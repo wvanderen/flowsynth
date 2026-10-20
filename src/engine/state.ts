@@ -178,6 +178,12 @@ export function createMutator(state: GameState, family: MutatorFamily, rarity: R
 // once-ever starter flag down, empty occupant trays, zero Hone ranks, and
 // every authored enemy standing reserved at its fixed stats. Enemies key to
 // the authored roster — the table is code, the save only live state.
+// `freshEnemyStates` is the restore shape too: prestige resets the
+// encounters to exactly this map.
+export function freshEnemyStates(): WorldState["enemies"] {
+  return Object.fromEntries(WORLD_ENEMIES.map((def) => [def.key, { discovered: false, hp: def.maxHp }]));
+}
+
 export function freshWorld(): WorldState {
   return {
     frontier: 0,
@@ -185,7 +191,7 @@ export function freshWorld(): WorldState {
     columns: [],
     weapons: [],
     hone: { chargeBlade: 0 },
-    enemies: Object.fromEntries(WORLD_ENEMIES.map((def) => [def.key, { discovered: false, hp: def.maxHp }])),
+    enemies: freshEnemyStates(),
   };
 }
 
@@ -241,7 +247,10 @@ export function normalizeWorld(raw: unknown): WorldState {
       if (typeof weapon !== "object" || weapon === null) continue;
       const candidate = weapon as unknown as Record<string, unknown>;
       if (typeof candidate.id !== "string") continue;
-      const type = candidate.type === "chargeBlade" ? candidate.type : "chargeBlade";
+      // The first experiment ships one weapon type (issue #425); the
+      // per-type schema is the seam a second joins, so the load read is
+      // per-type already.
+      const type: WeaponType = "chargeBlade";
       const store = typeof candidate.store === "number" && Number.isFinite(candidate.store) && candidate.store > 0 ? candidate.store : 0;
       const cooldown = typeof candidate.cooldown === "number" && Number.isFinite(candidate.cooldown) && candidate.cooldown > 0 ? candidate.cooldown : 0;
       const priority = Array.isArray(candidate.targetPriority)

@@ -8,7 +8,7 @@ import { addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress, accrueGoalFuel, secondsUntilGoalCompletion } from "./goals";
 import { accrueClassDevelopment } from "./classes";
-import { advanceWorldCharge, advanceWorldCombat, combatBoundaryOf, discoverySecondsOf, syncWorldDiscoveries } from "./world";
+import { advanceWorldCharge, advanceWorldCombat, syncWorldDiscoveries, worldBoundarySeconds } from "./world";
 import type { AdvanceResult, GameState, ModuleInstance, RateSnapshot } from "./types";
 
 // Where a span's produced nous lands and whether it credits practice
@@ -150,7 +150,7 @@ export function advance(
     // spans hold fire, and their production never touches eraEarned, so
     // neither boundary can move under them.
     if (sink === "live") {
-      earliest = Math.min(earliest, discoverySecondsOf(state, snapshot.rate), combatBoundaryOf(state));
+      earliest = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
     }
     const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;
 
@@ -271,7 +271,7 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     // absent here.
     const snapshot = syncRates(state, true);
     const { liveGenerators, earliest } = boardBoundaries(state);
-    const boundary = Math.min(earliest, discoverySecondsOf(state, snapshot.rate), combatBoundaryOf(state));
+    const boundary = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
     const spanSeconds = boundary !== Infinity && boundary + EPS < seconds ? boundary : seconds;
     const gained = snapshot.rate * spanSeconds;
     // Pre-trusted time banks straight onto the balance — the counter-image

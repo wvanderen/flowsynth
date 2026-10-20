@@ -59,7 +59,7 @@ export function worldFactorOf(state: GameState): number {
   for (const def of WORLD_ENEMIES) {
     const live = state.world.enemies[def.key];
     if (!live?.discovered) continue;
-    factor *= live.hp <= EPS ? 1 + def.bonus : 1 - def.penalty;
+    factor *= enemyDefeated(state, def.key) ? 1 + def.bonus : 1 - def.penalty;
   }
   return factor;
 }
@@ -85,7 +85,7 @@ export function syncWorldDiscoveries(state: GameState): number {
 
 // The discovery boundary (issue #425, priority 5): seconds of production at
 // this rate until era-earned crosses the lowest not-yet-revealed threshold —
-// a rate-relevant boundary the walk splits at, because the debuff change
+// a rate-relevant boundary the walk splits at, because the penalty change
 // lands exactly at the discovery point. Infinity when no reveal waits or
 // nothing produces.
 export function discoverySecondsOf(state: GameState, rate: number): number {
@@ -98,6 +98,13 @@ export function discoverySecondsOf(state: GameState, rate: number): number {
     next = Math.min(next, def.threshold);
   }
   return next === Infinity ? Infinity : (next - state.eraEarned) / rate;
+}
+
+// The World's own span boundary (issue #425, priority 5): the earlier of
+// the discovery crossing and the next attack tick — the one read both walk
+// loops share, so the trusted-time legs can never drift apart.
+export function worldBoundarySeconds(state: GameState, rate: number): number {
+  return Math.min(discoverySecondsOf(state, rate), combatBoundaryOf(state));
 }
 
 // The weapon type's current attack power (issue #425): the authored base
@@ -143,7 +150,7 @@ export function eligibleTargetsOf(state: GameState, weapon: WeaponCopy): string[
   for (const key of order) {
     const def = ENEMY_BY_KEY.get(key)!;
     const live = state.world.enemies[key];
-    if (!live?.discovered || live.hp <= EPS) continue;
+    if (!live?.discovered || enemyDefeated(state, key)) continue;
     if (!adjacent(weapon.pos, def.pos)) continue;
     eligible.push(key);
   }
@@ -153,7 +160,7 @@ export function eligibleTargetsOf(state: GameState, weapon: WeaponCopy): string[
 // The combat boundary (issue #425, priority 5): seconds until the next
 // attack tick of any deployed weapon holding an eligible target — a
 // rate-relevant boundary whether or not the weapon is currently fed, since
-// the tick is when a kill can land and the starved tick is when new supply
+// the tick is when a kill can land and the unfed tick is when new supply
 // first gets spent. A weapon with no eligible target holds no boundary (a
 // target appears only at a discovery or a prestige, both their own
 // boundaries), so quiet eras span whole board boundaries. Clamped off zero

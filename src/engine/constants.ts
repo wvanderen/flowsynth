@@ -487,25 +487,35 @@ export const BALANCE: Balance = {
 };
 
 // The authored enemy roster (issue #425, ADR-0074; findings.md's nine fixed
-// encounters): thresholds at 1T × 10ⁱ era-earned, HP 12×1.5ⁱ, the shared
-// ×0.8 remaining-production penalty while discovered and alive, and the
-// ×1.08 era-local bonus once defeated. Positions are authored World
-// coordinates inside the launch band's rows (−1..2, well within the six-row
-// cap) — unowned coordinates allowed; the first enemy sits adjacent to the
-// opening footprint so its cell is attackable through ordinary expansion
-// from day one. The reachability invariant over this roster is pinned in
-// world.test.ts.
-export const WORLD_ENEMIES: readonly WorldEnemyDef[] = [
-  { key: "w0", threshold: 1e12, pos: { q: -1, r: 0 }, maxHp: 12, penalty: 0.2, bonus: 0.08 },
-  { key: "w1", threshold: 1e13, pos: { q: 1, r: 1 }, maxHp: 18, penalty: 0.2, bonus: 0.08 },
-  { key: "w2", threshold: 1e14, pos: { q: 2, r: -1 }, maxHp: 27, penalty: 0.2, bonus: 0.08 },
-  { key: "w3", threshold: 1e15, pos: { q: 0, r: 2 }, maxHp: 40.5, penalty: 0.2, bonus: 0.08 },
-  { key: "w4", threshold: 1e16, pos: { q: 2, r: 1 }, maxHp: 60.75, penalty: 0.2, bonus: 0.08 },
-  { key: "w5", threshold: 1e17, pos: { q: -1, r: 2 }, maxHp: 91.125, penalty: 0.2, bonus: 0.08 },
-  { key: "w6", threshold: 1e18, pos: { q: 3, r: -1 }, maxHp: 136.6875, penalty: 0.2, bonus: 0.08 },
-  { key: "w7", threshold: 1e19, pos: { q: 1, r: 2 }, maxHp: 205.03125, penalty: 0.2, bonus: 0.08 },
-  { key: "w8", threshold: 1e20, pos: { q: 3, r: -2 }, maxHp: 307.546875, penalty: 0.2, bonus: 0.08 },
+// encounters): thresholds at 1T × 10ⁱ era-earned, HP baseHp × growthⁱ, the
+// shared penalty while discovered and alive, and the shared era bonus once
+// defeated — the shared arithmetic living once in BALANCE.world. Positions
+// are authored World coordinates inside the launch band's rows (−1..2, well
+// within the six-row cap) — unowned coordinates allowed; the first enemy
+// sits adjacent to the opening footprint so its cell is attackable through
+// ordinary expansion from day one. Keys are authored placeholders until a
+// design session names the encounters. The reachability invariant over this
+// roster is pinned in world.test.ts.
+const ENEMY_POSITIONS: readonly Hex[] = [
+  { q: -1, r: 0 },
+  { q: 1, r: 1 },
+  { q: 2, r: -1 },
+  { q: 0, r: 2 },
+  { q: 2, r: 1 },
+  { q: -1, r: 2 },
+  { q: 3, r: -1 },
+  { q: 1, r: 2 },
+  { q: 3, r: -2 },
 ];
+
+export const WORLD_ENEMIES: readonly WorldEnemyDef[] = ENEMY_POSITIONS.map((pos, i) => ({
+  key: `w${i}`,
+  threshold: BALANCE.world.entryNous * 10 ** i,
+  pos,
+  maxHp: BALANCE.world.enemyBaseHp * BALANCE.world.enemyHpGrowth ** i,
+  penalty: BALANCE.world.enemyPenalty,
+  bonus: BALANCE.world.enemyBonus,
+}));
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by
 // ADR-0048/0049): register-free pitch sets — interval classes above the

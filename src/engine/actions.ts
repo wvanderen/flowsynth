@@ -1,5 +1,5 @@
 import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf, WORLD_ENEMIES } from "./constants";
-import { bankableClaimOf, horizonReached } from "./accumulator";
+import { bankableClaimOf, frontierEntitlement, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
 import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
@@ -8,7 +8,7 @@ import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
 import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
-import { createModule, createMutator, createWeapon, createWorldColumn, openingGrant } from "./state";
+import { createModule, createMutator, createWeapon, createWorldColumn, freshEnemyStates, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
@@ -1124,10 +1124,11 @@ export function prestige(state: GameState): ActionResult {
   state.arete += claim;
   state.world.frontier += claim;
   // The starter grant (issue #425, priority 2): the first World-eligible
-  // claim — a claim banking at least the Column's price, which the entry
-  // entitlement's construction guarantees — lands the Charge Blade copy
-  // outright. Granted exactly once, ever.
-  if (claim > 0 && !state.world.starterWeaponGranted) {
+  // claim — the era's entitlement reaching at least the Column's price,
+  // which the entry grant's construction guarantees — lands the Charge
+  // Blade copy outright. Granted exactly once, ever; the eligibility read
+  // keeps the grant tied to the curve, not to the claim's rounded figure.
+  if (!state.world.starterWeaponGranted && frontierEntitlement(state.eraEarned) >= columnCost(0)) {
     state.world.weapons.push(createWeapon(state, "chargeBlade"));
     state.world.starterWeaponGranted = true;
   }
@@ -1153,9 +1154,7 @@ export function prestige(state: GameState): ActionResult {
   // at their authored fixed stats — undiscovered, undamaged, era bonuses
   // gone with the defeat state they derived from — and stored World charge
   // empties. Purchases and the frontier persist above.
-  for (const def of WORLD_ENEMIES) {
-    state.world.enemies[def.key] = { discovered: false, hp: def.maxHp };
-  }
+  state.world.enemies = freshEnemyStates();
   for (const weapon of state.world.weapons) {
     weapon.store = 0;
     weapon.cooldown = 0;

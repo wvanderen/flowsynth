@@ -18,8 +18,8 @@ import { BALANCE, WORLD_ENEMIES } from "./constants";
 import { createInitialState, createWeapon } from "./state";
 import { fresh, give } from "./fixtures";
 import { serialize, deserialize } from "./save";
-import { adjacent, hex } from "./hex";
-import { octaveRowOf } from "./lattice";
+import { adjacent, hex, neighbors } from "./hex";
+import { octaveRowOf, positionInRange } from "./lattice";
 import { resolveHonestyReport } from "./trust";
 import type { GameState, Hex, WeaponCopy } from "./types";
 
@@ -236,23 +236,16 @@ describe("the first World-eligible claim (issue #425, priority 2)", () => {
 
 describe("the authored roster and its reachability invariant (issue #425, priority 3)", () => {
   it("every enemy sits within the available octave rows and beside an obtainable cell", () => {
-    const rowFloor = -BALANCE.launchRowsBelow - 1;
-    const rowCeil = BALANCE.launchRowsAbove + 1;
+    // "Obtainable through ordinary expansion" reads the authoritative
+    // purchasable predicate at the board's six-row cap — both Row unlocks
+    // owned, the furthest state ordinary expansion can reach.
+    const maxed = fresh();
+    maxed.unlockedRows = [-BALANCE.launchRowsBelow - 1, BALANCE.launchRowsAbove + 1];
     for (const def of WORLD_ENEMIES) {
       const row = octaveRowOf(def.pos);
-      expect(row).toBeGreaterThanOrEqual(rowFloor);
-      expect(row).toBeLessThanOrEqual(rowCeil);
-      // Reachable: an owned neighboring cell is obtainable through
-      // ordinary expansion — a neighbor inside the purchasable range.
-      const reachable = [def.pos]
-        .flatMap((pos) => [-1, 0, 1].flatMap((dq) => [-1, 0, 1].map((dr) => hex(pos.q + dq, pos.r + dr))))
-        .filter((n) => !(n.q === def.pos.q && n.r === def.pos.r))
-        .some((n) => {
-          const neighborRow = octaveRowOf(n);
-          const inRows = neighborRow >= rowFloor && neighborRow <= rowCeil;
-          const inColumns = n.q >= -5 && n.q <= 6;
-          return inRows && inColumns;
-        });
+      expect(row).toBeGreaterThanOrEqual(-BALANCE.launchRowsBelow - 1);
+      expect(row).toBeLessThanOrEqual(BALANCE.launchRowsAbove + 1);
+      const reachable = neighbors(def.pos).some((n) => positionInRange(maxed, n));
       expect(reachable).toBe(true);
     }
   });
@@ -260,8 +253,11 @@ describe("the authored roster and its reachability invariant (issue #425, priori
   it("the first enemy is reachable from the opening footprint under its penalty", () => {
     const opening = createInitialState().cells;
     const first = WORLD_ENEMIES[0]!;
+    // Adjacent to an owned cell from day one: the penalty is survivable
+    // because the attack never waits on expansion.
     expect(opening.some((cell) => adjacent(cell, first.pos))).toBe(true);
     expect(first.threshold).toBe(BALANCE.world.entryNous);
+    expect(first.penalty).toBeGreaterThan(0);
   });
 
   it("thresholds, positions, and stats repeat unchanged each era — prestige never raises enemy strength", () => {
@@ -311,7 +307,7 @@ describe("discovery (issue #425, priorities 3 and 5)", () => {
     expect(Math.abs(s.eraEarned - expected)).toBeLessThan(1e-9);
   });
 
-  it("the debuff change is a rate boundary at the discovery point: a kill mid-span really changes the remainder", () => {
+  it("the penalty change is a rate boundary at the discovery point: a kill mid-span really changes the remainder", () => {
     const s = flowing();
     give(s, "additive", hex(0, 1)); // widen the owned patch for placement
     const weapon = grantWeapon(s, hex(1, 0));
@@ -391,7 +387,7 @@ describe("the Charge Column's conservation (issue #425, priority 6)", () => {
     expect(split.wasted).toBeCloseTo(0, 10);
   });
 
-  it("starvation wastes exactly what nobody could take", () => {
+  it("an unfed roster wastes exactly what nobody could take", () => {
     const split = splitColumnSupply(6, new Map([["a", 1], ["b", 2]]));
     expect(split.accepted.get("a")).toBeCloseTo(1, 10);
     expect(split.accepted.get("b")).toBeCloseTo(2, 10);
