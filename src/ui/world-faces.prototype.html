@@ -1,0 +1,152 @@
+<!doctype html>
+<!-- THROWAWAY: the World face's presentation-language round (issue #426).
+     Two variants over one composition — the layer legend, the four enemy
+     states, the occupant faces, and the quiet-activity read — judged
+     against the pinned instrument standards. Illustrative figures only;
+     no saves, no game mutations. Run: python3 -m http.server 5176 -->
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>FlowSynth · World face prototype</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap');
+:root{color-scheme:dark;--bg:#111213;--panel:#1b1d1f;--panel-soft:#17191b;--line:#34383b;--line-soft:#292d30;--line-strong:#555c61;--ink:#e9eae8;--muted:#a4aaa9;--charge:#9affa8;--arete:#b994f5;--switch:#cc603d;--world:#a7b7c4;--world-bright:color-mix(in srgb,var(--world) 72%,var(--ink));--world-faint:color-mix(in srgb,var(--world) 13%,var(--panel-soft));--world-line:color-mix(in srgb,var(--world) 38%,transparent);--hex-face:color-mix(in srgb,var(--panel) 58%,var(--bg))}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 'IBM Plex Sans',sans-serif}
+h1,h2,.name{font-family:'Barlow Condensed',sans-serif;font-weight:600}h1{font-size:23px;margin:0}h2{font-size:26px;margin:0 0 4px}
+.mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}.dim{color:var(--muted)}
+header{display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line-soft);padding:14px 26px;gap:16px}
+.notice{padding:8px 26px;font-size:12px;color:var(--muted);border-bottom:1px solid var(--line-soft)}
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:30px;padding:26px;align-items:start}
+.boardwrap{display:flex;justify-content:center}
+svg.board{overflow:visible;width:100%;max-width:640px}
+.legend{display:flex;flex-direction:column;gap:6px;position:absolute;left:8px;top:8px}
+/* Variant B recarries the module hex — the rejected contrast. */
+body[data-variant=b] .wface{display:none}body[data-variant=b] .hface{display:block}
+body:not([data-variant=b]) .wface{display:block}body:not([data-variant=b]) .hface{display:none}
+/* ── the square-cut plate (variant A) ── */
+.wplate{fill:var(--hex-face);stroke:var(--world-line);stroke-width:2}
+.wplate.open{fill:none;stroke:var(--line);stroke-dasharray:5 5}
+.wplate.firm{stroke:var(--world);stroke-width:2.6;fill:color-mix(in srgb,var(--world) 7%,var(--hex-face))}
+.wplate.reserved{fill:color-mix(in srgb,var(--panel-deep,#0d0f10) 40%,var(--hex-face));stroke:var(--line-strong);stroke-width:2}
+.wplate.engraved{fill:none;stroke:var(--line-strong);stroke-width:1.4}
+.wplate.locked{stroke:var(--line);stroke-width:1.6}
+.whatch{stroke:var(--line-strong);stroke-width:1;opacity:.4}
+.wword{font:600 11.5px 'Barlow Condensed',sans-serif;letter-spacing:.08em;fill:var(--muted)}
+.wsub{font:600 9.5px 'Barlow Condensed',sans-serif;letter-spacing:.08em;fill:var(--muted)}
+.wfig{font:500 12.5px 'IBM Plex Mono',monospace;fill:var(--ink)}
+.wfig.charge{fill:var(--charge)}.wfig.penalty{fill:var(--world-bright)}
+.wglyph{fill:none;stroke:var(--world);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.wglyph.dimmed{stroke:var(--line-strong)}
+.wbar{fill:none;stroke:var(--line);stroke-width:1}
+.wbarfill{fill:var(--charge)}
+.wbarfill.live{animation:breath 3.2s ease-in-out infinite}
+@keyframes breath{0%,100%{opacity:.55}50%{opacity:.95}}
+.underglow{fill:var(--charge);opacity:.05;animation:stead 3.2s ease-in-out infinite}
+@keyframes stead{0%,100%{opacity:.04}50%{opacity:.09}}
+@media(prefers-reduced-motion:reduce){.wbarfill.live,.underglow{animation:none}.wbarfill.live{opacity:.7}.underglow{opacity:.05}}
+/* ── the hex contrast (variant B) ── */
+.hface polygon{fill:var(--hex-face);stroke:var(--world-line);stroke-width:2}
+/* legend */
+.legend-symbol{display:flex;align-items:center;justify-content:center;width:34px;height:34px;background:var(--panel);border:1px solid var(--line);color:var(--muted);cursor:pointer}
+.legend-symbol.active{color:var(--ink);box-shadow:inset 0 -3px var(--ink)}
+.legend-symbol svg{width:18px;height:18px}
+.side{border-left:1px solid var(--line-soft);padding-left:26px}
+.side section{border-top:1px solid var(--line-soft);padding:16px 0}
+.side h2:first-child{border-top:0;padding-top:0}
+.row{display:flex;align-items:center;gap:12px;margin:10px 0}
+.row svg{width:64px;height:70px;flex-shrink:0}
+.row .name{font-size:17px}.row p{margin:2px 0 0;font-size:13px;color:var(--muted)}
+.switcher{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#e9eae8;color:#111213;display:flex;align-items:center;gap:14px;padding:6px 10px;box-shadow:0 6px 20px #0007;white-space:nowrap}
+.switcher button{border:1px solid #949bb0;background:none;color:#111213;font:600 15px 'Barlow Condensed',sans-serif;padding:6px 12px;cursor:pointer}
+.switcher span{font-size:13px;min-width:230px;text-align:center}
+@media(max-width:900px){.stage{grid-template-columns:1fr}.side{border-left:0;padding-left:0}.legend{position:static;flex-direction:row}}
+</style>
+<body>
+<header><h1>FlowSynth · World face round</h1><span class="mono dim" id="mode-read">variant A · square-cut plates</span></header>
+<div class="notice">Throwaway visual study for issue #426 · illustrative figures · judged against the pinned instrument standards</div>
+<main class="stage">
+  <section class="boardwrap" aria-label="The World layer composition">
+    <div style="position:relative;width:100%;max-width:640px">
+      <div class="legend" role="group" aria-label="Layer legend">
+        <button class="legend-symbol active" aria-pressed="true" aria-label="World layer" title="World — enemies, weapons, Columns"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16"/><path d="M8.5 15.5v-4.2l3.5-3.3 3.5 3.3v4.2z"/></svg></button>
+        <button class="legend-symbol" aria-pressed="false" aria-label="Modules layer" title="Modules — the production grid"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2.6 20.2 7.3v9.4L12 21.4 3.8 16.7V7.3Z"/><path d="M12 8.2v7.6M8.4 10.1l7.2 3.8M15.6 10.1l-7.2 3.8"/></svg></button>
+      </div>
+      <svg class="board" viewBox="0 0 640 430" role="img" aria-label="Nine World faces: locked, reserved, discovered enemy, cleared, fed weapon, unfed weapon, column, open cell">
+        <defs><pattern id="hatch" width="7" height="7" patternTransform="rotate(45)" patternUnits="userSpaceOnUse"><line class="whatch" x1="0" y1="0" x2="0" y2="7"/></pattern></defs>
+        <!-- one hex cell chassis per station, the projection the production board shares -->
+        <g id="cells"></g>
+      </svg>
+    </div>
+  </section>
+  <aside class="side">
+    <section><h2>The question</h2><p class="dim">Enemies and Columns are not modules, and hexes are the module voice. Variant A gives the World its own square-cut plate — the instrument's control silhouette. Variant B recarries the hex as the rejected contrast: on it, a discovered enemy reads as a module wearing a costume.</p></section>
+    <section><h2>State grammar</h2>
+      <div class="row" data-station="reserved"><span class="name">Reserved cell</span></div>
+      <div class="row" data-station="enemy"><span class="name">Enemy · discovered</span></div>
+      <div class="row" data-station="cleared"><span class="name">Cleared</span></div>
+      <div class="row" data-station="weapon"><span class="name">Weapon · fed</span></div>
+      <div class="row" data-station="unfed"><span class="name">Weapon · unfed</span></div>
+      <div class="row" data-station="column"><span class="name">Charge Column</span></div>
+      <div class="row" data-station="open"><span class="name">Open World cell</span></div>
+      <div class="row" data-station="locked"><span class="name">Pre-entry · locked</span></div>
+    </section>
+    <section><h2>Quiet activity</h2><p class="dim">The fed weapon's charge fill breathes at low amplitude; the unfed plate stands still and says so. No attack flashes anywhere; reduced motion renders every fill static.</p></section>
+  </aside>
+</main>
+<div class="switcher"><button id="prev" aria-label="Previous variant">←</button><span id="label"></span><button id="next" aria-label="Next variant">→</button><button id="grey">Greyscale</button></div>
+<script>
+// The shared projection: pointy-top hexes, spacing 65, radius 61 — the
+// production board's own numbers, so what fits here fits there.
+const R=61,S=65,PLATE=37.5; // plate half-side: a 75-unit square in the cell
+const names={a:'variant A · square-cut plates',b:'variant B · hex recarried (contrast)'};
+let variant=new URLSearchParams(location.search).get('variant')||'a';
+const station=(x,y,key)=>({x,y,key});
+const cells=[
+  station(160,120,'locked'),station(290,45,'reserved'),station(420,120,'enemy'),
+  station(160,265,'cleared'),station(290,190,'weapon'),station(420,265,'unfed'),
+  station(290,335,'column'),station(550,45,'open'),
+];
+const P=r=>Array.from({length:6},(_,i)=>{const a=(60*i-30)*Math.PI/180;return[ (r*Math.cos(a)).toFixed(2),(r*Math.sin(a)).toFixed(2)].join(',')}).join(' ');
+const pts=P(R);
+const glyph={
+  enemy:'<path d="M-11-7 0 3 11-7"/><path d="M-11 1 0 11 11 1"/>',
+  weapon:'<path d="M-3-13 5-9 3 9-5 13-3-9Z"/><path d="M-8 13h10"/>',
+  column:'<rect x="-7" y="-12" width="14" height="24"/><path d="M-11-12h22M-11 12h22"/>',
+  lock:'<g transform="translate(-6 -8) scale(1.5)"><rect x="-4.5" y="-1" width="9" height="7"/><path d="M-2.6-1v-2.2a2.6 2.6 0 0 1 5.2 0V-1"/></g>',
+};
+function face(st){
+  const w=(inner)=>`<g class="wface"><rect class="wplate ${st.cls}" x="${-PLATE}" y="${-PLATE}" width="${PLATE*2}" height="${PLATE*2}"/>${st.hatch?'<rect x="'+-PLATE+'" y="'+-PLATE+'" width="'+PLATE*2+'" height="'+PLATE*2+'" fill="url(#hatch)"/>':''}${inner}</g>`;
+  const h=(inner)=>`<g class="hface"><polygon points="${pts}"/>${inner}</g>`;
+  const build=(inner)=>w(inner)+h(inner);
+  switch(st.key){
+    case 'locked':return build(`<g class="wglyph dimmed" transform="translate(0,-6) scale(.9)">${glyph.lock}</g><text class="wword" y="20" text-anchor="middle">WORLD</text>`);
+    case 'reserved':return build(`<rect x="${-PLATE}" y="${-PLATE}" width="${PLATE*2}" height="${PLATE*2}" fill="url(#hatch)"/><text class="wword" y="-6" text-anchor="middle">RESERVED</text><text class="wfig dim" y="12" text-anchor="middle">· · ·</text>`);
+    case 'enemy':return build(`<text class="wword" y="${-PLATE+14}" text-anchor="middle">ENEMY</text><g class="wglyph" transform="translate(0,-8) scale(.85)">${glyph.enemy}</g><text class="wfig" y="16" text-anchor="middle">HP 8/12</text><text class="wfig penalty" y="${PLATE-6}" text-anchor="middle">−20% ν</text>`);
+    case 'cleared':return build(`<text class="wword" y="${-PLATE+14}" text-anchor="middle">CLEARED</text><g class="wglyph dimmed" transform="translate(0,-8) scale(.7)">${glyph.enemy}</g><text class="wfig dim" y="20" text-anchor="middle">+8% ν</text>`);
+    case 'weapon':return build(`<text class="wword" y="${-PLATE+14}" text-anchor="middle">BLADE</text><g class="wglyph" transform="translate(0,-10) scale(.75)">${glyph.weapon}</g><rect class="wbar" x="-26" y="-1" width="52" height="5"/><rect class="wbarfill live" x="-26" y="-1" width="41" height="5"/><text class="wfig charge" y="17" text-anchor="middle">⌁24/30</text><text class="wsub" y="${PLATE-6}" text-anchor="middle">ATK 4</text>`);
+    case 'unfed':return build(`<text class="wword" y="${-PLATE+14}" text-anchor="middle">BLADE</text><g class="wglyph dimmed" transform="translate(0,-10) scale(.75)">${glyph.weapon}</g><rect class="wbar" x="-26" y="-1" width="52" height="5"/><rect class="wbarfill" x="-26" y="-1" width="0" height="5"/><text class="wfig dim" y="17" text-anchor="middle">⌁0/30</text><text class="wsub" y="${PLATE-6}" text-anchor="middle">UNFED</text>`);
+    case 'column':return build(`<text class="wword" y="${-PLATE+14}" text-anchor="middle">COLUMN</text><g class="wglyph" transform="translate(0,-8) scale(.8)">${glyph.column}</g><text class="wfig charge" y="20" text-anchor="middle">⌁3.2/s</text>`);
+    case 'open':return build(`<text class="wword" y="4" text-anchor="middle">OPEN</text>`);
+  }
+}
+function render(){
+  document.body.dataset.variant=variant;
+  document.getElementById('label').textContent=names[variant];
+  document.getElementById('mode-read').textContent=names[variant];
+  const u=new URL(location);u.searchParams.set('variant',variant);history.replaceState(null,'',u);
+  document.getElementById('cells').innerHTML=cells.map((c,i)=>{
+    const st={locked:{cls:'locked'},reserved:{cls:'reserved',hatch:true},enemy:{cls:'firm'},cleared:{cls:'engraved'},weapon:{cls:'firm'},unfed:{cls:'firm'},column:{cls:'firm'},open:{cls:'open'}}[c.key];
+    return `<g transform="translate(${c.x} ${c.y})">${face({key:c.key,cls:st.cls,hatch:st.hatch})}
+      <polygon points="${pts}" fill="none" stroke="var(--line-soft)" stroke-width="1" opacity=".5"/>
+      ${c.key==='weapon'?`<rect class="underglow" x="${-PLATE}" y="${-PLATE}" width="${PLATE*2}" height="${PLATE*2}"/>`:''}</g>`;
+  }).join('');
+}
+// side rows mirror the stations' faces at row scale — mounted once
+document.querySelectorAll('.row').forEach(row=>{
+  const key=row.dataset.station;
+  row.insertAdjacentHTML('afterbegin',`<svg viewBox="-45 -45 90 90" aria-hidden="true"><g transform="scale(.62)">${face({key,cls:{locked:'locked',reserved:'reserved',enemy:'firm',cleared:'engraved',weapon:'firm',unfed:'firm',column:'firm',open:'open'}[key],hatch:key==='reserved'})}</g></svg>`);
+});
+document.getElementById('prev').onclick=()=>{variant=variant==='a'?'b':'a';render()};
+document.getElementById('next').onclick=()=>{variant=variant==='a'?'b':'a';render()};
+document.getElementById('grey').onclick=()=>{document.body.style.filter=document.body.style.filter?'':'grayscale(1) contrast(1.05)'};
+document.querySelectorAll('.legend-symbol').forEach(b=>b.onclick=()=>{document.querySelectorAll('.legend-symbol').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b))})});
+render();
+</script>
+</body></html>

@@ -247,12 +247,60 @@ export function splitColumnSupply(supply: number, space: ReadonlyMap<string, num
   return { accepted, wasted: Math.max(0, supply - taken) };
 }
 
+// The lift read (issue #426's preview seam): what the Columns copy and the
+// weapons receive per second — the routing outcome of the one conservation
+// split. Storage never enters the read: the walk clamps each span against
+// live headroom (below), while the faces and the placement preview need
+// the routing itself — who a Column feeds, and at what share. `override`
+// re-positions one occupant hypothetically (the placement preview's moved
+// piece); the real state is never touched. A full store still reads fed on
+// the routing read — the store figure carries fullness on the face.
+export interface WorldLift {
+  // Copied supply per placed Column, per second.
+  byColumn: Map<string, number>;
+  // Routing share per deployed weapon, per second.
+  byWeapon: Map<string, number>;
+}
+
+export function columnLiftsOf(
+  state: GameState,
+  snapshot: Pick<RateSnapshot, "chargeStrength">,
+  override?: { id: string; pos: Hex | null },
+): WorldLift {
+  const lift: WorldLift = { byColumn: new Map(), byWeapon: new Map() };
+  const positionOf = (id: string, pos: Hex | null): Hex | null =>
+    override && override.id === id ? override.pos : pos;
+  for (const column of state.world.columns) {
+    const pos = positionOf(column.id, column.pos);
+    if (pos === null) continue;
+    const module = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
+    if (!module) continue;
+    const copied = snapshot.chargeStrength.get(module.id) ?? 0;
+    if (copied <= EPS) continue;
+    lift.byColumn.set(column.id, (lift.byColumn.get(column.id) ?? 0) + copied);
+    const consumers = state.world.weapons
+      .map((weapon) => ({ id: weapon.id, pos: positionOf(weapon.id, weapon.pos) }))
+      .filter((entry): entry is { id: string; pos: Hex } => entry.pos !== null && adjacent(entry.pos, pos));
+    if (consumers.length === 0) continue;
+    // Unlimited storage: the split's routing shape alone.
+    const split = splitColumnSupply(
+      copied,
+      new Map(consumers.map(({ id }) => [id, Infinity])),
+    );
+    for (const [id, amount] of split.accepted) {
+      lift.byWeapon.set(id, (lift.byWeapon.get(id) ?? 0) + amount);
+    }
+  }
+  return lift;
+}
+
 // One span's World charge lift (issue #425, priority 6): each placed
 // Column copies the charge its module cell received over the span —
 // without draining the module beneath, whose received strength the
 // snapshot already carries — and feeds adjacent World weapons through the
-// one conservation split. Both trusted and provisional spans lift (the
-// charge economy runs in both); only the combat legs above gate on trust.
+// one conservation split, clamped against each weapon's live headroom.
+// Both trusted and provisional spans lift (the charge economy runs in
+// both); only the combat legs above gate on trust.
 export function advanceWorldCharge(state: GameState, snapshot: RateSnapshot, spanSeconds: number): void {
   for (const column of state.world.columns) {
     const pos = column.pos;
