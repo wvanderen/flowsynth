@@ -1,9 +1,11 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules, normalizeWorld } from "./state";
 import { normalizeHabitBuilds } from "./builds";
-import { normalizeHabitClasses } from "./classes";
+import { classDefOf, freshClassPair, normalizeHabitClasses } from "./classes";
 import { normalizeGoals } from "./goals";
+import { longGoalCost, mutatorSlotCost } from "./economy";
+import { generateOffer, type Rng } from "./rolls";
 import { BALANCE, SAVE_VERSION } from "./constants";
-import type { BreatherState, GameState, SpecialDraftKind } from "./types";
+import type { BreatherState, GameState, Goal, Meter, SpecialDraftKind } from "./types";
 
 export interface SaveFile {
   app: "flowsynth";
@@ -29,13 +31,13 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // ADR-0017's pattern at the v11 boundary (issue #423): the habit-class
 // cut is the iteration's schema step. Every version older than v10
 // rejects with the start-fresh message — no chain, no archive, no import
-// path for rejected versions. A v10 save loads through the lenient-default
-// block alone for now: the explicit `migrateV10ToV11` (Engineer
-// conversion, the flow meter's final payout, the retired purchases'
-// refunds) belongs to the migration brief (#427) and lands beside it.
-// The retired v9 step is gone with its version: nothing below v10 loads,
-// so nothing can still need it.
-export function deserialize(text: string): LoadResult {
+// path for rejected versions. The one explicit step this build carries is
+// `migrateV10ToV11` below (the retired purchases' refunds, the Engineer
+// conversion, the flow meter's final payout, the goal retirement — issue
+// #427); it runs for a v10 save alone and the retired fields die in the
+// same pass, so a re-run cannot exist. The retired v9 step is gone with
+// its version: nothing below v10 loads, so nothing can still need it.
+export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -100,9 +102,10 @@ export function deserialize(text: string): LoadResult {
   // figures re-default; unknown enemy keys drop.
   merged.world = normalizeWorld(raw.world);
   // The Horizon break (ADR-0042, issue #200) retired with the frontier
-  // claim curve (issue #425): the Headroom flag is gone — the migration
-  // brief's exact Arete refund (#427) reads the raw save's field and the
-  // retired purchase's price before this deletion.
+  // claim curve (issue #425): the Headroom flag is gone. The migration's
+  // exact Arete refund (#427) reads the raw save's field — untouched by
+  // this delete, which is the raw copy's — and the retired purchase's
+  // price before the flag leaves the merged shape.
   delete (merged as unknown as Record<string, unknown>).horizonBroken;
   // The scrap balance (issue #377) lenient-defaults the same way: absent
   // or corrupt reads as nothing banked — exactly what a pre-scrap save
@@ -283,12 +286,18 @@ export function deserialize(text: string): LoadResult {
   // habit reads as an Engineer from zero — exactly what a fresh shape
   // writes. Unknown pair keys drop; corrupt figures re-default.
   normalizeHabitClasses(merged.habits);
+  // The one-step migration (issue #427): a v10 save — the gate above
+  // rejected everything older — passes through the explicit conversion
+  // before the retired fields drop. The conversion reads the raw save's
+  // retired fields (the oracle the merged copy's deletes must not
+  // precede) and writes the v11 schema once; a v11 save skips it
+  // entirely, so no refund, conversion, or payout can ever run twice.
+  if (parsed.version < SAVE_VERSION) migrateV10ToV11(raw, merged, rng);
   // The retired player-wide flow meter (ADR-0041 as retired by issue
   // #423): its schema slot is gone — the per-pair practice-roll meters
   // replaced it. The field drops here per the retired-field precedent;
-  // the v10 → v11 conversion that pays its nonzero progress out as one
-  // banked roll belongs to the migration brief (#427), which will read
-  // the raw save's field before this deletion.
+  // the v10 → v11 conversion above paid its nonzero progress out as one
+  // banked roll, reading the raw save's field before this deletion.
   delete (merged as unknown as Record<string, unknown>).flow;
   // The v9 → v10 migration (issue #371) retired with its version: nothing
   // below v10 loads, so no conversion step exists at this boundary yet.
@@ -301,6 +310,142 @@ export function deserialize(text: string): LoadResult {
   delete (merged as unknown as Record<string, unknown>).chargeWindow;
   merged.purchased = { ...fresh.purchased, ...merged.purchased };
   return { state: merged };
+}
+
+// ── The v10 → v11 migration (issue #427, ADR-0017's one step) ───────────
+//
+// Every returning player keeps their life: the record, the habits, the
+// collection, the banked rolls — untouched. What the World experiment
+// retires comes home as currency, once and exactly, refunded in the
+// currency it was paid in; what it converts converts once, by one stated
+// rule. The migration runs for a v10 save alone — the version gate in
+// deserialize routes only v10 here, and the save it writes is v11, so no
+// refund, conversion, or payout can ever run twice. The retired flag
+// fields die in the same pass.
+
+// The Engineer conversion rule (issue #427), stated once: each habit's
+// recorded development converts to Engineer experience at 1 XP per
+// recorded second. `habit.seconds` already includes historical manual
+// practice credited under the old rules, and the rule's honesty is that
+// it converts the record as it stands — no interest, no rounding up, no
+// second conversion path in tests or dev tools. Revisable only by a
+// future design round, never re-applied: the conversion writes the new
+// schema and the pair ledger it writes is what v11 saves carry.
+const ENGINEER_XP_PER_RECORDED_SECOND = 1;
+
+// The goal-slot refund's plausibility bound (the lenient clamps'
+// precedent: an implausibly large count clamps so it can never disagree
+// with the prices). The long-goal ladder is unbounded — its nth rung
+// costs 500·5^n — so the refund walk clamps at a count no purchase
+// history could ever have held: rung 64 alone costs ~7e45 nous, past any
+// lifetime the save could have lived. A corrupt figure refunds the
+// ladder's plausible head, never spins.
+export const GOAL_CAPACITY_REFUND_CAP = 64;
+
+// The lenient read for a retired scalar: absent or corrupt owes nothing.
+function retiredPositive(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merged: GameState, rng: Rng): void {
+  // ── Arete refunds, original currency, exact ladders ──────────────────
+  // One-place rule: every refunded amount comes from the same price
+  // function or constant its purchase charged — the refund and the price
+  // can never drift apart. A retired purchase never owned refunds nothing.
+  // The refund settles the purchase's cost; it does not flip ownership —
+  // the flags rest exactly as carried (the Mutator layer's standing data,
+  // whose deletion the brief forbids), and whether production still reads
+  // them belongs to the briefs that own those surfaces, never to this
+  // conversion.
+  let areteRefund = 0;
+  if (merged.catalogEntryOwned) {
+    // The Mutator tree's entry (BALANCE.catalogEntryCost).
+    areteRefund += BALANCE.catalogEntryCost;
+    // Mutator slot unlocks past the entry's free first slot: the exact
+    // rung each unlock paid, summed over the count of paid slots — the
+    // same ladder mutatorSlotCost quotes (economy.ts), read over the
+    // slots the save carries.
+    for (let unlocked = 1; unlocked < merged.mutatorSlots.length; unlocked++) {
+      areteRefund += mutatorSlotCost(unlocked);
+    }
+  }
+  if (merged.rollPoolJoined) {
+    // The Mutator Forge's pool join (BALANCE.rollPoolJoinCost).
+    areteRefund += BALANCE.rollPoolJoinCost;
+  }
+  if (raw.horizonBroken === true) {
+    // Headroom (BALANCE.horizonBreakCost), read off the raw save's
+    // retired flag — the merged copy's key is already deleted above.
+    areteRefund += BALANCE.horizonBreakCost;
+  }
+  merged.arete += areteRefund;
+
+  // ── The nous refund: the shared goal-slot economy retires ────────────
+  // `goalCapacityBought` refunds its exact `longGoalCost` ladder sum —
+  // the same price function buyGoalCapacity charged per purchase — as
+  // one refund, whole nous. The retired count then retires with its
+  // economy: capacity is the per-habit fixed figure now.
+  const goalCapacityBought = Math.min(Math.floor(retiredPositive(raw.goalCapacityBought)), GOAL_CAPACITY_REFUND_CAP);
+  for (let bought = 0; bought < goalCapacityBought; bought++) {
+    merged.nous += longGoalCost(bought);
+  }
+  merged.goalCapacityBought = 0;
+
+  // ── The Engineer conversion, once, one rule ──────────────────────────
+  // Each habit's recorded seconds convert at the stated rule into its
+  // Engineer pair's experience. The write is assignment, never accrual:
+  // the pair's shape after this pass is the only shape it produces. Level
+  // and tree points derive through the authored thresholds — the same
+  // BALANCE.engineerLevelThresholds the accrual leg (classes.ts) walks,
+  // whose array is the one source both walks read — and allocations start
+  // at the default: every derived point unspent. The pair's practice-roll
+  // meter starts empty. Idempotence is structural: the version gate alone
+  // routes a v10 save here, the conversion writes the v11 schema, and the
+  // retired fields die in this pass.
+  const engineer = classDefOf("engineer");
+  for (const habit of merged.habits) {
+    const pair = habit.classes.engineer ?? freshClassPair();
+    habit.classes.engineer = pair;
+    pair.experience = retiredPositive(habit.seconds) * ENGINEER_XP_PER_RECORDED_SECOND;
+    pair.level = 0;
+    pair.points = 0;
+    pair.spent = {};
+    while (pair.level < engineer.levelThresholds.length && pair.experience >= engineer.levelThresholds[pair.level]!) {
+      pair.level++;
+      pair.points++;
+    }
+  }
+
+  // ── The flow meter's final payout ────────────────────────────────────
+  // Nonzero shared flow-meter progress converts into exactly one banked
+  // module roll, appended to the shared queue before the meter retires;
+  // zero (or a corrupt figure — meters never ran negative) converts to
+  // nothing. The meter's `earned` count retires from active use with the
+  // meter — already-banked rolls are in the player's hands and untouched.
+  const rawFlow = raw.flow as Partial<Meter> | undefined;
+  if (rawFlow && retiredPositive(rawFlow.progress) > 0) {
+    merged.bankedRolls.push(generateOffer(merged, rng));
+  }
+
+  // Retire in place: session history resolves goal IDs against this list.
+  // Keep the full condition, schedule, and progress even for goals that
+  // have never appeared in a session. Active readers exclude retired rows.
+  const perHabit = new Map<string, Goal[]>();
+  for (const goal of merged.goals) {
+    if (goal.condition.habitId === null) goal.retired = true;
+    if (goal.retired || goal.condition.habitId === null) continue;
+    const own = perHabit.get(goal.condition.habitId) ?? [];
+    own.push(goal);
+    perHabit.set(goal.condition.habitId, own);
+  }
+  for (const own of perHabit.values()) {
+    const overflow = own.length - BALANCE.habitGoalSlots;
+    if (overflow <= 0) continue;
+    const oldestFirst = own
+      .map((goal, index) => ({ goal, index }))
+      .sort((a, b) => a.goal.createdAt - b.goal.createdAt || a.index - b.index);
+    for (const { goal } of oldestFirst.slice(0, overflow)) goal.retired = true;
+  }
 }
 
 export const STORAGE_KEY = "flowsynth.save.v1";

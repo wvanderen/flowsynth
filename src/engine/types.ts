@@ -544,6 +544,8 @@ export type GoalSchedule = { kind: "once" } | { kind: "daily" } | { kind: "weekl
 export type GoalColor = "vermillion" | "amber" | "green" | "cyan" | "indigo" | "violet";
 
 export interface Goal {
+  // Retired goals retain their facts for session history but never run.
+  retired?: true;
   id: string;
   condition: GoalCondition;
   schedule: GoalSchedule;

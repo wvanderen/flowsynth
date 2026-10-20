@@ -40,7 +40,7 @@ import { CLASSES, nodeAvailable, pairDef, pairOf, practiceRollThreshold, rankOf 
 import type { ClassId } from "../engine/types";
 import { isInFlowNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, GOAL_COLORS, type GoalTrackerState } from "../engine/goals";
+import { activeGoals, goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, GOAL_COLORS, type GoalTrackerState } from "../engine/goals";
 import type { ClassPairState, GameState, Goal, GoalColor, Habit, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
 
 // The tracker word set (issue #149): the Goals-state read's one vocabulary —
@@ -153,7 +153,7 @@ export function goalMeterOf(state: GameState): GoalMeterRead | null {
   if (!habit) return null;
   // Goals are habit-owned (issue #423): only the selected habit's own
   // goals qualify the display well.
-  const qualifying = state.goals.filter(
+  const qualifying = activeGoals(state).filter(
     (goal) => goal.condition.kind === "habit-minutes" && goal.condition.habitId === habit.id,
   );
   if (qualifying.length === 0) return null;
@@ -263,7 +263,7 @@ export function honestyEventLine(event: HonestyEvent): string {
 // (#311's one-place rule) — so the sheet's own surfaces never repeat it.
 
 function goalsTrackedRead(state: GameState): string {
-  const count = state.goals.length;
+  const count = activeGoals(state).length;
   return count === 1 ? "1 goal tracked" : `${count} goals tracked`;
 }
 
@@ -643,7 +643,7 @@ function goalsFaceHtml(app: App): string {
   const upgrade = state.mode === "upgrade";
   const habit = activeHabit(state);
   const capacity = goalCapacity();
-  const ownGoals = habit ? state.goals.filter((g) => g.condition.habitId === habit.id) : [];
+  const ownGoals = habit ? activeGoals(state).filter((g) => g.condition.habitId === habit.id) : [];
   const goalRow = (goal: Goal) => {
     const required = goalRequiredSeconds(goal);
     const status = goal.completed
@@ -1051,7 +1051,7 @@ export function updateFocusSheetLive(app: App, scope: ParentNode): void {
     const display = formatDuration(habit.seconds);
     if (node && node.textContent !== display) node.textContent = display;
   }
-  for (const goal of state.goals) {
+  for (const goal of activeGoals(state)) {
     const required = goalRequiredSeconds(goal);
     const bar = scope.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
     const barHeight = goalBarHeight(goal);

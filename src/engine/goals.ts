@@ -40,6 +40,10 @@ export function normalizeGoalColor(color: unknown): GoalColor {
 // state.goalFuel and draws down inside the one credit seam
 // (reserves.creditGoalEarning); it is a rule, never a displayed resource.
 
+export function activeGoals(state: GameState): Goal[] {
+  return state.goals.filter((goal) => !goal.retired && goal.condition.habitId !== null);
+}
+
 export function goalCapacity(): number {
   return BALANCE.habitGoalSlots;
 }
@@ -68,7 +72,7 @@ export type GoalTrackerState = "none" | "open" | "complete";
 export function goalTrackerState(state: GameState): GoalTrackerState {
   const habitId = state.activeHabitId;
   if (habitId === null) return "none";
-  const own = state.goals.filter((g) => g.condition.habitId === habitId);
+  const own = activeGoals(state).filter((g) => g.condition.habitId === habitId);
   if (own.length === 0) return "none";
   return own.some((g) => !g.completed) ? "open" : "complete";
 }
@@ -95,7 +99,7 @@ export function occurrenceKeyFor(schedule: GoalSchedule, now: number): string {
 // boundary. Cheap and idempotent; call with the real clock from ticks and
 // session events.
 export function rollGoalOccurrences(state: GameState, now: number): void {
-  for (const goal of state.goals) {
+  for (const goal of activeGoals(state)) {
     const key = occurrenceKeyFor(goal.schedule, now);
     if (goal.occurrenceKey !== key) {
       goal.occurrenceKey = key;
@@ -119,7 +123,7 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
   // Goals are owned by a habit (issue #423): the cross-habit template
   // retired with the shared slot economy.
   if (input.habitId === null) return { ok: false, reason: "Pick the habit this goal tracks." };
-  if (state.goals.filter((g) => g.condition.habitId === input.habitId).length >= goalCapacity()) {
+  if (activeGoals(state).filter((g) => g.condition.habitId === input.habitId).length >= goalCapacity()) {
     return { ok: false, reason: "No free goal slots — remove a goal first." };
   }
   if (!(input.minutes > 0) || input.minutes > 24 * 60) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
@@ -146,7 +150,7 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
 
 export function deleteGoal(state: GameState, id: string): { ok: boolean; reason?: string } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
-  const index = state.goals.findIndex((g) => g.id === id);
+  const index = state.goals.findIndex((g) => !g.retired && g.id === id);
   if (index === -1) return { ok: false, reason: "Goal not found." };
   state.goals.splice(index, 1);
   return { ok: true };
@@ -157,7 +161,7 @@ export function deleteGoal(state: GameState, id: string): { ok: boolean; reason?
 // must be one of the six.
 export function setGoalColor(state: GameState, id: string, color: GoalColor): { ok: boolean; reason?: string } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
-  const goal = state.goals.find((g) => g.id === id);
+  const goal = activeGoals(state).find((g) => g.id === id);
   if (!goal) return { ok: false, reason: "Goal not found." };
   if (normalizeGoalColor(color) !== color) return { ok: false, reason: "Pick one of the six colors." };
   goal.color = color;
@@ -181,6 +185,7 @@ export function goalSummary(state: GameState, goal: Goal): string {
 export function normalizeGoals(goals: Goal[]): void {
   for (const goal of goals) {
     if (!goal || typeof goal !== "object") continue;
+    if (goal.retired !== true) delete goal.retired;
     if (typeof goal.liveSeconds !== "number" || !Number.isFinite(goal.liveSeconds)) goal.liveSeconds = 0;
     goal.color = normalizeGoalColor(goal.color);
   }
@@ -216,7 +221,7 @@ function acceptsPractice(goal: Goal, habitId: string | null): boolean {
 // this seam because it does not advance goals until reconciliation.
 export function secondsUntilGoalCompletion(state: GameState, habitId: string | null): number {
   let earliest = Infinity;
-  for (const goal of state.goals) {
+  for (const goal of activeGoals(state)) {
     if (!acceptsPractice(goal, habitId)) continue;
     const remaining = goalRequiredSeconds(goal) - goal.progressSeconds;
     if (remaining > EPS) earliest = Math.min(earliest, remaining);
@@ -238,7 +243,7 @@ export function secondsUntilGoalCompletion(state: GameState, habitId: string | n
 export function accrueGoalProgress(state: GameState, habitId: string | null, seconds: number, source: "live" | "manual" = "live"): number {
   if (seconds <= EPS) return 0;
   let completions = 0;
-  for (const goal of state.goals) {
+  for (const goal of activeGoals(state)) {
     if (!acceptsPractice(goal, habitId)) continue;
     // Only practice up to completion belongs to this occurrence. Excess
     // time still counts as practice, but cannot change its live share.

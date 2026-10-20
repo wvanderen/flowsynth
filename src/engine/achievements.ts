@@ -127,6 +127,13 @@ const glyph = (body: string): string =>
 // and detection — milestone-first too.
 const MILESTONES: readonly AchievementDef[] = [
   {
+    // Migration disposition (issue #427): the entry is a retired purchase —
+    // the World experiment refunds it and the Mutator surfaces retired with
+    // issue #426. The flag persists in saves as the Mutator layer's inert
+    // data, so owners keep this milestone earned, and no fresh save can
+    // ever earn it: the fallout is two milestone rows that stand
+    // permanently un-crossed on new saves, naming a purchase that no
+    // longer sells. The definition stays so the ledger keeps rendering.
     id: "mutator-entry",
     category: "milestone",
     milestone: true,
@@ -139,6 +146,8 @@ const MILESTONES: readonly AchievementDef[] = [
     progress: (s) => fraction(s.catalogEntryOwned ? 1 : 0, 1),
   },
   {
+    // Migration disposition (issue #427): the join is the entry's retired
+    // sibling — same settlement, same fallout as the milestone above.
     id: "roll-pool-join",
     category: "milestone",
     milestone: true,
@@ -378,8 +387,20 @@ export function achievementById(id: string): AchievementDef | undefined {
   return ACHIEVEMENTS.find((a) => a.id === id);
 }
 
+// Retired feats' ledger names (issue #427's disposition). "Breaking the
+// horizon" (ADR-0042) retired with its Headroom purchase in issue #425:
+// its definition is gone, but the migration keeps every ledger stamp it
+// finds — already-earned feats stay earned, the boost keeps counting the
+// ledger, and history lines keep a human name. The feats page no longer
+// renders the row; the fallout, listed: a migrated save's "N of M feats"
+// header can read N past the rendered list, because the count is the
+// ledger's truth and the retired stamps are the ledger's entries.
+const RETIRED_ACHIEVEMENT_NAMES: Record<string, string> = {
+  "breaking-the-horizon": "Breaking the horizon",
+};
+
 export function achievementName(id: string): string {
-  return ACHIEVEMENTS.find((a) => a.id === id)?.name ?? id;
+  return ACHIEVEMENTS.find((a) => a.id === id)?.name ?? RETIRED_ACHIEVEMENT_NAMES[id] ?? id;
 }
 
 // The single global term (ADR-0014's third leg): each unlocked feat adds
