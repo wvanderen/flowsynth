@@ -3,7 +3,7 @@
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals" | "Habit class" | "Engineer" | "practice-roll meter" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card";
+export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals" | "Habit class" | "Engineer" | "practice-roll meter" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card" | "World layer" | "Charge Blade" | "Charge Column" | "Enemy" | "Penalty" | "Era bonus" | "Reserved cell" | "Cleared" | "Unfed" | "Target priority" | "Hone" | "World tray" | "Claimed frontier" | "Pending claim";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Breather: "Timed post-flow break with profile-scaled production",
   Oscillator: "Pitched module contributing production",
@@ -22,7 +22,6 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Expansion Bays": "Ceiling purchases persist through arete reset",
   "Chord Catalysts": "Discount purchases persist through arete reset",
   "Warp Beam": "Cap purchases persist through arete reset",
-  Headroom: "Extra earnings scale the payout logarithmically",
   nous: "Main progression resource spent on upgrades",
   charge: "Generator output that powers other modules",
   pitch: "The absolute note sounded by a board cell",
@@ -40,6 +39,20 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Governor: "Discounts the flat cadence without changing the opening fill",
   Reed: "Lifts practice-minted tiers within the unlocked cap",
   "Punch card": "Guarantees rare drafts on the pair’s own mint cadence",
+  "World layer": "Enemies give the board’s power a purpose",
+  "Charge Blade": "Granted weapon with stored charge and capped cadence",
+  "Charge Column": "Lifts its module cell’s received charge to adjacent weapons",
+  Enemy: "Authored adversary revealing at its threshold",
+  Penalty: "A discovered enemy’s bounded production reduction",
+  "Era bonus": "The production bonus replacing a defeated enemy’s penalty",
+  "Reserved cell": "An enemy position set aside, identity concealed",
+  Cleared: "A defeated enemy’s face, restored at prestige",
+  Unfed: "A weapon without supply, read on its own face",
+  "Target priority": "A weapon’s between-sessions ordered preference",
+  Hone: "Arete’s persistent attack-power ranks for a weapon type",
+  "World tray": "Where unplaced World occupants wait",
+  "Claimed frontier": "The entitlement already claimed through prestige",
+  "Pending claim": "Arete waiting to bank on the next prestige",
 };
 let catalogTermSeq = 0;
 export function termTipHtml(term: CatalogTerm, label: string = term): string {

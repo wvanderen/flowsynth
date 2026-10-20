@@ -543,7 +543,7 @@ The complete append-only run of session records, browsed in the Time app's list 
 **Miss marker**:
 The muted list-row flag on session records carrying a missed honesty event. Muted grey, never red — accounting, not judgment.
 
-### World progression design (the class layer ships — issue #423; the World layer remains agreed direction)
+### World progression design (the class and World engine layers ship — issues #423 and #425; the World surfaces await their UI brief)
 
 **World layer**:
 The progression layer whose enemies give the module board's production and charge a purpose and resistance. Its encounters run automatically during flow; preparation happens between sessions.
@@ -584,7 +584,16 @@ _Avoid_: fuel bar, goal energy
 A freely switchable specialization through which credited flow time with a selected habit shapes its gameplay contribution. Each habit–class pair retains its own experience and upgrade tree; switching classes preserves that history without transferring it to another habit.
 
 **Claimed frontier**:
-The greatest era-earned nous depth whose cumulative Arete entitlement has already been claimed through prestige. Returning to that depth awards no additional Arete; surpassing it builds a pending claim banked only on prestige.
+The greatest era-earned entitlement whose Arete has already been claimed through prestige. The frontier advances only on prestige, atomically with banking, and always by whole banked steps — which is what makes arbitrary prestige splittings telescope to the single-climb total and leaves the sub-unit fraction pending rather than lost. Returning to a previously reached depth awards nothing; surpassing it builds a pending claim banked only on prestige.
+_Avoid_: high-water mark (the implementation reads entitlement, never depth), banked depth
+
+**Frontier entitlement**:
+The cumulative curve E assigning total Arete entitlement to era-earned nous depth: zero below the World's 1T entry, then the log candidate's `2 + 2·log₁₀(x)` over x = era-earned ÷ 1T — the discontinuous entry grant paying exactly one weapon plus one Column. Fractionally valued, always; increasing with diminishing marginal reward per nous. A hypothesis knob citing `research/world-frontier/findings.md`, pending the re-derivation.
+_Avoid_: claim formula (the pending difference is the claim; the curve is the entitlement), accumulator claim (the retired prestige-count sense)
+
+**Pending claim**:
+The positive difference between the frontier entitlement at the current era score and the claimed frontier — the Arete waiting to bank on the next prestige. It reads only on the prestige door and its confirm; no board-wide or ledger claim figure exists. Banked claims floor to whole Arete; the fraction stays pending, never lost. A zero claim is a valid prestige, confirmed outright.
+_Avoid_: live claim (the retired accumulator sense), claim preview
 
 **Engineer**:
 The first habit class, earning module rolls through credited flow time and developing bounded choices in cadence, draft control, and merge progression. Its class ability is the practice-roll meter itself — practice mints modules. Each habit retains its own Engineer experience, tree allocation, and partial roll progress.
@@ -637,15 +646,15 @@ _Avoid_: blade upgrade, sharpening, power up
 The World layer's unplaced-occupant browser, sharing the tray column's switch like the Mutator tray: click inspects, Place arms, drag places, drag out retrieves; collapsed, it keeps the symbol and stored count.
 _Avoid_: weapon rack, armory, second inventory
 
-The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; numerical tuning awaits simulation and prototype evidence. Existing progression and habit-build entries below describe shipped behavior until implementation.
+The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; the engine and economy of the class layer (#423) and the two-layer World (#425) are shipped. Every World figure — the claim curve, prices, HP and thresholds, cadence, storage — is a hypothesis knob citing `research/world-frontier/findings.md` (commit `4eaac5f`), pending the no-refund recoverability re-derivation; the pinned fixtures in `world.test.ts` mark each as such, and no shipped default claims recoverability. Existing progression and habit-build entries below describe shipped behavior.
 
 ### Progression
 
 **Arete**:
-The resource banked by prestige and by nothing else — never granted before the reset. Each prestige banks a claim that grows with the prestiges performed; once the horizon is broken, score beyond the horizon line raises the claim further, up to a hard cap. It spends on the Arete Catalog.
+The resource banked by prestige and by nothing else — never granted before the reset. Each prestige banks the era's pending claim: the frontier entitlement's positive difference (issue #425), which grows as the era pushes past the claimed frontier and banks nothing at or below it — a zero-claim reset is valid and confirmed. It spends on the Arete Catalog and the Catalog's World section.
 
 **Arete Catalog**:
-The catalog's `◇ Arete` face. Its tab stands open from the start — the face never locks on the prestige count; before the Mutator tree's entry it is the single centered Unlock Mutator Layer purchase screen, shown from the first session as the preview of the future entry with its price muted (Arete arrives only through prestige, so the purchase cannot land early). The entry purchase reveals the sheet's two sections: **Upgrades** (the Expansion Bays, the Chord Catalysts, Headroom, the inert Accelerator placeholder) and **Module Types** (the Mutator Forge pool join, empty once joined, previewed by the module's own face). Purchases are memorized and act in upgrade mode only.
+The catalog's `◇ Arete` face. Its tab stands open from the start — the face never locks on the prestige count; before the Mutator tree's entry it is the single centered Unlock Mutator Layer purchase screen, shown from the first session as the preview of the future entry with its price muted (Arete arrives only through prestige, so the purchase cannot land early). The entry purchase reveals the sheet's two sections: **Upgrades** (the Expansion Bays, the Chord Catalysts, the inert Accelerator placeholder — Headroom retired with the frontier claim, issue #425) and **Module Types** (the Mutator Forge pool join, empty once joined, previewed by the module's own face). The face's World section — the Charge Column and the Hone ladder — joins with the World UI brief. Purchases are memorized and act in upgrade mode only.
 _Avoid_: prestige sheet, prestige tree, skill tree
 
 **Memorized**:
@@ -671,11 +680,11 @@ _Avoid_: Arete pill
 The Arete accumulator's cap — the fixed prestige threshold and the horizon bar's far end, the same every era. Reaching it opens the prestige door; it mints nothing by itself.
 
 **Prestige**:
-The arete reset: once the current era's fill reaches the horizon line, prestige banks the era's Arete claim and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm.
+The arete reset: once the current era's fill reaches the horizon line, prestige banks the era's pending frontier claim (issue #425) and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm; the confirm names the zero-claim case outright.
 _Avoid_: reset (bare — the reset's player-facing name is arete reset; Prestige stays the verb)
 
 **Headroom**:
-The one-time memorized Arete Catalog purchase, standing alone beside the Mutator tree, that lets score beyond the horizon line raise the prestige claim — still banked only on reset. Until it is bought, the claim reads the prestiges performed alone and pushing past the horizon banks nothing extra. The line is the strongest signal the current rig can generate; the purchase opens the range past it.
+Retired with the frontier claim curve (issue #425): the overfill scaling it purchased is subsumed by the frontier entitlement, which pays every era past the claimed frontier from the first eligible reset. The migration brief refunds the purchase in its original currency (#427).
 _Avoid_: Horizon break, break infinity, limit break
 
 **Achievement**:

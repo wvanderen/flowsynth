@@ -1,10 +1,15 @@
 // The Arete accumulator (ADR-0015, ambient per ADR-0038, prestige per
-// ADR-0039/0042): a log-scale fill on the current era's earned nous toward
+// ADR-0039): a log-scale fill on the current era's earned nous toward
 // the horizon line — the fixed prestige threshold, the same every era. The
 // fill rebases at each prestige; lifetime totalEarned stays the monotonic
 // truth underneath (and is what the "Eyes on the horizon" feat reads).
 // Arete mints nowhere: the crossing only opens the door; the reset action
 // banks the claim. The floor and horizon are provisional tuning.
+// The frontier contract (issue #425, ADR-0074 as amended): the claim reads
+// a cumulative entitlement curve over era-earned depth, never the prestige
+// count — the retired accumulator claim (ADR-0042's linear base and the
+// Horizon break's overfill scaling) is subsumed by the curve, and Headroom
+// retires with it.
 import { BALANCE } from "./constants";
 import type { GameState } from "./types";
 
@@ -40,17 +45,41 @@ export function horizonReached(state: GameState): boolean {
   return state.eraEarned >= ARETE_HORIZON;
 }
 
-// The live prestige claim (ADR-0042). The base is linear forever: the nth
-// prestige banks n. Once the horizon break is owned, per-era overfill
-// scales on top — R is the era's earned ν over the horizon line (the bar's
-// own rebased measure, never lifetime; R ≥ 1 under the floored scale), the
-// decade coefficient is log₁₀ by contract, and the product sits under a
-// hard cap. The scale floors at n, so an at-threshold reset banks exactly
-// n; claims round down to whole Arete (rounding is tuning), which also
-// keeps the pre-break claim and the floor identical.
-export function claimOf(state: GameState): number {
-  const n = state.prestiges + 1;
-  if (!state.horizonBroken) return n;
-  const R = Math.max(state.eraEarned / ARETE_HORIZON, 1);
-  return Math.min(Math.floor(n * (1 + Math.log10(R))), BALANCE.horizonBreakClaimCap);
+// The frontier claim curve (issue #425, ADR-0074's claimed-frontier
+// section): a cumulative entitlement E over era-earned nous depth assigns
+// total Arete entitlement to depth. Zero below the World's 1T entry; the
+// log candidate from research/world-frontier/findings.md — 2 + 2·log₁₀(x)
+// over x = era-earned / 1e12 — ships as the baseline, its discontinuous
+// entry grant paying exactly one weapon plus one Column. HYPOTHESIS KNOBS:
+// findings.md is comparison evidence within a short horizon, its own
+// provenance section records that no current-engine calibration was rerun
+// and the no-refund re-derivation (#425's second blocker) had not landed —
+// no shipped default claims recoverability. The curve is increasing with
+// diminishing marginal reward; fractionally valued, always.
+export function frontierEntitlement(eraEarned: number): number {
+  if (eraEarned < BALANCE.world.entryNous) return 0;
+  const depth = Math.log10(eraEarned / BALANCE.world.entryNous);
+  return BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * depth;
+}
+
+// The pending claim (issue #425): the positive difference between the
+// entitlement at the current era score and the entitlement already banked
+// against — the claimed frontier, advanced only on prestige, atomically
+// with banking. Fractional entitlement is preserved internally so rounding
+// neither destroys progress nor the partition-independence the simulation
+// proved: claims telescope because the frontier advances by whole banked
+// steps (an integer), so floor sums recombine exactly. Repeating a
+// previously reached depth leaves at most the sub-unit fraction pending —
+// it banks nothing. This figure reads only on the prestige door and its
+// confirm; no board-wide or ledger claim figure exists.
+export function pendingClaimOf(state: GameState): number {
+  return Math.max(0, frontierEntitlement(state.eraEarned) - state.world.frontier);
+}
+
+// The bankable claim: whole Arete, floored from the pending figure at the
+// moment of banking. The frontier then advances by exactly this whole step
+// — the invariant that makes arbitrary prestige splittings telescope to
+// the single-climb total (world.test.ts re-derives it within 1e-10).
+export function bankableClaimOf(state: GameState): number {
+  return Math.floor(pendingClaimOf(state));
 }

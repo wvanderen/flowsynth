@@ -1,5 +1,5 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf } from "./constants";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf, WORLD_ENEMIES } from "./constants";
 import { lifetimeBreatherSecondsOf, baseProductionOf, boosterResponseOf, breatherResponseOf, chargeResponseOf, chordResponseOf, restPhaseKeyOf, restWarmthFactorOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
@@ -9,6 +9,7 @@ import { activeHabit } from "./habits";
 import { baseBuildFactors, amplifyFactors } from "./builds";
 import { discoveryBoostOf, discoveryCount, syncChordDiscoveries } from "./library";
 import { summaryTermsOf } from "./allocation";
+import { worldFactorOf } from "./world";
 import { adjacent, sameHex } from "./hex";
 import { octaveRowOf } from "./lattice";
 import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "./types";
@@ -618,6 +619,12 @@ export function computeRates(
 
   const achievementBoost = achievementBoostOf(state) * (1 + factors.achievementBoost);
   const discoveryBoost = discoveryBoostOf(state);
+  // The World layer's remaining-production factor (issue #425): the
+  // discovered enemies' penalties and the defeated enemies' era bonuses,
+  // multiplied. It lands on every oscillator's final value — nous only,
+  // never the Forge meters or charge — and divides back out of the
+  // empowerment leg below, so the breakdown multiplies out exactly.
+  const worldFactor = worldFactorOf(state);
   // The temporal profiles' shared basis (issue #372): the phase this pass
   // speaks for. The advance walk re-syncs at every step boundary, so each
   // production span reads one constant factor — and the memo's fingerprint
@@ -793,10 +800,10 @@ export function computeRates(
     // its own terms. The Standby's deepening (issue #416) rides the same
     // read: the lifetime completed count is the one input it adds.
     const breatherResponse = state.mode === "breather" ? breatherResponseOf(module.type, state.breathersCompleted) : 1;
-    const value = silent ? 0 : base * (1 + localBonus) * chargeTerm * achievementBoost * discoveryBoost * breatherResponse;
+    const value = silent ? 0 : base * (1 + localBonus) * chargeTerm * achievementBoost * discoveryBoost * breatherResponse * worldFactor;
     if (!silent) {
-      synthsLeg += base;
-      boosters += base * localBonus;
+      synthsLeg += base * worldFactor;
+      boosters += base * localBonus * worldFactor;
       rate += value;
     }
     contributions.set(module.id, {
@@ -819,10 +826,11 @@ export function computeRates(
   // The boosts multiply every module's final value; the empowerment leg
   // divides them back out so the breakdown multiplies out exactly:
   // rate = (synths + boosters) × empowerment × achievementBoost ×
-  // discoveryBoost. The Blaster's conversion rides inside its value, so a
-  // converting Blaster reads as empowerment on its own terms — the leg
-  // split stays exact.
-  const empowerment = amplitude > EPS ? rate / (amplitude * achievementBoost * discoveryBoost) : 1;
+  // discoveryBoost × worldFactor. The Blaster's conversion rides inside its
+  // value, so a converting Blaster reads as empowerment on its own terms —
+  // the leg split stays exact.
+  const empowerment =
+    amplitude > EPS ? rate / (amplitude * achievementBoost * discoveryBoost * worldFactor) : 1;
 
   return {
     synths: synthsLeg,
@@ -832,6 +840,7 @@ export function computeRates(
     empowerment,
     achievementBoost,
     discoveryBoost,
+    worldFactor,
     ritualAmplification: rawAmplification,
     rate,
     forgeRate,
@@ -948,6 +957,14 @@ function allocationFingerprint(state: GameState): string {
   parts.push(`f:${Object.keys(state.achievements).length}`);
   parts.push(`d:${discoveryCount(state)}`);
   parts.push(`c:${state.capacityBought}:${state.capacityCeilings}`);
+  // The World layer's remaining-production factor (issue #425): the
+  // enemies' discovered/alive bits are the factor's whole input — a reveal
+  // or a kill must re-solve, while steady combat damage between the two
+  // must not.
+  for (const def of WORLD_ENEMIES) {
+    const live = state.world.enemies[def.key];
+    parts.push(`w:${def.key}:${live?.discovered ? 1 : 0}:${live && live.hp > EPS ? 1 : 0}`);
+  }
   // The temporal profiles' phase (issue #372): the pass's clock factor
   // moves at step boundaries, not every second, so the quantized phase —
   // never the raw clock — keeps consecutive ticks on one solve while a

@@ -33,10 +33,12 @@ import type { GameState, MutatorFamily, MutatorInstance, Rarity } from "./types"
 // all of it surviving prestige intact.
 
 // A fresh state standing just past its first prestige: the Catalog's lock
-// is the first Arete reset, so every Arete question starts here.
+// is the first Arete reset, so every Arete question starts here. The era
+// jumps to the World entry (issue #425) — the first claim banks two Arete;
+// a bare-horizon reset would be zero-claim.
 function banked(): GameState {
   const s = fresh();
-  s.eraEarned = ARETE_HORIZON;
+  s.eraEarned = BALANCE.world.entryNous;
   prestige(s);
   return s;
 }

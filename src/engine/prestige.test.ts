@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { breakHorizon, endSession, prestige, startSession } from "./actions";
-import { ARETE_HORIZON, claimOf, horizonReached } from "./accumulator";
+import { endSession, prestige, startSession } from "./actions";
+import { ARETE_HORIZON, horizonReached } from "./accumulator";
 import { BALANCE } from "./constants";
 import { advance } from "./advance";
 import { fresh, give, plainHabit } from "./fixtures";
@@ -31,7 +31,9 @@ describe("the prestige action", () => {
     s.eraEarned = ARETE_HORIZON;
     expect(horizonReached(s)).toBe(true);
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(1);
+    // Below the World entry the frontier curve pays nothing (issue #425):
+    // the reset is valid and zero-claim.
+    expect(s.arete).toBe(0);
     expect(s.eraEarned).toBe(0);
   });
 
@@ -45,18 +47,20 @@ describe("the prestige action", () => {
     expect(prestige(ready).ok).toBe(true);
   });
 
-  it("banks the live claim: the nth reset banks n, and no other code path grants Arete", () => {
+  it("banks the live claim: production between resets banks nothing, and no other code path grants Arete", () => {
     const s = atHorizon();
     prestige(s);
-    expect(s.arete).toBe(1);
+    expect(s.arete).toBe(0);
     // Production past the horizon banks nothing on its own.
     startSession(s, null);
     advance(s, 600);
     endSession(s, 5_000);
-    expect(s.arete).toBe(1);
-    s.eraEarned = ARETE_HORIZON;
+    expect(s.arete).toBe(0);
+    // The frontier claim pays only on prestige — push past the first
+    // reset's depth and the next door banks the difference.
+    s.eraEarned = BALANCE.world.entryNous * 10;
     prestige(s);
-    expect(s.arete).toBe(3);
+    expect(s.arete).toBe(4);
   });
 
   it("resets module levels to base while keeping every owned module", () => {
@@ -192,11 +196,14 @@ describe("the prestige action", () => {
     const loaded = deserialize(serialize(s, 5_000));
     expect(loaded.error).toBeUndefined();
     const m = loaded.state!;
-    expect(m.arete).toBe(1);
+    expect(m.arete).toBe(0);
     expect(m.prestiges).toBe(1);
     expect(m.eraEarned).toBe(0);
     expect(m.totalEarned).toBe(ARETE_HORIZON);
     expect(m.nous).toBe(BALANCE.openingGrant);
+    // The World surface rides the save (issue #425).
+    expect(m.world.frontier).toBe(0);
+    expect(m.world.starterWeaponGranted).toBe(false);
   });
 
   it("an upgraded module's next level prices from base again", () => {
@@ -208,45 +215,5 @@ describe("the prestige action", () => {
   });
 });
 
-describe("post-break banking (ADR-0042, issue #200)", () => {
-  function brokenAt(overfill: number): GameState {
-    const s = fresh();
-    s.arete = BALANCE.horizonBreakCost;
-    expect(breakHorizon(s).ok).toBe(true);
-    s.eraEarned = ARETE_HORIZON * overfill;
-    return s;
-  }
-
-  it("an at-threshold reset banks exactly n; a decade of overfill multiplies by two", () => {
-    const s = brokenAt(1);
-    expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(1);
-    // The next era pushed one decade past the line: n = 2 doubles to 4.
-    s.eraEarned = ARETE_HORIZON * 10;
-    expect(claimOf(s)).toBe(4);
-    expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(5);
-  });
-
-  it("prestige and immediately re-resetting banks n, not a decade-multiplied claim", () => {
-    // The acceptance check: the claim reads the bar's own rebased measure —
-    // the decade's overfill died with the era that earned it.
-    const s = brokenAt(1_000_000);
-    expect(prestige(s).ok).toBe(true);
-    s.eraEarned = ARETE_HORIZON;
-    expect(claimOf(s)).toBe(2);
-  });
-
-  it("nothing banks beyond the cap even from a maximally juiced era", () => {
-    const s = brokenAt(1e30);
-    expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(BALANCE.horizonBreakClaimCap);
-  });
-
-  it("the break round-trips the save cleanly", () => {
-    const s = brokenAt(1);
-    const loaded = deserialize(serialize(s, 5_000));
-    expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.horizonBroken).toBe(true);
-  });
-});
+// The frontier claim's banking, the starter grant, and the World reset
+// boundary carry their own suites in world.test.ts (issue #425).

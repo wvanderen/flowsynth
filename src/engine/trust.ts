@@ -3,6 +3,7 @@ import { advance, advanceBreather, earnNous, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
 import { accrueClassDevelopment } from "./classes";
 import { accrueGoalFuel, accrueGoalProgress } from "./goals";
+import { syncWorldDiscoveries } from "./world";
 import type { Rng } from "./rolls";
 import type { AdvanceResult, GameState, HonestyOutcome, SessionAccounting } from "./types";
 
@@ -182,6 +183,11 @@ export function resolveHonestyReport(
     // The bucket's nous banks through the one production-credit seam.
     earnNous(state, accounting.bucketNous);
     session.earned += accounting.bucketNous;
+    // The bucket's landing is an era-earned move outside the walk (issue
+    // #425): every threshold it crossed discovers together, here — the
+    // credited minutes themselves never fight, so this is discovery only,
+    // never combat.
+    syncWorldDiscoveries(state);
   }
   accounting.events.push({ awaySeconds: pool, outcome });
   accounting.poolSeconds = 0;

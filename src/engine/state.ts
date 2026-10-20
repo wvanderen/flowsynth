@@ -1,6 +1,6 @@
-import { BALANCE, isOscillatorType } from "./constants";
+import { BALANCE, isOscillatorType, WORLD_ENEMIES } from "./constants";
 import { hex } from "./hex";
-import type { ChordDiscovery, GameState, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity } from "./types";
+import type { ChordDiscovery, GameState, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity, WeaponCopy, WeaponType, WorldColumn, WorldState } from "./types";
 
 // The opening board (board-redesign spec §8, ADR-0022): the three-cell
 // opening footprint is retained — its geometry, not its Carrier rationale.
@@ -52,7 +52,7 @@ export function createInitialState(): GameState {
     unlockedRows: [],
     catalogEntryOwned: false,
     rollPoolJoined: false,
-    horizonBroken: false,
+    world: freshWorld(),
     capacityBought: 0,
     capacityCeilings: 0,
     capacityDiscounts: 0,
@@ -172,4 +172,119 @@ export function createMutator(state: GameState, family: MutatorFamily, rarity: R
     rarity,
     pos: null,
   };
+}
+
+// The World layer's fresh surface (issue #425): an unclaimed frontier, the
+// once-ever starter flag down, empty occupant trays, zero Hone ranks, and
+// every authored enemy standing reserved at its fixed stats. Enemies key to
+// the authored roster — the table is code, the save only live state.
+// `freshEnemyStates` is the restore shape too: prestige resets the
+// encounters to exactly this map.
+export function freshEnemyStates(): WorldState["enemies"] {
+  return Object.fromEntries(WORLD_ENEMIES.map((def) => [def.key, { discovered: false, hp: def.maxHp }]));
+}
+
+export function freshWorld(): WorldState {
+  return {
+    frontier: 0,
+    starterWeaponGranted: false,
+    columns: [],
+    weapons: [],
+    hone: { chargeBlade: 0 },
+    enemies: freshEnemyStates(),
+  };
+}
+
+// A Charge Column copy waits in the World tray (pos = null) until placed
+// over an owned cell; persistence rides the reset contract.
+export function createWorldColumn(state: GameState): WorldColumn {
+  return { id: newModuleId(state), pos: null };
+}
+
+// A weapon copy waits in the World tray: its store and cadence clock start
+// empty, and its target priority starts unconfigured — the authored roster
+// order resolves until the player picks between sessions (issue #425).
+export function createWeapon(state: GameState, type: WeaponType): WeaponCopy {
+  return {
+    id: newModuleId(state),
+    type,
+    pos: null,
+    store: 0,
+    cooldown: 0,
+    targetPriority: [],
+  };
+}
+
+// Load-time normalization for the World layer's surface (issue #425): a
+// save written before the World layer carries none of it — exactly what a
+// fresh shape owes. Corrupt figures re-default; unknown enemy keys drop;
+// missing authored keys fill from the table; an overfilled store clamps at
+// the cap it could never exceed; a stale cadence clock folds into one
+// interval so it can never wedge the walk.
+function hexOrTray(raw: unknown): { q: number; r: number } | null {
+  const pos = raw as { q?: unknown; r?: unknown } | null | undefined;
+  return pos && typeof pos.q === "number" && typeof pos.r === "number" ? { q: pos.q, r: pos.r } : null;
+}
+
+export function normalizeWorld(raw: unknown): WorldState {
+  const world = freshWorld();
+  if (typeof raw !== "object" || raw === null) return world;
+  const shape = raw as Partial<WorldState> & Record<string, unknown>;
+  if (typeof shape.frontier === "number" && Number.isFinite(shape.frontier) && shape.frontier > 0) {
+    world.frontier = shape.frontier;
+  }
+  if (shape.starterWeaponGranted === true) world.starterWeaponGranted = true;
+  if (Array.isArray(shape.columns)) {
+    for (const column of shape.columns) {
+      if (typeof column !== "object" || column === null) continue;
+      const candidate = column as Partial<WorldColumn> & Record<string, unknown>;
+      if (typeof candidate.id !== "string") continue;
+      world.columns.push({ id: candidate.id, pos: hexOrTray(candidate.pos) });
+    }
+  }
+  if (Array.isArray(shape.weapons)) {
+    for (const weapon of shape.weapons) {
+      if (typeof weapon !== "object" || weapon === null) continue;
+      const candidate = weapon as unknown as Record<string, unknown>;
+      if (typeof candidate.id !== "string") continue;
+      // The first experiment ships one weapon type (issue #425); the
+      // per-type schema is the seam a second joins, so the load read is
+      // per-type already.
+      const type: WeaponType = "chargeBlade";
+      const store = typeof candidate.store === "number" && Number.isFinite(candidate.store) && candidate.store > 0 ? candidate.store : 0;
+      const cooldown = typeof candidate.cooldown === "number" && Number.isFinite(candidate.cooldown) && candidate.cooldown > 0 ? candidate.cooldown : 0;
+      const priority = Array.isArray(candidate.targetPriority)
+        ? candidate.targetPriority.filter((key): key is string => typeof key === "string" && WORLD_ENEMIES.some((def) => def.key === key))
+        : [];
+      world.weapons.push({
+        id: candidate.id,
+        type,
+        pos: hexOrTray(candidate.pos),
+        store: Math.min(store, BALANCE.world.storageCap),
+        cooldown: cooldown % BALANCE.world.attackCadenceSeconds,
+        targetPriority: [...new Set(priority)],
+      });
+    }
+  }
+  if (typeof shape.hone === "object" && shape.hone !== null) {
+    for (const key of Object.keys(world.hone) as WeaponType[]) {
+      const rank = (shape.hone as Record<string, unknown>)[key];
+      if (typeof rank === "number" && Number.isFinite(rank) && rank > 0) {
+        world.hone[key] = Math.min(Math.floor(rank), BALANCE.world.honeCosts.length);
+      }
+    }
+  }
+  if (typeof shape.enemies === "object" && shape.enemies !== null) {
+    for (const [key, value] of Object.entries(shape.enemies as Record<string, unknown>)) {
+      const def = WORLD_ENEMIES.find((entry) => entry.key === key);
+      if (!def || typeof value !== "object" || value === null) continue;
+      const candidate = value as Record<string, unknown>;
+      const hp = typeof candidate.hp === "number" && Number.isFinite(candidate.hp) ? candidate.hp : def.maxHp;
+      world.enemies[key] = {
+        discovered: candidate.discovered === true,
+        hp: Math.min(Math.max(hp, 0), def.maxHp),
+      };
+    }
+  }
+  return world;
 }

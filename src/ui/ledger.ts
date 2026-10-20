@@ -5,7 +5,7 @@
 // board's lower edge, and the phone game-info strip carrying the same
 // resource reads alone. The session read has left the ledger; the console
 // carries no readouts.
-import { accumulatorFill, claimOf, horizonReached } from "../engine/accumulator";
+import { accumulatorFill, bankableClaimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { capacityCeiling } from "../engine/capacity";
 import { catalogOpen } from "../engine/catalog";
@@ -473,7 +473,7 @@ export function renderHorizonBar(app: App): void {
   // (its claim lives in the label), or the locked readout during a session.
   // The fill's clip width and the label's percentage patch in place every
   // tick, so nothing here ever churns.
-  const key = reached ? `door:${state.mode}:${claimOf(state)}` : "under";
+  const key = reached ? `door:${state.mode}:${bankableClaimOf(state)}` : "under";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.classList.toggle("reached", reached);
@@ -497,17 +497,12 @@ export function renderHorizonBar(app: App): void {
     host.innerHTML = `${horizonSvg()}${
       reached
         ? state.mode === "upgrade"
-          ? `<button class="prestige-door" id="prestige-door" title="Begins the next era">Prestige and Claim <b class="mono">${claimOf(state)}</b> Arete</button>`
+          ? `<button class="prestige-door" id="prestige-door" title="Begins the next era">Prestige and Claim <b class="mono">${bankableClaimOf(state)}</b> Arete</button>`
           : `<span class="horizon-state locked">prestige available — enter upgrade mode</span>`
         : `<span class="horizon-word">Arete <b data-live="h-word"></b></span>`
     }`;
     app.listen(document.getElementById("prestige-door"), "click", () => app.openPrestigeConfirm());
   }
-  // The break beat (ADR-0042, issue #200): the purchase's one visual, a
-  // flare on the bar it plays once and only once. Evaluated every render so
-  // the class drops when the window closes; a class that outlives the
-  // animation is inert.
-  host.classList.toggle("break-beat", app.breakBeatUntil > Date.now());
   const fill = accumulatorFill(state.eraEarned);
   const clip = host.querySelector<SVGRectElement>('[data-live="h-clip"]');
   if (clip) {

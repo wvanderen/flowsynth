@@ -8,6 +8,7 @@ import { addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
 import { accrueGoalProgress, accrueGoalFuel, secondsUntilGoalCompletion } from "./goals";
 import { accrueClassDevelopment } from "./classes";
+import { advanceWorldCharge, advanceWorldCombat, syncWorldDiscoveries, worldBoundarySeconds } from "./world";
 import type { AdvanceResult, GameState, ModuleInstance, RateSnapshot } from "./types";
 
 // Where a span's produced nous lands and whether it credits practice
@@ -116,32 +117,41 @@ export function advance(
   if (!session) return result;
 
   // Walk spans iteratively: recurring cycle boundaries must not grow the
-  // call stack during multi-day away catch-up, even with empty reserves.
+  // call stack during multi-day away catch-up, even with empty reserves —
+  // and, with the World layer (issue #425), even while weapons fire and
+  // enemies fall across the whole gap.
   while (seconds > 0) {
     const spanResult: AdvanceResult = {
       nousEarned: 0, rollsBanked: 0, rollsFlow: 0,
       rollsForge: 0, rollsMutator: 0, goalsCompleted: 0,
     };
     // The board is locked during flow, so the rate is constant across the
-    // step — except at reserve depletion, live goal completion, or a
-    // temporal profile's step boundary. A generator whose
-    // remaining duration runs out mid-step splits there, so the drained
-    // generator stops crediting the remainder (the rate really does change
-    // mid-step, once — the loop walks every boundary).
+    // step — except at reserve depletion, live goal completion, a
+    // temporal profile's step boundary, or a World boundary (issue #425):
+    // a generator whose remaining duration runs out mid-step splits there,
+    // so the drained generator stops crediting the remainder (the rate
+    // really does change mid-step, once — the loop walks every boundary).
     // The reserves are charge quantity per module (issue #371): delivery
     // consumes quantity at the generator's emission rate, so the earliest
     // emptying one — remaining quantity ÷ strength — is one split boundary.
     // Every generator drains by the same rule, and the temporal walk
-    // (issue #372) splits at its authored marks beside them.
+    // (issue #372) splits at its authored marks beside them. The snapshot
+    // leads the boundary read because the World legs need its rate: the
+    // discovery crossing is measured in produced nous.
+    const snapshot = syncRates(state, true);
     let { liveGenerators, earliest } = boardBoundaries(state);
     // A live goal completion banks reserve mid-span, so it is another rate
     // boundary even when every generator starts empty.
     if (sink === "live") earliest = Math.min(earliest, secondsUntilGoalCompletion(state, state.activeHabitId));
-    // The temporal profiles' step boundaries (issue #372): a warmed
-    // Afterglow or a cycling Pulsewell changes the rate exactly at its
-    // authored marks on the shared session clock, so the walk splits there
-    // too — each span then holds one constant factor, and equivalent
-    // advancement intervals deliver equivalently whatever the step shape.
+    // The World boundaries (issue #425, priorities 3 and 5): the era's
+    // first threshold crossing — the reveal — and the next armed weapon's
+    // attack tick are rate-relevant boundaries exactly like reserve
+    // depletion and temporal marks. Both are trusted-time legs: provisional
+    // spans hold fire, and their production never touches eraEarned, so
+    // neither boundary can move under them.
+    if (sink === "live") {
+      earliest = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
+    }
     const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;
 
     // The board is locked during flow, so the rate is constant across the
@@ -156,8 +166,9 @@ export function advance(
     // the selected whole chords only, recomputed every step so charge,
     // upgrades, and placement reselections land. The retention hint rides
     // the state and is written back here.
-    const snapshot = syncRates(state, true);
     const gained = snapshot.rate * spanSeconds;
+    // Supply earned during this span is available at its ending attack tick.
+    advanceWorldCharge(state, snapshot, spanSeconds);
     if (sink === "provisional") {
       // Provisional nous never touches the balance: it waits in the bucket
       // for the honesty report to bank or drop it in one move (§2), and the
@@ -202,6 +213,14 @@ export function advance(
       // nothing class-side.
       spanResult.rollsFlow += accrueClassDevelopment(state, spanSeconds, rng);
       spanResult.rollsBanked += spanResult.rollsFlow;
+      // The World's combat leg (issue #425, priorities 4–5): the ticks the
+      // span crossed resolve at its edge — the boundary above cut the span
+      // at the next firing tick, so a kill lands exactly where the
+      // remainder's production factor changes. Provisional spans never
+      // reach this: rejected practice retains no damage, victories, or
+      // bonuses, with no retraction machinery and no pending combat ledger.
+      advanceWorldCombat(state, spanSeconds);
+      syncWorldDiscoveries(state);
     }
     // The session-tick check (ADR-0015): charge exists only live in flow, so
     // the tick that holds the snapshot reports whether any module received
@@ -243,11 +262,18 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     };
     // The same boundary walk as flow, goals aside — a breather advances no
     // goal: reserve depletion, temporal marks, and lifetime rest marks are the mid-step
-    // rate changes the phase can meet.
-    const { liveGenerators, earliest } = boardBoundaries(state);
-    const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;
+    // rate changes the phase can meet — and the World's own (issue #425):
+    // the breather is trusted time, so enemy reveals and weapon ticks
+    // split its spans exactly as flow's do, and its combat fights beside
+    // its production with no class accrual, exactly as practice legs are
+    // absent here.
     const snapshot = syncRates(state, true);
+    const { liveGenerators, earliest } = boardBoundaries(state);
+    const boundary = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
+    const spanSeconds = boundary !== Infinity && boundary + EPS < seconds ? boundary : seconds;
     const gained = snapshot.rate * spanSeconds;
+    // Supply earned during this span is available at its ending attack tick.
+    advanceWorldCharge(state, snapshot, spanSeconds);
     // Pre-trusted time banks straight onto the balance — the counter-image
     // of the provisional sink (docs/breather-spec.md §4).
     earnNous(state, gained);
@@ -258,6 +284,8 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     // No creditedSeconds, no habit, no goal, no flow meter: a breather
     // credits nothing (spec §6 — the honesty system governs practice
     // claims, and a breather claims nothing).
+    advanceWorldCombat(state, spanSeconds);
+    syncWorldDiscoveries(state);
     discoverBoard(state, snapshot);
     result = sumResults(result, spanResult);
     seconds -= spanSeconds;
