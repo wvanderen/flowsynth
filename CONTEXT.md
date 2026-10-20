@@ -565,6 +565,46 @@ _Avoid_: starter perk, bonus ability, class-skill roll (the superseded Engineer-
 The first weapon type of the World layer's first experiment: a weapon copy storing charge up to a capped quantity, spending a fixed amount per attack on an adjacent discovered, undefeated enemy, on a capped attack cadence; Arete upgrades its type-level attack power persistently. Granted by the first World-eligible claim, never sold; copies beyond the granted one mint through the class roll paths — the module path until Blacksmith's weapon path exists. The World layer's combat vocabulary is deliberately non-musical: the board's modules carry the musical register, and World occupants name their function — the Charge Column, the Charge Blade — leaving room for later combat families such as armor, spells, and summons.
 _Avoid_: Arpeggiator (the pre-naming placeholder)
 
+**Charge Column**:
+The World layer's lift occupant: one World cell over an owned module cell, lifting the charge received at that module cell without draining it. The lifted supply is conserved — split equally among adjacent consumers with available storage, overflow redistributed to consumers still able to accept — and Columns never relay to Columns in the first experiment. Copies place and relocate free between sessions and persist through prestige; additional copies are bought on the Arete Catalog's World section, the entry being the Column itself and never memorized — persistence rides the reset contract, not the memorized upgrade family. Its face carries the lifted supply figure alone; an unfed consumer reads unfed on its own face.
+_Avoid_: relay (the board's charge-conduit sense), battery
+
+**Enemy**:
+The World layer's authored adversary: occupying an authored World position, applying its penalty until defeated. Discovered automatically at its progression threshold, attacked through an adjacent owned cell, restored at prestige. The player-facing word on every surface; encounter stays the system term for the authored position and its era reward and never renders. Its face reads remaining HP while undefeated; the HP gloss is implementation copy — weapon hits reduce it, zero clears the cell.
+_Avoid_: encounter (on any surface), hostile, mob
+
+**Penalty**:
+A discovered enemy's bounded production reduction, multiplying its remaining-production factors. First-experiment penalties touch nous production alone, leaving charge generation, routing, and combat functional. Defeat replaces it with the era bonus.
+_Avoid_: debuff, curse, malus
+
+**Era bonus**:
+The modest era-local production bonus replacing a defeated enemy's penalty; prestige restores the enemy and removes the bonus, so lasting strength comes from Arete purchases, never from the bonus.
+_Avoid_: defeat reward, clear bonus
+
+**Reserved cell**:
+An enemy position's pre-discovery state: the cell stands visibly set aside with its identity concealed, silent until discovery activates its penalty. Reserved is the state's word on every surface.
+_Avoid_: claimed (the Arete claim family owns the word), occupied (owned cells' modules)
+
+**Unfed**:
+A weapon's persistent without-supply state, read on its own face: placement-determined supply is the mechanic the board shows, so the state is visible at a glance and never a tooltip apology.
+_Avoid_: starved, out of charge
+
+**Cleared**:
+A defeated enemy's face state: the encounter and its era bonus remain, the bonus engraved; the enemy returns at prestige. Defeat itself is silent — no broadcast, no combat log — the face flipping with a brief local accent.
+_Avoid_: defeated (as the face's word), vanquished
+
+**Target priority**:
+A weapon's between-sessions control: an ordered preference among eligible enemies — discovered, undefeated, adjacent — defaulting to the authored sequence order when unconfigured. Locks with everything else in flow.
+_Avoid_: auto-target, target lock
+
+**Hone**:
+The Arete Catalog's World section's weapon-power family: one entry per weapon type, each bought per rank, persistently upgrading that type's attack power for every copy. The first entry is the Charge Blade's; later weapon types join as entries.
+_Avoid_: blade upgrade, sharpening, power up
+
+**World tray**:
+The World layer's unplaced-occupant browser, sharing the tray column's switch like the Mutator tray: click inspects, Place arms, drag places, drag out retrieves; collapsed, it keeps the symbol and stored count.
+_Avoid_: weapon rack, armory, second inventory
+
 The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; numerical tuning awaits simulation and prototype evidence. Existing progression and habit-build entries below describe shipped behavior until implementation.
 
 ### Progression
