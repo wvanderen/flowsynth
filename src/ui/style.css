@@ -2380,11 +2380,6 @@ body.hex-detail-open .upgrade-all {
   padding-bottom: 4px;
   border-bottom: 1px solid var(--line-soft);
 }
-.hex-detail-mutator-line {
-  margin: 0;
-  font: 12px/1.5 var(--font-sans);
-  color: var(--ink);
-}
 .hex-detail-section .profile-grades { flex-wrap: wrap; justify-content: flex-start; }
 /* The context map (ADR-0072): the miniature heading the column — the
    opened hex in the firm selected marker, its active chords as hue links
@@ -3120,10 +3115,6 @@ body.hex-detail-open .upgrade-all {
 .mutator-forge-block { margin-top: 14px; }
 .mut-candidates { display: flex; gap: 14px; justify-content: center; }
 .mut-candidate .candidate-effect { color: var(--muted); }
-.mut-combine-pair { display: flex; align-items: center; gap: 12px; }
-.mut-combine-tile { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; }
-.mut-combine-tile svg { width: 76px; color: var(--arete); }
-.mut-combine-tile small { font-size: 10px; color: var(--muted); }
 
 .config-label { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
 
@@ -4272,7 +4263,6 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   background: var(--panel);
   overflow: hidden;
 }
-.mutator-tray.inventory-browser.drag-over { background: var(--charge); }
 .modal-backdrop.peek-tray .modal { padding: 1px; border: 0; background: var(--line-strong); overflow: hidden; }
 .inventory-sheet-frame { padding: var(--modal-pad); background: var(--panel); max-height: min(82vh, 718px); overflow-y: auto; }
 .modal-backdrop.peek-tray .modal.drag-over { background: var(--charge); }

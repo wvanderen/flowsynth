@@ -82,7 +82,7 @@ export function layerLegendHtml(app: App): string {
   // register for the arrived one — never both at once. World leads the
   // pair. The locked click previews the reveal in figures; the click never
   // flips and never opens a sheet — the World arrives, it is not bought.
-  const preview = worldRevealPreview(state);
+  const preview = worldRevealPreview();
   return `<button class="legend-symbol${worldSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="world" aria-pressed="${worldSelected}" aria-label="${locked ? `World layer — locked; reveals at ${preview}` : "World layer"}" title="${locked ? `World — reveals at ${preview}` : "World — enemies, weapons, Columns"}">${locked ? LOCK_MARK : LAYER_WORLD_SVG}</button>
     <button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>`;
 }
@@ -93,7 +93,7 @@ const LOCK_MARK = lockMarkSvg("world-tab-lock");
 
 // The locked World face's preview line: the reveal's threshold in figures
 // — the click's whole answer, in flow as in upgrade.
-export function worldRevealPreview(_state: GameState): string {
+export function worldRevealPreview(): string {
   return `${formatNumber(BALANCE.world.entryNous)} era-earned`;
 }
 
@@ -414,6 +414,10 @@ export function worldTileSvg(kind: "weapon" | "column"): string {
   return `<svg viewBox="-70 -70 140 140" aria-hidden="true" style="color: var(--world)">${worldTileInner(kind)}</svg>`;
 }
 
+// The collapsed tray's one mark: the plate symbol + the stored count — the
+// inventory's own collapsed grammar.
+const WORLD_TRAY_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" style="width:17px;height:17px"><rect x="4" y="4" width="16" height="16"/><path d="M8.5 15.5v-4.2l3.5-3.3 3.5 3.3v4.2z"/></svg>`;
+
 function weaponTrayRead(state: GameState, weapon: WeaponCopy): string {
   return `⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap} · ATK ${formatInt(attackPowerOf(state, weapon.type))}`;
 }
@@ -506,7 +510,7 @@ export function renderWorldTrayContent(app: App, host: HTMLElement, sheet: boole
     || `<p class="inventory-empty">No stored World occupants.</p>`
   }</div>`;
   const subview = ui.worldTray.inspect !== null ? worldInspectHtml(app) : browse;
-  host.innerHTML = `${sheet ? "" : '<div class="inventory-frame inst-panel-face">'}<div class="inventory-head"><button data-world-collapse aria-expanded="${!collapsed}" aria-label="${sheet ? "Close tray" : collapsed ? "Expand tray" : "Collapse tray"}, ${count} stored">World tray&nbsp;<span class="mono">${count}</span>${collapsed ? "" : `<span aria-hidden="true">${sheet ? "×" : "−"}</span>`}</button></div>${collapsed ? "" : `<div class="inventory-body">${subview}</div>`}${sheet ? "" : "</div>"}`;
+  host.innerHTML = `${sheet ? "" : '<div class="inventory-frame inst-panel-face">'}<div class="inventory-head"><button data-world-collapse aria-expanded="${!collapsed}" aria-label="${sheet ? "Close tray" : collapsed ? "Expand tray" : "Collapse tray"}, ${count} stored">${collapsed ? WORLD_TRAY_ICON : "World tray"}&nbsp;<span class="mono">${count}</span>${collapsed ? "" : `<span aria-hidden="true">${sheet ? "×" : "−"}</span>`}</button></div>${collapsed ? "" : `<div class="inventory-body">${subview}</div>`}${sheet ? "" : "</div>"}`;
   host.querySelectorAll<HTMLElement>("button").forEach((node) => {
     const attr = node.getAttributeNames().find((name) => name.startsWith("data-"));
     node.dataset.worldFocus = attr ? `${attr}:${node.getAttribute(attr)}` : node.getAttribute("aria-label") ?? "";
@@ -559,7 +563,7 @@ export function renderWorldPill(app: App): void {
     return;
   }
   host.hidden = false;
-  host.innerHTML = `Place ${app.ui.worldArmedKind === "column" ? COLUMN_WORD : WORLD_META.chargeBlade.name} · free<span class="mut-esc">Cancel · Esc</span>`;
+  host.innerHTML = `Place ${app.ui.worldArmedKind === "column" ? COLUMN_WORD : WORLD_META.chargeBlade.name} · free<span class="pill-esc">Cancel · Esc</span>`;
   if (host.dataset.bound) return;
   host.dataset.bound = "true";
   app.listen(host, "click", () => app.worldCancelGestures());
@@ -717,7 +721,7 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
   if (!worldEntered(state)) {
     return {
       chassis: `<svg class="world-stack locked" viewBox="-70 -70 140 140" aria-hidden="true">${plate("locked")}<g class="world-glyph dimmed" transform="translate(0,-6) scale(1.6)"><rect x="-4.5" y="-1" width="9" height="7"/><path d="M-2.6-1v-2.2a2.6 2.6 0 0 1 5.2 0V-1"/></g><text class="world-word" y="22" text-anchor="middle">LOCKED</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
-      tip: `The World reveals at ${worldRevealPreview(state)}`,
+      tip: `The World reveals at ${worldRevealPreview()}`,
     };
   }
   const def = enemyDefAt(pos);
@@ -726,25 +730,25 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
     if (!live?.discovered) {
       return {
         chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("reserved", 52)}<rect class="world-hatch" x="-52" y="-52" width="104" height="104"/><text class="world-word" y="4" text-anchor="middle">RESERVED</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
-        tip: `Reserved cell — the World holds this position`,
+        tip: `Reserved cell · silent until its reveal`,
       };
     }
     if (enemyDefeated(state, def.key)) {
       return {
         chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("engraved", 52)}<text class="world-word" y="-38" text-anchor="middle">CLEARED</text><g transform="translate(0,-12)">${worldGlyph("enemy", true, 1)}</g><text class="world-fig dim" y="30" text-anchor="middle">+${Math.round(def.bonus * 100)}% ν</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
-        tip: `Cleared · era bonus +${Math.round(def.bonus * 100)}% ν — the enemy returns at prestige`,
+        tip: `Cleared · the enemy returns at prestige`,
       };
     }
     return {
       chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("firm", 52)}<text class="world-word" y="-38" text-anchor="middle">ENEMY</text><g transform="translate(0,-14)">${worldGlyph("enemy", false, 1.2)}</g><text class="world-fig" y="24" text-anchor="middle">HP ${formatInt(Math.max(0, Math.ceil(live.hp)))}/${formatInt(Math.ceil(def.maxHp))}</text><text class="world-fig penalty" y="44" text-anchor="middle">−${Math.round(def.penalty * 100)}% ν</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
-      tip: `Enemy · HP ${formatInt(Math.max(0, Math.ceil(live.hp)))}/${formatInt(Math.ceil(def.maxHp))} · −${Math.round(def.penalty * 100)}% ν while it stands`,
+      tip: `Enemy · attacked by adjacent weapons on their cadence`,
     };
   }
   const occupant = worldOccupantAt(state, pos);
   if (!occupant) {
     return {
       chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("open", 52)}<polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
-      tip: `Open World cell at ${cellNoteOf(pos)} — an occupant places free`,
+      tip: `Open World cell · an occupant places free`,
     };
   }
   const lift = columnLiftsOf(state, snapshot);
@@ -754,7 +758,7 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
     const fed = rate > 0;
     return {
       chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("firm", 52)}<text class="world-word" y="-38" text-anchor="middle">${WORLD_META[weapon.type].short}</text><g transform="translate(0,-16)">${worldGlyph("weapon", !fed, 1)}</g><g transform="translate(0,4)">${chargeBar(weapon.store, fed, 72)}</g><text class="world-fig${fed ? " charge" : " dim"}" y="26" text-anchor="middle">⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap}</text><text class="${fed ? "world-fig" : "world-word"}" y="44" text-anchor="middle">${fed ? `ATK ${formatInt(attackPowerOf(state, weapon.type))}${rate ? ` · ⌁${formatNumber(rate)}/s` : ""}` : "UNFED"}</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
-      tip: `${WORLD_META[weapon.type].name} · ⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap} stored · ATK ${formatInt(attackPowerOf(state, weapon.type))}${fed ? ` · fed ⌁${formatNumber(rate)}/s` : " · unfed"}`,
+      tip: fed ? `${WORLD_META[weapon.type].name} · attacks its top target every ${BALANCE.world.attackCadenceSeconds} s` : `${WORLD_META[weapon.type].name} · place beside a Column to feed`,
     };
   }
   const column = state.world.columns.find((c) => c.id === occupant.id)!;
@@ -762,6 +766,6 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
   const hostless = !state.modules.some((m) => m.pos !== null && sameHex(m.pos, pos));
   return {
     chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("firm", 52)}<text class="world-word" y="-38" text-anchor="middle">${COLUMN_SHORT}</text><g transform="translate(0,-10)">${worldGlyph("column", hostless || rate <= 0, 1.3)}</g><text class="world-fig${rate > 0 ? " charge" : " dim"}" y="32" text-anchor="middle">${hostless ? "inert · no host" : `⌁${formatNumber(rate)}/s`}</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
-    tip: hostless ? `${COLUMN_WORD} · inert — no module occupies this cell` : `${COLUMN_WORD} · lifts ⌁${formatNumber(rate)}/s from the module beneath`,
+    tip: hostless ? `${COLUMN_WORD} · place over a module cell to lift` : `${COLUMN_WORD} · lifts ⌁${formatNumber(rate)}/s from the module beneath`,
   };
 }

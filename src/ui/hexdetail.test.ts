@@ -301,9 +301,11 @@ describe("the World face in detail", () => {
     app.detailFace("world");
     const tip = worldTip()!;
     expect(tip).toContain("Charge Blade");
-    expect(tip).toContain("⌁0/30");
+    // The tip adds what the plate cannot: the feed line, never a restatement.
+    expect(tip).toContain("place beside a Column to feed");
     // Unfed is the face's own word, never a tooltip apology.
     expect(section("world").querySelector(".world-stack")!.textContent).toContain("UNFED");
+    expect(section("world").querySelector(".world-stack")!.textContent).toContain(`⌁0/${BALANCE.world.storageCap}`);
     // The rail holds the retrieve and the between-sessions priority control.
     expect(document.getElementById("detail-world-retrieve")).not.toBeNull();
     expect(detail().querySelector(".world-priority")).not.toBeNull();
@@ -563,7 +565,7 @@ describe("read-only during flow (issue #295)", () => {
     app.openDetail(hex(1, 0), "world");
     expect(open()).toBe(true);
     expect(detail().querySelector(".hex-detail-readonly")).not.toBeNull();
-    expect(section("world").querySelector(".inst-tip-body")!.textContent).toContain("⌁12/30");
+    expect(section("world").querySelector(".world-stack")!.textContent).toContain("⌁12/30");
     endSession(app.state);
   });
 });

@@ -1439,7 +1439,7 @@ export class App {
   setBoardLayer(layer: "modules" | "world"): void {
     if (this.ui.boardLayer === layer) return;
     if (layer === "world" && !worldEntered(this.state)) {
-      this.say(`The World layer reveals at ${worldRevealPreview(this.state)}.`);
+      this.say(`The World layer reveals at ${worldRevealPreview()}.`);
       return;
     }
     const cancelled: string[] = [];
