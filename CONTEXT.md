@@ -543,6 +543,22 @@ The complete append-only run of session records, browsed in the Time app's list 
 **Miss marker**:
 The muted list-row flag on session records carrying a missed honesty event. Muted grey, never red — accounting, not judgment.
 
+### World progression design (agreed direction; not yet implemented)
+
+**World layer**:
+The progression layer whose enemies give the module board's production and charge a purpose and resistance. Its encounters run automatically during flow; preparation happens between sessions.
+
+**Habit class**:
+A freely switchable specialization through which credited flow time with a selected habit shapes its gameplay contribution. Each habit–class pair retains its own experience and upgrade tree; switching classes preserves that history without transferring it to another habit.
+
+**Claimed frontier**:
+The greatest era-earned nous depth whose cumulative Arete entitlement has already been claimed through prestige. Returning to that depth awards no additional Arete; surpassing it builds a pending claim banked only on prestige.
+
+**Engineer**:
+The first habit class, earning module rolls through credited flow time and developing bounded choices in cadence, draft control, and merge progression. Each habit retains its own Engineer experience, tree allocation, and partial roll progress.
+
+The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; numerical tuning awaits simulation and prototype evidence. Existing progression and habit-build entries below describe shipped behavior until implementation.
+
 ### Progression
 
 **Arete**:
