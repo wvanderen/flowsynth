@@ -1,0 +1,1689 @@
+{
+  "model": "hypothesis-v2-norefund",
+  "entry_minutes_proxy": 21.5,
+  "first_claim": [
+    {
+      "column_price": 0.5,
+      "guarantee_holds": true,
+      "entry_kit_power": 3.0,
+      "columns": 1,
+      "enemy1_clear_minutes": 5.33,
+      "enemy2_clear_minutes": 8.0
+    },
+    {
+      "column_price": 1,
+      "guarantee_holds": true,
+      "entry_kit_power": 3.0,
+      "columns": 1,
+      "enemy1_clear_minutes": 5.33,
+      "enemy2_clear_minutes": 8.0
+    },
+    {
+      "column_price": 2,
+      "guarantee_holds": true,
+      "entry_kit_power": 2.0,
+      "columns": 1,
+      "enemy1_clear_minutes": 12.0,
+      "enemy2_clear_minutes": 18.0
+    },
+    {
+      "column_price": 4,
+      "guarantee_holds": false,
+      "entry_kit_power": 2.0,
+      "columns": 0,
+      "enemy1_clear_minutes": null,
+      "enemy2_clear_minutes": null
+    }
+  ],
+  "frontier_checks": [
+    {
+      "curve": "log",
+      "depth": 0,
+      "wallet": 2,
+      "columns": 1,
+      "power_rank": 1,
+      "weapons": 1,
+      "dps": 2.25,
+      "enemy_clear_minutes": 5.33,
+      "return_minutes": 21.35,
+      "reached_110": true,
+      "victories": 0,
+      "first_kill": null,
+      "rolls_banked_in_return": 0
+    },
+    {
+      "curve": "log",
+      "depth": 1,
+      "wallet": 4,
+      "columns": 1,
+      "power_rank": 3,
+      "weapons": 1,
+      "dps": 6.25,
+      "enemy_clear_minutes": 2.88,
+      "return_minutes": 81.3,
+      "reached_110": true,
+      "victories": 1,
+      "first_kill": 25.350000000000225,
+      "rolls_banked_in_return": 0
+    },
+    {
+      "curve": "log",
+      "depth": 2,
+      "wallet": 6,
+      "columns": 1,
+      "power_rank": 5,
+      "weapons": 2,
+      "dps": 12.25,
+      "enemy_clear_minutes": 2.2,
+      "return_minutes": 165.2,
+      "reached_110": true,
+      "victories": 2,
+      "first_kill": 24.40000000000021,
+      "rolls_banked_in_return": 1
+    },
+    {
+      "curve": "log",
+      "depth": 3,
+      "wallet": 8,
+      "columns": 1,
+      "power_rank": 7,
+      "weapons": 3,
+      "dps": 20.25,
+      "enemy_clear_minutes": 2.0,
+      "return_minutes": 253.65,
+      "reached_110": true,
+      "victories": 3,
+      "first_kill": 24.000000000000206,
+      "rolls_banked_in_return": 2
+    },
+    {
+      "curve": "log",
+      "depth": 4,
+      "wallet": 10,
+      "columns": 1,
+      "power_rank": 9,
+      "weapons": 3,
+      "dps": 30.25,
+      "enemy_clear_minutes": 2.01,
+      "return_minutes": 342.65,
+      "reached_110": true,
+      "victories": 4,
+      "first_kill": 23.800000000000203,
+      "rolls_banked_in_return": 2
+    },
+    {
+      "curve": "log",
+      "depth": 5,
+      "wallet": 12,
+      "columns": 1,
+      "power_rank": 11,
+      "weapons": 4,
+      "dps": 42.25,
+      "enemy_clear_minutes": 2.16,
+      "return_minutes": 431.7,
+      "reached_110": true,
+      "victories": 5,
+      "first_kill": 23.700000000000202,
+      "rolls_banked_in_return": 3
+    },
+    {
+      "curve": "log",
+      "depth": 6,
+      "wallet": 14,
+      "columns": 1,
+      "power_rank": 13,
+      "weapons": 5,
+      "dps": 56.25,
+      "enemy_clear_minutes": 2.43,
+      "return_minutes": 520.75,
+      "reached_110": true,
+      "victories": 6,
+      "first_kill": 23.6500000000002,
+      "rolls_banked_in_return": 4
+    },
+    {
+      "curve": "log",
+      "depth": 7,
+      "wallet": 16,
+      "columns": 1,
+      "power_rank": 15,
+      "weapons": 6,
+      "dps": 72.25,
+      "enemy_clear_minutes": 2.84,
+      "return_minutes": 609.85,
+      "reached_110": true,
+      "victories": 7,
+      "first_kill": 23.6000000000002,
+      "rolls_banked_in_return": 5
+    },
+    {
+      "curve": "log",
+      "depth": 8,
+      "wallet": 18,
+      "columns": 1,
+      "power_rank": 17,
+      "weapons": 6,
+      "dps": 90.25,
+      "enemy_clear_minutes": 3.41,
+      "return_minutes": 698.9,
+      "reached_110": true,
+      "victories": 8,
+      "first_kill": 23.5500000000002,
+      "rolls_banked_in_return": 5
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 0,
+      "wallet": 2,
+      "columns": 1,
+      "power_rank": 1,
+      "weapons": 1,
+      "dps": 2.25,
+      "enemy_clear_minutes": 5.33,
+      "return_minutes": 21.35,
+      "reached_110": true,
+      "victories": 0,
+      "first_kill": null,
+      "rolls_banked_in_return": 0
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 1,
+      "wallet": 5,
+      "columns": 1,
+      "power_rank": 4,
+      "weapons": 1,
+      "dps": 9.0,
+      "enemy_clear_minutes": 2.0,
+      "return_minutes": 81.25,
+      "reached_110": true,
+      "victories": 1,
+      "first_kill": 24.750000000000217,
+      "rolls_banked_in_return": 0
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 2,
+      "wallet": 6,
+      "columns": 1,
+      "power_rank": 5,
+      "weapons": 2,
+      "dps": 12.25,
+      "enemy_clear_minutes": 2.2,
+      "return_minutes": 165.2,
+      "reached_110": true,
+      "victories": 2,
+      "first_kill": 24.40000000000021,
+      "rolls_banked_in_return": 1
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 3,
+      "wallet": 7,
+      "columns": 1,
+      "power_rank": 6,
+      "weapons": 3,
+      "dps": 16.0,
+      "enemy_clear_minutes": 2.53,
+      "return_minutes": 253.65,
+      "reached_110": true,
+      "victories": 3,
+      "first_kill": 24.150000000000208,
+      "rolls_banked_in_return": 2
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 4,
+      "wallet": 8,
+      "columns": 1,
+      "power_rank": 7,
+      "weapons": 3,
+      "dps": 20.25,
+      "enemy_clear_minutes": 3.0,
+      "return_minutes": 342.65,
+      "reached_110": true,
+      "victories": 4,
+      "first_kill": 24.000000000000206,
+      "rolls_banked_in_return": 2
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 5,
+      "wallet": 8,
+      "columns": 1,
+      "power_rank": 7,
+      "weapons": 4,
+      "dps": 20.25,
+      "enemy_clear_minutes": 4.5,
+      "return_minutes": 431.75,
+      "reached_110": true,
+      "victories": 5,
+      "first_kill": 24.000000000000206,
+      "rolls_banked_in_return": 3
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 6,
+      "wallet": 9,
+      "columns": 1,
+      "power_rank": 8,
+      "weapons": 5,
+      "dps": 25.0,
+      "enemy_clear_minutes": 5.47,
+      "return_minutes": 520.85,
+      "reached_110": true,
+      "victories": 6,
+      "first_kill": 23.900000000000205,
+      "rolls_banked_in_return": 4
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 7,
+      "wallet": 9,
+      "columns": 1,
+      "power_rank": 8,
+      "weapons": 6,
+      "dps": 25.0,
+      "enemy_clear_minutes": 8.2,
+      "return_minutes": 609.95,
+      "reached_110": true,
+      "victories": 7,
+      "first_kill": 23.900000000000205,
+      "rolls_banked_in_return": 5
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 8,
+      "wallet": 10,
+      "columns": 1,
+      "power_rank": 9,
+      "weapons": 6,
+      "dps": 30.25,
+      "enemy_clear_minutes": 10.17,
+      "return_minutes": 699.1,
+      "reached_110": true,
+      "victories": 8,
+      "first_kill": 23.800000000000203,
+      "rolls_banked_in_return": 5
+    },
+    {
+      "curve": "power_015",
+      "depth": 0,
+      "wallet": 2,
+      "columns": 1,
+      "power_rank": 1,
+      "weapons": 1,
+      "dps": 2.25,
+      "enemy_clear_minutes": 5.33,
+      "return_minutes": 21.35,
+      "reached_110": true,
+      "victories": 0,
+      "first_kill": null,
+      "rolls_banked_in_return": 0
+    },
+    {
+      "curve": "power_015",
+      "depth": 1,
+      "wallet": 2,
+      "columns": 1,
+      "power_rank": 1,
+      "weapons": 1,
+      "dps": 2.25,
+      "enemy_clear_minutes": 8.0,
+      "return_minutes": 81.5,
+      "reached_110": true,
+      "victories": 1,
+      "first_kill": 28.750000000000274,
+      "rolls_banked_in_return": 0
+    },
+    {
+      "curve": "power_015",
+      "depth": 2,
+      "wallet": 3,
+      "columns": 1,
+      "power_rank": 2,
+      "weapons": 2,
+      "dps": 4.0,
+      "enemy_clear_minutes": 6.75,
+      "return_minutes": 165.35,
+      "reached_110": true,
+      "victories": 2,
+      "first_kill": 26.45000000000024,
+      "rolls_banked_in_return": 1
+    },
+    {
+      "curve": "power_015",
+      "depth": 3,
+      "wallet": 5,
+      "columns": 1,
+      "power_rank": 4,
+      "weapons": 3,
+      "dps": 9.0,
+      "enemy_clear_minutes": 4.5,
+      "return_minutes": 253.7,
+      "reached_110": true,
+      "victories": 3,
+      "first_kill": 24.750000000000217,
+      "rolls_banked_in_return": 2
+    },
+    {
+      "curve": "power_015",
+      "depth": 4,
+      "wallet": 7,
+      "columns": 1,
+      "power_rank": 6,
+      "weapons": 3,
+      "dps": 16.0,
+      "enemy_clear_minutes": 3.8,
+      "return_minutes": 342.7,
+      "reached_110": true,
+      "victories": 4,
+      "first_kill": 24.150000000000208,
+      "rolls_banked_in_return": 2
+    },
+    {
+      "curve": "power_015",
+      "depth": 5,
+      "wallet": 11,
+      "columns": 1,
+      "power_rank": 10,
+      "weapons": 4,
+      "dps": 36.0,
+      "enemy_clear_minutes": 2.53,
+      "return_minutes": 431.7,
+      "reached_110": true,
+      "victories": 5,
+      "first_kill": 23.750000000000203,
+      "rolls_banked_in_return": 3
+    },
+    {
+      "curve": "power_015",
+      "depth": 6,
+      "wallet": 15,
+      "columns": 1,
+      "power_rank": 14,
+      "weapons": 5,
+      "dps": 64.0,
+      "enemy_clear_minutes": 2.14,
+      "return_minutes": 520.75,
+      "reached_110": true,
+      "victories": 6,
+      "first_kill": 23.6000000000002,
+      "rolls_banked_in_return": 4
+    },
+    {
+      "curve": "power_015",
+      "depth": 7,
+      "wallet": 22,
+      "columns": 1,
+      "power_rank": 21,
+      "weapons": 6,
+      "dps": 132.25,
+      "enemy_clear_minutes": 1.55,
+      "return_minutes": 609.8,
+      "reached_110": true,
+      "victories": 7,
+      "first_kill": 23.5000000000002,
+      "rolls_banked_in_return": 5
+    },
+    {
+      "curve": "power_015",
+      "depth": 8,
+      "wallet": 31,
+      "columns": 1,
+      "power_rank": 30,
+      "weapons": 6,
+      "dps": 256.0,
+      "enemy_clear_minutes": 1.2,
+      "return_minutes": 698.85,
+      "reached_110": true,
+      "victories": 8,
+      "first_kill": 23.4500000000002,
+      "rolls_banked_in_return": 5
+    }
+  ],
+  "recovery": [
+    {
+      "curve": "log",
+      "depth": 1,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 81.5,
+      "victories": 1,
+      "surpassed": true
+    },
+    {
+      "curve": "log",
+      "depth": 2,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 165.5,
+      "victories": 2,
+      "surpassed": true
+    },
+    {
+      "curve": "log",
+      "depth": 3,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 254.05,
+      "victories": 3,
+      "surpassed": true
+    },
+    {
+      "curve": "log",
+      "depth": 4,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 343.3,
+      "victories": 4,
+      "surpassed": true
+    },
+    {
+      "curve": "log",
+      "depth": 5,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 432.9,
+      "victories": 5,
+      "surpassed": true
+    },
+    {
+      "curve": "log",
+      "depth": 6,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 523.05,
+      "victories": 6,
+      "surpassed": true
+    },
+    {
+      "curve": "log",
+      "depth": 7,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 614.65,
+      "victories": 7,
+      "surpassed": true
+    },
+    {
+      "curve": "log",
+      "depth": 8,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 709.9,
+      "victories": 7,
+      "surpassed": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 1,
+      "marginal_claim": 3,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 2,
+      "dps": 4.0,
+      "surpass_minutes": 81.35,
+      "victories": 1,
+      "surpassed": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 2,
+      "marginal_claim": 1,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "surpass_minutes": 166.0,
+      "victories": 2,
+      "surpassed": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 3,
+      "marginal_claim": 1,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "surpass_minutes": 254.85,
+      "victories": 3,
+      "surpassed": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 4,
+      "marginal_claim": 1,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "surpass_minutes": 344.85,
+      "victories": 4,
+      "surpassed": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 5,
+      "marginal_claim": 0,
+      "combat_possible": false,
+      "recovery_depth": 6,
+      "recovery_claim": 1,
+      "recovery_push_minutes": 586.3
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 6,
+      "marginal_claim": 1,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "surpass_minutes": 531.85,
+      "victories": 5,
+      "surpassed": true
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 7,
+      "marginal_claim": 0,
+      "combat_possible": false,
+      "recovery_depth": 8,
+      "recovery_claim": 1,
+      "recovery_push_minutes": 788.35
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 8,
+      "marginal_claim": 1,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "surpass_minutes": 721.05,
+      "victories": 7,
+      "surpassed": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 1,
+      "marginal_claim": 0,
+      "combat_possible": false,
+      "recovery_depth": 2,
+      "recovery_claim": 1,
+      "recovery_push_minutes": 182.6
+    },
+    {
+      "curve": "power_015",
+      "depth": 2,
+      "marginal_claim": 1,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "surpass_minutes": 166.0,
+      "victories": 2,
+      "surpassed": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 3,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 254.05,
+      "victories": 3,
+      "surpassed": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 4,
+      "marginal_claim": 2,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "surpass_minutes": 343.3,
+      "victories": 4,
+      "surpassed": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 5,
+      "marginal_claim": 4,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 3,
+      "dps": 6.25,
+      "surpass_minutes": 432.0,
+      "victories": 5,
+      "surpassed": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 6,
+      "marginal_claim": 4,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 3,
+      "dps": 6.25,
+      "surpass_minutes": 521.3,
+      "victories": 6,
+      "surpassed": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 7,
+      "marginal_claim": 7,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 6,
+      "dps": 16.0,
+      "surpass_minutes": 610.1,
+      "victories": 7,
+      "surpassed": true
+    },
+    {
+      "curve": "power_015",
+      "depth": 8,
+      "marginal_claim": 9,
+      "combat_possible": true,
+      "columns": 1,
+      "power_rank": 8,
+      "dps": 25.0,
+      "surpass_minutes": 699.15,
+      "victories": 8,
+      "surpassed": true
+    }
+  ],
+  "allocations": [
+    {
+      "curve": "log",
+      "depth": 0,
+      "columns": 1,
+      "weapons": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "minutes": 21.35,
+      "victories": 0
+    },
+    {
+      "curve": "log",
+      "depth": 0,
+      "columns": 2,
+      "weapons": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "minutes": 21.35,
+      "victories": 0
+    },
+    {
+      "curve": "log",
+      "depth": 1,
+      "columns": 1,
+      "weapons": 1,
+      "power_rank": 3,
+      "dps": 6.25,
+      "minutes": 81.3,
+      "victories": 1
+    },
+    {
+      "curve": "log",
+      "depth": 1,
+      "columns": 2,
+      "weapons": 1,
+      "power_rank": 2,
+      "dps": 4.0,
+      "minutes": 81.35,
+      "victories": 1
+    },
+    {
+      "curve": "log",
+      "depth": 1,
+      "columns": 3,
+      "weapons": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "minutes": 81.5,
+      "victories": 1
+    },
+    {
+      "curve": "log",
+      "depth": 1,
+      "columns": 4,
+      "weapons": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "minutes": 82.0,
+      "victories": 1
+    },
+    {
+      "curve": "log",
+      "depth": 2,
+      "columns": 1,
+      "weapons": 2,
+      "power_rank": 5,
+      "dps": 12.25,
+      "minutes": 165.2,
+      "victories": 2
+    },
+    {
+      "curve": "log",
+      "depth": 2,
+      "columns": 2,
+      "weapons": 2,
+      "power_rank": 4,
+      "dps": 18.0,
+      "minutes": 165.25,
+      "victories": 2
+    },
+    {
+      "curve": "log",
+      "depth": 2,
+      "columns": 3,
+      "weapons": 2,
+      "power_rank": 3,
+      "dps": 12.5,
+      "minutes": 165.25,
+      "victories": 2
+    },
+    {
+      "curve": "log",
+      "depth": 2,
+      "columns": 4,
+      "weapons": 2,
+      "power_rank": 2,
+      "dps": 8.0,
+      "minutes": 165.35,
+      "victories": 2
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 0,
+      "columns": 1,
+      "weapons": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "minutes": 21.35,
+      "victories": 0
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 0,
+      "columns": 2,
+      "weapons": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "minutes": 21.35,
+      "victories": 0
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 1,
+      "columns": 1,
+      "weapons": 1,
+      "power_rank": 4,
+      "dps": 9.0,
+      "minutes": 81.25,
+      "victories": 1
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 1,
+      "columns": 2,
+      "weapons": 1,
+      "power_rank": 3,
+      "dps": 6.25,
+      "minutes": 81.3,
+      "victories": 1
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 1,
+      "columns": 3,
+      "weapons": 1,
+      "power_rank": 2,
+      "dps": 4.0,
+      "minutes": 81.35,
+      "victories": 1
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 1,
+      "columns": 4,
+      "weapons": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "minutes": 81.5,
+      "victories": 1
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 2,
+      "columns": 1,
+      "weapons": 2,
+      "power_rank": 5,
+      "dps": 12.25,
+      "minutes": 165.2,
+      "victories": 2
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 2,
+      "columns": 2,
+      "weapons": 2,
+      "power_rank": 4,
+      "dps": 18.0,
+      "minutes": 165.25,
+      "victories": 2
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 2,
+      "columns": 3,
+      "weapons": 2,
+      "power_rank": 3,
+      "dps": 12.5,
+      "minutes": 165.25,
+      "victories": 2
+    },
+    {
+      "curve": "sqrt_log",
+      "depth": 2,
+      "columns": 4,
+      "weapons": 2,
+      "power_rank": 2,
+      "dps": 8.0,
+      "minutes": 165.35,
+      "victories": 2
+    },
+    {
+      "curve": "power_015",
+      "depth": 0,
+      "columns": 1,
+      "weapons": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "minutes": 21.35,
+      "victories": 0
+    },
+    {
+      "curve": "power_015",
+      "depth": 0,
+      "columns": 2,
+      "weapons": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "minutes": 21.35,
+      "victories": 0
+    },
+    {
+      "curve": "power_015",
+      "depth": 1,
+      "columns": 1,
+      "weapons": 1,
+      "power_rank": 1,
+      "dps": 2.25,
+      "minutes": 81.5,
+      "victories": 1
+    },
+    {
+      "curve": "power_015",
+      "depth": 1,
+      "columns": 2,
+      "weapons": 1,
+      "power_rank": 0,
+      "dps": 1.0,
+      "minutes": 82.0,
+      "victories": 1
+    },
+    {
+      "curve": "power_015",
+      "depth": 2,
+      "columns": 1,
+      "weapons": 2,
+      "power_rank": 2,
+      "dps": 4.0,
+      "minutes": 165.35,
+      "victories": 2
+    },
+    {
+      "curve": "power_015",
+      "depth": 2,
+      "columns": 2,
+      "weapons": 2,
+      "power_rank": 1,
+      "dps": 4.5,
+      "minutes": 165.5,
+      "victories": 2
+    },
+    {
+      "curve": "power_015",
+      "depth": 2,
+      "columns": 3,
+      "weapons": 2,
+      "power_rank": 0,
+      "dps": 2.0,
+      "minutes": 166.0,
+      "victories": 2
+    }
+  ],
+  "strategies": [
+    {
+      "scenario": "roll_sweep",
+      "roll_minutes": 30.0,
+      "entry_era": {
+        "era_start": 0.0,
+        "target": 1.0,
+        "minutes": 19.45,
+        "score": 1.0013,
+        "reached": true,
+        "victories": 0,
+        "first_kill_minute": null,
+        "rolls_banked": 0,
+        "reach_spent_T": 0.0,
+        "columns": 0,
+        "power_rank": 0,
+        "weapons": 0,
+        "trace": []
+      },
+      "era2": {
+        "era_start": 0.0,
+        "target": 100.0,
+        "minutes": 160.95,
+        "score": 100.0217,
+        "reached": true,
+        "victories": 2,
+        "first_kill_minute": 28.750000000000274,
+        "rolls_banked": 5,
+        "reach_spent_T": 1.1,
+        "columns": 1,
+        "power_rank": 1,
+        "weapons": 6,
+        "trace": [
+          {
+            "minute": 19.45,
+            "event": "discover",
+            "enemy": 0,
+            "score": 1.0013
+          },
+          {
+            "minute": 28.75,
+            "event": "victory",
+            "enemy": 0,
+            "score": 1.5491
+          },
+          {
+            "minute": 77.55,
+            "event": "discover",
+            "enemy": 1,
+            "score": 10.0034
+          },
+          {
+            "minute": 90.55,
+            "event": "victory",
+            "enemy": 1,
+            "score": 13.7074
+          }
+        ]
+      },
+      "weapons_at_era2_start": 1,
+      "weapons_after_era2": 6
+    },
+    {
+      "scenario": "roll_sweep",
+      "roll_minutes": 60.0,
+      "entry_era": {
+        "era_start": 0.0,
+        "target": 1.0,
+        "minutes": 19.45,
+        "score": 1.0013,
+        "reached": true,
+        "victories": 0,
+        "first_kill_minute": null,
+        "rolls_banked": 0,
+        "reach_spent_T": 0.0,
+        "columns": 0,
+        "power_rank": 0,
+        "weapons": 0,
+        "trace": []
+      },
+      "era2": {
+        "era_start": 0.0,
+        "target": 100.0,
+        "minutes": 160.95,
+        "score": 100.0217,
+        "reached": true,
+        "victories": 2,
+        "first_kill_minute": 28.750000000000274,
+        "rolls_banked": 2,
+        "reach_spent_T": 1.1,
+        "columns": 1,
+        "power_rank": 1,
+        "weapons": 3,
+        "trace": [
+          {
+            "minute": 19.45,
+            "event": "discover",
+            "enemy": 0,
+            "score": 1.0013
+          },
+          {
+            "minute": 28.75,
+            "event": "victory",
+            "enemy": 0,
+            "score": 1.5491
+          },
+          {
+            "minute": 77.55,
+            "event": "discover",
+            "enemy": 1,
+            "score": 10.0034
+          },
+          {
+            "minute": 90.55,
+            "event": "victory",
+            "enemy": 1,
+            "score": 13.7074
+          }
+        ]
+      },
+      "weapons_at_era2_start": 1,
+      "weapons_after_era2": 3
+    },
+    {
+      "scenario": "roll_sweep",
+      "roll_minutes": 120.0,
+      "entry_era": {
+        "era_start": 0.0,
+        "target": 1.0,
+        "minutes": 19.45,
+        "score": 1.0013,
+        "reached": true,
+        "victories": 0,
+        "first_kill_minute": null,
+        "rolls_banked": 0,
+        "reach_spent_T": 0.0,
+        "columns": 0,
+        "power_rank": 0,
+        "weapons": 0,
+        "trace": []
+      },
+      "era2": {
+        "era_start": 0.0,
+        "target": 100.0,
+        "minutes": 160.95,
+        "score": 100.0217,
+        "reached": true,
+        "victories": 2,
+        "first_kill_minute": 28.750000000000274,
+        "rolls_banked": 1,
+        "reach_spent_T": 1.1,
+        "columns": 1,
+        "power_rank": 1,
+        "weapons": 2,
+        "trace": [
+          {
+            "minute": 19.45,
+            "event": "discover",
+            "enemy": 0,
+            "score": 1.0013
+          },
+          {
+            "minute": 28.75,
+            "event": "victory",
+            "enemy": 0,
+            "score": 1.5491
+          },
+          {
+            "minute": 77.55,
+            "event": "discover",
+            "enemy": 1,
+            "score": 10.0034
+          },
+          {
+            "minute": 90.55,
+            "event": "victory",
+            "enemy": 1,
+            "score": 13.7074
+          }
+        ]
+      },
+      "weapons_at_era2_start": 1,
+      "weapons_after_era2": 2
+    },
+    {
+      "scenario": "roll_sweep",
+      "roll_minutes": 240.0,
+      "entry_era": {
+        "era_start": 0.0,
+        "target": 1.0,
+        "minutes": 19.45,
+        "score": 1.0013,
+        "reached": true,
+        "victories": 0,
+        "first_kill_minute": null,
+        "rolls_banked": 0,
+        "reach_spent_T": 0.0,
+        "columns": 0,
+        "power_rank": 0,
+        "weapons": 0,
+        "trace": []
+      },
+      "era2": {
+        "era_start": 0.0,
+        "target": 100.0,
+        "minutes": 160.95,
+        "score": 100.0217,
+        "reached": true,
+        "victories": 2,
+        "first_kill_minute": 28.750000000000274,
+        "rolls_banked": 0,
+        "reach_spent_T": 1.1,
+        "columns": 1,
+        "power_rank": 1,
+        "weapons": 1,
+        "trace": [
+          {
+            "minute": 19.45,
+            "event": "discover",
+            "enemy": 0,
+            "score": 1.0013
+          },
+          {
+            "minute": 28.75,
+            "event": "victory",
+            "enemy": 0,
+            "score": 1.5491
+          },
+          {
+            "minute": 77.55,
+            "event": "discover",
+            "enemy": 1,
+            "score": 10.0034
+          },
+          {
+            "minute": 90.55,
+            "event": "victory",
+            "enemy": 1,
+            "score": 13.7074
+          }
+        ]
+      },
+      "weapons_at_era2_start": 1,
+      "weapons_after_era2": 1
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "log",
+      "targets": [
+        100.0
+      ],
+      "minutes": 182.85,
+      "eras": [
+        {
+          "target": 100.0,
+          "minutes": 182.85,
+          "claim": 6,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 5,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "log",
+      "targets": [
+        1.0,
+        100.0
+      ],
+      "minutes": 180.4,
+      "eras": [
+        {
+          "target": 1.0,
+          "minutes": 19.45,
+          "claim": 2,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 1,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 100.0,
+          "minutes": 160.95,
+          "claim": 4,
+          "banked": 0,
+          "victories": 2,
+          "first_kill": 28.750000000000274,
+          "build": {
+            "columns": 2,
+            "power_rank": 4,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "log",
+      "targets": [
+        1.0,
+        10.0,
+        100.0
+      ],
+      "minutes": 257.8,
+      "eras": [
+        {
+          "target": 1.0,
+          "minutes": 19.45,
+          "claim": 2,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 1,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 10.0,
+          "minutes": 77.55,
+          "claim": 2,
+          "banked": 0,
+          "victories": 1,
+          "first_kill": 28.750000000000274,
+          "build": {
+            "columns": 2,
+            "power_rank": 2,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 100.0,
+          "minutes": 160.8,
+          "claim": 2,
+          "banked": 0,
+          "victories": 2,
+          "first_kill": 26.45000000000024,
+          "build": {
+            "columns": 3,
+            "power_rank": 3,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "sqrt_log",
+      "targets": [
+        100.0
+      ],
+      "minutes": 182.85,
+      "eras": [
+        {
+          "target": 100.0,
+          "minutes": 182.85,
+          "claim": 6,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 5,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "sqrt_log",
+      "targets": [
+        1.0,
+        100.0
+      ],
+      "minutes": 180.4,
+      "eras": [
+        {
+          "target": 1.0,
+          "minutes": 19.45,
+          "claim": 2,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 1,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 100.0,
+          "minutes": 160.95,
+          "claim": 4,
+          "banked": 0,
+          "victories": 2,
+          "first_kill": 28.750000000000274,
+          "build": {
+            "columns": 2,
+            "power_rank": 4,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "sqrt_log",
+      "targets": [
+        1.0,
+        10.0,
+        100.0
+      ],
+      "minutes": 257.7,
+      "eras": [
+        {
+          "target": 1.0,
+          "minutes": 19.45,
+          "claim": 2,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 1,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 10.0,
+          "minutes": 77.55,
+          "claim": 3,
+          "banked": 0,
+          "victories": 1,
+          "first_kill": 28.750000000000274,
+          "build": {
+            "columns": 2,
+            "power_rank": 3,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 100.0,
+          "minutes": 160.7,
+          "claim": 1,
+          "banked": 0,
+          "victories": 2,
+          "first_kill": 25.350000000000225,
+          "build": {
+            "columns": 3,
+            "power_rank": 3,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "power_015",
+      "targets": [
+        100.0
+      ],
+      "minutes": 182.85,
+      "eras": [
+        {
+          "target": 100.0,
+          "minutes": 182.85,
+          "claim": 3,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 2,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "power_015",
+      "targets": [
+        1.0,
+        100.0
+      ],
+      "minutes": 180.4,
+      "eras": [
+        {
+          "target": 1.0,
+          "minutes": 19.45,
+          "claim": 2,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 1,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 100.0,
+          "minutes": 160.95,
+          "claim": 1,
+          "banked": 0,
+          "victories": 2,
+          "first_kill": 28.750000000000274,
+          "build": {
+            "columns": 2,
+            "power_rank": 1,
+            "weapons": 2
+          }
+        }
+      ]
+    },
+    {
+      "scenario": "push_vs_reset",
+      "curve": "power_015",
+      "targets": [
+        1.0,
+        10.0,
+        100.0
+      ],
+      "minutes": 257.95,
+      "eras": [
+        {
+          "target": 1.0,
+          "minutes": 19.45,
+          "claim": 2,
+          "banked": 0,
+          "victories": 0,
+          "first_kill": null,
+          "build": {
+            "columns": 1,
+            "power_rank": 1,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 10.0,
+          "minutes": 77.55,
+          "claim": 0,
+          "banked": 0,
+          "victories": 1,
+          "first_kill": 28.750000000000274,
+          "build": {
+            "columns": 1,
+            "power_rank": 1,
+            "weapons": 1
+          }
+        },
+        {
+          "target": 100.0,
+          "minutes": 160.95,
+          "claim": 1,
+          "banked": 0,
+          "victories": 2,
+          "first_kill": 28.750000000000274,
+          "build": {
+            "columns": 2,
+            "power_rank": 1,
+            "weapons": 2
+          }
+        }
+      ]
+    }
+  ],
+  "sensitivities": [
+    {
+      "settings": {
+        "column_price": 1
+      },
+      "first_combat_dead_frontier": null
+    },
+    {
+      "settings": {
+        "column_price": 2
+      },
+      "first_combat_dead_frontier": null
+    },
+    {
+      "settings": {
+        "column_price": 4
+      },
+      "first_combat_dead_frontier": {
+        "curve": "log",
+        "depth": 0
+      }
+    },
+    {
+      "settings": {
+        "uptime": 0.25
+      },
+      "minutes": 249.25,
+      "victories": 3,
+      "first_kill": 26.45000000000024
+    },
+    {
+      "settings": {
+        "uptime": 0.0
+      },
+      "minutes": 283.5,
+      "victories": 0,
+      "first_kill": null
+    },
+    {
+      "settings": {
+        "reach_cost": 1.0
+      },
+      "minutes": 249.05,
+      "victories": 3,
+      "first_kill": 24.150000000000208
+    },
+    {
+      "settings": {
+        "reach_cost": 10.0
+      },
+      "minutes": 260.9,
+      "victories": 2,
+      "first_kill": 87.0499999999972
+    },
+    {
+      "settings": {
+        "penalty": 0.5
+      },
+      "minutes": 249.3,
+      "victories": 3,
+      "first_kill": 24.150000000000208
+    },
+    {
+      "settings": {
+        "bonus": 1.0
+      },
+      "minutes": 257.8,
+      "victories": 3,
+      "first_kill": 24.150000000000208
+    },
+    {
+      "settings": {
+        "growth": 0.01
+      },
+      "minutes": 530.75,
+      "victories": 3,
+      "first_kill": 27.05000000000025
+    },
+    {
+      "settings": {
+        "reach_minutes": 40
+      },
+      "minutes": 253.55,
+      "victories": 3,
+      "first_kill": 60.19999999999872
+    },
+    {
+      "settings": {
+        "dt": 0.025
+      },
+      "minutes": 249.0,
+      "victories": 3,
+      "first_kill": 24.199999999999694
+    }
+  ],
+  "grant_invariants": [
+    {
+      "curve": "log",
+      "entry_claim": 2,
+      "single_claim_to_1000": 8
+    },
+    {
+      "curve": "sqrt_log",
+      "entry_claim": 2,
+      "single_claim_to_1000": 7
+    },
+    {
+      "curve": "power_015",
+      "entry_claim": 2,
+      "single_claim_to_1000": 5
+    }
+  ]
+}
