@@ -557,6 +557,10 @@ The greatest era-earned nous depth whose cumulative Arete entitlement has alread
 **Engineer**:
 The first habit class, earning module rolls through credited flow time and developing bounded choices in cadence, draft control, and merge progression. Each habit retains its own Engineer experience, tree allocation, and partial roll progress.
 
+**Charge Blade**:
+The first weapon type of the World layer's first experiment: a weapon copy storing charge up to a capped quantity, spending a fixed amount per attack on an adjacent discovered, undefeated enemy, on a capped attack cadence; Arete upgrades its type-level attack power persistently. Granted by the first World-eligible claim, never sold. The World layer's combat vocabulary is deliberately non-musical: the board's modules carry the musical register, and World occupants name their function — the Charge Column, the Charge Blade — leaving room for later combat families such as armor, spells, and summons.
+_Avoid_: Arpeggiator (the pre-naming placeholder)
+
 The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; numerical tuning awaits simulation and prototype evidence. Existing progression and habit-build entries below describe shipped behavior until implementation.
 
 ### Progression
