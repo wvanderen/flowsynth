@@ -4,7 +4,7 @@ import { endSession, startSession } from "./actions";
 import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { BALANCE, SAVE_VERSION } from "./constants";
 import { longGoalCost, mutatorSlotCost } from "./economy";
-import { accrueGoalProgress } from "./goals";
+import { activeGoals, accrueGoalProgress, createGoal, deleteGoal, rollGoalOccurrences, setGoalColor } from "./goals";
 import { deserialize, serialize, GOAL_CAPACITY_REFUND_CAP } from "./save";
 import { freshWorld } from "./state";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
@@ -480,14 +480,14 @@ describe("the v10 → v11 migration (issue #427)", () => {
     const byId = new Map(state.goals.map((goal) => [goal.id, goal]));
     // h1 carried four goals past the fixed capacity of three; the oldest
     // retires. h2 carried two — nothing retires.
-    expect(byId.has("g1")).toBe(false);
+    expect(byId.get("g1")).toEqual({ ...v10MigrationFixture.state.goals.find((g) => g.id === "g1"), liveSeconds: 0, retired: true });
+    expect(activeGoals(state).some((g) => g.id === "g1")).toBe(false);
     expect(byId.get("g2")).toMatchObject({ progressSeconds: 900, condition: { minutes: 45 } });
     expect(byId.get("g3")).toMatchObject({ progressSeconds: 300, schedule: { kind: "weekly" } });
     expect(byId.get("g5")).toMatchObject({ progressSeconds: 0 });
     expect(byId.get("g6")).toMatchObject({ progressSeconds: 120 });
     expect(byId.get("g7")).toMatchObject({ progressSeconds: 0 });
-    // The retired row's history is the session records — no new parallel
-    // record was invented alongside it.
+    // Session history still resolves the preserved goal by ID.
     expect(state.sessionRecords[0]!.goalsAdvanced[0]).toMatchObject({ goalId: "g1" });
   });
 
@@ -502,7 +502,44 @@ describe("the v10 → v11 migration (issue #427)", () => {
     accrueGoalProgress(state, "h1", 3_600, "live");
     expect(cross!.progressSeconds).toBe(before);
     // And it never occupies a slot: capacity counts single-habit rows.
-    expect(state.goals.filter((goal) => goal.condition.habitId === "h1")).toHaveLength(BALANCE.habitGoalSlots);
+    expect(activeGoals(state).filter((goal) => goal.condition.habitId === "h1")).toHaveLength(BALANCE.habitGoalSlots);
+  });
+
+  it("preserves fractional recorded seconds and pays even subsecond flow progress", () => {
+    const state = loadFixture(withEdits((s) => {
+      (s.habits as Habit[])[0]!.seconds = 36_000.75;
+      (s.flow as { progress: number }).progress = 0.25;
+    }));
+    expect(state.habits[0]!.classes.engineer!.experience).toBe(36_000.75);
+    expect(state.bankedRolls).toHaveLength(2);
+    const reloaded = deserialize(serialize(state)).state!;
+    expect(reloaded.habits[0]!.classes.engineer!.experience).toBe(36_000.75);
+    expect(reloaded.bankedRolls).toHaveLength(2);
+  });
+
+  it("keeps retired goal facts unchanged across rollover, practice, edits, and reload", () => {
+    const state = loadFixture();
+    const retired = state.goals.filter((g) => g.retired);
+    expect(retired.map((g) => g.id)).toEqual(["g1", "g4"]);
+    const before = structuredClone(retired);
+    rollGoalOccurrences(state, Date.UTC(2030, 0, 1));
+    accrueGoalProgress(state, "h1", 3_600);
+    state.mode = "upgrade";
+    expect(deleteGoal(state, "g1").ok).toBe(false);
+    expect(setGoalColor(state, "g1", "cyan").ok).toBe(false);
+    expect(retired).toEqual(before);
+    expect(deserialize(serialize(state)).state!.goals.filter((g) => g.retired)).toEqual(before);
+    // Retirement leaves exactly three active slots, and a replacement can
+    // use an opened slot even though the retired record remains present.
+    expect(deleteGoal(state, "g2").ok).toBe(true);
+    expect(createGoal(state, { habitId: "h1", minutes: 10, schedule: "daily", now: 1 }).ok).toBe(true);
+  });
+
+  it("preserves overflow goals even when no session ever referenced them", () => {
+    const state = loadFixture(withEdits((s) => { s.sessionRecords = []; }));
+    expect(state.goals.find((g) => g.id === "g1")).toEqual({
+      ...v10MigrationFixture.state.goals.find((g) => g.id === "g1"), liveSeconds: 0, retired: true,
+    });
   });
 
   it("keeps the Mutator layer resting intact: slots, tray, placed mutators, banked rolls, and meter survive inert", () => {

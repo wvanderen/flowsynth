@@ -5,9 +5,10 @@ import { createHabit, selectHabit, addPracticeLog } from "../engine/habits";
 import { createGoal, accrueGoalProgress, goalCapacity } from "../engine/goals";
 import { endSession, startSession } from "../engine/actions";
 import { advance } from "../engine/advance";
-import { serialize } from "../engine/save";
+import { deserialize, serialize } from "../engine/save";
 import { goalMeterOf, GOAL_METER_SEGMENTS } from "./focus";
 import { createInitialState } from "../engine/state";
+import v10MigrationFixture from "../engine/fixtures/saves/v10-migration.json";
 import { createAppFixture, setVisibility } from "./testing/app-fixture";
 
 // The Focus control sheet (ADR-0050, issue #275): four faces in the ruled
@@ -109,6 +110,26 @@ describe("the four faces in the Focus frame", () => {
     createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1000 });
     expect(openFace("goals").querySelector("#focus-slots-read")!.textContent).toContain(`1/${goalCapacity()} slots`);
     expect(openFace("plan").querySelector("#focus-plan-read")!.textContent).toContain("1 goal tracked");
+  });
+
+  it("retired goals stay in history data without appearing in active goal controls or meters", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1000 }).goal!;
+    goal.retired = true;
+    expect(goalMeterOf(app.state)).toBeNull();
+    expect(openFace("goals").querySelector("#focus-slots-read")!.textContent).toContain(`0/${goalCapacity()} slots`);
+    expect(sheet().querySelector("[data-goal-delete]")).toBeNull();
+    expect(openFace("plan").querySelector("#focus-plan-read")!.textContent).toContain("0 goals tracked");
+    expect(app.state.goals.find((g) => g.id === goal.id)).toBe(goal);
+  });
+
+  it("session history resolves the full description of a retired migrated goal", () => {
+    app.state = deserialize(JSON.stringify(v10MigrationFixture)).state!;
+    openFace("history");
+    app.openDrill(1);
+    expect(sheet().textContent).toContain("5 min · Piano · 20 min a day");
+    expect(sheet().textContent).not.toContain("a since-removed goal");
   });
 
   it("the PLAN face's habit chips and the HABIT list read the same selection", () => {

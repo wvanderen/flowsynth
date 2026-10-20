@@ -344,7 +344,7 @@ export const GOAL_CAPACITY_REFUND_CAP = 64;
 
 // The lenient read for a retired scalar: absent or corrupt owes nothing.
 function retiredPositive(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merged: GameState, rng: Rng): void {
@@ -385,7 +385,7 @@ function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merg
   // the same price function buyGoalCapacity charged per purchase — as
   // one refund, whole nous. The retired count then retires with its
   // economy: capacity is the per-habit fixed figure now.
-  const goalCapacityBought = Math.min(retiredPositive(raw.goalCapacityBought), GOAL_CAPACITY_REFUND_CAP);
+  const goalCapacityBought = Math.min(Math.floor(retiredPositive(raw.goalCapacityBought)), GOAL_CAPACITY_REFUND_CAP);
   for (let bought = 0; bought < goalCapacityBought; bought++) {
     merged.nous += longGoalCost(bought);
   }
@@ -427,23 +427,13 @@ function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merg
     merged.bankedRolls.push(generateOffer(merged, rng));
   }
 
-  // ── Goals: capacity and history ──────────────────────────────────────
-  // Each habit's goals beyond the fixed per-habit capacity retire to
-  // history, oldest active first (creation stamp, array order breaking
-  // ties). The retirement is not deletion: the goal's history survives
-  // where it always lived — the session records' goal history — and only
-  // the active slot it could no longer hold is given up. Nothing is
-  // reinterpreted (no goal flips completed, no condition is rewritten) and
-  // no parallel record is invented; keeping the rows instead would leave
-  // them live past a capacity the GOALS face can no longer show. Cross-
-  // habit (multi-habit) goals retire to history in full and are never
-  // re-read as single-habit goals: their `habitId: null` condition is the
-  // marker every production read already refuses (accrual, display,
-  // tracker, per-habit capacity), so those rows rest inert in the save
-  // exactly like the Mutator layer — kept, never deleted, never read.
+  // Retire in place: session history resolves goal IDs against this list.
+  // Keep the full condition, schedule, and progress even for goals that
+  // have never appeared in a session. Active readers exclude retired rows.
   const perHabit = new Map<string, Goal[]>();
   for (const goal of merged.goals) {
-    if (goal.condition.habitId === null) continue;
+    if (goal.condition.habitId === null) goal.retired = true;
+    if (goal.retired || goal.condition.habitId === null) continue;
     const own = perHabit.get(goal.condition.habitId) ?? [];
     own.push(goal);
     perHabit.set(goal.condition.habitId, own);
@@ -454,8 +444,7 @@ function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merg
     const oldestFirst = own
       .map((goal, index) => ({ goal, index }))
       .sort((a, b) => a.goal.createdAt - b.goal.createdAt || a.index - b.index);
-    const retiredToHistory = new Set(oldestFirst.slice(0, overflow).map((entry) => entry.goal));
-    merged.goals = merged.goals.filter((goal) => !retiredToHistory.has(goal));
+    for (const { goal } of oldestFirst.slice(0, overflow)) goal.retired = true;
   }
 }
 
