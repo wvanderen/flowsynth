@@ -186,14 +186,12 @@ function weaponFaceHtml(state: GameState, weapon: WeaponCopy, lift: number, pos:
   const fed = lift > 0;
   const short = WORLD_META[weapon.type].short;
   return `${plate("firm")}
-    <text class="world-word" y="${NAME_Y}" text-anchor="middle">${short}</text>
+    <text class="world-word" y="${NAME_Y}" text-anchor="middle">${short}${fed ? "" : " · UNFED"}</text>
     <g transform="translate(0,-11)">${worldGlyph("weapon", !fed, 0.7)}</g>
     <g transform="translate(0,4)">${chargeBar(weapon.store, fed)}</g>
     <text class="world-fig${fed ? " charge" : " dim"}" y="22" text-anchor="middle">⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap}</text>
-    ${fed
-      ? `<text class="world-fig" y="${VERDICT_Y}" text-anchor="middle">ATK ${formatInt(attackPowerOf(state, weapon.type))}</text>`
-      : `<text class="world-word" y="${VERDICT_Y}" text-anchor="middle">UNFED</text>`}
-    <polygon class="world-hit" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+    <text class="world-fig" y="${VERDICT_Y}" text-anchor="middle">ATK ${formatInt(attackPowerOf(state, weapon.type))}</text>
+    <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
 
 // The Column's face: its lifted supply figure alone — the one figure the
@@ -207,7 +205,7 @@ function columnFaceHtml(state: GameState, lift: number, pos: Hex): string {
     ${hostless
       ? `<text class="world-word" y="22" text-anchor="middle">inert · no host</text>`
       : `<text class="world-fig${lift > 0 ? " charge" : " dim"}" y="22" text-anchor="middle">⌁${formatNumber(lift)}/s</text>`}
-    <polygon class="world-hit" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+    <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
 
 // The reserved cell's face: claimed-but-unknown — the hatch says the
@@ -217,7 +215,7 @@ function reservedFaceHtml(pos: Hex): string {
   return `${plate("reserved")}
     <rect class="world-hatch" x="${-PLATE_HALF}" y="${-PLATE_HALF}" width="${PLATE_HALF * 2}" height="${PLATE_HALF * 2}"/>
     <text class="world-word" y="-6" text-anchor="middle">RESERVED</text>
-    <polygon class="world-hit" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+    <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
 
 // The discovered enemy's face: the firm plate, the hostile glyph, the
@@ -230,7 +228,7 @@ function enemyFaceHtml(state: GameState, pos: Hex, key: string): string {
     ${worldGlyph("enemy", false, 0.85)}
     <text class="world-fig" y="16" text-anchor="middle">HP ${formatInt(Math.max(0, Math.ceil(live.hp)))}/${formatInt(Math.ceil(def.maxHp))}</text>
     <text class="world-fig penalty" y="${VERDICT_Y}" text-anchor="middle">−${Math.round(def.penalty * 100)}% ν</text>
-    <polygon class="world-hit" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+    <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
 
 // The cleared plate: the encounter retained, the era bonus engraved — the
@@ -240,7 +238,7 @@ function clearedFaceHtml(pos: Hex): string {
     <text class="world-word" y="${NAME_Y}" text-anchor="middle">CLEARED</text>
     ${worldGlyph("enemy", true, 0.7)}
     <text class="world-fig dim engraved-fig" y="20" text-anchor="middle">+${Math.round(enemyDefAt(pos)!.bonus * 100)}% ν</text>
-    <polygon class="world-hit" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+    <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
 
 // The open cell's face: quiet dashed hairline — owned space a placement
@@ -248,7 +246,7 @@ function clearedFaceHtml(pos: Hex): string {
 // targets, the Mutator Grid's own pattern).
 function openFaceHtml(pos: Hex, armed: boolean): string {
   return `${plate(armed ? "open pulse" : "open")}
-    <polygon class="world-hit" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+    <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
 
 /* ── The grid decorations ───────────────────────────── */
@@ -300,7 +298,7 @@ export function worldLensCoordinates(): Hex[] {
 
 /* ── The reserved readout's ask ─────────────────────── */
 
-// Hovering a plate asks the face's full declaration into the reserved
+// Hovering a plate asks its deeper routing and reset facts into the reserved
 // readout — one spot, never floating over the board. The weapons carry
 // their routing (fed, by whom); the enemies their threat; the reserved
 // cells their silence.
@@ -313,9 +311,9 @@ export function worldAskHtml(app: App, pos: Hex, snapshot: RateSnapshot): string
       return `<span class="chord-readout-chip mono" style="--cc:var(--world)">Reserved cell · ${cellNoteOf(pos)} — the World holds this position</span>`;
     }
     if (enemyDefeated(state, def.key)) {
-      return `<span class="chord-readout-chip mono" style="--cc:var(--world)">Cleared · era bonus +${Math.round(def.bonus * 100)}% ν — returns at prestige</span>`;
+      return `<span class="chord-readout-chip mono" style="--cc:var(--world)">Cleared · returns at prestige</span>`;
     }
-    return `<span class="chord-readout-chip mono" style="--cc:var(--world)">Enemy · HP ${formatInt(Math.max(0, Math.ceil(live.hp)))}/${formatInt(Math.ceil(def.maxHp))} · −${Math.round(def.penalty * 100)}% ν</span>`;
+    return `<span class="chord-readout-chip mono" style="--cc:var(--world)">Enemy · returns at prestige</span>`;
   }
   const occupant = worldOccupantAt(state, pos);
   if (!occupant) return `<span class="chord-readout-chip mono" style="--cc:var(--world)">Open World cell · ${cellNoteOf(pos)}</span>`;
@@ -332,7 +330,7 @@ export function worldAskHtml(app: App, pos: Hex, snapshot: RateSnapshot): string
   const lift = columnLiftsOf(state, snapshot).byWeapon.get(weapon.id) ?? 0;
   const targets = eligibleTargetsOf(state, weapon);
   const targetWords = targets.map((key) => `at ${cellNoteOf(WORLD_ENEMIES.find((d) => d.key === key)!.pos)}`);
-  return `<span class="chord-readout-chip mono" style="--cc:var(--world)">${WORLD_META[weapon.type].name} · ⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap}${lift > 0 ? ` · fed ⌁${formatNumber(lift)}/s` : " · unfed"} · ATK ${formatInt(attackPowerOf(state, weapon.type))}${targetWords.length ? ` · engages ${targetWords.join(", ")}` : " · no target in reach"}</span>`;
+  return `<span class="chord-readout-chip mono" style="--cc:var(--world)">${WORLD_META[weapon.type].name}${lift > 0 ? ` · fed ⌁${formatNumber(lift)}/s` : " · unfed"} · ATK ${formatInt(attackPowerOf(state, weapon.type))}${targetWords.length ? ` · engages ${targetWords.join(", ")}` : " · no target in reach"}</span>`;
 }
 
 /* ── The placement preview ────────────────────────────
@@ -430,12 +428,15 @@ function worldInspectHtml(app: App): string {
   if (!weapon && !column) return `<button data-world-back>Back to tray</button><p class="inventory-empty">This occupant is no longer in the tray.</p>`;
   const locked = state.mode !== "upgrade";
   const kind = weapon ? "weapon" : "column";
+  const target = app.ui.detail?.pos;
+  const preview = target ? worldPlacementPreview(state, id, target) : null;
   return `<button data-world-back>Back to tray</button>
     <div class="inventory-inspection">
       <div class="inventory-detail-face">${worldTileSvg(kind)}</div>
       <h3 class="inventory-detail-name">${weapon ? WORLD_META[weapon.type].name : COLUMN_WORD}</h3>
       <p>${weapon ? `Stores charge to ⌁${BALANCE.world.storageCap} · attacks adjacent enemies · ${weaponTrayRead(state, weapon)}` : `Lifts its module cell's received charge to adjacent weapons`}</p>
       ${weapon ? targetPriorityHtml(state, weapon) : ""}
+      ${preview ? `<div class="world-placement-preview" aria-label="Placement supply preview">${worldPreviewHtml(preview)}</div>` : ""}
       <button class="primary" data-world-place="${id}"${locked ? " disabled" : ""}>Place</button>
     </div>`;
 }
@@ -481,6 +482,7 @@ function trayKey(app: App): string {
     state.mode,
     ui.worldTray.inspect,
     ui.worldArmed,
+    ui.detail?.pos,
     state.world.weapons.map((w) => [w.id, w.pos, w.store, w.targetPriority]),
     state.world.columns.map((c) => [c.id, c.pos]),
   ]);
@@ -603,6 +605,7 @@ export function bindWorldLayer(app: App, svg: SVGSVGElement): void {
       startWorldDrag(app, event, occupant.id, pos);
     });
   });
+  refreshWorldPreview(app);
 }
 
 export function hexFromAttr(raw: string | null | undefined): Hex | null {
@@ -757,7 +760,7 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
     const rate = lift.byWeapon.get(weapon.id) ?? 0;
     const fed = rate > 0;
     return {
-      chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("firm", 52)}<text class="world-word" y="-38" text-anchor="middle">${WORLD_META[weapon.type].short}</text><g transform="translate(0,-16)">${worldGlyph("weapon", !fed, 1)}</g><g transform="translate(0,4)">${chargeBar(weapon.store, fed, 72)}</g><text class="world-fig${fed ? " charge" : " dim"}" y="26" text-anchor="middle">⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap}</text><text class="${fed ? "world-fig" : "world-word"}" y="44" text-anchor="middle">${fed ? `ATK ${formatInt(attackPowerOf(state, weapon.type))}${rate ? ` · ⌁${formatNumber(rate)}/s` : ""}` : "UNFED"}</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
+      chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("firm", 52)}<text class="world-word" y="-38" text-anchor="middle">${WORLD_META[weapon.type].short}${fed ? "" : " · UNFED"}</text><g transform="translate(0,-16)">${worldGlyph("weapon", !fed, 1)}</g><g transform="translate(0,4)">${chargeBar(weapon.store, fed, 72)}</g><text class="world-fig${fed ? " charge" : " dim"}" y="26" text-anchor="middle">⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap}</text><text class="${fed ? "world-fig" : "world-word"}" y="44" text-anchor="middle">ATK ${formatInt(attackPowerOf(state, weapon.type))}${fed && rate ? ` · ⌁${formatNumber(rate)}/s` : ""}</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
       tip: fed ? `${WORLD_META[weapon.type].name} · attacks its top target every ${BALANCE.world.attackCadenceSeconds} s` : `${WORLD_META[weapon.type].name} · place beside a Column to feed`,
     };
   }

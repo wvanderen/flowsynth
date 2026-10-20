@@ -7,7 +7,7 @@ import { hex } from "../engine/hex";
 import { BALANCE } from "../engine/constants";
 import { endSession, prestige, startSession } from "../engine/actions";
 import { bankableClaimOf } from "../engine/accumulator";
-import { columnLiftsOf } from "../engine/world";
+import { attackPowerOf, columnLiftsOf } from "../engine/world";
 import { createInitialState } from "../engine/state";
 import type { GameState } from "../engine/types";
 
@@ -169,6 +169,11 @@ describe("the occupant plates (issue #426, priority 3)", () => {
     expect(blade.textContent).toContain("BLADE");
     expect(blade.textContent).toContain(`⌁0/${BALANCE.world.storageCap}`);
     expect(blade.textContent).toContain("UNFED");
+    expect(blade.textContent).toContain(`ATK ${attackPowerOf(app.state, "chargeBlade")}`);
+    app.openDetail(hex(1, 0), "world");
+    const chassis = document.querySelector(".world-stack")!;
+    expect(chassis.textContent).toContain("UNFED");
+    expect(chassis.textContent).toContain(`ATK ${attackPowerOf(app.state, "chargeBlade")}`);
   });
 
   it("a fed weapon's face reads the charge figure and its attack power", () => {
@@ -217,6 +222,40 @@ describe("placement and relocation (issue #426, priority 4)", () => {
     expect(app.state.world.weapons.find((w) => w.id === "wp2")!.pos).toEqual(hex(0, 0));
     expect(app.ui.worldArmed).toBeNull();
     expect(status()).toContain("Charge Blade placed");
+  });
+
+  it.each(["pointerover", "focusin"])("armed placement previews supply on %s and clears on exit", (event) => {
+    seedEra();
+    app.setBoardLayer("world");
+    app.worldArmTray("wp2");
+    expect(openFace(0, 0).getAttribute("tabindex")).toBe("0");
+    openFace(0, 0).dispatchEvent(new Event(event, { bubbles: true }));
+    const readout = () => document.getElementById("chord-readout")!.textContent!;
+    expect(readout()).toContain("this BLADE: unfed → unfed");
+    expect(app.state.world.weapons[1]!.pos).toBeNull();
+    app.render();
+    expect(openFace(0, 0).getAttribute("tabindex")).toBe("0");
+    expect(app.ui.worldDropHover?.pos).toEqual(hex(0, 0));
+    grid().dispatchEvent(new Event(event === "focusin" ? "focusout" : "pointerleave", { bubbles: true }));
+    expect(app.ui.worldDropHover).toBeNull();
+    expect(readout()).not.toContain("→");
+  });
+
+  it("hover keeps stored charge and encounter effects on their faces", () => {
+    seedEra();
+    app.state.world.weapons[0]!.store = 12;
+    app.state.world.enemies.w0 = { discovered: true, hp: 5 };
+    app.setBoardLayer("world");
+    const readout = () => document.getElementById("chord-readout")!.textContent!;
+    openFace(1, 0).dispatchEvent(new Event("pointerover", { bubbles: true }));
+    expect(readout()).not.toContain("⌁12/");
+    expect(readout()).toContain("no target in reach");
+    openFace(-1, 0).dispatchEvent(new Event("pointerover", { bubbles: true }));
+    expect(readout()).not.toContain("% ν");
+    app.state.world.enemies.w0.hp = 0;
+    app.render();
+    openFace(-1, 0).dispatchEvent(new Event("pointerover", { bubbles: true }));
+    expect(readout()).not.toContain("% ν");
   });
 
   it("an occupied cell refuses; enemy cells refuse, cleared ones included", () => {

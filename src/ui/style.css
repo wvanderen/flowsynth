@@ -4350,8 +4350,8 @@ body.hex-detail-open .tray-column { z-index: 24; }
 .world-priority-move {
   all: unset;
   cursor: pointer;
-  width: 22px;
-  height: 22px;
+  width: 44px;
+  height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -4367,3 +4367,5 @@ body.hex-detail-open .tray-column { z-index: 24; }
 .world-preview svg, .grant-face svg { width: 44px; height: 44px; color: var(--world); }
 .grant-face { display: flex; justify-content: center; padding: 18px 0 6px; }
 .hex-detail-world-line { margin: 4px 0 0; font: 12px var(--font-sans); color: var(--ink); }
+
+.world-placement-preview { display: flex; flex-direction: column; gap: 4px; }

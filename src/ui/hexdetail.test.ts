@@ -1009,6 +1009,10 @@ describe("the shared inventory in Hex detail", () => {
     app.openModal("inventory");
     document.querySelector<HTMLButtonElement>('#modal-content [data-legend-layer="world"]')!.click();
     document.querySelector<HTMLButtonElement>('#modal-content [data-world-tray]')!.click();
+    const preview = document.querySelector('#modal-content [aria-label="Placement supply preview"]');
+    expect(preview?.textContent).toContain("this BLADE:");
+    expect(preview?.textContent).toContain("→");
+    expect(app.state.world.weapons[1]!.pos).toBeNull();
     document.querySelector<HTMLButtonElement>('#modal-content [data-world-place]')!.click();
     // The tray twin (weapon #2) lands on the opened cell; no swap exists
     // on the World face — an occupied cell refuses.

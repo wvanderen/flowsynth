@@ -1180,7 +1180,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // no placement armed, no hover can be live — stale state never survives a
   // render. The Mutator layer's preview obeys the same rule (issue #199).
   if (!app.dragging && !ui.placing) ui.dropHover = null;
-  if (!app.ui.worldCarrying) ui.worldDropHover = null;
+  if (!ui.worldCarrying && !ui.worldArmed) ui.worldDropHover = null;
   // A state change always rides a render (act), so the placement
   // projection never outlives the pass that could stale it (#260) — the
   // hover refresh recomputes it on demand.
@@ -1821,6 +1821,9 @@ function updateChordEmphasis(app: App): void {
 function setChordHover(app: App, hover: ChordHover | null): void {
   if (app.released) return;
   const next = hover ?? null;
+  if (app.ui.worldArmed && !app.ui.worldCarrying) {
+    app.setWorldDropHover(app.ui.worldArmed, next?.kind === "world" ? next.pos : null);
+  }
   if (sameChordHover(app.ui.chordHover, next)) return;
   app.ui.chordHover = next;
   updateChordReadout(app);
@@ -2357,6 +2360,10 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
   };
   app.listen(svg, "pointerover", ask);
   app.listen(svg, "focusin", ask);
+  app.listen(svg, "focusout", (event) => {
+    const next = (event as FocusEvent).relatedTarget;
+    if (!(next instanceof Node) || !svg.contains(next)) setChordHover(app, null);
+  });
   app.listen(byId("chord-readout"), "pointerleave", (event) => {
     const next = (event as PointerEvent).relatedTarget;
     if (next instanceof Node && svg.contains(next)) return;
