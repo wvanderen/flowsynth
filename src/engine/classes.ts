@@ -95,7 +95,7 @@ export const CLASSES: readonly ClassDef[] = [
     presets: [
       { id: "engineer-default", name: "Default", spent: { governor: 2, reed: 1 } },
       { id: "engineer-cadence", name: "Draft control", spent: { governor: 2 } },
-      { id: "engineer-merge", name: "Merge progression", spent: { reed: 2 } },
+      { id: "engineer-merge", name: "Plying", spent: { reed: 2 } },
     ],
   },
 ];
@@ -128,8 +128,8 @@ export function pairDef(habit: Habit): ClassDef {
 // The habit's selected pair — the accrual target. A save can carry an
 // unknown classId only before normalization; readers guard with the same
 // default the normalizer writes.
-export function pairOf(habit: Habit, classId: ClassId = habit.classId): ClassPairState {
-  return habit.classes[classId] ?? freshClassPair();
+export function pairOf(habit: Habit): ClassPairState {
+  return habit.classes[habit.classId] ?? freshClassPair();
 }
 
 // The session's active pair: the active habit wearing its selected class.
@@ -152,9 +152,15 @@ export function nodeAvailable(pair: ClassPairState, node: ClassNodeDef): boolean
   return pair.level >= node.requiredLevel;
 }
 
+// The def's node by id — the registry is code, so an unknown id reads
+// undefined and every caller guards.
+function nodeOf(def: ClassDef, nodeId: string): ClassNodeDef | undefined {
+  return def.nodes.find((node) => node.id === nodeId);
+}
+
 // The Governor ranks' discount on the flat cadence block.
 function cadenceDiscount(pair: ClassPairState, def: ClassDef): number {
-  const governor = def.nodes.find((node) => node.id === "governor");
+  const governor = nodeOf(def, "governor");
   if (!governor) return 0;
   return rankOf(pair, governor) * BALANCE.engineerCadenceDiscountPerRank;
 }
@@ -170,7 +176,7 @@ export function practiceRollThreshold(pair: ClassPairState, earned: number, def:
 
 // The Reed ranks' extra tier-lift chance on this pair's practice mints.
 function mintTierChance(pair: ClassPairState, def: ClassDef): number {
-  const reed = def.nodes.find((node) => node.id === "reed");
+  const reed = nodeOf(def, "reed");
   if (!reed) return 0;
   return rankOf(pair, reed) * BALANCE.engineerTierChancePerRank;
 }
@@ -185,8 +191,10 @@ export { totalPracticeRollsEarned } from "./rolls";
 // card's guaranteed-rare weave on every nth crossing. One crossing mints
 // one offer, whichever shape it takes.
 function generatePracticeOffer(state: GameState, pair: ClassPairState, def: ClassDef, rng: Rng) {
+  const punchCard = nodeOf(def, "punch-card");
   if (
-    rankOf(pair, def.nodes.find((node) => node.id === "punch-card")!) > 0 &&
+    punchCard &&
+    rankOf(pair, punchCard) > 0 &&
     pair.rollMeter.earned > 0 &&
     pair.rollMeter.earned % BALANCE.engineerGuaranteedWeaveNth === 0
   ) {
@@ -238,26 +246,33 @@ export function accrueClassDevelopment(state: GameState, seconds: number, rng: R
 // refusal surface, one sentence over.
 const CLASS_MODE_LOCK = "The active class is locked during flow.";
 
-export function selectHabitClass(state: GameState, habitId: string, classId: ClassId): { ok: boolean; reason?: string } {
+// The one habit lookup every class action shares: upgrade-mode gate, the
+// live-habit find, and the shared refusal.
+function classHabitOf(state: GameState, habitId: string): { habit: Habit } | { ok: false; reason: string } {
   if (state.mode !== "upgrade") return { ok: false, reason: CLASS_MODE_LOCK };
   const habit = state.habits.find((h) => h.id === habitId && !h.archived);
   if (!habit) return { ok: false, reason: "Habit not found." };
+  return { habit };
+}
+
+export function selectHabitClass(state: GameState, habitId: string, classId: ClassId): { ok: boolean; reason?: string } {
+  const found = classHabitOf(state, habitId);
+  if (!("habit" in found)) return found;
   if (!CLASS_IDS.includes(classId)) return { ok: false, reason: "That class does not exist." };
-  if (habit.classId === classId) return { ok: true };
-  habit.classId = classId;
-  const ledger = habit.classes as Record<string, ClassPairState | undefined>;
+  if (found.habit.classId === classId) return { ok: true };
+  found.habit.classId = classId;
+  const ledger = found.habit.classes as Record<string, ClassPairState | undefined>;
   if (!ledger[classId]) ledger[classId] = freshClassPair();
   return { ok: true };
 }
 
 export function allocateClassNode(state: GameState, habitId: string, nodeId: string): { ok: boolean; reason?: string } {
-  if (state.mode !== "upgrade") return { ok: false, reason: CLASS_MODE_LOCK };
-  const habit = state.habits.find((h) => h.id === habitId && !h.archived);
-  if (!habit) return { ok: false, reason: "Habit not found." };
-  const def = pairDef(habit);
-  const node = def.nodes.find((n) => n.id === nodeId);
+  const found = classHabitOf(state, habitId);
+  if (!("habit" in found)) return found;
+  const def = pairDef(found.habit);
+  const node = nodeOf(def, nodeId);
   if (!node) return { ok: false, reason: "That tree node does not exist." };
-  const pair = pairOf(habit);
+  const pair = pairOf(found.habit);
   if (!nodeAvailable(pair, node)) return { ok: false, reason: `${node.name} unlocks at class level ${node.requiredLevel}.` };
   if (rankOf(pair, node) >= node.maxRank) return { ok: false, reason: `${node.name} is fully ranked.` };
   if (pair.points < 1) return { ok: false, reason: "No tree points to allocate — level up through practice." };
@@ -270,11 +285,10 @@ export function allocateClassNode(state: GameState, habitId: string, nodeId: str
 // sessions. Experience, level, and the meter are untouched — the free
 // reassignment is the whole act.
 export function respecClassTree(state: GameState, habitId: string): { ok: boolean; reason?: string } {
-  if (state.mode !== "upgrade") return { ok: false, reason: CLASS_MODE_LOCK };
-  const habit = state.habits.find((h) => h.id === habitId && !h.archived);
-  if (!habit) return { ok: false, reason: "Habit not found." };
-  const pair = pairOf(habit);
-  for (const node of pairDef(habit).nodes) {
+  const found = classHabitOf(state, habitId);
+  if (!("habit" in found)) return found;
+  const pair = pairOf(found.habit);
+  for (const node of pairDef(found.habit).nodes) {
     pair.points += rankOf(pair, node);
   }
   pair.spent = {};
@@ -286,13 +300,12 @@ export function respecClassTree(state: GameState, habitId: string): { ok: boolea
 // allocation. Nothing exclusive, nothing extra: unlisted nodes reset,
 // and the pair's earned points must cover every rank the preset spends.
 export function applyClassPreset(state: GameState, habitId: string, presetId: string): { ok: boolean; reason?: string } {
-  if (state.mode !== "upgrade") return { ok: false, reason: CLASS_MODE_LOCK };
-  const habit = state.habits.find((h) => h.id === habitId && !h.archived);
-  if (!habit) return { ok: false, reason: "Habit not found." };
-  const def = pairDef(habit);
+  const found = classHabitOf(state, habitId);
+  if (!("habit" in found)) return found;
+  const def = pairDef(found.habit);
   const preset = def.presets.find((p) => p.id === presetId);
   if (!preset) return { ok: false, reason: "That preset does not exist." };
-  const pair = pairOf(habit);
+  const pair = pairOf(found.habit);
   let wanted = 0;
   for (const node of def.nodes) {
     const rank = preset.spent[node.id] ?? 0;

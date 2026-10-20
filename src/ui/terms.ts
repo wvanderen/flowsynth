@@ -31,11 +31,11 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "mutator rolls": "Choose one mutator from two candidates",
   "habit build": "Equipped build nodes apply during that habit’s sessions",
   goals: "Practice targets credited by flow sessions",
-  "Habit class": "A habit’s specialization; each pair keeps its own progress",
+  "Habit class": "A habit’s specialization, keeping its own progress",
   Engineer: "Earns module rolls through credited practice",
-  "practice-roll meter": "Credited practice with the pair fills it toward a module roll",
-  "tree point": "Grants per class level; allocates into bounded-rank nodes",
-  Respec: "Returns every allocated point; experience and level stay",
+  "practice-roll meter": "Credited practice fills it toward a module roll",
+  "tree point": "Grants per class level, allocating into rank-capped nodes",
+  Respec: "Returns every allocated point, keeping experience and level",
   Preset: "A named ordinary allocation the tree applies in one move",
 };
 let catalogTermSeq = 0;

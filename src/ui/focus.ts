@@ -414,19 +414,27 @@ export function practiceMeterLine(pair: ClassPairState): string {
   return `${formatCountdown(pair.rollMeter.progress)} / ${formatCountdown(threshold)} — next roll in ~${formatCountdown(remaining)} of practice`;
 }
 
+// The pair's meter read, one builder for the row's markup and its live
+// patcher alike: threshold, fill share, and the spoken line (#351's
+// no-drift rule, issue #423).
+function classMeterRead(habit: Habit): { threshold: number; fill: string; line: string } {
+  const pair = pairOf(habit);
+  const threshold = practiceRollThreshold(pair, pair.rollMeter.earned);
+  const fill = `${(Math.min(1, Math.max(0, pair.rollMeter.progress / threshold)) * 100).toFixed(1)}%`;
+  return { threshold, fill, line: practiceMeterLine(pair) };
+}
+
 // The meter's live row (issue #423): the track carries the same
 // progressbar semantics its fill shows (#351) — valuenow and valuetext
 // mirror the visible read. Rendered in the flow-mode active read and the
 // habit/class detail; the live patcher fills both.
 function classMeterRowHtml(habit: Habit): string {
-  const pair = pairOf(habit);
-  const threshold = practiceRollThreshold(pair, pair.rollMeter.earned);
-  const fill = `${(Math.min(1, Math.max(0, pair.rollMeter.progress / threshold)) * 100).toFixed(1)}%`;
+  const { threshold, fill, line } = classMeterRead(habit);
   return `<div class="folio-row class-meter-row">
-    <span class="folio-key">${termTipHtml("practice-roll meter", "Practice rolls")}</span>
+    <span class="folio-key">${termTipHtml("practice-roll meter", "Practice-roll meter")}</span>
     <span class="folio-main class-meter">
-      <span class="class-meter-track" data-live="class-meter-track" data-habit="${habit.id}" role="progressbar" aria-label="Practice-roll meter" aria-valuemin="0" aria-valuemax="${threshold}" aria-valuenow="${pair.rollMeter.progress}" aria-valuetext="${escapeHtml(practiceMeterLine(pair))}"><i data-live="class-meter-pip" style="width:${fill}"></i></span>
-      <small class="mono" data-live="class-meter-line" data-habit="${habit.id}">${escapeHtml(practiceMeterLine(pair))}</small>
+      <span class="class-meter-track" data-live="class-meter-track" data-habit="${habit.id}" role="progressbar" aria-label="Practice-roll meter" aria-valuemin="0" aria-valuemax="${threshold}" aria-valuenow="${pairOf(habit).rollMeter.progress}" aria-valuetext="${escapeHtml(line)}"><i data-live="class-meter-pip" style="width:${fill}"></i></span>
+      <small class="mono" data-live="class-meter-line" data-habit="${habit.id}">${escapeHtml(line)}</small>
     </span>
   </div>`;
 }
@@ -485,13 +493,15 @@ function habitClassHtml(app: App, habit: Habit): string {
     .map((preset) => {
       const cost = Object.values(preset.spent).reduce((sum, rank) => sum + rank, 0);
       const affordable = upgrade && cost <= pair.points + spentTotal;
-      return `<button class="plan-chip" data-class-preset="${preset.id}" data-habit="${habit.id}" aria-pressed="false" ${affordable ? "" : "disabled"} title="Applies as an ordinary allocation">${escapeHtml(preset.name)}</button>`;
+      // A momentary action, never a toggle: no pressed state — the engine
+      // answers for the budget and the prerequisites either way.
+      return `<button class="plan-chip" data-class-preset="${preset.id}" data-habit="${habit.id}" ${affordable ? "" : "disabled"} title="Applies as an ordinary allocation">${escapeHtml(preset.name)}</button>`;
     })
     .join("");
   return `<div class="habit-class">
     <span class="eyebrow">CLASS</span>
     <div class="class-chips" role="group" aria-label="Class">${chips}</div>
-    <div class="stat-row"><span>Class</span><span class="mono">${termTipHtml("Engineer", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
+    <div class="stat-row"><span>Class</span><span class="mono">${termTipHtml(def.id === "engineer" ? "Engineer" : "Habit class", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
     <div class="stat-row"><span>Next level</span><span class="mono">${nextRead}</span></div>
     ${classMeterRowHtml(habit)}
     <div class="class-tree">
@@ -1017,24 +1027,22 @@ export function updateFocusSheetLive(app: App, scope: ParentNode): void {
   }
   // The practice-roll meters (issue #423): every rendered pair's track and
   // line patch in place — the active one moves during flow, the frozen
-  // pairs never do, and both read through the same builder.
+  // pairs never do, and both read through the one builder.
   const habitById = new Map(state.habits.map((habit) => [habit.id, habit] as const));
   for (const track of scope.querySelectorAll<HTMLElement>('[data-live="class-meter-track"]')) {
     const habit = habitById.get(track.getAttribute("data-habit") ?? "");
     if (!habit) continue;
-    const pair = pairOf(habit);
-    const threshold = practiceRollThreshold(pair, pair.rollMeter.earned);
-    const fill = `${(Math.min(1, Math.max(0, pair.rollMeter.progress / threshold)) * 100).toFixed(1)}%`;
+    const { threshold, fill, line } = classMeterRead(habit);
     const pip = track.querySelector<HTMLElement>('[data-live="class-meter-pip"]');
     if (pip && pip.style.width !== fill) pip.style.width = fill;
     track.setAttribute("aria-valuemax", String(threshold));
-    track.setAttribute("aria-valuenow", String(Math.max(0, pair.rollMeter.progress)));
-    track.setAttribute("aria-valuetext", practiceMeterLine(pair));
+    track.setAttribute("aria-valuenow", String(Math.max(0, pairOf(habit).rollMeter.progress)));
+    track.setAttribute("aria-valuetext", line);
   }
   for (const line of scope.querySelectorAll<HTMLElement>('[data-live="class-meter-line"]')) {
     const habit = habitById.get(line.getAttribute("data-habit") ?? "");
     if (!habit) continue;
-    setText(line, practiceMeterLine(pairOf(habit)));
+    setText(line, classMeterRead(habit).line);
   }
   for (const habit of state.habits) {
     const node = scope.querySelector(`[data-habit-seconds="${habit.id}"]`);
