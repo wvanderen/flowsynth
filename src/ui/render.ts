@@ -3724,12 +3724,13 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
     <p class="lead">${zero
       ? `This prestige banks <strong>no Arete</strong> — the frontier already covers how far this era climbed.`
       : `Prestige banks <strong class="mono">${claim} Arete</strong>`} and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
-    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, your scrap, and lifetime nous all stay — as do your World columns, weapons, and Hone ranks.</p>
+    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, your scrap, and lifetime nous all stay — as do your World columns, weapons, and ${termTipHtml("Hone")} ranks.</p>
     <div class="modal-actions">
       <button id="prestige-cancel">Not yet</button>
       <button id="prestige-confirm" class="primary">${zero ? "Prestige anyway" : `Prestige and claim ${claim} Arete`}</button>
     </div>`;
   app.listen(byId("prestige-cancel"), "click", () => app.closeModal());
+  wireTooltips(content, app.signal);
   app.listen(byId("prestige-confirm"), "click", () => app.confirmPrestige());
   wireClose(app);
 }

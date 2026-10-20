@@ -12,7 +12,7 @@ import {
   worldFactorOf,
 } from "./world";
 import { bankableClaimOf, frontierEntitlement, pendingClaimOf, ARETE_HORIZON } from "./accumulator";
-import { buyChargeColumn, buyHoneRank, placeWorldOccupant, prestige, retrieveWorldOccupant, setWeaponTargetPriority, startSession } from "./actions";
+import { buyChargeColumn, buyHoneRank, placeWorldOccupant, prestige, reshapeCells, retrieveWorldOccupant, setWeaponTargetPriority, startSession } from "./actions";
 import { advance, advanceBreather } from "./advance";
 import { BALANCE, WORLD_ENEMIES } from "./constants";
 import { createInitialState, createWeapon } from "./state";
@@ -622,6 +622,31 @@ describe("the combat clock in the span walk (issue #425, priority 5)", () => {
     expect(combatBoundaryOf(s)).toBe(Infinity);
   });
 
+  it.each(["flow", "breather"] as const)("%s combat uses charge earned before a tick regardless of step size", (mode) => {
+    const rig = () => {
+      const s = flowing();
+      give(s, "additive", hex(0, 1));
+      give(s, "focusKeyed", hex(1, 0)).reserve = 500000;
+      s.world.columns.push({ id: "col1", pos: hex(0, 1) });
+      grantWeapon(s, hex(1, 0), 0);
+      reveal(s, "w1");
+      if (mode === "breather") {
+        s.mode = "breather";
+        s.breather = { startedAt: 0, allowanceSeconds: 600, elapsed: 0 };
+      }
+      return s;
+    };
+    const whole = rig();
+    const split = rig();
+    const walk = mode === "flow" ? advance : advanceBreather;
+    walk(whole, 60);
+    walk(split, 30);
+    walk(split, 30);
+    expect(whole.world.enemies.w1!.hp).toBe(WORLD_ENEMIES.find(e => e.key === "w1")!.maxHp - BALANCE.world.attackBase);
+    expect(whole.world.enemies).toEqual(split.world.enemies);
+    expect(whole.world.weapons).toEqual(split.world.weapons);
+  });
+
   it("a multi-day away gap with live combat resolves iteratively: bounded, complete, exact at the kills", () => {
     const s = flowing();
     give(s, "additive", hex(0, 1));
@@ -726,6 +751,20 @@ describe("no refunds — World purchases are permanent (issue #425, priority 8)"
     expect(retrieveWorldOccupant(s, weapon.id).ok).toBe(true);
     expect(weapon.pos).toBeNull();
     expect(placeWorldOccupant(s, second.id, hex(0, 1)).ok).toBe(true);
+  });
+
+  it.each(["column", "weapon"] as const)("reshaping preserves a deployed %s host", (kind) => {
+    const s = fresh();
+    for (const module of s.modules) module.pos = null;
+    const occupant = kind === "weapon" ? grantWeapon(s, null) : { id: "col1", pos: null as Hex | null };
+    if (kind === "column") s.world.columns.push(occupant);
+    expect(placeWorldOccupant(s, occupant.id, hex(0, 1)).ok).toBe(true);
+    const next = [hex(0, 0), hex(1, 0), hex(1, -1)];
+    const before = [...s.cells];
+    expect(reshapeCells(s, next).ok).toBe(false);
+    expect(s.cells).toEqual(before);
+    expect(retrieveWorldOccupant(s, occupant.id).ok).toBe(true);
+    expect(reshapeCells(s, next).ok).toBe(true);
   });
 
   it("the enemy cell blocks World placement even after defeat — the encounter remains", () => {

@@ -167,6 +167,8 @@ export function advance(
     // upgrades, and placement reselections land. The retention hint rides
     // the state and is written back here.
     const gained = snapshot.rate * spanSeconds;
+    // Supply earned during this span is available at its ending attack tick.
+    advanceWorldCharge(state, snapshot, spanSeconds);
     if (sink === "provisional") {
       // Provisional nous never touches the balance: it waits in the bucket
       // for the honesty report to bank or drop it in one move (§2), and the
@@ -220,10 +222,6 @@ export function advance(
       advanceWorldCombat(state, spanSeconds);
       syncWorldDiscoveries(state);
     }
-    // The World's charge lift (issue #425): Columns copy their module
-    // cells' received charge in both sinks — the charge economy runs in
-    // both — while only the combat leg above gates on trust.
-    advanceWorldCharge(state, snapshot, spanSeconds);
     // The session-tick check (ADR-0015): charge exists only live in flow, so
     // the tick that holds the snapshot reports whether any module received
     // it (Spark). Unlocks queue into the session's summary row. The feats
@@ -274,6 +272,8 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     const boundary = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
     const spanSeconds = boundary !== Infinity && boundary + EPS < seconds ? boundary : seconds;
     const gained = snapshot.rate * spanSeconds;
+    // Supply earned during this span is available at its ending attack tick.
+    advanceWorldCharge(state, snapshot, spanSeconds);
     // Pre-trusted time banks straight onto the balance — the counter-image
     // of the provisional sink (docs/breather-spec.md §4).
     earnNous(state, gained);
@@ -285,7 +285,6 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     // credits nothing (spec §6 — the honesty system governs practice
     // claims, and a breather claims nothing).
     advanceWorldCombat(state, spanSeconds);
-    advanceWorldCharge(state, snapshot, spanSeconds);
     syncWorldDiscoveries(state);
     discoverBoard(state, snapshot);
     result = sumResults(result, spanResult);

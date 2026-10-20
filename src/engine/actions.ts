@@ -731,6 +731,9 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
       return fail("Every deployed module needs a cell.");
     }
   }
+  if ([...state.world.columns, ...state.world.weapons].some((occupant) => occupant.pos !== null && !keys.has(hexKey(occupant.pos)))) {
+    return fail("Every deployed World occupant needs a cell.");
+  }
   if (state.mutatorSlots.some((slot) => !keys.has(hexKey(slot)))) {
     return fail("Every unlocked Mutator slot needs its cell.");
   }

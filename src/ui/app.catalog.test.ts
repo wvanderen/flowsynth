@@ -476,6 +476,20 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(app.state.arete).toBe(2);
   }
 
+  it("discloses Hone in the prestige confirmation and dismisses it with Escape", () => {
+    app.state.eraEarned = BALANCE.world.entryNous;
+    app.render();
+    document.getElementById("prestige-door")!.click();
+    const hone = document.querySelector<HTMLButtonElement>('[aria-label="Hone — what it means"]')!;
+    hone.focus();
+    expect(hone.getAttribute("aria-expanded")).toBe("true");
+    const tip = document.getElementById(hone.getAttribute("aria-describedby")!)!;
+    expect(tip.classList.contains("inst-show")).toBe(true);
+    hone.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(hone.getAttribute("aria-expanded")).toBe("false");
+    expect(tip.classList.contains("inst-show")).toBe(false);
+  });
+
   it("before the first prestige the ledger and strip carry the dim telegraph slot (issue #270)", () => {
     app.render();
     // No live arete read and no door anywhere — the dim slot is the surface.
