@@ -196,17 +196,17 @@ describe("the session group's one-click start (issue #331)", () => {
 });
 
 describe("the unified Focus surface", () => {
-  it("logo, habit, and timer share one native door and one focus stop", () => {
+  it("habit and timer share one native door; the logo stays outside", () => {
     const created = createHabit(app.state, "Jammin");
     selectHabit(app.state, created.habit!.id);
     app.render();
     const door = () => document.querySelector<HTMLButtonElement>(".session-focus")!;
     expect(door().tagName).toBe("BUTTON");
     expect(door().querySelectorAll("button, [tabindex]")).toHaveLength(0);
-    expect(door().contains(document.querySelector(".brand"))).toBe(true);
+    expect(door().contains(document.querySelector("#console-logo"))).toBe(false);
     expect(door().contains(document.getElementById("session-habit"))).toBe(true);
     expect(door().contains(document.querySelector(".display-well"))).toBe(true);
-    document.querySelector<HTMLElement>(".brand")!.click();
+    door().click();
     expect(app.ui.app).toBe("time");
     expect(door().getAttribute("aria-expanded")).toBe("true");
     expect(door().contains(document.getElementById("app-popover"))).toBe(false);
@@ -1140,7 +1140,7 @@ describe("the breather (docs/breather-spec.md)", () => {
     expect(app.ui.modal).toBeNull();
     // The console reads the breather: the main switch is the early exit,
     // no pause stands beside it, the caption names the phase.
-    expect(document.getElementById("pause-flow")).toBeNull();
+    expect(document.querySelector<HTMLButtonElement>("#pause-flow")!.disabled).toBe(true);
     const mainSwitch = document.getElementById("flow-switch")!;
     expect(mainSwitch.getAttribute("aria-label")).toBe("End breather");
     expect(document.getElementById("session-caption")!.textContent).toContain("Breather");

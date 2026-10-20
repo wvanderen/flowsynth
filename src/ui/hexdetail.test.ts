@@ -136,53 +136,32 @@ describe("opening the cross-section (issue #295)", () => {
     expect(map.querySelectorAll(".ctx-dot").length).toBe(1);
   });
 
-  it("an owned cell on the context map navigates the detail to its coordinate", () => {
-    give(app.state, "additive", hex(1, 0));
-    app.render();
-    clickCell(0, 0);
-    // Owned cells are the map's buttons — the board grid's own SVG
-    // grammar; the opened cell stays a marker, never a control.
-    const node = detail().querySelector('[data-ctx-cell="1,0"]')!;
-    expect(node.getAttribute("role")).toBe("button");
-    expect(detail().querySelector('[data-ctx-cell="0,0"]')).toBeNull();
-    node.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.detail).toEqual({ pos: hex(1, 0), face: "modules" });
-    // Keyboard opens too, and the face survives the jump.
-    const back = detail().querySelector('[data-ctx-cell="0,0"]')!;
-    back.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
-    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "modules" });
+  it("expands the map and navigates by click and keyboard with the focused layer intact", () => {
+    give(app.state,"additive",hex(1,0)); app.render(); clickCell(0,0);
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    const dialog=document.querySelector<HTMLDialogElement>(".context-overview")!;
+    expect(dialog.open).toBe(true);
+    dialog.querySelector('[data-ctx-cell="1,0"]')!.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
+    expect(document.querySelector(".context-overview")).toBeNull();
+    expect(app.ui.detail).toEqual({pos:hex(1,0),face:"modules"});
   });
-
-  it("keeps context-map keyboard focus through a changing live read", () => {
-    app.render();
-    clickCell(0, 0);
-    const node = detail().querySelector<SVGElement>('[data-ctx-cell="1,0"]')!;
-    node.focus();
+  it("retains overview focus through live ticks and closes back to the miniature", () => {
+    app.render();clickCell(0,0);
+    const invoker=detail().querySelector<HTMLButtonElement>("[data-context-expand]")!;
+    invoker.focus();invoker.click();
+    const node=document.querySelector<HTMLButtonElement>('[data-map-cell="1,0"]')!;
+    node.focus();app.state.nous+=10;app.render();
     expect(document.activeElement).toBe(node);
-    app.state.nous += 10;
-    app.render();
-    const replacement = detail().querySelector<SVGElement>('[data-ctx-cell="1,0"]')!;
-    expect(replacement).not.toBe(node);
-    expect(document.activeElement).toBe(replacement);
-    replacement.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true }));
-    expect(app.ui.detail?.pos).toEqual(hex(1, 0));
+    document.querySelector<HTMLButtonElement>("[data-map-close]")!.click();
+    expect(document.querySelector(".context-overview")).toBeNull();
   });
-
-  it("the phone cell picker navigates owned cells and retains the focused layer", () => {
-    setAppWidth(390);
-    seedEra();
-    app.openDetail(hex(0, 0), "world");
-    const picker = detail().querySelector<HTMLSelectElement>("[data-ctx-navigation]")!;
-    expect(picker.closest("label")?.textContent).toContain("Open hex");
-    expect(picker.options.length).toBe(app.state.cells.length);
-    expect(picker.value).toBe("0,0");
-    picker.focus();
-    picker.value = "1,0";
-    picker.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(app.ui.detail).toEqual({ pos: hex(1, 0), face: "world" });
-    const replacement = detail().querySelector<HTMLSelectElement>("[data-ctx-navigation]")!;
-    expect(replacement.value).toBe("1,0");
-    expect(document.activeElement).toBe(replacement);
+  it("offers touch-sized cell buttons instead of a native picker on phone", () => {
+    setAppWidth(390);seedEra();app.openDetail(hex(0,0),"world");
+    expect(detail().querySelector("select[data-ctx-navigation]")).toBeNull();
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    expect(document.querySelectorAll("[data-map-cell]")).toHaveLength(app.state.cells.length);
+    document.querySelector<HTMLButtonElement>('[data-map-cell="1,0"]')!.click();
+    expect(app.ui.detail).toEqual({pos:hex(1,0),face:"world"});
   });
 
   it("an empty owned place still maps its context, with no chord work", () => {

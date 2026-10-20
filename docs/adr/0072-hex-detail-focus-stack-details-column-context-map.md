@@ -14,3 +14,7 @@ This records accepted direction from the interview; the phone sheet reflows the 
 
 
 Accessibility correction, 2026-10-19 (PR #413 review): map controls preserve keyboard focus through live rebuilds. Phone widths and coarse-pointer devices also expose a native Open hex picker with a 44px minimum height, offering reliable cell navigation while retaining the miniature formation view and the current focused layer.
+
+## Interface refinement amendment — 2026-10-20
+
+The approved interface-refinement review replaces the native Open hex picker with an expandable context map. The miniature opens an overview with pan, pinch zoom, a range control, keyboard-operable owned cells, and a list of 44px-minimum owned-cell buttons as the reliable coarse-pointer path. Choosing a cell closes the overview and retains the focused layer. Close, Escape, and backdrop dismiss; the miniature regains focus on close. The context-map and layer-legend jobs remain distinct.

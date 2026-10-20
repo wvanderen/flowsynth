@@ -25,7 +25,10 @@ export const HEX_RADIUS = 61;
 export const SPACING = 65;
 
 export function boardPoint({ q, r }: Hex): [number, number] {
-  return [Math.sqrt(3) * SPACING * (q + r / 2), SPACING * 1.5 * r];
+  const x = Math.sqrt(3) * SPACING * (q + r / 2);
+  const y = SPACING * 1.5 * r;
+  // Presentation only: clockwise 60°, preserving the axial lattice and saves.
+  return [x / 2 - y * Math.sqrt(3) / 2, x * Math.sqrt(3) / 2 + y / 2];
 }
 
 // The face's pointy-top corner offsets, shared with every renderer that must

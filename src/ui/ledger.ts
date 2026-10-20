@@ -1,11 +1,5 @@
-// The board's production surfaces (§7, issue #270): the ledger — one
-// clipped instrument panel docked above the board (grouped resource reads
-// left, the feats/chords chips right) — the module-linked rate details
-// disclosed from its rate figure, the ambient horizon bar riding the
-// board's lower edge, and the phone game-info strip carrying the same
-// resource reads alone. The session read has left the ledger; the console
-// carries no readouts.
-import { accumulatorFill, bankableClaimOf, horizonReached } from "../engine/accumulator";
+// Shared resource and production ledger. One resource-area button opens the
+// ledger; Arete owns prestige, while Catalog owns spending.
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { capacityCeiling } from "../engine/capacity";
 import { catalogOpen } from "../engine/catalog";
@@ -176,13 +170,6 @@ export function wireSynthPicks(host: ParentNode, pick: (id: string) => void, own
 // the line, so the figure keeps a door everywhere. The breakdown mounts
 // beside the clipped panel, not inside it — a clip-path ancestor cuts a
 // floating child's paint, and the popover hangs below the panel's edge.
-function rateCellHtml(): string {
-  return `<button class="ledger-fig-btn" id="rate-cell" aria-label="Rate details" title="Rate — the board's live total; hover or tap for the module details">
-    <b class="mono" data-live="rate"></b><small aria-hidden="true">ν/s</small>
-    <span class="rate-hint" aria-hidden="true">ⓘ</span>
-  </button>`;
-}
-
 export const FEATS_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
   <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/>
   <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/>
@@ -211,22 +198,12 @@ export function libraryChipHtml(state: GameState): string {
 }
 
 // ── The arete read (§7, issue #197 → #270 → #271) ───────────────────────
-// The ledger's third grouped resource: the banked Arete in its color, the
-// canonical mark at 15px. The telegraph slot is unconditional: before the
-// first Arete the read is a dim `— ◇` — the lock itself teaches that
-// prestige will bank here. The read is a read, never a door (issue #271):
-// the labeled Catalog door owns the shop, and the balance spends through
-// the catalog's arete face.
+// Banked Arete keeps its canonical mark and the pre-prestige telegraph.
+// Both states open the Arete section, including its gated prestige action.
 export const ARETE_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round">
   <path d="M12 2.5 20 8l-3.2 13H7.2L4 8l8-5.5Z"/>
   <path d="M12 2.5 9.4 21M12 2.5l2.6 18.5M4.6 8.4h14.8"/>
 </svg>`;
-
-// The telegraph slot's one markup, both faces of the ledger: a dim `— ◇`
-// until the first prestige banks the first Arete.
-function areteTelegraphHtml(): string {
-  return `<b class="mono">—</b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small>`;
-}
 
 // The read's meter semantics (issue #351): the visible figure is the
 // value — role="meter" names it queryable within the ladder's ceiling, so
@@ -234,13 +211,6 @@ function areteTelegraphHtml(): string {
 // live patchers keep valuenow and valuemax honest as the ladder moves.
 function capacityMeterAttrs(state: GameState): string {
   return ` role="meter" aria-label="Harmonic capacity" aria-valuemin="0" aria-valuemax="${capacityCeiling(state)}" aria-valuenow="${voiceCapacityOf(state)}"`;
-}
-
-export function areteLedgerHtml(state: GameState): string {
-  if (!catalogOpen(state)) {
-    return `<span class="ledger-fig ledger-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`;
-  }
-  return `<span class="ledger-fig ledger-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`;
 }
 
 // ── The harmonic-capacity read (§7, issue #333) ─────────────────────────
@@ -260,16 +230,6 @@ export const CAPACITY_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="n
   <path d="M8 13.8h8"/>
 </svg>`;
 
-function capacityReadHtml(state: GameState, phone: boolean): string {
-  const live = phone ? "i-capacity" : "capacity";
-  const classes = phone ? "info-read info-capacity" : "ledger-fig ledger-capacity";
-  return `<span class="inst-tip capacity-tip"><button type="button" class="inst-tip-trigger capacity-trigger ${classes}" aria-labelledby="${live}-name ${live}-value" aria-expanded="false" aria-describedby="${live}-tip"><span class="sr-only" id="${live}-name">Harmonic capacity</span><b class="mono" id="${live}-value" data-live="${live}"${capacityMeterAttrs(state)}>${voiceCapacityOf(state)}</b><small class="capacity-mark" aria-hidden="true">${CAPACITY_SVG}</small></button><span class="inst-tip-body" id="${live}-tip" role="tooltip">Whole-chord budget per standard voice</span></span>`;
-}
-
-export function capacityLedgerHtml(state: GameState): string {
-  return capacityReadHtml(state, false);
-}
-
 // ── The scrap read (§7, issue #377) ─────────────────────────────────────
 // The board ledger's scrap balance — the collection value recovered from
 // scrapped modules and skipped drafts (ADR-0066), sitting with the
@@ -283,22 +243,9 @@ export const SCRAP_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none
   <path d="M9.6 9.4 3.8 7.25M12.7 11.5l7.5-1.3"/>
 </svg>`;
 
-export function scrapLedgerHtml(): string {
-  return `<span class="ledger-fig ledger-scrap" title="Recovered from unwanted modules and skipped drafts"><b class="mono" data-live="scrap"></b><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></span>`;
-}
-
 // ── The board ledger (§7, issue #270) ───────────────────────────────────
-// One clipped instrument panel docked above the board: the resources group
-// left — `1.24k ν · 18.6 ν/s · 6 ◇`, the arete read in its color with the
-// canonical mark at 15px — then a hairline, then the feats and chords
-// chips right-aligned as paired icon + count chips. The session read has
-// left; bonuses live in the sheets and the rate details' legs, never here.
-// The 760px container breakpoint (§7): above it hover or focus anywhere on
-// the strip discloses the module-linked details, and a tap on the rate
-// figure opens the same roster as a sheet at every width — a touch surface
-// above the line has no hover, so the figure's tap is its door everywhere.
-// The gate reads the container's own inline size — the number the
-// stylesheet's @container rules respond to (container.ts holds it).
+// Nous pool and production share a column; other resources align alongside.
+// Feats and Chords retain their destinations. Live lanes update in place.
 export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("board-ledger");
   if (!host) return;
@@ -319,28 +266,23 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   const key = `${banked ? state.arete : "pre"}:${feats}:${discoveries}:${!!snapshot.allocation}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    host.innerHTML = `<div class="inst-panel ledger-panel"><div class="inst-panel-face ledger-face" role="group" aria-label="Production">
-        <span class="ledger-fig" title="Nous — the board's banked resource"><b class="mono" data-live="nous"></b><small class="nous-unit" aria-hidden="true">ν</small></span>
-        <span class="ledger-fig ledger-rate" id="rate-slot">
-          ${rateCellHtml()}
-        </span>
-        ${areteLedgerHtml(state)}
-        ${scrapLedgerHtml()}
-        ${capacityLedgerHtml(state)}
-        <span class="ledger-rule" aria-hidden="true"></span>
-        <span class="ledger-chips">
-          ${featsChipHtml(feats)}
-          ${libraryChipHtml(state)}
-        </span>
-      </div></div>
-      <div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>`;
+    host.innerHTML = `<div class="inst-panel ledger-panel"><div class="inst-panel-face ledger-face">
+        <button class="ledger-overview" id="ledger-overview" aria-label="Open ledger">
+          <span class="ledger-resource ledger-nous" data-ledger="nous"><span class="ledger-resource-name">Nous</span><span class="ledger-resource-value"><b class="mono" data-live="nous"></b><small>ν</small></span><span class="ledger-production" id="rate-cell"><b class="mono" data-live="rate"></b> ν/s</span></span>
+          <span class="ledger-resource ledger-arete${banked ? "" : " arete-dim"}" data-ledger="arete"><span class="ledger-resource-name">Arete</span><span class="ledger-resource-value"><b class="mono"${banked ? ' data-live="arete"' : ""}>—</b><small class="arete-mark">${ARETE_SVG}</small></span></span>
+          <span class="ledger-resource ledger-scrap" data-ledger="scrap"><span class="ledger-resource-name">Scrap</span><span class="ledger-resource-value"><b class="mono" data-live="scrap"></b><small class="scrap-mark">${SCRAP_SVG}</small></span></span>
+          <span class="ledger-resource ledger-capacity" data-ledger="capacity"><span class="ledger-resource-name">Harmonic capacity</span><span class="ledger-resource-value"><b class="mono" data-live="capacity"${capacityMeterAttrs(state)}></b><small class="capacity-mark">${CAPACITY_SVG}</small></span></span>
+        </button>
+        <span class="ledger-chips">${featsChipHtml(feats)}${libraryChipHtml(state)}</span>
+      </div></div><div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>`;
     app.listen(document.getElementById("feats-chip"), "click", () => app.openModal("achievements"));
-    app.listen(document.getElementById("rate-cell"), "click", () => app.openModal("rate"));
+    app.listen(document.getElementById("ledger-overview"), "click", () => app.openLedger("nous"));
     app.listen(document.getElementById("library-chip"), "click", () => app.openModal("library"));
+    wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.openModuleDetail(id), app);
     // A synth row's tap names its module's place (§7, issue #295): the
     // tap opens the module's Hex detail — the row names the place, the
     // cross-section shows it.
-    wireSynthPicks(host.querySelector(".rate-breakdown")!, (id) => app.openModuleDetail(id), app);
+
     wireTooltips(host, app.signal);
   }
   const detailModule = app.ui.detail ? deployedAt(state, app.ui.detail.pos) : undefined;
@@ -360,7 +302,7 @@ export function updateLedgerLive(
   // small — the slot carries the number alone.
   set("nous", formatBalance(state.nous));
   liveAttr(scope, "nous", "title", formatInt(state.nous));
-  set("rate", formatNumber(snapshot.rate));
+  set("rate", formatFixed(snapshot.rate));
   if (catalogOpen(state)) set("arete", formatInt(state.arete));
   // The scrap balance (issue #377): one figure, patched in place like the
   // other resources — a scrap or skip on any surface moves this read.
@@ -369,7 +311,7 @@ export function updateLedgerLive(
   // standard voice's whole-chord budget, every board's floor (#373). A
   // purchase moves it on the next render, and the meter's values ride the
   // same patch (#351).
-  set("capacity", String(voiceCapacityOf(state)));
+  set("capacity", `${voiceCapacityOf(state)} / ${capacityCeiling(state)}`);
   liveAttr(scope, "capacity", "aria-valuenow", String(voiceCapacityOf(state)));
   liveAttr(scope, "capacity", "aria-valuemax", String(capacityCeiling(state)));
   updateRateDetailsLive(scope, state, snapshot);
@@ -382,16 +324,8 @@ export function updateLedgerLive(
 }
 
 // ── The phone game-info strip (§7, issue #270) ──────────────────────────
-// The ledger's phone face: the same grouped resource reads on the board
-// surface — ν, rate, arete — and nothing else. No session read, no
-// feats/chords chips: Collection owns both entries from the thumb bar
-// (issue #270). The rate read stays the strip's one tap: it opens the
-// module-linked rate details as a sheet, the same door the ledger's rate
-// figure provides at every other width (the ledger itself dissolves below
-// the 600px breakpoint). The arete read is a read, never a door (issue
-// #271) — the thumb bar's Catalog segment owns the shop — and the
-// telegraph slot stands dim before the first prestige. Displayed only
-// below the 600px breakpoint; values update every render.
+// Phone pairs nous and rate alongside Arete and scrap in one ledger door.
+// Capacity and Feats/Chords remain reachable in the shared disclosure.
 export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const host = document.getElementById("game-info-strip");
   if (!host) return;
@@ -402,16 +336,12 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   const key = catalogOpen(state) ? "strip-banked" : "strip-pre";
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
-    host.innerHTML = `<div class="inst-panel-face game-info-face"><span class="info-read" title="Nous — the board's banked resource"><b class="mono" data-live="i-nous"></b><small aria-hidden="true">ν</small></span>
-      <button class="info-read info-rate" id="info-rate" aria-label="Rate details" title="Rate — tap for the module details"><b class="mono" data-live="i-rate"></b><small aria-hidden="true">ν/s</small><span class="info-hint" aria-hidden="true">ⓘ</span></button>
-      ${
-        catalogOpen(state)
-          ? `<span class="info-read info-arete" title="Arete — banked by prestige; spent in the catalog"><b class="mono" data-live="i-arete"></b><small class="arete-mark" aria-hidden="true">${ARETE_SVG}</small></span>`
-          : `<span class="info-read info-arete arete-dim" title="Unlocks at first Arete Reset">${areteTelegraphHtml()}</span>`
-      }
-      <span class="info-read info-scrap" title="Recovered from unwanted modules and skipped drafts"><b class="mono" data-live="i-scrap"></b><small class="scrap-mark" aria-hidden="true">${SCRAP_SVG}</small></span>
-      ${capacityReadHtml(state, true)}</div>`;
-    app.listen(document.getElementById("info-rate"), "click", () => app.openModal("rate"));
+    host.innerHTML = `<button class="inst-panel-face game-info-face ledger-overview" id="phone-ledger-overview" aria-label="Open ledger">
+      <span class="phone-nous"><span class="ledger-resource-name">Nous</span><span><b class="mono" data-live="i-nous"></b><small>ν</small></span><span class="ledger-production" id="info-rate"><b class="mono" data-live="i-rate"></b> ν/s</span></span>
+      <span class="info-arete${catalogOpen(state) ? "" : " arete-dim"}"><span class="ledger-resource-name">Arete</span><span><b class="mono"${catalogOpen(state) ? ' data-live="i-arete"' : ""}>—</b><small class="arete-mark">${ARETE_SVG}</small></span></span>
+      <span class="info-scrap"><span class="ledger-resource-name">Scrap</span><span><b class="mono" data-live="i-scrap"></b><small class="scrap-mark">${SCRAP_SVG}</small></span></span>
+      </button>`;
+    app.listen(document.getElementById("phone-ledger-overview"), "click", () => app.openLedger("nous"));
     wireTooltips(host, app.signal);
   }
   const set = (live: string, text: string) => liveSet(host, live, text);
@@ -429,96 +359,4 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
   set("i-capacity", String(voiceCapacityOf(state)));
   liveAttr(host, "i-capacity", "aria-valuenow", String(voiceCapacityOf(state)));
   liveAttr(host, "i-capacity", "aria-valuemax", String(capacityCeiling(state)));
-}
-
-// ── The ambient horizon bar (§7, issue #156, ADR-0038, ADR-0039) ───────
-// One wide curved-scale fill — the current era's log scale drawn as a
-// shallow arc — riding the board's lower edge at every width. Pointer-
-// transparent everywhere except the one door: when the era's fill reaches
-// the horizon, the percentage readout gives way to "Prestige and Claim X
-// Arete" (ADR-0039) — a live button in upgrade mode, a locked "prestige
-// available — enter upgrade mode" readout during a session.
-const HORIZON_VIEW_WIDTH = 600;
-
-// The curved rail and its log-scale fill. The fill is the same path
-// revealed by a clip rect whose width the tick patches in place — the
-// accumulator's 0–1 fill position maps to the clip's 0–600 user units,
-// dodging dash-and-pathLength quirks under a squashed viewBox. The
-// shallow symmetric arc keeps x-position monotonic in path progress, so
-// a horizontal reveal reads exactly as the fill's head.
-function horizonSvg(): string {
-  const path = "M8 42 Q 300 8 592 42";
-  return `<svg class="horizon-svg" viewBox="0 0 ${HORIZON_VIEW_WIDTH} 52" preserveAspectRatio="none" aria-hidden="true">
-      <defs>
-        <linearGradient id="horizon-fill-grad" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0" style="stop-color: color-mix(in srgb, var(--arete) 45%, var(--panel))"></stop>
-          <stop offset="1" style="stop-color: var(--arete)"></stop>
-        </linearGradient>
-        <clipPath id="horizon-fill-clip" clipPathUnits="userSpaceOnUse">
-          <rect class="horizon-clip" data-live="h-clip" x="0" y="0" width="0" height="52"></rect>
-        </clipPath>
-      </defs>
-      <path class="horizon-flare" d="${path}"></path>
-      <path class="horizon-track" d="${path}" pathLength="100"></path>
-      <path class="horizon-fill" d="${path}" clip-path="url(#horizon-fill-clip)"></path>
-    </svg>`;
-}
-
-export function renderHorizonBar(app: App): void {
-  const host = document.getElementById("horizon-bar");
-  if (!host) return;
-  const { state } = app;
-  const reached = horizonReached(state);
-  // Structural key: the era flip rebuilds the bar — under, the open door
-  // (its claim lives in the label), or the locked readout during a session.
-  // The fill's clip width and the label's percentage patch in place every
-  // tick, so nothing here ever churns.
-  const key = reached ? `door:${state.mode}:${bankableClaimOf(state)}` : "under";
-  if (host.dataset.renderKey !== key) {
-    host.dataset.renderKey = key;
-    host.classList.toggle("reached", reached);
-    if (reached) {
-      // The door states carry live controls and text; a figure role would
-      // flatten them for assistive tech, so only the ambient bar wears it.
-      host.removeAttribute("role");
-      host.removeAttribute("aria-label");
-      host.removeAttribute("aria-valuemin");
-      host.removeAttribute("aria-valuemax");
-      host.removeAttribute("aria-valuenow");
-    } else {
-      // The ambient bar answers as a progressbar (issue #351): the
-      // percentage the word reads is the valuenow AT queries.
-      host.setAttribute("role", "progressbar");
-      host.setAttribute("aria-label", "The Arete horizon: this era's progress toward prestige");
-      host.setAttribute("aria-valuemin", "0");
-      host.setAttribute("aria-valuemax", "100");
-      host.setAttribute("aria-valuenow", "0");
-    }
-    host.innerHTML = `${horizonSvg()}${
-      reached
-        ? state.mode === "upgrade"
-          ? `<button class="prestige-door" id="prestige-door" title="Begins the next era">Prestige and Claim <b class="mono">${bankableClaimOf(state)}</b> Arete</button>`
-          : `<span class="horizon-state locked">prestige available — enter upgrade mode</span>`
-        : `<span class="horizon-word">Arete <b data-live="h-word"></b></span>`
-    }`;
-    app.listen(document.getElementById("prestige-door"), "click", () => app.openPrestigeConfirm());
-  }
-  const fill = accumulatorFill(state.eraEarned);
-  const clip = host.querySelector<SVGRectElement>('[data-live="h-clip"]');
-  if (clip) {
-    // Numeric compare: style serializers may renormalize the stored value,
-    // and re-writing it every tick would churn the transition.
-    const width = fill * HORIZON_VIEW_WIDTH;
-    const current = Number.parseFloat(clip.style.getPropertyValue("width"));
-    if (!Number.isFinite(current) || Math.abs(current - width) >= 0.005) {
-      clip.style.setProperty("width", `${width.toFixed(2)}px`);
-    }
-  }
-  if (!reached) {
-    const pct = Math.round(fill * 100);
-    liveSet(host, "h-word", `${pct}%`);
-    if (host.getAttribute("aria-valuenow") !== String(pct)) {
-      host.setAttribute("aria-valuenow", String(pct));
-    }
-  }
 }

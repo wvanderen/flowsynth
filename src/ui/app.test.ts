@@ -163,14 +163,16 @@ describe("the console", () => {
 });
 
 describe("the console header around Enter/Exit Flow (#148)", () => {
-  it("orders the row: brand, session cluster, icon tiles, Settings last", () => {
+  it("keeps Notes inside the dark session console and Settings at the edge", () => {
     app.render();
     const header = document.querySelector(".console")!;
     const children = [...header.children];
     const order = (el: Element) => children.indexOf(el);
-    expect(document.getElementById("clock-plan")!.contains(header.querySelector(".brand"))).toBe(true);
-    expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-apps")!));
-    expect(order(document.getElementById("console-apps")!)).toBeLessThan(order(document.getElementById("console-settings")!));
+    expect(document.getElementById("clock-plan")!.contains(header.querySelector("#console-logo"))).toBe(false);
+    expect(header.querySelector("#console-logo svg")).not.toBeNull();
+    expect(document.querySelector(".clock-anchor #app-tile-notes")).not.toBeNull();
+    expect(document.getElementById("clock-plan")!.contains(document.getElementById("app-tile-notes"))).toBe(false);
+    expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-settings")!));
     // The session cluster is the switch's home — the header's dominant
     // control, wearing its state light.
     expect(document.querySelector("#console-session #flow-switch .switch-state")).not.toBeNull();
@@ -248,13 +250,13 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     app.render();
     expect(app.state.mode).toBe("flow");
     expect(sw().classList.contains("live")).toBe(true);
-    expect(sw().getAttribute("aria-label")).toBe("End flow");
-    expect(sw().querySelector("span")!.textContent).toBe("End flow");
+    expect(sw().getAttribute("aria-label")).toBe("Finish");
+    expect(sw().querySelector("span")!.textContent).toBe("Finish");
     // Held: the switch still ends the session; the sibling names the hold.
     app.pause();
     app.render();
     expect(sw().classList.contains("held")).toBe(true);
-    expect(sw().getAttribute("aria-label")).toBe("End flow");
+    expect(sw().getAttribute("aria-label")).toBe("Finish");
     expect(document.getElementById("pause-flow")!.getAttribute("aria-label")).toBe("Resume");
   });
 
@@ -267,7 +269,8 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     document.getElementById("pause-flow")!.click();
     expect(app.state.mode).toBe("paused");
     app.render();
-    expect(document.getElementById("pause-flow")!.textContent).toBe("Resume");
+    expect(document.getElementById("pause-flow")!.getAttribute("aria-label")).toBe("Resume");
+    expect(document.getElementById("pause-flow")!.textContent).toBe("");
     document.getElementById("pause-flow")!.click();
     expect(app.state.mode).toBe("flow");
   });

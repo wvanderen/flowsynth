@@ -46,7 +46,7 @@ import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
 import { profileGradesHtml } from "./profile";
 import { moduleFlowsHtml } from "./hexflows";
-import { contextMapSvg } from "./contextmap";
+import { contextMapSvg, openContextMap } from "./contextmap";
 import { bindPointerDrag, type DetailChordRow } from "./render";
 
 /* ── The upgrade benefit (§5) ─────────────────────────
@@ -282,27 +282,8 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     const face = chassis.getAttribute("data-detail-face") as DetailFace;
     app.listen(chassis, "click", () => app.detailFace(face));
   });
-  // The context map's navigation (ADR-0072): an owned cell — by click,
-  // Enter, or Space — opens that coordinate's cross-section at the
-  // current face. The opened cell renders as the marker, never a control.
-  host.querySelectorAll<HTMLElement>("[data-ctx-cell]").forEach((node) => {
-    const [q, r] = node.getAttribute("data-ctx-cell")!.split(",").map(Number);
-    const open = (): void => {
-      if (ui.detail && (ui.detail.pos.q !== q || ui.detail.pos.r !== r)) app.openDetail({ q, r }, ui.detail.face);
-    };
-    app.listen(node, "click", open);
-    app.listen(node, "keydown", (event) => {
-      if ((event as KeyboardEvent).key === "Enter" || (event as KeyboardEvent).key === " ") {
-        event.preventDefault();
-        open();
-      }
-    });
-  });
-  const navigation = host.querySelector<HTMLSelectElement>("[data-ctx-navigation]");
-  app.listen(navigation, "change", () => {
-    if (!navigation || !ui.detail) return;
-    const [q, r] = navigation.value.split(",").map(Number);
-    app.openDetail({ q, r }, ui.detail.face);
+  app.listen(host.querySelector("[data-context-expand]"), "click", () => {
+    openContextMap(app, chordRow.marks);
   });
   // The World actions and the buy column wire together — an occupied
   // place's stack still carries its controls.

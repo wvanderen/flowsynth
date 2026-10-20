@@ -15,3 +15,7 @@ ADR-0015 shipped the accumulator as a translucent pill over the board's bottom e
 - ADR-0029's rule survives the rename with it: the bar rides the board at every width and is never dismissed — sheets may cover the lower edge, but nothing unmounts or gates the bar. The board-redesign spec's "floating Arete pill" wording (§7) reads as this bar throughout.
 - The removed button's reserved-UI-slot rationale lapses with it: when prestige arrives it designs its own door (issue #156's horizon is the provisional target and may move with prestige's design).
 - Feat detection is unchanged elsewhere: already-unlocked feats never re-fire, nothing unlocks in session one, and unlocks toast and persist exactly as before.
+
+## Interface refinement amendment — 2026-10-20
+
+The approved interface-refinement review removes the ambient horizon bar. The old 7M eligibility fill completed far below the new 1T frontier entitlement and no longer communicated the claim. The ledger’s Arete section now presents “Prestige now for X Arete” with the existing eligibility gate and confirmation. No replacement progress meter is introduced. Economy and feat predicates are unchanged.

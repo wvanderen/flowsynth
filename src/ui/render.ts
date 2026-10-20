@@ -2,7 +2,7 @@ import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
 import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
-import { bankableClaimOf } from "../engine/accumulator";
+import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { skipPayoutOf } from "../engine/scrap";
@@ -53,8 +53,8 @@ import { updateSvg } from "./svg";
 import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, WORLD_META, rarityMark, tierNumeral, tierWord } from "./meta";
 import { columnCost, honeCostOf } from "../engine/world";
 import { typeRarityOf } from "../engine/constants";
-import { formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
-import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
+import { formatBalance, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
+import { renderBoardLedger, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { profileGradesHtml } from "./profile";
@@ -153,7 +153,6 @@ export function render(app: App): void {
       : { html: "", key: "", marks: [] };
     renderHexDetail(app, live, projected, detailChord);
     renderZoomCluster(app);
-    renderHorizonBar(app);
     renderGameInfoStrip(app, live);
     // The second face's furniture (issue #426): the vertical layer legend
     // and the armed placement's pill — each a no-op wherever its moment
@@ -226,11 +225,18 @@ function renderConsoleSession(app: App): void {
   const host = byId("console-session");
   if (!host) return;
 
+  const logo = byId("console-logo");
+  if (logo && !logo.firstChild) logo.innerHTML = BRAND_MARK;
+  const preserveNotes = () => {
+    const apps = byId("console-apps");
+    if (apps && host.contains(apps)) host.parentElement?.append(apps);
+  };
   const switchSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
   // The switch's one name per state (#347): the aria-label and the visible
   // span share it, so the announced name can never drift from the read one.
   const enterFlowWord = "Enter flow";
-  const endFlowWord = "End flow";
+  const endFlowWord = "Finish";
+  const finishSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H4v18h16V9M8 3v6h6V3M8 21v-7h5M15 14l2 2 5-5"/></svg>`;
   const pauseSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>`;
   const resumeSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></svg>`;
   const discloseSvg = `<svg class="clock-disclose" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>`;
@@ -245,10 +251,6 @@ function renderConsoleSession(app: App): void {
   // patcher addresses the nodes directly.
   const focusButton = (title: string, clockAttrs = "", captionAttrs = ""): string => `
       <button class="session-focus" id="clock-plan" aria-label="Focus controls" title="${title}">
-        <span class="brand" aria-hidden="true">
-          ${BRAND_MARK}
-          <span class="brand-name">FlowSynth</span>
-        </span>
         <span class="display-well">
           <span class="clock-row">
             <span class="session-clock mono"${clockAttrs}></span>
@@ -291,13 +293,16 @@ function renderConsoleSession(app: App): void {
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       const scrollTop = popoverScroll(host);
+      preserveNotes();
       host.innerHTML = `
         <div class="session-group" role="group" aria-label="Session">
+          <button id="pause-flow" aria-label="Pause" disabled>${pauseSvg}</button>
           <div class="clock-anchor">
             ${focusButton("Opens the Focus sheet")}
             ${sheetOpen ? sheetHtml() : ""}
           </div>
           <div class="session-actions">
+
             <button class="main-switch idle" id="flow-switch" aria-label="${enterFlowWord}" title="The board locks and runs itself">
               ${switchSvg}<span>${enterFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
             </button>
@@ -334,13 +339,16 @@ function renderConsoleSession(app: App): void {
     if (host.dataset.renderKey !== key) {
       host.dataset.renderKey = key;
       const scrollTop = popoverScroll(host);
+      preserveNotes();
       host.innerHTML = `
         <div class="session-group" role="group" aria-label="Session">
+          <button id="pause-flow" aria-label="Pause" disabled>${pauseSvg}</button>
           <div class="clock-anchor">
             ${focusButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
             ${sheetOpen ? sheetHtml() : ""}
           </div>
           <div class="session-actions">
+
             <button class="main-switch live" id="flow-switch" aria-label="End breather">
               ${switchSvg}<span>End breather</span><i class="switch-state" aria-hidden="true"></i>
             </button>
@@ -356,7 +364,7 @@ function renderConsoleSession(app: App): void {
       if (node && node.textContent !== text) node.textContent = text;
     };
     setBreather("session-clock", formatClock(Math.max(0, breather.allowanceSeconds - breather.elapsed)));
-    setBreather("session-caption", "Breather — the board runs while you rest");
+    setBreather("session-caption", "Breather");
     setBreather("session-provisional", "");
     renderSessionStrip(true, breather.elapsed, breather.allowanceSeconds, false);
     refreshSessionReads(app);
@@ -369,16 +377,18 @@ function renderConsoleSession(app: App): void {
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     const scrollTop = popoverScroll(host);
+    preserveNotes();
     host.innerHTML = `
       <div class="session-group" role="group" aria-label="Session">
+          <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}</button>
         <div class="clock-anchor">
           ${focusButton("Opens the Focus sheet", ' id="session-clock"', ' id="session-caption"')}
           ${sheetOpen ? sheetHtml() : ""}
         </div>
         <div class="session-actions">
-          <button id="pause-flow" aria-label="${paused ? "Resume" : "Pause"}" title="${paused ? "Resume the session" : "Pause the session"}">${paused ? resumeSvg : pauseSvg}<span aria-hidden="true">${paused ? "Resume" : "Pause"}</span></button>
+
           <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" aria-label="${endFlowWord}" title="Ends the session and banks its production">
-            ${switchSvg}<span>${endFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
+            ${finishSvg}<span>${endFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
           </button>
           </div>
         </div>
@@ -553,6 +563,8 @@ function renderConsoleApps(app: App): void {
   const host = byId("console-apps");
   if (!host) return;
   const { ui } = app;
+  const anchor = document.querySelector(".clock-anchor");
+  if (anchor && host.parentElement !== anchor) anchor.insertBefore(host, anchor.querySelector(".app-popover"));
   const phone = isPhoneWidth();
   // The doors' pressed states ride the open app; everything the sheets
   // show lives under the clock's own key.
@@ -2644,7 +2656,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                 // the tick fills in place, so clock ticks never rebuild
                 // (and collapse) an expanded row.
                 : kind === "rate"
-                  ? [deployedRosterKey(app.state), unlockedCount(app.state), discoveryCount(app.state)]
+                  ? [deployedRosterKey(app.state), unlockedCount(app.state), discoveryCount(app.state), app.ledgerSection]
                 : kind === "inventory"
                   ? [
                       // The whole roster's merge-relevant shape (issue #368):
@@ -2674,7 +2686,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
     // the tick fills them in place on this no-rebuild path, so an expanded
     // row survives the clock (ADR-0037). The Forge meters do the same —
     // the detail stays live during flow (ADR-0041).
-    if (kind === "rate") updateRateDetailsLive(content, app.state, live);
+    if (kind === "rate") { updateRateDetailsLive(content, app.state, live); updateLedgerModal(app, content); }
     if (kind === "forge") updateForgeMetersLive(content, app.state, projected.forgeRate, projected.mutatorForgeRate);
     return;
   }
@@ -2705,6 +2717,17 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "notes") renderNotesModal(app, content);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   else if (kind === "combine") renderCombineModal(app, content);
+  // Shared clipped rim and scrolling face: the hairline follows both cuts.
+  const framed = kind !== "catalog" && kind !== "forge" && kind !== "inventory";
+  content.classList.toggle("framed-modal", framed);
+  if (framed) {
+    const focused = content.contains(document.activeElement) ? document.activeElement as HTMLElement : null;
+    const face = document.createElement("div");
+    face.className = "modal-face";
+    face.append(...content.childNodes);
+    content.append(face);
+    focused?.focus({ preventScroll: true });
+  }
   // The Notes modal lands focus itself (issue #332): the composer on
   // CAPTURE, the standing tab on LOGGED — never the generic first button.
   // Every other dialog lands on its first control (issue #346), the open
@@ -2751,9 +2774,17 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   // discloses.
   const snapshot = live;
   content.innerHTML = `
-    ${modalTop("RATE", "modal-title")}
-    <div class="rate-details-sheet">${rateDetailsHtml(app.state, snapshot, true, "sheet")}</div>`;
+    ${modalTop("LEDGER", "modal-title")}
+    <section id="ledger-nous" class="ledger-section" tabindex="-1"><h3>Nous</h3><div class="ledger-detail-row"><span>Balance</span><b class="mono" data-live="ledger-nous"></b></div><div id="ledger-production" class="rate-details-sheet" tabindex="-1">${rateDetailsHtml(app.state, snapshot, true, "sheet")}</div></section>
+    <section id="ledger-arete" class="ledger-section" tabindex="-1"><h3>Arete</h3><div class="ledger-detail-row"><span>Banked</span><b class="mono" data-live="ledger-arete"></b></div><button id="prestige-door" class="prestige-door"></button><small class="prestige-availability" data-live="prestige-availability"></small></section>
+    <section id="ledger-scrap" class="ledger-section" tabindex="-1"><h3>Scrap</h3><div class="ledger-detail-row"><span>Recovered from modules and skipped drafts</span><b class="mono" data-live="ledger-scrap"></b></div></section>
+    <section id="ledger-capacity" class="ledger-section" tabindex="-1"><h3>Harmonic capacity</h3><div class="ledger-detail-row"><span>Whole-chord budget per standard voice</span><b class="mono" data-live="ledger-capacity"></b></div></section>
+    <nav class="ledger-destinations"><button id="ledger-feats">${FEATS_SVG}<span>Feats</span><span class="mono">${unlockedCount(app.state)}/${ACHIEVEMENTS.length}</span></button><button id="ledger-chords">${LIBRARY_SVG}<span>Chords</span><span class="mono">${discoveryCount(app.state)}/${NAMED_CHORDS.length}</span></button></nav>`;
   updateRateDetailsLive(content, app.state, snapshot);
+  updateLedgerModal(app, content);
+  app.listen(byId("prestige-door"), "click", () => app.openPrestigeConfirm());
+  app.listen(byId("ledger-feats"), "click", () => app.openModal("achievements"));
+  app.listen(byId("ledger-chords"), "click", () => app.openModal("library"));
   const sheet = content.querySelector(".rate-details-sheet");
   if (sheet) {
     wireSynthPicks(sheet, (id) => {
@@ -2763,6 +2794,20 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
     wireTooltips(sheet, app.signal);
   }
   wireClose(app);
+}
+
+function updateLedgerModal(app: App, content: HTMLElement): void {
+  liveSet(content, "ledger-nous", `${formatBalance(app.state.nous)} ν`);
+  liveSet(content, "ledger-arete", `${formatInt(app.state.arete)} Arete`);
+  liveSet(content, "ledger-scrap", formatInt(app.state.scrap));
+  liveSet(content, "ledger-capacity", `${voiceCapacityOf(app.state)} / ${capacityCeiling(app.state)}`);
+  const door = content.querySelector<HTMLButtonElement>("#prestige-door");
+  if (door) {
+    const label = `Prestige now for ${bankableClaimOf(app.state)} Arete`;
+    if (door.textContent !== label) door.textContent = label;
+    door.disabled = app.state.mode !== "upgrade" || !horizonReached(app.state);
+  }
+  liveSet(content, "prestige-availability", app.state.mode !== "upgrade" ? "Available between sessions" : !horizonReached(app.state) ? `Requires ${formatBalance(ARETE_HORIZON)} era nous` : "");
 }
 
 // The tray sheet (§7, issue #272 review): the tray column, re-docked for

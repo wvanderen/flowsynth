@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createHabit, selectHabit } from "../engine/habits";
@@ -329,89 +329,66 @@ describe("board navigation (§7)", () => {
       ({ left: 0, top: 0, right: width, bottom: height, width, height, x: 0, y: 0, toJSON: () => ({}) }) as DOMRect;
   }
 
-  it("the zoom cluster zooms and fits, clamped to the zoom range", () => {
-    app.render();
-    const before = viewBox();
-    document.getElementById("zoom-in")!.click();
-    const zoomed = viewBox();
-    expect(app.ui.zoom).toBeGreaterThan(1);
-    // Zoom shrinks the lens: the view narrows.
-    expect(Number(zoomed.split(" ")[2])).toBeLessThan(Number(before.split(" ")[2]));
-    for (let i = 0; i < 8; i++) document.getElementById("zoom-in")!.click();
-    expect(app.ui.zoom).toBe(3); // ZOOM_MAX
-    document.getElementById("zoom-out")!.click();
-    expect(app.ui.zoom).toBeLessThan(3);
-    document.getElementById("zoom-fit")!.click();
-    expect(app.ui.zoom).toBe(1);
-    expect(viewBox()).toBe(before);
+  function setZoom(value: number): void {
+    const slider=document.getElementById("board-zoom") as HTMLInputElement;
+    slider.value=String(value);slider.dispatchEvent(new Event("input",{bubbles:true}));
+  }
+  it("sets a repeatable continuous zoom and resets both zoom and position", () => {
+    const before=viewBox();setZoom(173);
+    expect(app.ui.zoom).toBeCloseTo(1.73);
+    expect(document.getElementById("board-zoom-value")!.textContent).toBe("173%");
+    setZoom(300);expect(app.ui.zoom).toBe(3);
+    setZoom(80);expect(app.ui.zoom).toBe(.8);
+    app.ui.pan={x:0,y:0};document.getElementById("zoom-fit")!.click();
+    expect(app.ui.zoom).toBe(1);expect(app.ui.pan).toBeNull();expect(viewBox()).toBe(before);
   });
-
-  it("zooming out below the range clamps; fitted is the floor", () => {
-    app.render();
-    const before = viewBox();
-    document.getElementById("zoom-out")!.click();
-    expect(app.ui.zoom).toBe(0.8); // ZOOM_MIN — a wider lens than fit
-    document.getElementById("zoom-fit")!.click();
-    expect(app.ui.zoom).toBe(1);
-    expect(viewBox()).toBe(before);
+  it("trackpad scrolling pans without zooming", async () => {
+    mockWrap(800,600);const before=viewBox();
+    svgEl().dispatchEvent(new WheelEvent("wheel",{deltaX:60,deltaY:40,cancelable:true}));
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+    expect(app.ui.zoom).toBe(1);expect(viewBox()).not.toBe(before);
   });
-
-  it("wheel zoom anchors the cursor's world point", async () => {
-    app.render();
-    mockWrap(800, 600);
-    const bounds = app.boardBounds;
-    const anchor = { x: bounds.x + bounds.width * 0.7, y: bounds.y + bounds.height * 0.4 };
-    const frame = lensFrame(app.ui.zoom, app.ui.pan, bounds);
-    const u = (anchor.x - frame.view.x) / frame.view.width;
-    const v = (anchor.y - frame.view.y) / frame.view.height;
-    // happy-dom's WheelEvent carries no pointer coordinates: assign them.
-    const wheel = new WheelEvent("wheel", { deltaY: -100, cancelable: true });
-    Object.defineProperty(wheel, "clientX", { value: u * 800 });
-    Object.defineProperty(wheel, "clientY", { value: v * 600 });
-    svgEl().dispatchEvent(wheel);
-    // The wheel coalesces to the animation frame (#349): the zoom lands
-    // when the frame flushes.
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(app.ui.zoom).toBeGreaterThan(1);
-    const after = lensFrame(app.ui.zoom, app.ui.pan, bounds);
-    const keptX = after.view.x + u * after.view.width;
-    const keptY = after.view.y + v * after.view.height;
-    expect(Math.abs(keptX - anchor.x)).toBeLessThan(1);
-    expect(Math.abs(keptY - anchor.y)).toBeLessThan(1);
+  it("pinch wheel zoom anchors the pointer including letterboxed space", async () => {
+    mockWrap(800,600);const before=lensFrame(1,null,app.boardBounds).view;
+    const scale=Math.min(800/before.width,600/before.height);
+    const anchor={x:before.x+before.width/2+80/scale,y:before.y+before.height/2-30/scale};
+    const wheel=new WheelEvent("wheel",{deltaY:-20,ctrlKey:true,cancelable:true});
+    Object.defineProperties(wheel,{clientX:{value:480},clientY:{value:270},ctrlKey:{value:true}});svgEl().dispatchEvent(wheel);
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+    expect(app.ui.zoom).toBeCloseTo(Math.exp(.2));
+    const after=lensFrame(app.ui.zoom,app.ui.pan,app.boardBounds).view;
+    const nextScale=Math.min(800/after.width,600/after.height);
+    expect(after.x+after.width/2+80/nextScale).toBeCloseTo(anchor.x);
+    expect(after.y+after.height/2-30/nextScale).toBeCloseTo(anchor.y);
   });
-
-  it("a wheel gesture renders at most once per animation frame (#349)", async () => {
-    app.render();
-    mockWrap(800, 600);
-    let renders = 0;
-    const render = app.render.bind(app);
-    (app as unknown as { render: () => void }).render = () => {
-      renders++;
-      render();
-    };
-    const dispatch = (deltaY: number) => {
-      const wheel = new WheelEvent("wheel", { deltaY, cancelable: true });
-      Object.defineProperty(wheel, "clientX", { value: 400 });
-      Object.defineProperty(wheel, "clientY", { value: 300 });
-      svgEl().dispatchEvent(wheel);
-    };
-    // A burst of events inside one frame — the gesture's factors
-    // accumulate into that frame's single render.
-    dispatch(-100);
-    dispatch(-100);
-    dispatch(-100);
-    dispatch(100);
-    expect(renders).toBe(0);
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(renders).toBe(1);
-    // The accumulated product applied: 1.25 × 1.25 × 1.25 / 1.25.
-    expect(app.ui.zoom).toBeCloseTo(1.25 * 1.25, 10);
-    // The next frame after a fresh event renders again — one per frame,
-    // never one per event.
-    dispatch(-100);
-    await new Promise((resolve) => requestAnimationFrame(resolve));
-    expect(renders).toBe(2);
-    expect(app.ui.zoom).toBeCloseTo(1.25 * 1.25 * 1.25, 10);
+  it("coalesces a smooth pinch to one render per frame", async () => {
+    mockWrap(800,600);const render=vi.spyOn(app,"render");
+    for(let i=0;i<4;i++) { const wheel=new WheelEvent("wheel",{deltaY:-5,ctrlKey:true,cancelable:true}); Object.defineProperty(wheel,"ctrlKey",{value:true}); svgEl().dispatchEvent(wheel); }
+    expect(render).not.toHaveBeenCalled();await new Promise(resolve=>requestAnimationFrame(resolve));
+    expect(render).toHaveBeenCalledTimes(1);expect(app.ui.zoom).toBeCloseTo(Math.exp(.2));
+  });
+  it("Space pans over an occupied module while Space in a text input remains typing", () => {
+    mockWrap(800,600);document.dispatchEvent(new KeyboardEvent("keydown",{code:"Space",bubbles:true}));
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("pointerdown",{button:0,bubbles:true,clientX:200,clientY:200}));
+    document.dispatchEvent(new MouseEvent("pointermove",{bubbles:true,clientX:130,clientY:200}));
+    document.dispatchEvent(new MouseEvent("pointerup",{bubbles:true}));
+    expect(app.ui.pan).not.toBeNull();expect(document.querySelector(".drag-ghost")).toBeNull();
+    document.dispatchEvent(new KeyboardEvent("keyup",{code:"Space"}));
+    const input=document.createElement("input");document.body.append(input);
+    const key=new KeyboardEvent("keydown",{code:"Space",bubbles:true,cancelable:true});input.dispatchEvent(key);
+    expect(key.defaultPrevented).toBe(false);
+    const notes=document.getElementById("app-tile-notes")!;
+    const activation=new KeyboardEvent("keydown",{code:"Space",key:" ",bubbles:true,cancelable:true});
+    notes.dispatchEvent(activation);expect(activation.defaultPrevented).toBe(false);
+  });
+  it("two touch contacts take over from placement to pan and pinch", () => {
+    mockWrap(800,600);const cell=document.querySelector('[data-cell="0,0"]')!;
+    cell.dispatchEvent(new PointerEvent("pointerdown",{button:0,pointerId:1,pointerType:"touch",bubbles:true,clientX:100,clientY:100}));
+    cell.dispatchEvent(new PointerEvent("pointerdown",{button:0,pointerId:2,pointerType:"touch",bubbles:true,clientX:200,clientY:100}));
+    document.dispatchEvent(new PointerEvent("pointermove",{pointerId:2,pointerType:"touch",clientX:240,clientY:120}));
+    expect(app.ui.zoom).toBeGreaterThan(1);expect(app.ui.pan).not.toBeNull();
+    expect(document.querySelector(".drag-ghost")).toBeNull();
+    document.dispatchEvent(new PointerEvent("pointerup",{pointerId:1}));document.dispatchEvent(new PointerEvent("pointerup",{pointerId:2}));
   });
 
   it("the board pans by dragging outside the grid at any zoom, clamped to the board", () => {
@@ -442,7 +419,7 @@ describe("board navigation (§7)", () => {
     document.dispatchEvent(new MouseEvent("pointerup", { bubbles: true, clientX: 100, clientY: 200 }));
     expect(lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view.x).toBe(fitted);
     // Zoomed in, the same gesture walks the board.
-    document.getElementById("zoom-in")!.click();
+    setZoom(125);
     const zoomed = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view.x;
     empty.dispatchEvent(new MouseEvent("pointerdown", { button: 0, bubbles: true, clientX: 200, clientY: 200 }));
     document.dispatchEvent(new MouseEvent("pointermove", { bubbles: true, clientX: 100, clientY: 200 }));
@@ -503,23 +480,15 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(grid.lastElementChild).toBe(side);
     expect(side!.querySelector(".ctx-map")).not.toBeNull();
     expect(grid.querySelector(".hex-detail-actions #detail-upgrade")).not.toBeNull();
-    // The horizon bar floats at every width (§7): an open sheet covers the
-    // board's lower edge but never dismisses the bar itself.
-    const bar = document.getElementById("horizon-bar")!;
-    expect(bar).not.toBeNull();
-    expect(bar.querySelector('[data-live="h-clip"]')).not.toBeNull();
+    expect(document.getElementById("horizon-bar")).toBeNull();
     // The return control closes the sheet and restores the grid.
     document.getElementById("hex-detail-return")!.click();
     expect(detailEl.hidden).toBe(true);
     expect(document.body.classList.contains("hex-detail-open")).toBe(false);
-    // The bar rides on: still rendered, still whole, era intact.
-    app.render();
-    const barAfter = document.getElementById("horizon-bar")!;
-    expect(barAfter.querySelector('[data-live="h-clip"]')).not.toBeNull();
-    expect(barAfter.querySelector(".horizon-word")!.textContent).toContain("Arete");
+    expect(document.getElementById("horizon-bar")).toBeNull();
   });
 
-  it("on phone every modal presents as a sheet, so any open modal raises the zoom cluster", () => {
+  it("tracks phone modal sheet state while zoom retains its board lane", () => {
     // The modal layer reads the viewport (it lives outside #app), so the
     // cluster's rise reads it too: at a phone viewport any open modal is a
     // bottom sheet (§7), and the cluster must never be buried beneath one.
@@ -599,14 +568,13 @@ describe("phone anatomy (§7, below the 600px container line)", () => {
     expect(app.state.modules.find((m) => m.id === row.getAttribute("data-module-id"))!.pos).toEqual(app.ui.detail!.pos);
   });
 
-  it("the horizon bar spans the board's lower edge with its full anatomy", () => {
-    app.render();
-    const bar = document.getElementById("horizon-bar")!;
-    expect(bar.querySelector(".horizon-svg")).not.toBeNull();
-    expect(bar.querySelector('[data-live="h-clip"]')).not.toBeNull();
-    expect(bar.querySelector('[data-live="h-word"]')).not.toBeNull();
-    expect(document.getElementById("zoom-cluster")).not.toBeNull();
+  it("uses the ledger for prestige and leaves board zoom in its stable lane", () => {
+    expect(document.getElementById("horizon-bar")).toBeNull();
+    expect(document.getElementById("board-zoom")).not.toBeNull();
+    document.querySelector<HTMLButtonElement>(".info-arete")!.click();
+    expect(app.ui.modal).toBe("rate");expect(document.getElementById("prestige-door")).not.toBeNull();
   });
+
 });
 
 // The phone tests read the stylesheet's container blocks as lane

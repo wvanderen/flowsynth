@@ -14,3 +14,7 @@ The spec is explicit that the Arete accumulator floats as a translucent pill ove
 
 - The prestige button and the practice beat are readable at every width whenever no surface physically covers them. _Amended by ADR-0038 (issue #156): the button, the beat, and the lifetime total retire with the pill — the bar carries no furniture to keep readable; the cover, never dismiss rule stands._
 - Any future sheet that opens over the board's lower edge inherits the same rule: cover, never dismiss.
+
+## Interface refinement amendment — 2026-10-20
+
+The approved interface-refinement review retires the horizon bar entirely and moves prestige to the shared ledger’s Arete section. The old never-dismissed rule no longer applies to a retired surface. Zoom controls retain a stable board location when sheets open; they no longer rise above sheets. Blocking dialogs may cover them.

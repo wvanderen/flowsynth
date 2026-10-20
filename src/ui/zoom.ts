@@ -10,8 +10,6 @@ import { HEX_RADIUS } from "./face";
 // a wide board letterbox more tightly, 3× is comfortably inside a face.
 export const ZOOM_MIN = 0.8;
 export const ZOOM_MAX = 3;
-// The wheel and the cluster buttons ride the same factor.
-const ZOOM_STEP = 1.25;
 
 // The lens's base: the board's own bounds plus breathing room for the chip
 // layer above the top row and the faces' shadows below.
@@ -71,26 +69,20 @@ export function lensFrame(zoom: number, pan: { x: number; y: number } | null, bo
   };
 }
 
-const ZOOM_CLUSTER_SVG = {
-  in: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>`,
-  out: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 12h12"/></svg>`,
-  fit: `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5"/></svg>`,
-};
-
-// The zoom cluster (§7): +/−/fit floating over the board's right edge,
-// below the chord readout and beside the horizon bar; wheel zoom rides the board.
+// Slider nodes survive render ticks, including while the thumb is held.
 export function renderZoomCluster(app: App): void {
   const host = document.getElementById("zoom-cluster");
   if (!host) return;
-  if (host.dataset.renderKey) return;
-  host.dataset.renderKey = "cluster";
-  host.innerHTML = `
-    <button id="zoom-in" aria-label="Zoom in" title="Zoom in">${ZOOM_CLUSTER_SVG.in}</button>
-    <button id="zoom-out" aria-label="Zoom out" title="Zoom out">${ZOOM_CLUSTER_SVG.out}</button>
-    <button id="zoom-fit" aria-label="Fit the board" title="Fit the board">${ZOOM_CLUSTER_SVG.fit}</button>`;
-  app.listen(host.querySelector("#zoom-in"), "click", () => zoomBy(app, ZOOM_STEP));
-  app.listen(host.querySelector("#zoom-out"), "click", () => zoomBy(app, 1 / ZOOM_STEP));
-  app.listen(host.querySelector("#zoom-fit"), "click", () => fitBoard(app));
+  if (!host.dataset.renderKey) {
+    host.dataset.renderKey = "slider";
+    host.innerHTML = `<input id="board-zoom" type="range" min="80" max="300" step="1" aria-label="Board zoom"><output id="board-zoom-value" for="board-zoom"></output><button id="zoom-fit" aria-label="Reset board position and zoom">Reset</button>`;
+    app.listen(host.querySelector("#board-zoom"), "input", (event) => zoomBy(app, Number((event.target as HTMLInputElement).value) / 100 / app.ui.zoom));
+    app.listen(host.querySelector("#zoom-fit"), "click", () => fitBoard(app));
+  }
+  const input = host.querySelector<HTMLInputElement>("#board-zoom")!;
+  const value = String(Math.round(app.ui.zoom * 100));
+  if (input.value !== value) input.value = value;
+  host.querySelector("output")!.textContent = `${value}%`;
 }
 
 // Zooming keeps one world point fixed: with a pointer anchor that is the
@@ -101,7 +93,7 @@ export function zoomBy(app: App, factor: number, anchor?: { x: number; y: number
   const next = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, app.ui.zoom * factor));
   if (next === app.ui.zoom) return;
   const bounds = app.boardBounds;
-  const center = boundsCenter(bounds);
+  const center = resolvePan(app.ui.pan, bounds);
   const anchorAt = anchor ?? center;
   const kept = {
     x: center.x + (anchorAt.x - center.x) * (1 - app.ui.zoom / next),
@@ -164,9 +156,11 @@ export function zoomAtPointer(app: App, factor: number, clientX: number, clientY
     return;
   }
   const frame = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds);
-  const u = (clientX - rect.left) / rect.width;
-  const v = (clientY - rect.top) / rect.height;
-  zoomBy(app, factor, { x: frame.view.x + u * frame.view.width, y: frame.view.y + v * frame.view.height });
+  const scale = Math.min(rect.width / frame.view.width, rect.height / frame.view.height);
+  zoomBy(app, factor, {
+    x: frame.view.x + frame.view.width / 2 + (clientX - rect.left - rect.width / 2) / scale,
+    y: frame.view.y + frame.view.height / 2 + (clientY - rect.top - rect.height / 2) / scale,
+  });
 }
 
 // Pan by dragging (§7): outside the grid at any zoom — the bare svg
@@ -182,103 +176,116 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
   if (panBoundBoards.has(svg)) return;
   panBoundBoards.add(svg);
 
-  // Wheel zoom coalesces to at most one render per animation frame
-  // (#349): a gesture's events accumulate their factor — the frame applies
-  // the product in one step — and keep the latest pointer as the anchor,
-  // so a fast scroll costs one solve-and-render per frame, not one per
-  // event. preventDefault stays synchronous: the page must not scroll.
-  let pendingWheel: { factor: number; clientX: number; clientY: number } | null = null;
+  let space = false;
+  const editing = (target: EventTarget | null): boolean => target instanceof Element && !!target.closest("input, textarea, select, button, a, [contenteditable], [role=button], [role=slider], [role=dialog], dialog");
+  app.listen(document, "keydown", (event) => {
+    if (event.code !== "Space" || editing(event.target) || app.ui.modal) return;
+    space = true;
+    event.preventDefault();
+    svg.classList.add("pan-ready");
+  });
+  const releaseSpace = () => { space = false; svg.classList.remove("pan-ready"); };
+  app.listen(document, "keyup", (event) => { if (event.code === "Space") releaseSpace(); });
+  app.listen(window, "blur", releaseSpace);
+
+  const scale = (): number => {
+    const view = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view;
+    return Math.min(svg.clientWidth / view.width, svg.clientHeight / view.height) || 1;
+  };
+  const paint = () => {
+    const lens = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds);
+    svg.setAttribute("viewBox", lens.viewBox);
+    syncGlowLens(svg, lens.view);
+  };
+  const panBy = (dx: number, dy: number) => {
+    const center = resolvePan(app.ui.pan, app.boardBounds);
+    const px = scale();
+    app.ui.pan = resolvePan({ x: center.x - dx / px, y: center.y - dy / px }, app.boardBounds);
+    paint();
+  };
+  let pendingWheel: { dx: number; dy: number; factor: number; x: number; y: number } | null = null;
   let wheelFrame: number | null = null;
   const flushWheel = () => {
     wheelFrame = null;
-    const pending = pendingWheel;
+    const next = pendingWheel;
     pendingWheel = null;
-    if (!pending || app.released) return;
-    zoomAtPointer(app, pending.factor, pending.clientX, pending.clientY);
+    if (!next || app.released) return;
+    panBy(next.dx, next.dy);
+    if (next.factor !== 1) zoomAtPointer(app, next.factor, next.x, next.y);
   };
-  // Container changes also change the visible letterbox bands, even when
-  // the viewBox and game state remain unchanged.
-  const glowResize = new ResizeObserver(() => {
-    if (!app.released) syncGlowLens(svg, lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view);
-  });
-  glowResize.observe(svg);
-  app.ownCleanup(() => glowResize.disconnect());
-
   app.listen(svg, "wheel", (event) => {
     event.preventDefault();
-    // Scroll up zooms in; scroll down eases back out.
-    const step = event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP;
-    pendingWheel = pendingWheel
-      ? { factor: pendingWheel.factor * step, clientX: event.clientX, clientY: event.clientY }
-      : { factor: step, clientX: event.clientX, clientY: event.clientY };
+    const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? svg.clientHeight : 1;
+    const previous = pendingWheel;
+    pendingWheel = {
+      dx: (previous?.dx ?? 0) + (event.ctrlKey ? 0 : event.deltaX * unit),
+      dy: (previous?.dy ?? 0) + (event.ctrlKey ? 0 : event.deltaY * unit),
+      factor: (previous?.factor ?? 1) * (event.ctrlKey ? Math.exp(-event.deltaY * unit * .01) : 1),
+      x: event.clientX, y: event.clientY,
+    };
     if (wheelFrame !== null) return;
     if (typeof requestAnimationFrame === "function") wheelFrame = requestAnimationFrame(flushWheel);
     else flushWheel();
   }, { passive: false });
-  app.ownCleanup(() => {
-    if (wheelFrame !== null) cancelAnimationFrame(wheelFrame);
-    wheelFrame = null;
-    pendingWheel = null;
-  });
+  const glowResize = new ResizeObserver(() => { if (!app.released) paint(); });
+  glowResize.observe(svg);
+  app.ownCleanup(() => { glowResize.disconnect(); if (wheelFrame !== null) cancelAnimationFrame(wheelFrame); });
 
-  const startPan = (event: PointerEvent): void => {
-    if (event.button !== 0) return;
-    const wrapWidth = svg.clientWidth;
-    const wrapHeight = svg.clientHeight;
-    if (wrapWidth <= 0 || wrapHeight <= 0) return;
-    const start = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds).view;
-    const wx = start.width / wrapWidth;
-    const wy = start.height / wrapHeight;
-    const origin = { x: event.clientX, y: event.clientY, pan: resolvePan(app.ui.pan, app.boardBounds) };
-    let moved = false;
-    const move = (ev: PointerEvent) => {
-      if (!moved && Math.hypot(ev.clientX - origin.x, ev.clientY - origin.y) > PAN_DRAG_THRESHOLD_PX) moved = true;
-      if (!moved) return;
-      app.ui.pan = resolvePan(
-        { x: origin.pan.x - (ev.clientX - origin.x) * wx, y: origin.pan.y - (ev.clientY - origin.y) * wy },
-        app.boardBounds,
-      );
-      // Pan repaints the lens without a full render: the viewBox is the
-      // only thing that moves — and the breathe re-lenses with it.
-      const lens = lensFrame(app.ui.zoom, app.ui.pan, app.boardBounds);
-      svg.setAttribute("viewBox", lens.viewBox);
-      syncGlowLens(svg, lens.view);
-    };
-    let finished = false;
-    let forget = () => {};
-    const finish = () => {
-      if (finished) return;
-      finished = true;
-      forget();
-      document.removeEventListener("pointermove", move);
-      document.removeEventListener("pointerup", finish);
-      document.removeEventListener("pointercancel", finish);
-      if (moved && !app.released) {
-        // A pan is a gesture, not a click: the release must not fall
-        // through to whatever cell sits under it.
-        app.suppressClick();
-        app.render();
-      }
-    };
-    document.addEventListener("pointermove", move);
-    document.addEventListener("pointerup", finish);
-    document.addEventListener("pointercancel", finish);
-    forget = app.ownCleanup(finish);
+  const pointers = new Map<number, { x: number; y: number }>();
+  let dragging: { id: number; x: number; y: number; moved: boolean } | null = null;
+  let multi = false;
+  const centroid = () => {
+    const [a, b] = [...pointers.values()];
+    return { x: (a!.x + b!.x) / 2, y: (a!.y + b!.y) / 2, distance: Math.hypot(a!.x - b!.x, a!.y - b!.y) };
   };
-
-  // Outside the grid — the bare svg — pans at any zoom.
   app.listen(svg, "pointerdown", (event) => {
-    if (event.target === svg) startPan(event);
-  });
-
-  // Press-and-move on an empty cell pans too once zoomed in: the world
-  // under the finger follows it. At fitted zoom the tap stays a tap.
-  app.listen(svg, "pointerdown", (event) => {
-    if (event.target === svg || event.button !== 0) return;
-    if (app.ui.zoom <= 1) return;
-    const cellNode = (event.target as Element).closest?.("[data-cell]");
-    if (!cellNode || cellNode.querySelector(".module-node")) return;
-    if (app.ui.placing || app.ui.buyingCell) return;
-    startPan(event);
-  });
+    if (event.button !== 0) return;
+    if (event.pointerType === "touch") pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (pointers.size >= 2) {
+      // A second finger takes ownership from any in-flight placement drag.
+      cancellingPlacement = true;
+      for (const id of pointers.keys()) document.dispatchEvent(new PointerEvent("pointercancel", { pointerId: id }));
+      cancellingPlacement = false;
+      multi = true;
+      dragging = null;
+      app.suppressClick();
+      event.preventDefault();
+      event.stopPropagation();
+      return;
+    }
+    const target = event.target as Element;
+    const empty = target.closest?.("[data-cell]") && !target.closest("[data-cell]")?.querySelector(".module-node");
+    if (!space && target !== svg && !(empty && app.ui.zoom > 1 && !app.ui.placing && !app.ui.buyingCell)) return;
+    dragging = { id: event.pointerId, x: event.clientX, y: event.clientY, moved: false };
+    if (space) { event.preventDefault(); event.stopPropagation(); }
+  }, { capture: true });
+  app.listen(document, "pointermove", (event) => {
+    if (multi && pointers.has(event.pointerId) && pointers.size >= 2) {
+      const before = centroid();
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const after = centroid();
+      panBy(after.x - before.x, after.y - before.y);
+      zoomAtPointer(app, before.distance > 0 ? after.distance / before.distance : 1, after.x, after.y);
+      event.preventDefault();
+      return;
+    }
+    if (pointers.has(event.pointerId)) pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (!dragging || dragging.id !== event.pointerId || multi) return;
+    const dx = event.clientX - dragging.x, dy = event.clientY - dragging.y;
+    if (!dragging.moved && Math.hypot(dx, dy) <= PAN_DRAG_THRESHOLD_PX) return;
+    dragging.moved = true;
+    panBy(dx, dy);
+    dragging.x = event.clientX; dragging.y = event.clientY;
+    event.preventDefault();
+  }, { passive: false });
+  let cancellingPlacement = false;
+  const finish = (event: PointerEvent) => {
+    if (cancellingPlacement) return;
+    pointers.delete(event.pointerId);
+    if (multi || dragging?.moved) app.suppressClick();
+    if (pointers.size === 0) multi = false;
+    if (dragging?.id === event.pointerId) dragging = null;
+  };
+  app.listen(document, "pointerup", finish);
+  app.listen(document, "pointercancel", finish);
 }

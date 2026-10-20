@@ -17,3 +17,7 @@ Hands-on playtesting failed to validate the shipped Carrier-centered distance fi
 - The costs consciously accepted and converted into design space: every chord is available at once (pitch is where you buy, so cells no longer gate harmonic depth — the economy re-anchors in ADR-0022), and major/minor triads need wiring rather than falling out of a wedge.
 - The octave is playable — vertical pairs, stacked wedges, registers as places — the one economy-relevant shape the folded boards lacked.
 - Prototype assets (throwaway branches): `prototype/board-geometry`, `prototype/isomorphic-layout-126`, `prototype/spacer-module-130`, `prototype/chord-feedback-120`.
+
+## Interface refinement amendment — 2026-10-20
+
+The approved interface-refinement review rotates the shared board projection 60 degrees clockwise. Octave bands now read approximately horizontally; glyphs and text stay upright. This supersedes this ADR’s physical horizontal/vertical presentation descriptions only. Pitch, axial coordinates, adjacency, transposition, cell prices, and saves are unchanged.
