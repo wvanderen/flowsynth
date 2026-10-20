@@ -280,7 +280,7 @@ describe("the feats page's milestone group (issue #268)", () => {
     app.openModal("achievements");
     const content = document.getElementById("modal-content")!;
     expect(content.querySelector(".eyebrow")!.textContent).toBe("FEATS");
-    expect(content.querySelector("#modal-title")!.textContent).toBe("1 of 23 feats.");
+    expect(content.querySelector("#modal-title")!.textContent).toBe("1 of 22 feats.");
     const sections = [...content.querySelectorAll(".ach-section")];
     expect(sections[0]!.querySelector(".catalog-section-title")!.textContent).toBe("Milestones");
     const rows = [...sections[0]!.querySelectorAll(".ach-milestone")];
@@ -318,7 +318,7 @@ describe("the feats page's milestone group (issue #268)", () => {
     expect(tip.classList.contains("inst-show")).toBe(false);
   });
 
-  it("a pre-existing save's satisfied milestones grant silently on load (N/23, no toast)", () => {
+  it("a pre-existing save's satisfied milestones grant silently on load (N/22, no toast)", () => {
     const s = createInitialState();
     s.sessionsCompleted = 1;
     s.catalogEntryOwned = true;
@@ -337,9 +337,9 @@ describe("the feats page's milestone group (issue #268)", () => {
     expect(document.getElementById("status")!.textContent).not.toContain("Feat unlocked");
     // The chip reads the full count — the five milestones plus first-light.
     booted.render();
-    expect(document.getElementById("feats-chip")!.textContent).toContain("6/23");
+    expect(document.getElementById("feats-chip")!.textContent).toContain("6/22");
     booted.openModal("achievements");
-    expect(document.getElementById("modal-content")!.querySelector("#modal-title")!.textContent).toBe("6 of 23 feats.");
+    expect(document.getElementById("modal-content")!.querySelector("#modal-title")!.textContent).toBe("6 of 22 feats.");
     const crossed = document.querySelectorAll(".ach-milestone.crossed");
     expect(crossed).toHaveLength(5);
   });
@@ -349,9 +349,9 @@ describe("the feats page's encourager icons (issue #269)", () => {
   it("every encourager row leads with its unique icon", () => {
     app.openModal("achievements");
     const rows = [...document.querySelectorAll(".ach-row")];
-    expect(rows).toHaveLength(18);
+    expect(rows).toHaveLength(17);
     const marks = rows.map((row) => row.querySelector(".ach-icon svg")!.innerHTML);
-    expect(new Set(marks).size).toBe(18);
+    expect(new Set(marks).size).toBe(17);
   });
 
   it("an un-crossed encourager reads muted with its progress figures, no done-mark", () => {

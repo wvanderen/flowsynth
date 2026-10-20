@@ -1,4 +1,4 @@
-import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules } from "./state";
+import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules, normalizeWorld } from "./state";
 import { normalizeHabitBuilds } from "./builds";
 import { normalizeHabitClasses } from "./classes";
 import { normalizeGoals } from "./goals";
@@ -93,11 +93,17 @@ export function deserialize(text: string): LoadResult {
   if (typeof raw.rollPoolJoined !== "boolean") {
     merged.rollPoolJoined = false;
   }
-  // The Horizon break (ADR-0042, issue #200) lenient-defaults the same way:
-  // absent means never bought — exactly what a pre-break save owes.
-  if (typeof raw.horizonBroken !== "boolean") {
-    merged.horizonBroken = false;
-  }
+  // The World layer (issue #425) lenient-defaults the same way, per field:
+  // a save written before the layer carries none of it — an unclaimed
+  // frontier, no occupants, no Hone ranks, every enemy reserved at its
+  // fixed stats — which is exactly what a fresh shape writes. Corrupt
+  // figures re-default; unknown enemy keys drop.
+  merged.world = normalizeWorld(raw.world);
+  // The Horizon break (ADR-0042, issue #200) retired with the frontier
+  // claim curve (issue #425): the Headroom flag is gone — the migration
+  // brief's exact Arete refund (#427) reads the raw save's field and the
+  // retired purchase's price before this deletion.
+  delete (merged as unknown as Record<string, unknown>).horizonBroken;
   // The scrap balance (issue #377) lenient-defaults the same way: absent
   // or corrupt reads as nothing banked — exactly what a pre-scrap save
   // owes. A negative figure is corrupt, not a debt.

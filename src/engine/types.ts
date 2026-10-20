@@ -191,6 +191,65 @@ export interface MutatorInstance {
   pos: Hex | null;
 }
 
+// The World layer's weapon types (issue #425, ADR-0074): the first
+// experiment ships exactly one — the Charge Blade, the capped-cadence
+// weapon the first World-eligible claim grants. The union is the whole
+// schema a later type joins: a new key in the per-type records (Hone
+// ranks, storage, attack), no reshaping of saves.
+export type WeaponType = "chargeBlade";
+
+// A Charge Column (issue #425, ADR-0074): the World layer's lift occupant.
+// It sits over an owned module cell, copies the charge received at that
+// cell upward without draining the module beneath, and splits its copied
+// supply among adjacent World consumers. `pos === null` waits in the World
+// tray; persistence rides the reset contract, never a memorized purchase.
+export interface WorldColumn {
+  id: string;
+  pos: Hex | null;
+}
+
+// A weapon copy (issue #425, ADR-0074): stores charge up to its type's
+// capped quantity (persists between sessions, resets on prestige), attacks
+// adjacent discovered undefeated enemies on the capped cadence, spending
+// the fixed cost per attack. `targetPriority` is the between-sessions
+// control: the ordered preference among authored enemy keys, resolved
+// against the authored roster order when unconfigured or exhausted.
+// `cooldown` is combat state — seconds accumulated toward the next attack;
+// lenient-defaulted to 0 at load.
+export interface WeaponCopy {
+  id: string;
+  type: WeaponType;
+  pos: Hex | null;
+  store: number;
+  cooldown: number;
+  targetPriority: string[];
+}
+
+// One authored enemy's live World state (issue #425), keyed by the
+// authored roster key: discovered flips the moment era-earned crosses the
+// threshold (the penalty activates), `hp` carries damage between sessions
+// and restores at fixed stats on prestige. Defeat reads `hp <= 0` — the
+// era bonus replaces the penalty, never stored twice.
+export interface WorldEnemyState {
+  discovered: boolean;
+  hp: number;
+}
+
+// The World layer's save surface (issue #425, ADR-0074): the claimed
+// frontier (the entitlement already banked against, advanced only on
+// prestige), the once-ever starter weapon flag, the placed and tray
+// occupants (Columns and weapons), the per-type Hone ranks, and the
+// enemies' live state. World purchases persist through prestige; enemy
+// encounters, damage, and stored World charge reset with the era.
+export interface WorldState {
+  frontier: number;
+  starterWeaponGranted: boolean;
+  columns: WorldColumn[];
+  weapons: WeaponCopy[];
+  hone: Record<WeaponType, number>;
+  enemies: Record<string, WorldEnemyState>;
+}
+
 export interface MutatorCandidate {
   id: string;
   family: MutatorFamily;
@@ -624,11 +683,11 @@ export interface GameState {
   // lenient-default to false.
   catalogEntryOwned: boolean;
   rollPoolJoined: boolean;
-  // The Horizon break (ADR-0042, issue #200): the one-time Catalog purchase
-  // that lets per-era overfill scale the claim — min(n × (1 + log₁₀ R), CAP)
-  // with R the era's earned ν over the horizon line. One-time, Arete-paid,
-  // persisting through prestige; lenient-defaults to false.
-  horizonBroken: boolean;
+  // The World layer (issue #425, ADR-0074): the two-layer World's whole
+  // save surface — the claimed frontier, the occupants, the Hone ranks,
+  // and the enemies' live state. Lenient-defaulted to a fresh World at
+  // load, per field.
+  world: WorldState;
   // The harmonic-capacity ladder (issue #259, the confirmed design beside
   // ADR-0050). `capacityBought` counts this era's nous Catalog purchases —
   // each adds one whole-chord unit to every current and future voice, and
@@ -866,6 +925,14 @@ export interface RateSnapshot {
   // leg, riding every oscillator's final value beside the achievements
   // boost. Nous-rate only.
   discoveryBoost: number;
+  // The World layer's remaining-production factor (issue #425): the
+  // discovered enemies' penalties and defeated enemies' era bonuses
+  // multiplied together — a figure in (0, ∞), 1 with no World effect
+  // standing. It multiplies every oscillator's final value and divides
+  // back out of the empowerment leg, so the breakdown multiplies out
+  // exactly and the rate details can show the one factor where the math
+  // actually carries it — never an aggregate penalty meter elsewhere.
+  worldFactor: number;
   // The active build's RITUAL amplification (ADR-0046, wave 4): the raw
   // amp the deployed RITUALs deliver while receiving charge — zero when
   // none receives. Every equipped magnitude scales by (1 + this) in the

@@ -32,10 +32,10 @@ function unlockIds(s: GameState): string[] {
 }
 
 describe("the achievement registry", () => {
-  it("ships 23 feats — five milestones leading 18 encouragers — with unique ids and copy", () => {
-    expect(ACHIEVEMENTS).toHaveLength(23);
+  it("ships 22 feats — five milestones leading 17 encouragers — with unique ids and copy", () => {
+    expect(ACHIEVEMENTS).toHaveLength(22);
     const ids = ACHIEVEMENTS.map((a) => a.id);
-    expect(new Set(ids).size).toBe(23);
+    expect(new Set(ids).size).toBe(22);
     for (const def of ACHIEVEMENTS) {
       expect(def.name.length).toBeGreaterThan(0);
       expect(def.description.length).toBeGreaterThan(0);
@@ -66,14 +66,14 @@ describe("the achievement registry", () => {
     }
   });
 
-  it("every feat carries its own mark — 23 distinct glyphs (issue #269)", () => {
+  it("every feat carries its own mark — 22 distinct glyphs (issue #269)", () => {
     const icons = ACHIEVEMENTS.map((d) => d.icon);
     // The instrument's line language: one stroke wrapper, one voice.
     for (const icon of icons) {
       expect(icon).toContain('<svg viewBox="0 0 24 24"');
       expect(icon).toContain('stroke="currentColor"');
     }
-    expect(new Set(icons).size).toBe(23);
+    expect(new Set(icons).size).toBe(22);
   });
 
   it("never unlocks anything during session one", () => {
@@ -199,7 +199,9 @@ describe("the milestone feats (ADR-0015 amended)", () => {
   it("milestones grant at their actions' boundaries like any feat", () => {
     const s = fresh();
     completeSession(s);
-    s.eraEarned = ARETE_HORIZON;
+    // The era jumps to the World entry so the reset banks the claim's
+    // first two Arete (issue #425); the entry purchase spends one.
+    s.eraEarned = BALANCE.world.entryNous;
     expect(prestige(s).unlocked).toEqual(["first-prestige"]);
     expect(buyCatalogEntry(s).unlocked).toEqual(["mutator-entry"]);
     s.arete = BALANCE.rollPoolJoinCost;
@@ -438,16 +440,13 @@ describe("the 17-feat launch set", () => {
   it("Breaking the horizon: the purchase is the trigger, awarded once, never gating", () => {
     const s = fresh();
     completeSession(s);
-    // Overfill and reach alone do not break anything — the purchase does.
+    // Overfill and reach alone unlock nothing extra — the frontier era
+    // has no purchase left to gate a feat on (issue #425 retired the
+    // Horizon break's encourager with its purchase).
     // (The lifetime total stays under the horizon here, so "Eyes on the
     // horizon" stays shut too.)
     s.eraEarned = ARETE_HORIZON * 100;
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
-    s.horizonBroken = true;
-    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["breaking-the-horizon"]);
-    // Once, ever.
-    expect(syncAchievements(s, { now: NOW })).toEqual([]);
-    expect(s.achievements["breaking-the-horizon"]).toBe(NOW);
   });
 
   it("Time in the seat: 100 lifetime practice minutes, live plus manual", () => {

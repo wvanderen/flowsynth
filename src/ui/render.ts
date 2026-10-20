@@ -2,7 +2,7 @@ import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
 import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
-import { claimOf } from "../engine/accumulator";
+import { bankableClaimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
 import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { skipPayoutOf } from "../engine/scrap";
@@ -2594,7 +2594,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   app.state.arete,
                   app.state.catalogEntryOwned,
                   app.state.rollPoolJoined,
-                  app.state.horizonBroken,
+                  app.state.world.frontier,
                   // The scrap face's rows (issues #378, #379, #380): the
                   // owned rungs and the balance re-read with every purchase,
                   // so the loom's chance, price, and muted state never stand
@@ -3141,7 +3141,6 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   app.listen(byId("buy-arete-beam"), "click", () => app.buyMergeCapAction());
   app.listen(byId("buy-arete-entry"), "click", () => app.buyCatalogEntryAction());
   app.listen(byId("buy-arete-pool"), "click", () => app.joinRollPoolAction());
-  app.listen(byId("buy-arete-break"), "click", () => app.breakHorizonAction());
   // The scrap face's purchases and rolls (issues #378, #379): the same
   // handlers the rows carried on the Forge, one sheet home now.
   app.listen(content.querySelector<HTMLButtonElement>("[data-buy-draft-upgrade]"), "click", () => app.buyDraftUpgradeAction());
@@ -3401,11 +3400,12 @@ const ACCELERATOR_PLACEHOLDER_PRICE = 3;
 
 // The arete face: the single centered lock screen until the Mutator entry
 // is bought, then two sections (issue #310 steering) — Upgrades (the
-// entry's ACQUIRED rewards line, the capacity products, Headroom, the
-// inert Accelerator placeholder) and Module Types (the Mutator Forge pool
+// entry's ACQUIRED rewards line, the capacity products, the inert
+// Accelerator placeholder) and Module Types (the Mutator Forge pool
 // join, previewed by the module's own face, empty once joined). The lock
 // screen is the face's one offer — the entry itself; the sections appear
-// only once it stands acquired.
+// only once it stands acquired. Headroom retired with the frontier claim
+// curve (issue #425): the World section joins the face with its own brief.
 function catalogAreteFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -3417,7 +3417,6 @@ function catalogAreteFaceHtml(app: App): string {
     ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
   }
   const joined = state.rollPoolJoined;
-  const broken = state.horizonBroken;
   return `<div class="catalog-sections">
     <section>
       <h2 class="t-condensed">Upgrades</h2>
@@ -3429,12 +3428,6 @@ function catalogAreteFaceHtml(app: App): string {
         ${areteLadderRowHtml(app, "extenders")}
         ${areteLadderRowHtml(app, "catalysts")}
         ${areteLadderRowHtml(app, "beam")}
-        <article class="catalog-row">
-          <div><h3 class="t-condensed">${termTipHtml("Headroom")}</h3><p class="t-note">Earning past the ${termTipHtml("nous")} cap scales the ${termTipHtml("Arete")} claim · ${termTipHtml("memorized")}</p>${
-            broken ? "" : `<p class="t-note mono">claim ${state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}</p>`
-          }</div>
-          ${broken ? catalogOwnedHtml("open") : areteBuyButtonHtml(app, "buy-arete-break", BALANCE.horizonBreakCost)}
-        </article>
         <article class="catalog-row">
           <div><h3 class="t-condensed">Arete Accelerator <span class="kind">(placeholder)</span></h3></div>
           ${catalogPriceHtml({ attrs: 'disabled', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
@@ -3713,21 +3706,28 @@ function renderResetModal(app: App, content: HTMLElement): void {
 // The prestige confirm (ADR-0039): the door's second press. The claim is
 // stated live; the boundary's two sides are named plainly — what prestige
 // takes (levels, nous, charge) and what survives it (the board, tray,
-// rolls, achievements, life record, Arete). Copy is tuning, and the
-// glossary's avoided-verb rule holds: prestige is the verb, never "reset".
+// rolls, achievements, life record, Arete, and the World's purchases —
+// issue #425). Copy is tuning, and the glossary's avoided-verb rule holds:
+// prestige is the verb, never "reset". The zero-claim case (issue #425):
+// a reset at or below the claimed frontier banks nothing — valid, and
+// said outright before the confirm, so a mis-spent stretch reads as a
+// lesson the player can choose to end.
 function renderPrestigeModal(app: App, content: HTMLElement): void {
-  const claim = claimOf(app.state);
+  const claim = bankableClaimOf(app.state);
   // The capacity clause (issue #259): purchased capacity is era progress,
   // so the modal names it among what prestige takes.
   const capacityClause = ", purchased capacity returns to one";
+  const zero = claim === 0;
   content.innerHTML = `
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
-    <p class="lead">Prestige banks <strong class="mono">${claim} Arete</strong> and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
-    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, your scrap, and lifetime nous all stay.</p>
+    <p class="lead">${zero
+      ? `This prestige banks <strong>no Arete</strong> — the frontier already covers how far this era climbed.`
+      : `Prestige banks <strong class="mono">${claim} Arete</strong>`} and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
+    <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, your scrap, and lifetime nous all stay — as do your World columns, weapons, and Hone ranks.</p>
     <div class="modal-actions">
       <button id="prestige-cancel">Not yet</button>
-      <button id="prestige-confirm" class="primary">Prestige and claim ${claim} Arete</button>
+      <button id="prestige-confirm" class="primary">${zero ? "Prestige anyway" : `Prestige and claim ${claim} Arete`}</button>
     </div>`;
   app.listen(byId("prestige-cancel"), "click", () => app.closeModal());
   app.listen(byId("prestige-confirm"), "click", () => app.confirmPrestige());

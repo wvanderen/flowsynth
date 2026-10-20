@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { breakHorizon, buyCatalogEntry, buyCell, buyRowUnlock, chooseMutatorRoll, joinRollPool, prestige } from "./actions";
-import { ARETE_HORIZON, claimOf } from "./accumulator";
+import { buyCatalogEntry, buyCell, buyRowUnlock, chooseMutatorRoll, joinRollPool, prestige } from "./actions";
+import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE } from "./constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "./catalog";
 import { cellCost, cellPurchasePrice, rowGateOwed } from "./economy";
@@ -20,10 +20,12 @@ const UNLOCK_ABOVE = LAUNCH_TOP + 1;
 const UNLOCK_BELOW = LAUNCH_BOTTOM - 1;
 
 // A fresh state standing just past its first prestige: the Catalog's lock
-// is the first Arete reset, so every Arete question starts here.
+// is the first Arete reset, so every Arete question starts here. The era
+// jumps to the World entry (issue #425) — the first claim banks two Arete
+// and grants the starter weapon; a bare-horizon reset would be zero-claim.
 function banked(): ReturnType<typeof fresh> {
   const s = fresh();
-  s.eraEarned = ARETE_HORIZON;
+  s.eraEarned = BALANCE.world.entryNous;
   prestige(s);
   return s;
 }
@@ -53,7 +55,8 @@ describe("the Mutator tree's sheet purchases", () => {
     const s = banked();
     expect(buyCatalogEntry(s).ok).toBe(true);
     expect(s.catalogEntryOwned).toBe(true);
-    expect(s.arete).toBe(0);
+    // The first claim banked two (issue #425); the entry spends one.
+    expect(s.arete).toBe(1);
   });
 
   it("the purchase performs one normal, unrigged Mutator roll into the banked queue (issue #274)", () => {
@@ -130,59 +133,9 @@ describe("the Mutator tree's sheet purchases", () => {
   });
 });
 
-describe("the Horizon break's purchase (issue #200)", () => {
-  it("stands alone: it needs no tree, debits its price, and reads as owned", () => {
-    const s = banked();
-    s.arete = BALANCE.horizonBreakCost;
-    expect(breakHorizon(s).ok).toBe(true);
-    expect(s.horizonBroken).toBe(true);
-    expect(s.arete).toBe(0);
-    // No Mutator side effects — the break is not a tree.
-    expect(s.catalogEntryOwned).toBe(false);
-  });
-
-  it("refuses twice, refuses short balances, and carries the feat's unlock", () => {
-    const s = banked();
-    s.arete = BALANCE.horizonBreakCost;
-    s.sessionsCompleted = 1;
-    // sessionsCompleted = 1 also arms first-light and the banked
-    // first-prestige; both are pre-stamped so the break's own unlock is
-    // the claim under test.
-    s.achievements["first-light"] = 1;
-    s.achievements["first-prestige"] = 1;
-    const result = breakHorizon(s);
-    expect(result.ok).toBe(true);
-    expect(result.unlocked).toEqual(["breaking-the-horizon"]);
-    expect(breakHorizon(s).ok).toBe(false);
-    const spent = banked();
-    expect(breakHorizon(spent).ok).toBe(false);
-    expect(spent.horizonBroken).toBe(false);
-  });
-
-  it("is inert outside upgrade mode", () => {
-    const s = banked();
-    s.arete = BALANCE.horizonBreakCost;
-    s.mode = "flow";
-    expect(breakHorizon(s).ok).toBe(false);
-    expect(s.horizonBroken).toBe(false);
-    s.mode = "paused";
-    expect(breakHorizon(s).ok).toBe(false);
-  });
-
-  it("persists through prestige, and the scaling rides the next era's claim", () => {
-    const s = banked();
-    s.arete = BALANCE.horizonBreakCost;
-    breakHorizon(s);
-    s.eraEarned = ARETE_HORIZON * 10;
-    prestige(s);
-    expect(s.horizonBroken).toBe(true);
-    // The fresh era reads R = 1 again: the immediately re-crossed reset
-    // banks the base n — third reset, three Arete — not a decade-multiplied
-    // claim.
-    s.eraEarned = ARETE_HORIZON;
-    expect(claimOf(s)).toBe(3);
-  });
-});
+// The Horizon break's purchase retired with the frontier claim curve
+// (issue #425) — its World-side successor's purchases carry their own
+// suites in world.test.ts.
 
 describe("the Row unlock", () => {
   it("offers exactly one row above and one below the launch band, reached by the board", () => {
@@ -206,7 +159,7 @@ describe("the Row unlock", () => {
     const s = atBoundary(banked());
     expect(rowUnlockCost(s)).toBe(1);
     expect(buyRowUnlock(s, UNLOCK_ABOVE).ok).toBe(true);
-    expect(s.arete).toBe(0);
+    expect(s.arete).toBe(1); // the entry grant's second Arete (issue #425)
     expect(rowUnlockCost(s)).toBe(2);
     s.arete = 2;
     expect(buyRowUnlock(s, UNLOCK_BELOW).ok).toBe(true);

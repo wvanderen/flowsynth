@@ -1,4 +1,4 @@
-import type { Category, ModuleType, MutatorFamily, Rarity, ShelfType, SpecialDraftKind } from "./types";
+import type { Category, Hex, ModuleType, MutatorFamily, Rarity, ShelfType, SpecialDraftKind } from "./types";
 
 export interface Balance {
   // One unified oscillator base rate (ADR-0022): every oscillator shares
@@ -132,16 +132,14 @@ export interface Balance {
   launchRowsAbove: number;
   launchRowsBelow: number;
   // The Arete Catalog's Arete prices (ADR-0040 as amended by ADR-0044,
-  // issue #197); the break's price is ADR-0042's (issue #200). Provisional
-  // tuning.
+  // issue #197). The Horizon break's price (ADR-0042, issue #200) is
+  // retired with the Headroom purchase (issue #425 — the frontier claim
+  // curve subsumes the overfill scaling); the figure stays only for the
+  // migration's exact Arete refund (#427), which reads the same price the
+  // purchase charged — the long-goal ladder's audit precedent.
   catalogEntryCost: number;
   rollPoolJoinCost: number;
   horizonBreakCost: number;
-  // The broken claim's hard cap (ADR-0042, issue #200): one juiced era
-  // banks no more than this, and past the ceiling resets bank it until
-  // future work raises it. Pre-break the cap never bites. Provisional
-  // tuning.
-  horizonBreakClaimCap: number;
   // The Row unlock's escalating ladder (ADR-0044): the nth unlock costs
   // rowUnlockCosts[n], either order. Past the ladder's end the board is at
   // its six-row cap and nothing more unlocks.
@@ -301,6 +299,72 @@ export interface Balance {
   // 120 a three-rare offer scraps for), so no product prints scrap.
   // Provisional prices and packaging throughout.
   specialDraftCosts: Record<SpecialDraftKind, number>;
+  // ── The World layer (issue #425, ADR-0074) ──────────────────────────
+  // Every figure here is a hypothesis knob pending the re-derivation of
+  // recoverability under the no-refund economy (the research issue off
+  // #425's blocker line): research/world-frontier/findings.md at 4eaac5f
+  // is the evidence base, and its own provenance section records that
+  // current-engine calibration was not rerun and no playtest export was
+  // supplied. No default below claims recoverability — the pinned
+  // hypothesis fixtures in world.test.ts mark each one as such until the
+  // re-derivation lands.
+  world: {
+    // The frontier claim curve (accumulator.ts): the 1T era-earned entry —
+    // the first enemy's reveal and the first claim's opening — and the log
+    // candidate's two figures, 2 + 2·log₁₀(x) over x = era-earned / entry.
+    // The entry grant pays exactly one weapon plus one Column (findings.md);
+    // curve construction asserts the entry entitlement covers the Column's
+    // price. Hypothesis knobs: findings.md's short-horizon comparison
+    // evidence, pending the no-refund re-derivation.
+    entryNous: number;
+    claimBase: number;
+    claimDepthSlope: number;
+    // The Charge Blade's combat figures (findings.md: one copied charge
+    // per attack, one attack per minute maximum, storage a hypothesis):
+    // the fixed charge cost per attack, the capped cadence, and the
+    // per-copy storage cap. Extra charge improves uptime until storage
+    // is full — never speed or damage.
+    attackCost: number;
+    attackCadenceSeconds: number;
+    storageCap: number;
+    // The Hone ladder's per-rank attack power (findings.md's damage
+    // budget D=(B/2)² is the simulation's relaxation, not adopted
+    // tuning): base attack at zero ranks, the authored per-rank power
+    // step, and the finite escalating Arete prices. Type-level: every
+    // current and future copy of the type reads the same figure.
+    attackBase: number;
+    honeAttackPerRank: number;
+    honeCosts: readonly number[];
+    // The Charge Column's escalating Arete ladder (the entry priced at
+    // the frontier curve's floor — the first World-eligible claim must
+    // bank at least columnFirstPrice; accumulator construction asserts
+    // it): each copy costs columnFirstPrice × growth^copies owned.
+    columnFirstPrice: number;
+    columnPriceGrowth: number;
+    // The authored encounter table's shared arithmetic (findings.md:
+    // nine fixed enemies, HP 12×1.5ⁱ, ×0.8 remaining production while
+    // discovered and alive, ×1.08 era-local bonus when defeated —
+    // multiplicative stacking, nine living enemies floor to ×0.8⁹).
+    enemyBaseHp: number;
+    enemyHpGrowth: number;
+    enemyPenalty: number;
+    enemyBonus: number;
+  };
+}
+
+// An authored World enemy (issue #425, ADR-0074): the encounter's fixed
+// identity — its key (target-priority references), its era-earned reveal
+// threshold, its authored World position (unowned coordinates allowed,
+// always within the available octave rows), and its fixed stats. Stats,
+// thresholds, and positions repeat unchanged each era; prestige never
+// raises enemy strength.
+export interface WorldEnemyDef {
+  key: string;
+  threshold: number;
+  pos: Hex;
+  maxHp: number;
+  penalty: number;
+  bonus: number;
 }
 
 // Provisional tuning throughout; the redesign spec's numbers are not final
@@ -348,7 +412,6 @@ export const BALANCE: Balance = {
   catalogEntryCost: 1,
   rollPoolJoinCost: 5,
   horizonBreakCost: 10,
-  horizonBreakClaimCap: 25,
   rowUnlockCosts: [1, 2],
   fifthsColumns: 12,
   openingGrant: 12,
@@ -399,7 +462,50 @@ export const BALANCE: Balance = {
   tierBonusChance: [0.15, 0.3, 0.5],
   tierBonusCosts: [50, 150, 450],
   specialDraftCosts: { category: 60, rare: 150, tier: 100 },
+  // All World figures are hypothesis knobs (see the interface block above):
+  // findings.md's comparison evidence, never selected balance.
+  world: {
+    entryNous: 1e12,
+    claimBase: 2,
+    claimDepthSlope: 2,
+    attackCost: 1,
+    attackCadenceSeconds: 60,
+    storageCap: 30,
+    attackBase: 4,
+    honeAttackPerRank: 2,
+    // Four rungs: 1, 2, 4, 8 Arete — the starter claim's two whole Arete
+    // afford the first rank beside nothing else, deepening as the claim
+    // curve pays. Strictly finite; provisional prices.
+    honeCosts: [1, 2, 4, 8],
+    columnFirstPrice: 1,
+    columnPriceGrowth: 2,
+    enemyBaseHp: 12,
+    enemyHpGrowth: 1.5,
+    enemyPenalty: 0.2,
+    enemyBonus: 0.08,
+  },
 };
+
+// The authored enemy roster (issue #425, ADR-0074; findings.md's nine fixed
+// encounters): thresholds at 1T × 10ⁱ era-earned, HP 12×1.5ⁱ, the shared
+// ×0.8 remaining-production penalty while discovered and alive, and the
+// ×1.08 era-local bonus once defeated. Positions are authored World
+// coordinates inside the launch band's rows (−1..2, well within the six-row
+// cap) — unowned coordinates allowed; the first enemy sits adjacent to the
+// opening footprint so its cell is attackable through ordinary expansion
+// from day one. The reachability invariant over this roster is pinned in
+// world.test.ts.
+export const WORLD_ENEMIES: readonly WorldEnemyDef[] = [
+  { key: "w0", threshold: 1e12, pos: { q: -1, r: 0 }, maxHp: 12, penalty: 0.2, bonus: 0.08 },
+  { key: "w1", threshold: 1e13, pos: { q: 1, r: 1 }, maxHp: 18, penalty: 0.2, bonus: 0.08 },
+  { key: "w2", threshold: 1e14, pos: { q: 2, r: -1 }, maxHp: 27, penalty: 0.2, bonus: 0.08 },
+  { key: "w3", threshold: 1e15, pos: { q: 0, r: 2 }, maxHp: 40.5, penalty: 0.2, bonus: 0.08 },
+  { key: "w4", threshold: 1e16, pos: { q: 2, r: 1 }, maxHp: 60.75, penalty: 0.2, bonus: 0.08 },
+  { key: "w5", threshold: 1e17, pos: { q: -1, r: 2 }, maxHp: 91.125, penalty: 0.2, bonus: 0.08 },
+  { key: "w6", threshold: 1e18, pos: { q: 3, r: -1 }, maxHp: 136.6875, penalty: 0.2, bonus: 0.08 },
+  { key: "w7", threshold: 1e19, pos: { q: 1, r: 2 }, maxHp: 205.03125, penalty: 0.2, bonus: 0.08 },
+  { key: "w8", threshold: 1e20, pos: { q: 3, r: -2 }, maxHp: 307.546875, penalty: 0.2, bonus: 0.08 },
+];
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by
 // ADR-0048/0049): register-free pitch sets — interval classes above the

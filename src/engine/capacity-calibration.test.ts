@@ -39,9 +39,10 @@ describe("the harmonic-capacity release calibration (#262)", () => {
     const ratio = era2!.minutes / era1.minutes;
     expect(ratio).toBeGreaterThan(0.35);
     expect(ratio).toBeLessThan(0.7);
-    // The claims bank the linear base: the first two resets bank one and
-    // two Arete — no other code path mints any.
-    expect(rec.claims).toEqual([1, 2]);
+    // The claims ride the frontier curve now (issue #425): these
+    // at-threshold resets sit far below the World's 1T entry, so they bank
+    // zero — valid zero-claim resets. No other code path mints any.
+    expect(rec.claims).toEqual([0, 0]);
     // Both first-era rungs sold inside the era, each opening a real
     // optimization opportunity on the board the player actually held.
     const rungs = era1.milestones.map((milestone) => milestone.rung);
@@ -51,7 +52,13 @@ describe("the harmonic-capacity release calibration (#262)", () => {
     }
   }, 600_000);
 
-  it("sells the ceiling-unlocked rungs when the Arete ladders open, without collapsing the rebuild", { skip: !FULL, timeout: 3_600_000 }, async () => {
+  // PENDING THE RE-DERIVATION (issue #424, recorded per issue #425's
+  // acceptance criteria — unavailable calibration is recorded, never
+  // claimed): the walk's premise funded the Arete ladders from the old
+  // per-prestige linear claim, which the frontier curve retires. Until
+  // the re-derivation sets where an era must push to fund the Catalog
+  // under the no-refund economy, this walk has no economy to exercise.
+  it.skip("sells the ceiling-unlocked rungs when the Arete ladders open, without collapsing the rebuild", { timeout: 3_600_000 }, async () => {
     // The ten-era walk: both Arete ladders complete (two discounts, two
     // ceilings), the first ceiling-unlocked rung sells the era after its
     // ceiling opens, the top rung sells under the saving posture, and no
@@ -72,9 +79,9 @@ describe("the harmonic-capacity release calibration (#262)", () => {
       for (const era of rec.eras) {
         expect(era.minutes).toBeGreaterThan(rec.eras[0]!.minutes * 0.4);
       }
-      // The claims bank the era count, one per prestige — the linear base
-      // the harness's at-threshold resets always see.
-      expect(rec.claims).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+      // The claims read the frontier curve: at-threshold resets bank what
+      // the era pushed past the claimed frontier — zero at these depths.
+      expect(rec.claims).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
     }
   });
 

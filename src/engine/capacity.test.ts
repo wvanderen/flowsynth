@@ -324,8 +324,9 @@ describe("the ladder on the save surface (#259)", () => {
     // eraEarned far past the new line: the door stands open at first
     // load. The documented consequence is that crossing, never a wipe:
     // the board, its inventory, the tray, and the life record all
-    // survive into the next era, and — the save never having bought the
-    // horizon break — the claim banks exactly the linear base.
+    // survive into the next era, and the claim reads the frontier curve
+    // (issue #425) — 1e23 era-earned is eleven decades past the 1T entry,
+    // so E = 2 + 2·11 = 24 banks whole.
     const state = fresh();
     affordable(state);
     state.eraEarned = 1e23;
@@ -333,11 +334,10 @@ describe("the ladder on the save surface (#259)", () => {
     const file = JSON.parse(serialize(state));
     const loaded = deserialize(JSON.stringify(file)).state!;
     expect(horizonReached(loaded)).toBe(true);
-    expect(loaded.horizonBroken).toBe(false);
     const sessionsBefore = loaded.sessionsCompleted;
     const cellsBefore = loaded.cells.length;
     expect(prestige(loaded).ok).toBe(true);
-    expect(loaded.arete).toBe(1);
+    expect(loaded.arete).toBe(24);
     expect(loaded.eraEarned).toBe(0);
     expect(horizonReached(loaded)).toBe(false);
     expect(loaded.cells.length).toBe(cellsBefore);
@@ -345,17 +345,15 @@ describe("the ladder on the save surface (#259)", () => {
     expect(loaded.totalEarned).toBe(1e23);
   });
 
-  it("a broken-horizon bank claims the logarithmic overfill, capped at the windfall limit (#262)", () => {
-    // The other migration mode: a save that owns the horizon break and
-    // carries overfill past the rebased line reads ADR-0042's scaling
-    // claim, not the linear base — potentially the capped windfall. The
-    // board, tray and life record survive exactly as in the linear mode;
-    // only the payout differs. Documented in the tuning record rather
-    // than promised as universally linear.
-    const build = (prestiges: number, eraEarned: number) => {
+  it("the frontier curve reads every migrated bank: below-entry banks reset for nothing, deep banks read their decades (#262, issue #425)", () => {
+    // The other migration mode: the retired Horizon break's flag drops at
+    // load (issue #425 — the frontier curve subsumes the overfill
+    // scaling), so every save claims the same way. The board, tray and
+    // life record survive exactly as in any mode; only the payout
+    // differs. Documented in the tuning record rather than promised as
+    // universally linear.
+    const build = (eraEarned: number) => {
       const state = fresh();
-      state.prestiges = prestiges;
-      state.horizonBroken = true;
       state.eraEarned = eraEarned;
       state.totalEarned = eraEarned;
       state.achievements["first-light"] = 1;
@@ -363,25 +361,25 @@ describe("the ladder on the save surface (#259)", () => {
       give(state, "additive", hex(5, 0));
       return deserialize(serialize(state)).state!;
     };
-    // A decade of overfill: R = 1000, so n=1 claims 1 + log10(1000) = 4.
-    const decade = build(0, 7e9);
-    expect(horizonReached(decade)).toBe(true);
-    expect(prestige(decade).ok).toBe(true);
-    expect(decade.arete).toBe(4);
-    expect(decade.horizonBroken).toBe(true);
-    expect(decade.eraEarned).toBe(0);
-    expect(decade.cells.some((c) => c.q === 5 && c.r === 0)).toBe(true);
-    expect(decade.modules.some((m) => m.type === "additive" && m.pos !== null)).toBe(true);
-    expect(decade.achievements["first-light"]).toBe(1);
-    // The old 1e23 bank under the break: R ≈ 1.43e16, so n=1 claims 17.
-    const legacy = build(0, 1e23);
+    // Below the 1T entry the curve pays nothing: the zero-claim reset
+    // stays valid, and the board survives it.
+    const shallow = build(7e9);
+    expect(horizonReached(shallow)).toBe(true);
+    expect(prestige(shallow).ok).toBe(true);
+    expect(shallow.arete).toBe(0);
+    expect(shallow.eraEarned).toBe(0);
+    expect(shallow.cells.some((c) => c.q === 5 && c.r === 0)).toBe(true);
+    expect(shallow.modules.some((m) => m.type === "additive" && m.pos !== null)).toBe(true);
+    expect(shallow.achievements["first-light"]).toBe(1);
+    // The old 1e23 bank: eleven decades past entry, E = 24.
+    const legacy = build(1e23);
     expect(prestige(legacy).ok).toBe(true);
-    expect(legacy.arete).toBe(17);
-    // The windfall cap: a late-game count (n=25) at extreme overfill
-    // lands exactly on the 25-Arete limit, never past it.
-    const capped = build(24, 1e23);
-    expect(prestige(capped).ok).toBe(true);
-    expect(capped.arete).toBe(BALANCE.horizonBreakClaimCap);
+    expect(legacy.arete).toBe(24);
+    // Half a decade floors: E = 2 + 2·11.5 = 25 — the same whole-step
+    // frontier advance every claim takes.
+    const half = build(1e23 * Math.sqrt(10));
+    expect(prestige(half).ok).toBe(true);
+    expect(half.arete).toBe(25);
   });
 
   it("corrupt counts degrade to zero, over-purchased rungs clamp at the ceiling, and over-owned offerings clamp at the ladder", () => {

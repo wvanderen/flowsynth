@@ -55,7 +55,7 @@ describe("the board ledger (§7, issue #270)", () => {
     expect(arete.querySelector(".arete-mark svg")).not.toBeNull();
     // The hairline, then the paired chips: icon + count.
     expect(ledger.querySelector(".ledger-rule")).not.toBeNull();
-    expect(document.getElementById("feats-chip")!.textContent).toContain("0/23");
+    expect(document.getElementById("feats-chip")!.textContent).toContain("0/22");
     expect(document.getElementById("feats-chip")!.querySelector("svg")).not.toBeNull();
     expect(document.getElementById("library-chip")!.textContent).toContain("0/11");
     // The chips open their sheets.
@@ -423,7 +423,9 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(bar.getAttribute("aria-valuenow")).toBeNull();
     expect(bar.querySelector(".horizon-word")).toBeNull();
     const door = bar.querySelector<HTMLButtonElement>("#prestige-door")!;
-    expect(door.textContent).toContain("Prestige and Claim 1 Arete");
+    // The bare horizon sits below the World entry: the door reads the
+    // zero claim it would bank (issue #425), and the confirm names it.
+    expect(door.textContent).toContain("Prestige and Claim 0 Arete");
     // The fill sits complete at the horizon.
     const clip = bar.querySelector<SVGRectElement>('[data-live="h-clip"]')!;
     expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(600);
@@ -452,14 +454,16 @@ describe("the horizon bar (§7, issue #156)", () => {
     document.getElementById("prestige-door")!.click();
     expect(app.ui.modal).toBe("prestige");
     const content = document.getElementById("modal-content")!;
-    expect(content.textContent).toContain("1 Arete");
+    // Below the World entry the door still opens — the claim reads zero
+    // and the confirm names it (issue #425).
+    expect(content.textContent).toContain("banks no Arete");
     expect(content.textContent).toContain("feats");
     expect(content.textContent).not.toContain("achievements");
     document.getElementById("prestige-confirm")!.click();
     expect(app.ui.modal).toBeNull();
-    expect(app.state.arete).toBe(1);
+    expect(app.state.arete).toBe(0);
     expect(app.state.prestiges).toBe(1);
-    expect(document.getElementById("status")!.textContent).toContain("Banked 1 Arete");
+    expect(document.getElementById("status")!.textContent).toContain("Banked 0 Arete");
     expect(document.getElementById("status")!.textContent).toContain("Feat unlocked — First prestige");
     // The boundary: era bar rebased, nous and charge reset.
     expect(app.state.eraEarned).toBe(0);
@@ -472,31 +476,20 @@ describe("the horizon bar (§7, issue #156)", () => {
     expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
   });
 
-  it("two consecutive resets bank 1 then 2, the door's claim reading live", () => {
-    app.state.eraEarned = ARETE_HORIZON;
-    app.render();
-    document.getElementById("prestige-door")!.click();
-    document.getElementById("prestige-confirm")!.click();
-    expect(app.state.arete).toBe(1);
-    app.state.eraEarned = ARETE_HORIZON;
+  it("the door's claim reads the frontier curve live: the entry grant, then a decade more (issue #425)", () => {
+    app.state.eraEarned = BALANCE.world.entryNous;
     app.render();
     const door = document.getElementById("prestige-door")!;
     expect(door.textContent).toContain("Claim 2 Arete");
     door.click();
     document.getElementById("prestige-confirm")!.click();
-    expect(app.state.arete).toBe(3);
-    expect(app.state.prestiges).toBe(2);
-  });
-
-  it("post-break the door's claim carries the era's overfill, live (issue #200)", () => {
-    app.state.horizonBroken = true;
-    app.state.eraEarned = ARETE_HORIZON * 100;
+    expect(app.state.arete).toBe(2);
+    expect(app.state.prestiges).toBe(1);
+    // The next era pushing one decade past the entry raises the pending
+    // claim by the curve's slope, live on the door.
+    app.state.eraEarned = BALANCE.world.entryNous * 10;
     app.render();
-    expect(document.getElementById("prestige-door")!.textContent).toContain("Claim 3 Arete");
-    // The readout grows as the era does: another decade, another point.
-    app.state.eraEarned = ARETE_HORIZON * 1000;
-    app.render();
-    expect(document.getElementById("prestige-door")!.textContent).toContain("Claim 4 Arete");
+    expect(document.getElementById("prestige-door")!.textContent).toContain("Claim 2 Arete");
   });
 
   it("carries no formula chip", () => {

@@ -64,7 +64,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]!.querySelector("svg")).not.toBeNull();
     expect(rows[0]!.textContent).toContain("Feats");
-    expect(rows[0]!.textContent).toContain("1/23");
+    expect(rows[0]!.textContent).toContain("1/22");
     expect(rows[1]!.textContent).toContain("Chords");
     expect(rows[1]!.textContent).toContain("0/11");
     // The feats row opens the feats sheet, and the sheet carries the

@@ -1,13 +1,14 @@
-import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf } from "./constants";
-import { claimOf, horizonReached } from "./accumulator";
+import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf, WORLD_ENEMIES } from "./constants";
+import { bankableClaimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
 import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
+import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "./world";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
 import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
-import { createModule, createMutator, openingGrant } from "./state";
+import { createModule, createMutator, createWeapon, createWorldColumn, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
@@ -17,7 +18,7 @@ import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
 import { generateMutatorOffer, generateSpecialOffer, nextDraftUpgradePrice, type Rng } from "./rolls";
-import type { Category, GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType, SpecialDraftKind } from "./types";
+import type { Category, GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType, SpecialDraftKind, WeaponType } from "./types";
 
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
 // Arete acts outside upgrade mode (ADR-0044).
@@ -862,21 +863,6 @@ export function joinRollPool(state: GameState): ActionResult {
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
-// The Horizon break (ADR-0042, issue #200): the one-time Catalog purchase
-// standing alone beside the trees. Buying it flips the claim's overfill
-// scaling on (claimOf); nothing else changes — the horizon line never
-// moves, and Arete still banks only on reset. The purchase can flip the
-// "breaking the horizon" feat, so it checks at the boundary like any
-// feat-bearing action.
-export function breakHorizon(state: GameState): ActionResult {
-  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  if (state.horizonBroken) return fail("The horizon is already broken.");
-  if (state.arete < BALANCE.horizonBreakCost) return fail("Not enough Arete.");
-  state.arete -= BALANCE.horizonBreakCost;
-  state.horizonBroken = true;
-  return { ok: true, unlocked: checkUnlocks(state) };
-}
-
 // The board-side Row unlock (ADR-0044, #174's approved surface): one Arete
 // purchase opens the octave row beyond the launch band — one per side,
 // either order, the ladder escalating 1 then 2 — and the purchase stands in
@@ -1083,30 +1069,48 @@ export function buyMergeCapIncrease(state: GameState): ActionResult {
 }
 
 // Prestige (ADR-0039, issue #170): the door at the horizon banks the era's
-// claim and begins the next era. The only Arete source in the game — claim
-// on reset, never before — and the nth reset banks n (ADR-0042's linear
-// base). The reset boundary: owned modules (types, rarity, secondaries),
+// pending frontier claim and begins the next era. The only Arete source in
+// the game — claim on reset, never before. The claim (issue #425,
+// ADR-0074's frontier contract) is the positive difference between the
+// cumulative entitlement at the era's score and the entitlement already
+// banked against; the claimed frontier advances only here, atomically with
+// banking, in one save transaction. Whole Arete banks; the frontier
+// advances by exactly the banked whole step, which is what makes arbitrary
+// prestige splittings telescope and leaves the sub-unit fraction pending
+// rather than lost. A zero-claim reset is valid — nothing banks, the
+// frontier stays.
+// The first World-eligible claim (era score past the 1T entry) grants the
+// starter Charge Blade outright — a granted copy, not a roll, not a
+// purchase; no other claim or prestige ever grants a weapon.
+// The reset boundary: owned modules (types, rarity, secondaries),
 // cells with placement, `cellsBought` and the paid row gates, tray
-// inventory, banked rolls, Forge progress, and the flow meter's fill and
-// earned count (ADR-0041 — progress earned by real life time is never
-// un-earned at the moment prestige pays off), achievements and their
-// boost, the life record, the Arete balance, and lifetime `totalEarned`
-// persist — as do the Catalog unlocks (issue #197): the Row unlock's rows
-// and the Mutator tree's purchases — and, with them, the whole mutator
-// layer (issue #198): the unlocked Mutator slots, the placed mutators, and
-// the Mutator tray with its pending rolls and its Forge branch's fill and
-// earned count — and the Horizon break (issue #200), whose overfill scaling
-// rides claimOf forever after, and the Arete offerings beside the harmonic-
-// capacity ladder (issue #259): the owned ceiling unlocks and discounts —
-// and the scrap balance (issue #377), which persists with the collection
-// it values, the Draft Loom's owned rungs (issue #378), which persist
-// with the scrap that pays for them, and the special drafts' held
+// inventory, banked rolls, Forge progress, and the per-pair practice-roll
+// meters' fill and earned counts (ADR-0041 — progress earned by real life
+// time is never un-earned at the moment prestige pays off), achievements
+// and their boost, the life record, the Arete balance, and lifetime
+// `totalEarned` persist — as do the Catalog unlocks (issue #197): the Row
+// unlock's rows and the Mutator tree's purchases — and, with them, the
+// whole mutator layer (issue #198): the unlocked Mutator slots, the placed
+// mutators, and the Mutator tray with its pending rolls and its Forge
+// branch's fill and earned count — and the Arete offerings beside the
+// harmonic-capacity ladder (issue #259): the owned ceiling unlocks and
+// discounts — and the scrap balance (issue #377), which persists with the
+// collection it values, the Draft Loom's owned rungs (issue #378), which
+// persist with the scrap that pays for them, and the special drafts' held
 // entitlements (issue #379), which persist unused beside them — and the
 // Warp Beam's owned rungs (issue #380), which persist with the raised
 // cap they bought — and the whole habit-class layer (issue #423,
 // ADR-0074): every habit's class wear, and each habit–class pair's
 // experience, level, tree points, allocations, and practice-roll meter.
 // Class progress persists through prestige; nothing class-side resets.
+// And the whole World layer's purchases (issue #425): the claimed
+// frontier, the starter weapon's granted flag, the Charge Columns, the
+// weapon copies with their between-session target priorities, and the
+// Hone ranks — purchases are permanent, no refund path exists. What
+// resets: every enemy restores at its fixed stats (discoveries, damage,
+// and the defeated state's era bonuses clear — prestige never raises
+// enemy strength), and stored World charge empties (weapon stores and
+// cadence clocks; the Columns carry no charge of their own).
 // Module levels return to base, nous to
 // a fresh opening grant, and the charge window resets — as does the
 // ladder's purchased capacity (issue #259): the voices return to one. The era measure
@@ -1115,7 +1119,18 @@ export function buyMergeCapIncrease(state: GameState): ActionResult {
 export function prestige(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail("Prestige happens between sessions.");
   if (!horizonReached(state)) return fail("The horizon is not reached yet.");
-  state.arete += claimOf(state);
+  // The claim transaction (issue #425): bank and advance in one move.
+  const claim = bankableClaimOf(state);
+  state.arete += claim;
+  state.world.frontier += claim;
+  // The starter grant (issue #425, priority 2): the first World-eligible
+  // claim — a claim banking at least the Column's price, which the entry
+  // entitlement's construction guarantees — lands the Charge Blade copy
+  // outright. Granted exactly once, ever.
+  if (claim > 0 && !state.world.starterWeaponGranted) {
+    state.world.weapons.push(createWeapon(state, "chargeBlade"));
+    state.world.starterWeaponGranted = true;
+  }
   state.prestiges++;
   for (const module of state.modules) {
     module.level = 0;
@@ -1134,6 +1149,17 @@ export function prestige(state: GameState): ActionResult {
   // are permanent Catalog purchases.
   state.capacityBought = 0;
   state.eraEarned = 0;
+  // The World's era-state resets (issue #425, priority 9): enemies restore
+  // at their authored fixed stats — undiscovered, undamaged, era bonuses
+  // gone with the defeat state they derived from — and stored World charge
+  // empties. Purchases and the frontier persist above.
+  for (const def of WORLD_ENEMIES) {
+    state.world.enemies[def.key] = { discovered: false, hp: def.maxHp };
+  }
+  for (const weapon of state.world.weapons) {
+    weapon.store = 0;
+    weapon.cooldown = 0;
+  }
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
@@ -1173,5 +1199,82 @@ export function setBoosterTarget(state: GameState, id: string, targetId: string 
   if (!target) return fail("Recipient not found.");
   if (!isOscillatorType(target.type)) return fail("Only an oscillator can receive the focus.");
   module.target = targetId;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// ── The World layer's between-session actions (issue #425, ADR-0074) ──
+
+// The Charge Column's Arete purchase (issue #425, priority 6): another
+// copy on the authored escalating ladder — multiple copies allowed, the
+// entry priced from the frontier curve's floor. The purchase is permanent:
+// it is memorized by nothing but the reset contract, and no refund path
+// exists for it or any World purchase.
+export function buyChargeColumn(state: GameState): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  const price = columnCost(state.world.columns.length);
+  if (state.arete < price) return fail("Not enough Arete.");
+  state.arete -= price;
+  state.world.columns.push(createWorldColumn(state));
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// The Hone purchase (issue #425, priority 7): one rank of the weapon
+// type's persistent attack-power upgrade — every current and future copy
+// of the type deals the raised figure, and the rank survives prestige.
+// Like every World purchase: irreversible, no refund action anywhere.
+export function buyHoneRank(state: GameState, type: WeaponType): ActionResult {
+  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
+  const price = honeCostOf(state, type);
+  if (price === null) return fail("That weapon type is at its Hone ceiling.");
+  if (state.arete < price) return fail("Not enough Arete.");
+  state.arete -= price;
+  state.world.hone[type]++;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// World placement (issue #425, priority 10): an occupant — Column or
+// weapon — lands on an owned cell's World face. The shared coordinates'
+// rules, the Mutator Grid's precedent: reserved enemy cells block only
+// World placement (and stay blocked after defeat — the encounter and its
+// era bonus remain), one World occupant per cell, and the module layer
+// beneath never reads the occupancy. Relocation is free between sessions;
+// upgrade mode is the only window, like every reconfiguration.
+export function placeWorldOccupant(state: GameState, id: string, pos: Hex): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const column = state.world.columns.find((entry) => entry.id === id);
+  const weapon = state.world.weapons.find((entry) => entry.id === id);
+  if (!column && !weapon) return fail("World occupant not found.");
+  if (!state.cells.some((cell) => sameHex(cell, pos))) return fail("Only an owned cell carries a World face.");
+  if (enemyDefAt(pos)) return fail("That cell is reserved for an enemy.");
+  const occupied = worldOccupantAt(state, pos);
+  if (occupied && occupied.id !== id) return fail("That World cell is already occupied.");
+  if (column) column.pos = pos;
+  else weapon!.pos = pos;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// World retrieval (issue #425): the occupant returns to the World tray,
+// free — placement and relocation never charge.
+export function retrieveWorldOccupant(state: GameState, id: string): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const column = state.world.columns.find((entry) => entry.id === id);
+  const weapon = state.world.weapons.find((entry) => entry.id === id);
+  if (!column && !weapon) return fail("World occupant not found.");
+  if (column) column.pos = null;
+  else weapon!.pos = null;
+  return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+// A weapon's between-session target priority (issue #425): the ordered
+// preference among the authored enemies, stored and locked with everything
+// else in flow. Keys resolve against the authored roster — unknown keys
+// drop, duplicates collapse — and an unconfigured or exhausted priority
+// falls back to the authored sequence order.
+export function setWeaponTargetPriority(state: GameState, id: string, keys: string[]): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const weapon = state.world.weapons.find((entry) => entry.id === id);
+  if (!weapon) return fail("Weapon not found.");
+  const known = keys.filter((key, index) => WORLD_ENEMIES.some((def) => def.key === key) && keys.indexOf(key) === index);
+  weapon.targetPriority = known;
   return { ok: true, unlocked: checkUnlocks(state) };
 }

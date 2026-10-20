@@ -1650,12 +1650,6 @@ button.build-node:hover { background: var(--hover-bg); border-color: var(--line)
   opacity: 0;
   pointer-events: none;
 }
-.horizon-bar.break-beat .horizon-flare { animation: break-beat-flare 2.4s ease-out; }
-@keyframes break-beat-flare {
-  0% { opacity: 0; }
-  12% { opacity: 0.65; }
-  100% { opacity: 0; }
-}
 
 /* The opening arc's one pop-up (§8): the second synth's card, floating
    over the board's top-left corner — clear of the dock, the readout, the

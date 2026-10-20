@@ -3,7 +3,6 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { BALANCE } from "../engine/constants";
-import { ARETE_HORIZON } from "../engine/accumulator";
 import { STORAGE_KEY } from "../engine/save";
 import { cellCost } from "../engine/economy";
 import { startSession } from "../engine/actions";
@@ -93,11 +92,12 @@ describe("the catalog door (issue #271)", () => {
     document.querySelector<HTMLButtonElement>(`[data-catalog-face="${face}"]`)!.click();
 
   function bankFirstArete(): void {
-    app.state.eraEarned = ARETE_HORIZON;
+    // The first World-eligible claim (issue #425): the entry's two Arete.
+    app.state.eraEarned = BALANCE.world.entryNous;
     app.render();
     document.getElementById("prestige-door")!.click();
     document.getElementById("prestige-confirm")!.click();
-    expect(app.state.arete).toBe(1);
+    expect(app.state.arete).toBe(2);
   }
 
   it("the face switch reads ν nous / ◇ Arete / scrap mark, and names the dialog without a duplicated title", () => {
@@ -423,14 +423,14 @@ describe("the catalog door (issue #271)", () => {
     expect(document.getElementById("buy-arete-pool")).toBeNull();
   });
 
-  it("prices mute when unaffordable: the break's price and a shelf offer stand inert without the resource", () => {
+  it("prices mute when unaffordable: an Arete row's price and a shelf offer stand inert without the resource", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
     app.state.arete = 0;
     app.state.nous = 0;
     app.openModal("catalog");
     switchFace("arete");
-    expect((document.getElementById("buy-arete-break") as HTMLButtonElement).disabled).toBe(true);
+    expect((document.getElementById("buy-capacity-ceiling") as HTMLButtonElement).disabled).toBe(true);
     switchFace("nous");
     const shelfButton = document.querySelector<HTMLButtonElement>('[data-buy="generator"]')!;
     expect(shelfButton.disabled).toBe(true);
@@ -448,15 +448,15 @@ describe("the catalog door (issue #271)", () => {
     expect(app.state.catalogEntryOwned).toBe(false);
   });
 
-  it("in flow the revealed shop mutes too: the break's price stands inert", () => {
+  it("in flow the revealed shop mutes too: every Arete row's price stands inert", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
-    app.state.arete = BALANCE.horizonBreakCost;
+    app.state.arete = BALANCE.capacityCeilingCosts[0]!;
     startSession(app.state, null);
     app.openModal("catalog");
     switchFace("arete");
-    expect((document.getElementById("buy-arete-break") as HTMLButtonElement).disabled).toBe(true);
-    expect(app.state.horizonBroken).toBe(false);
+    expect((document.getElementById("buy-capacity-ceiling") as HTMLButtonElement).disabled).toBe(true);
+    expect(app.state.capacityCeilings).toBe(0);
   });
 });
 
@@ -465,11 +465,15 @@ describe("the Arete Catalog (issue #197)", () => {
   const UNLOCK_BELOW = -BALANCE.launchRowsBelow - 1;
 
   function bankFirstArete(): void {
-    app.state.eraEarned = ARETE_HORIZON;
+    // The World entry sits eleven decades above the horizon line, so the
+    // door needs a past-entry era for a nonzero claim (issue #425): jump
+    // the era to the entry, whose grant banks 2 and lands the starter
+    // weapon.
+    app.state.eraEarned = BALANCE.world.entryNous;
     app.render();
     document.getElementById("prestige-door")!.click();
     document.getElementById("prestige-confirm")!.click();
-    expect(app.state.arete).toBe(1);
+    expect(app.state.arete).toBe(2);
   }
 
   it("before the first prestige the ledger and strip carry the dim telegraph slot (issue #270)", () => {
@@ -506,7 +510,7 @@ describe("the Arete Catalog (issue #197)", () => {
     const figure = document.querySelector("#board-ledger .ledger-arete")!;
     expect(figure.classList.contains("arete-dim")).toBe(false);
     expect(figure.querySelector(".arete-mark svg")).not.toBeNull();
-    expect(figure.querySelector('[data-live="arete"]')!.textContent).toBe("1");
+    expect(figure.querySelector('[data-live="arete"]')!.textContent).toBe("2");
     figure.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBeNull();
     // The tabbed shop rides the Catalog door instead.
@@ -551,51 +555,21 @@ describe("the Arete Catalog (issue #197)", () => {
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
-    expect((document.getElementById("buy-arete-break") as HTMLButtonElement).disabled).toBe(true);
     expect((document.getElementById("buy-arete-pool") as HTMLButtonElement).disabled).toBe(true);
-    expect(app.state.horizonBroken).toBe(false);
     expect(app.state.rollPoolJoined).toBe(false);
   });
 
-  it("Headroom buys outright: one click debits ten Arete and reads as open (issue #200, #310)", () => {
-    app.state.sessionsCompleted = 1;
+  // Headroom retired with the frontier claim curve (issue #425): the
+  // Upgrades section carries the capacity ladders and the placeholder
+  // alone, and no break button exists anywhere on the face.
+  it("the Upgrades section carries no Headroom row and no break button", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
-    app.state.arete = BALANCE.horizonBreakCost;
+    app.state.arete = 30;
     app.openModal("catalog");
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
-    const button = document.getElementById("buy-arete-break") as HTMLButtonElement;
-    expect(button.textContent).toContain(`${BALANCE.horizonBreakCost} Arete`);
-    // The description lives in the body and the delta carries the claim's
-    // concrete before → after (issue #310 steering).
     const sheet = document.getElementById("modal-content")!;
-    const headroomRow = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
-    expect(surfaceText(headroomRow.querySelector(".t-note")!)).toBe("Earning past the nous cap scales the Arete claim · memorized");
-    const persistence = [...headroomRow.querySelectorAll<HTMLButtonElement>(".term-trigger")].find((t) => t.textContent === "memorized")!;
-    persistence.focus();
-    const gloss = document.getElementById(persistence.getAttribute("aria-describedby")!)!;
-    expect(gloss.textContent).toBe("Persists through arete reset");
-    expect(gloss.classList.contains("inst-show")).toBe(true);
-    expect(headroomRow.textContent).toContain(`claim ${app.state.prestiges + 1} → up to ${BALANCE.horizonBreakClaimCap}`);
-    expect(headroomRow.querySelector("h3 .term-trigger")!.textContent).toBe("Headroom");
-    button.click();
-    expect(app.state.horizonBroken).toBe(true);
-    expect(app.state.arete).toBe(0);
-    expect(app.state.achievements["breaking-the-horizon"]).toBeGreaterThan(0);
-    // The toast carries both the beat's words and the feat's unlock.
-    expect(document.getElementById("status")!.textContent).toContain("Headroom opens");
-    expect(document.getElementById("status")!.textContent).toContain("Breaking the horizon");
-    // The beat's one visual rides the bar.
-    expect(app.breakBeatUntil).toBeGreaterThan(Date.now());
-    app.render();
-    expect(document.getElementById("horizon-bar")!.classList.contains("break-beat")).toBe(true);
-    app.render();
-    const after = document.getElementById("modal-content")!;
-    expect(after.querySelector("#buy-arete-break")).toBeNull();
-    const ownedRow = [...after.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Headroom"))!;
-    expect(ownedRow.querySelector(".st-acquired")!.textContent).toBe("open");
-    expect(ownedRow.textContent).not.toContain("+ over-line score");
-    // One-time: the button is gone, nothing re-charges it.
+    expect(sheet.textContent).not.toContain("Headroom");
     expect(document.getElementById("buy-arete-break")).toBeNull();
   });
 
@@ -616,7 +590,7 @@ describe("the Arete Catalog (issue #197)", () => {
     // One click, outright: the row opens and its gate stands paid.
     (banners[0] as SVGElement).dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.state.unlockedRows).toEqual([UNLOCK_ABOVE]);
-    expect(app.state.arete).toBe(0);
+    expect(app.state.arete).toBe(1);
     app.render();
     // The bought row's band is gone; the other side's banner escalates to 2.
     expect(document.querySelector(`[data-unlock-row="${UNLOCK_ABOVE}"]`)).toBeNull();
@@ -835,10 +809,10 @@ describe("the harmonic-capacity ladder (#259)", () => {
     }
     expect(rowOf("Expansion Bays").textContent).toContain("ceiling 3 → 4");
     expect(rowOf("Chord Catalysts").textContent).toContain("prices −0% → −20%");
-    // Seven entries on the whole face: the layer's six upgrades (the
+    // Six entries on the whole face: the layer's five upgrades (the
     // Warp Beam's cap row included, issue #380) and the pool join — no
-    // second rungs.
-    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(7);
+    // second rungs. Headroom retired with the frontier claim (issue #425).
+    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(6);
     // The ceiling purchase lands and the same entry walks its ladder:
     // owned figure, delta, then the rising next price.
     rowOf("Expansion Bays").querySelector<HTMLButtonElement>("button.price")!.click();
@@ -898,17 +872,15 @@ describe("the harmonic-capacity ladder (#259)", () => {
     const read = (): string[] =>
       [...document.querySelectorAll<HTMLElement>("#modal-content .inst-tip-body")].map((b) => b.textContent!.trim());
     // The arete face: the effect lines' term bodies (the Warp Beam's row
-    // included, issue #380) and the Module Types section's gloss,
-    // including Headroom's deeper claim mechanic.
+    // included, issue #380) and the Module Types section's gloss.
     let texts = read();
-    expect(texts.length).toBe(15);
+    expect(texts.length).toBe(11);
     for (const text of texts) {
       expect(text.length).toBeLessThanOrEqual(60);
       expect(text).not.toMatch(/[—;:]/);
     }
     expect(texts).toContain("Rolled module types appear here unweighted");
     expect(texts).toContain("Re-earned after arete reset");
-    expect(texts).toContain("The resource banked when an era ends");
     // The nous face: generator charge and Harmonic capacity glosses.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();

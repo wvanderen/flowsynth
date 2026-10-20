@@ -333,18 +333,6 @@ export const ACHIEVEMENTS: readonly AchievementDef[] = [
     progress: (s) => fraction(s.totalEarned, ARETE_HORIZON),
   },
   {
-    id: "breaking-the-horizon",
-    category: "formula",
-    name: "Breaking the horizon",
-    description: "Break the horizon.",
-    // The purchase is the trigger (ADR-0042): an encourager for the
-    // overfill stretch, accelerating and never gating. The arc broken, the
-    // body already past it.
-    icon: glyph('<path d="M2.5 18.5q6.5-7 11.5-7.8"/><path d="M17.8 11.2q2.4.6 3.7 2.3"/><circle cx="16.8" cy="5.2" r="2" fill="currentColor" stroke="none"/>'),
-    evaluate: (s) => s.horizonBroken,
-    progress: (s) => fraction(s.horizonBroken ? 1 : 0, 1),
-  },
-  {
     id: "time-in-the-seat",
     category: "practice",
     name: "Time in the seat",

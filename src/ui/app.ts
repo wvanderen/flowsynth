@@ -18,7 +18,6 @@ import {
   scrapInventoryBatch,
   combineMutators,
   combineMutatorsPreview,
-  breakHorizon,
   dismissArcCard as dismissArcCardAction,
   dismissSummary as dismissSessionSummary,
   endBreather as endBreatherAction,
@@ -46,7 +45,7 @@ import {
   type ActionResult,
   type BulkPurchase,
 } from "../engine/actions";
-import { ARETE_HORIZON, claimOf } from "../engine/accumulator";
+import { ARETE_HORIZON, bankableClaimOf } from "../engine/accumulator";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
 import { displayedRates, flowLive, mutatorAt, deployedAt } from "../engine/economy";
@@ -489,10 +488,6 @@ export class App {
   // The Forge's threshold-crossing flash: a roll was minted, so its face
   // flashes until this wall-clock moment.
   rollFlashUntil = 0;
-  // The horizon break's one-time beat (ADR-0042, issue #200): the purchase
-  // sets it, and the bar flashes until this wall-clock moment. The break
-  // fires exactly once, ever — the flag behind the purchase is one-time.
-  breakBeatUntil = 0;
   // Set when the stored save was rejected (e.g. the ADR-0017 v5 clean cut):
   // the message must survive the constructor's greeting.
   private loadNotice: string | null = null;
@@ -807,7 +802,7 @@ export class App {
   // levels to base, nous to a fresh grant, charge and the era bar reset;
   // the board, tray, rolls, achievements, life record, and Arete persist.
   confirmPrestige(): void {
-    const claim = claimOf(this.state);
+    const claim = bankableClaimOf(this.state);
     const result = prestige(this.state);
     if (!result.ok) {
       this.say(result.reason ?? "The door is not open.");
@@ -1407,16 +1402,6 @@ export class App {
 
   joinRollPoolAction(): void {
     this.act(joinRollPool(this.state), "The Mutator Forge joined the module roll pool.");
-  }
-
-  // Headroom's purchase (ADR-0042, issue #200): the sheet button's
-  // landing. The beat rides it — the bar flashes as the moment's one visual,
-  // the toast carries the words, and the feat's unlock (if session one is
-  // past) appends through announceUnlocks.
-  breakHorizonAction(): void {
-    const result = breakHorizon(this.state);
-    if (result.ok) this.breakBeatUntil = Date.now() + 2400;
-    this.act(result, "Headroom opens — score past the line now raises the claim.");
   }
 
   buyRowUnlockAction(row: number): void {
