@@ -95,11 +95,11 @@ describe("Forge drafts (#335)", () => {
     app.openModal("forge");
     const choice = panel().querySelector<HTMLButtonElement>("[data-choice]")!;
     choice.focus();
-    app.state.flow.progress = 90;
+    app.state.forge.progress = 30;
     app.render();
     expect(document.activeElement).toBe(choice);
-    expect(panel().querySelector('[data-live="modal-flow-pip"]')?.getAttribute("style")).toBe("width:50.0%");
-    expect(panel().querySelector('[data-live="modal-flow-line"]')?.textContent).toBe("1:30 / 3:00");
+    expect(panel().querySelector('[data-live="modal-forge-pip"]')?.getAttribute("style")).toBe("width:50.0%");
+    expect(panel().querySelector('[data-live="modal-forge-line"]')?.textContent).toBe("30 / 60");
     expect(panel().querySelector(".gbar")).toBeNull();
   });
 

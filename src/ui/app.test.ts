@@ -2,18 +2,16 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
 import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
-import { createGoal, deleteGoal, goalSummary, accrueGoalProgress } from "../engine/goals";
+import { createGoal, deleteGoal, goalCapacity, goalSummary, accrueGoalProgress } from "../engine/goals";
 import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { longGoalCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "../engine/trust";
 import { recordMissed, recordTargetHit } from "../engine/records";
 import { createInitialState } from "../engine/state";
 import { BALANCE } from "../engine/constants";
-import { formatInt } from "./format";
 import { createAppFixture } from "./testing/app-fixture";
 
 // console rendering and interaction on the production HTML skeleton.
@@ -850,10 +848,12 @@ describe("the Notes stream's habit chips (§9)", () => {
   });
 });
 
-describe("the GOALS face's slots and purchase row (#150)", () => {
+describe("the GOALS face's slots and create action (issue #423)", () => {
   const sheet = () => document.getElementById("app-popover")!;
 
   it("the create form offers exactly the six swatches, vermillion pressed by default (#312)", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
     app.openApp("goals");
     sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
     const swatches = [...sheet().querySelectorAll<HTMLButtonElement>(".goal-swatch")];
@@ -909,6 +909,7 @@ describe("the GOALS face's slots and purchase row (#150)", () => {
 
   it("a goal row's re-pick is the palette's edit half — the track and banner follow the goal (#312)", () => {
     const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
     const goal = createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: DAY, color: "vermillion" }).goal!;
     app.openApp("goals");
     const row = () => sheet().querySelector(`[data-goal="${goal.id}"]`)!;
@@ -930,89 +931,50 @@ describe("the GOALS face's slots and purchase row (#150)", () => {
   it("reads tracked goals first — open work above completed — then the on-demand create action", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
-    s.goalCapacityBought = 2; // room for the create action to stand beside the tracked three
+    selectHabit(s, habit.id);
     createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: DAY });
     const recurringDone = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: DAY }).goal!;
     accrueGoalProgress(s, habit.id, 300); // completes the daily goal until its reset
-    const onceDone = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "once", now: DAY }).goal!;
-    accrueGoalProgress(s, habit.id, 300); // completes the once goal for good
     app.openApp("goals");
     const rows = [...sheet().querySelectorAll(".goal-row")];
-    expect(rows).toHaveLength(3);
+    expect(rows).toHaveLength(2);
     expect(rows[0]!.classList.contains("done")).toBe(false);
     expect(rows[0]!.textContent).toContain("20 min");
     // Completed occurrences trail the open work, creation order kept.
     expect(rows[1]!.classList.contains("done")).toBe(true);
     expect(rows[1]!.getAttribute("data-goal")).toBe(recurringDone.id);
-    expect(rows[2]!.classList.contains("done")).toBe(true);
-    expect(rows[2]!.getAttribute("data-goal")).toBe(onceDone.id);
     // The create form is on-demand: the action button stands where the
-    // slots have room, the capacity purchase trails the face.
-    const sequence = [...sheet().querySelectorAll(".goal-row, .focus-actions, .long-goal-row")].map((el) => el.className);
-    expect(sequence.at(-1)).toContain("long-goal-row");
+    // habit's own slots have room.
     expect(sheet().querySelector("#goal-add")).toBeNull();
     sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
     expect(sheet().querySelector("#goal-add")).not.toBeNull();
   });
 
-  it("a full tracker hides the create action and keeps the purchase row last", () => {
+  it("a habit's full slot set hides the create action; another habit's slots stay its own", () => {
     const s = app.state;
     const habit = createHabit(s, "Piano").habit!;
-    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: DAY });
-    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: DAY });
+    selectHabit(s, habit.id);
+    const capacity = goalCapacity();
+    for (let i = 0; i < capacity; i++) {
+      createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: DAY + i });
+    }
     app.openApp("goals");
-    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain("2/2");
+    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain(`${capacity}/${capacity}`);
     expect(sheet().querySelector("#goal-create-open")).toBeNull();
-    // The purchase row trails the face — the sheet body's last block.
-    const lastBlock = sheet().querySelector(".focus-sheet-face")!.lastElementChild!;
-    expect(lastBlock.querySelector(".long-goal-row")).not.toBeNull();
+    // A second habit's slots are its own: switching the selection shows
+    // its empty set with the create action standing.
+    const other = createHabit(s, "Cooking").habit!;
+    selectHabit(s, other.id);
+    app.render();
+    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain(`0/${capacity}`);
+    expect(sheet().querySelector("#goal-create-open")).not.toBeNull();
   });
 
-  it("the purchase row sells the product — Channel Strips, one +1 slot effect line, next price on the button", () => {
+  it("with no habit selected the face reads none and shows no rows", () => {
+    createHabit(app.state, "Piano");
     app.openApp("goals");
-    const row = sheet().querySelector(".long-goal-row")!;
-    expect(row.textContent).not.toContain("CONSOLE LONG GOAL");
-    expect(row.textContent).not.toContain("→");
-    expect(row.textContent).not.toContain("2 → 4");
-    expect(row.querySelector(".long-goal-name .term-trigger")!.textContent).toBe("Channel Strips");
-    expect(row.querySelector(".long-goal-effect")!.textContent).toBe("+1 goal slot");
-    expect(row.querySelector("#long-goal-buy")!.textContent).toBe(`${formatInt(longGoalCost(0))} ν`);
-  });
-
-  it("Channel Strips discloses its price ladder by focus and tap without buying", () => {
-    app.openApp("goals");
-    const trigger = sheet().querySelector<HTMLButtonElement>(".long-goal-name .term-trigger")!;
-    const tip = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
-    const bought = app.state.goalCapacityBought;
-    expect(tip.textContent).toBe("Successive purchases reveal steeper prices");
-    expect(tip.textContent).not.toContain("+1 goal slot");
-    trigger.focus();
-    expect(tip.classList.contains("inst-show")).toBe(true);
-    trigger.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(tip.classList.contains("inst-show")).toBe(false);
-    expect(sheet().querySelector(".long-goal-row")).not.toBeNull();
-    trigger.click();
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    document.body.click();
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    expect(app.state.goalCapacityBought).toBe(bought);
-  });
-
-  it("each purchase adds exactly one slot and reveals the next, steeper price — back-to-back when affordable", () => {
-    const s = app.state;
-    s.nous = longGoalCost(0) + longGoalCost(1);
-    app.openApp("goals");
-    const slots = () => sheet().querySelector("#focus-slots-read")!.textContent;
-    const buy = () => document.getElementById("long-goal-buy") as HTMLButtonElement;
-    expect(slots()).toContain("0/2");
-    buy()!.click();
-    expect(slots()).toContain("0/3");
-    expect(s.goalCapacityBought).toBe(1);
-    expect(buy().textContent).toBe(`${formatInt(longGoalCost(1))} ν`);
-    // No occupancy gate: the second slot buys with the tracker still empty.
-    buy().click();
-    expect(slots()).toContain("0/4");
-    expect(s.goalCapacityBought).toBe(2);
+    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain("no habit selected");
+    expect(sheet().querySelectorAll(".goal-row")).toHaveLength(0);
   });
 });
 

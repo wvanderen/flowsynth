@@ -14,6 +14,7 @@ import { unlockedMergeCap } from "./catalog";
 import { BALANCE, SHELF_TYPES } from "./constants";
 import { displayedRates, maxChordFactorOf } from "./economy";
 import { isInFlowNote } from "./notes";
+import { totalPracticeRollsEarned } from "./rolls";
 import type { GameState } from "./types";
 
 export interface AchievementProgress {
@@ -89,11 +90,12 @@ const goalCompletions = (state: GameState): number =>
 const ownsCapTier = (state: GameState): boolean => state.modules.some((m) => m.tier >= unlockedMergeCap(state));
 
 // Rolls taken: every mint pushes exactly one offer into the one shared
-// queue (ADR-0041), so the un-taken count is the two meters' earned total
+// queue (ADR-0041), so the un-taken count is the meters' earned total
 // minus what still waits in the Forge — feats keyed on rolls taken read
-// the total, never one source.
+// the total, never one source. The practice side (issue #423) sums every
+// habit–class pair's meter, wherever its partial progress froze.
 const rollsTaken = (state: GameState): number =>
-  Math.max(0, state.forge.earned + state.flow.earned - state.bankedRolls.length);
+  Math.max(0, state.forge.earned + totalPracticeRollsEarned(state) - state.bankedRolls.length);
 
 // The steepest final chord factor of one deployed voice: formation and
 // resonance included. Both ordinary and development gameplay read the

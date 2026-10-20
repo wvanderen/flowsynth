@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, pauseSession, resumeSession, startSession } from "./actions";
 import { computeRates } from "./economy";
-import { fresh, give } from "./fixtures";
+import { fresh, give, giveHabit } from "./fixtures";
 import { hex } from "./hex";
 
 function earned(state: ReturnType<typeof fresh>, seconds: number): number {
@@ -42,16 +42,16 @@ describe("session rules", () => {
   it("open-ended sessions produce exactly what the board produces", () => {
     const s = fresh();
     give(s, "forge", hex(1, 0));
+    const { pair } = giveHabit(s);
     startSession(s, null);
     // The lone opening synth: 0.1 ν/s; the forge receives no charge (no
-    // generator) and no practice either (ADR-0041) — the 3600 credited
-    // seconds cross the flow meter's opening fill plus one flat cadence
-    // block, carrying 1620.
+    // generator) — the 3600 credited seconds cross the practice meter's
+    // opening fill plus one flat cadence block, carrying 1620.
     expect(earned(s, 3600)).toBeCloseTo(0.1 * 3600, 6);
     expect(computeRates(s, true).forgeRate).toBe(0);
     expect(s.forge.earned).toBe(0);
-    expect(s.flow.earned).toBe(2);
-    expect(s.flow.progress).toBeCloseTo(1620, 6);
+    expect(pair.rollMeter.earned).toBe(2);
+    expect(pair.rollMeter.progress).toBeCloseTo(1620, 6);
     expect(s.session?.target).toBeNull();
   });
 

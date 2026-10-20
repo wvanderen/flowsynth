@@ -8,7 +8,7 @@ import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview,
 import { skipPayoutOf } from "../engine/scrap";
 import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
-import { draftTierChanceOf, forgeThreshold, flowThreshold, mutatorForgeThreshold, nextDraftUpgradePrice } from "../engine/rolls";
+import { draftTierChanceOf, forgeThreshold, mutatorForgeThreshold, nextDraftUpgradePrice } from "../engine/rolls";
 import { BALANCE, CATEGORY_OF, isOscillatorType, isVoiceType, NAMED_CHORDS, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_MODULE } from "../engine/constants";
 import { goalCompletionBase } from "../engine/reserves";
 import { baseTermOf, generatorProfileOf } from "../engine/profiles";
@@ -52,7 +52,7 @@ import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } 
 import { updateSvg } from "./svg";
 import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, rarityMark, tierNumeral, tierWord } from "./meta";
 import { typeRarityOf } from "../engine/constants";
-import { formatCountdown, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
+import { formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
@@ -124,7 +124,7 @@ export function render(app: App): void {
     // from the detail refreshes its relationship breakdown even while the
     // grid stands retired.
     const chordWork = refreshChordOverlay(app, live);
-    renderConsoleSession(app, projected);
+    renderConsoleSession(app);
     renderConsoleApps(app);
     renderBoardLedger(app, live);
     renderTools(app, projected);
@@ -212,7 +212,7 @@ function sessionHabitHtml(app: App): string {
   return `<span class="session-habit" id="session-habit"><span class="bread${name ? "" : " unselected"}" data-session="habit">${name ? escapeHtml(name) : UNSTRUCTURED_WORD}</span>${done ? HABIT_DONE_MARK : ""}</span>`;
 }
 
-function renderConsoleSession(app: App, projected: RateSnapshot): void {
+function renderConsoleSession(app: App): void {
   const { state, ui } = app;
   const phone = isPhoneWidth();
   const host = byId("console-session");
@@ -263,7 +263,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   // (issue #332) — the modal layer owns it.
   const sheetOpen = ui.app !== null;
   const popoverKey = sheetOpen ? `sheet|${focusSheetKey(app)}` : "shut";
-  const sheetHtml = () => focusSheetHtml(app, projected);
+  const sheetHtml = () => focusSheetHtml(app);
   const bindSheet = (scrollTop: number): void => {
     if (!sheetOpen) return;
     bindFocusSheet(app, host);
@@ -300,7 +300,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
       app.listen(byId("flow-switch"), "click", () => app.startFlow());
       bindSheet(scrollTop);
     } else if (sheetOpen) {
-      updateFocusSheetLive(app, host, projected);
+      updateFocusSheetLive(app, host);
     }
     refreshConsoleClockPlan(app);
     refreshSessionReads(app);
@@ -353,7 +353,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
     renderSessionStrip(true, breather.elapsed, breather.allowanceSeconds, false);
     refreshSessionReads(app);
     syncClockDisclosure(app);
-    if (sheetOpen) updateFocusSheetLive(app, host, projected);
+    if (sheetOpen) updateFocusSheetLive(app, host);
     return;
   }
 
@@ -406,7 +406,7 @@ function renderConsoleSession(app: App, projected: RateSnapshot): void {
   renderSessionStrip(true, elapsed, target, paused);
   refreshSessionReads(app);
   syncClockDisclosure(app);
-  if (sheetOpen) updateFocusSheetLive(app, host, projected);
+  if (sheetOpen) updateFocusSheetLive(app, host);
 }
 
 // The clock's disclosure state: expanded while the sheet stands under it —
@@ -814,21 +814,10 @@ interface ToolAction {
 // The one meter detail (ADR-0041): every meter's progress, threshold, and
 // rate, one line each — the dock pip's hover/focus read and the Forge
 // modal's detail block share these builders, so neither can drift. The
-// flow meter's fill is credited practice time, so its figures are
-// durations and its rate reads as practice remaining; the charge branch's
-// are Forge progress points and its rate the projected contribution.
-// The flow meter's read, unprefixed — the dock pip's aria-valuetext wears
-// it, and the tooltip line prefixes the name.
-function flowMeterRead(state: GameState): string {
-  const threshold = flowThreshold(state.flow.earned);
-  const remaining = Math.max(0, threshold - state.flow.progress);
-  return `${formatCountdown(state.flow.progress)} / ${formatCountdown(threshold)} — next roll in ~${formatCountdown(remaining)} of practice`;
-}
-
-function flowMeterLine(state: GameState): string {
-  return `Flow meter ${flowMeterRead(state)}`;
-}
-
+// charge branch's figures are Forge progress points and its rate the
+// projected contribution. The practice-roll meter (issue #423) reads only
+// where its meter renders — the Focus sheet's habit/class face — so the
+// dock detail carries the shared queue's counts alone.
 function forgeMeterLine(state: GameState, forgeRate: number): string {
   return `Forge progress ${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeThreshold(state.forge.earned))}${
     forgeRate > 0 ? ` — ${formatNumber(forgeRate)}/s from charge` : " — charged by deployed Forges"
@@ -850,7 +839,7 @@ function meterDetail(app: App, forgeRate: number, mutatorRate: number): string {
   const mutBanked = state.bankedMutatorRolls.length;
   const mutNote = mutBanked > 0 ? ` · ${mutBanked} banked mutator roll${mutBanked === 1 ? "" : "s"}` : "";
   const mutLine = state.catalogEntryOwned ? ` · ${mutatorForgeMeterLine(state, mutatorRate)}${mutNote}` : "";
-  return `${flowMeterLine(state)} · ${forgeMeterLine(state, forgeRate)}${bankedNote}${mutLine}`;
+  return `${forgeMeterLine(state, forgeRate)}${bankedNote}${mutLine}`;
 }
 
 // Every meter bar's fill: the clamped progress share, one build for the
@@ -877,14 +866,14 @@ function toolActions(): ToolAction[] {
       run: (app) => app.openModal("forge"),
       badge: (app) =>
         app.state.bankedRolls.length + app.state.bankedMutatorRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length + app.state.bankedMutatorRolls.length}</b>` : "",
-      media: `<i class="forge-pip" data-live="forge-meter" role="progressbar" aria-label="Flow meter" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><i data-live="forge-pip"></i></i>`,
-      // The pip is the flow meter's progressbar (ADR-0041, #351): the fill
-      // is the visible state and the valuenow/value text mirror it, so AT
-      // queries the same figure the eye reads. The zero placeholder stands
-      // only until the live pass patches it — same task, never painted.
-      // Hover, focus, or tap opens the one detail — the live meter read, in
-      // flow suffixed with the lock reason (#233): the sheet never expands
-      // during a session, and the badge and pip stay as the visual indicator.
+      // The pip retired with the player-wide flow meter (issue #423): the
+      // practice-roll meter is pair-owned and renders only on the Focus
+      // sheet's habit/class face; the switch keeps the shared queue's
+      // badge, where banked-roll counts have always read.
+      // Hover, focus, or tap opens the one detail — the meter read. In
+      // flow it is suffixed with the lock reason (#233): the sheet never
+      // expands during a session, and the badge stays as the visual
+      // indicator.
       disabled: (app) => app.state.mode !== "upgrade",
       title: (app, projected) => {
         const read = meterDetail(app, projected.forgeRate, projected.mutatorForgeRate);
@@ -1091,19 +1080,11 @@ function renderTools(app: App, projected: RateSnapshot): void {
   }
 
   // Live under the structural rebuild: every icon's detail read patches in
-  // place (#354), the Forge pip tracks the flow meter (ADR-0041), and the
-  // cell icon wears the current price and affordability.
-  const flowCap = flowThreshold(state.flow.earned);
+  // place (#354), and the cell icon wears the current price and
+  // affordability. The practice-roll meter's fill reads on the Focus sheet
+  // (issue #423), so no dock pip tracks it.
   for (const target of [host, thumb]) {
     if (!target) continue;
-    const pip = target.querySelector<HTMLElement>('[data-live="forge-pip"]');
-    const pipFill = meterPipFill(state.flow.progress, flowCap);
-    if (pip && pip.style.width !== pipFill) pip.style.width = pipFill;
-    // The pip's meter semantics ride its visible fill (#351): the same
-    // progress and cap the bar draws, the same read the detail speaks.
-    liveAttr(target, "forge-meter", "aria-valuenow", String(Math.max(0, state.flow.progress)));
-    liveAttr(target, "forge-meter", "aria-valuemax", String(flowCap));
-    liveAttr(target, "forge-meter", "aria-valuetext", flowMeterRead(state));
     for (const action of actions) {
       const button = target.querySelector<HTMLButtonElement>(`[data-op="${action.op}"]`);
       const detail = button?.querySelector<HTMLElement>(".tool-detail");
@@ -3559,23 +3540,22 @@ function forgeMeterHtml(face: App["ui"]["forgeFace"]): string {
     <span class="meter-name">${name}</span><span class="meter-figures mono" data-live="modal-${key}-line"></span>
     <span class="forge-track" data-live="modal-${key}-track" role="progressbar" aria-label="${name}" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><i data-live="modal-${key}-pip"></i></span>
   </div>`;
+  // The practice-roll meter left the Forge modal with the flow meter's
+  // retirement (issue #423): it renders only on the Focus sheet's
+  // habit/class face. The modal's block stays the charge branches'.
   return `<div class="forge-meters">${face === "mutators"
     ? meter("Mutator Forge", "mutator")
-    : meter("Flow", "flow") + meter("Module Forge", "forge")}</div>`;
+    : meter("Module Forge", "forge")}</div>`;
 }
 
 function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: number, mutatorRate: number): void {
-  const flowCap = flowThreshold(state.flow.earned);
   const forgeCap = forgeThreshold(state.forge.earned);
   const mutatorCap = mutatorForgeThreshold(state.mutatorForge.earned);
-  for (const [key, progress, cap] of [["flow", state.flow.progress, flowCap], ["forge", state.forge.progress, forgeCap], ["mutator", state.mutatorForge.progress, mutatorCap]] as const) {
+  for (const [key, progress, cap] of [["forge", state.forge.progress, forgeCap], ["mutator", state.mutatorForge.progress, mutatorCap]] as const) {
     liveAttr(scope, `modal-${key}-pip`, "style", `width:${meterPipFill(progress, cap)}`);
     liveAttr(scope, `modal-${key}-track`, "aria-valuenow", String(Math.max(0, progress)));
     liveAttr(scope, `modal-${key}-track`, "aria-valuemax", String(cap));
   }
-  const flowLine = `${formatCountdown(state.flow.progress)} / ${formatCountdown(flowCap)}`;
-  liveSet(scope, "modal-flow-line", flowLine);
-  liveAttr(scope, "modal-flow-track", "aria-valuetext", flowLine);
   const forgeLine = `${formatNumber(Math.max(0, state.forge.progress))} / ${formatNumber(forgeCap)}${forgeRate > 0 ? ` · ${formatNumber(forgeRate)}/s` : ""}`;
   liveSet(scope, "modal-forge-line", forgeLine);
   liveAttr(scope, "modal-forge-track", "aria-valuetext", forgeLine);

@@ -46,6 +46,9 @@ describe("earning at the practice facts", () => {
     const milestone = give(s, "goalKeyed", null);
     const habit = createHabit(s, "Piano").habit!;
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
+    // The completion-credit arithmetic is the subject: fill the fuel pool
+    // past any draw, so the budget scales nothing here (issue #423).
+    s.goalFuel = 1e9;
     // No session has ever run: the write and the completion still bank —
     // and every generator reads both facts through its own profile.
     writeNote(s, "a thought worth keeping");

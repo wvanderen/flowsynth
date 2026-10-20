@@ -4,7 +4,7 @@ import { startSession } from "./actions";
 import { chargedFactor, computeRates, investment, levelCost, modulePower } from "./economy";
 import { BALANCE } from "./constants";
 import { OSCILLATOR_PROFILES } from "./profiles";
-import { fresh, give } from "./fixtures";
+import { fresh, give, giveHabit } from "./fixtures";
 import { hex } from "./hex";
 
 // The unified production model (ADR-0022 as amended by ADR-0036):
@@ -71,17 +71,18 @@ describe("board production model", () => {
 
   it("generators produce charge only from board modules; none exists without one", () => {
     const s = fresh();
+    const { pair } = giveHabit(s);
     expect(computeRates(s, true).forgeRate).toBe(0);
     startSession(s, 600);
     const result = advance(s, 600);
     expect(result.nousEarned).toBeCloseTo(60, 6);
     // No generator → the charge leg never moves; practice feeds only the
-    // flow meter now (ADR-0041): 600 credited seconds cross the opening
-    // fill and carry 420.
+    // practice meter now (issue #423): 600 credited seconds cross the
+    // opening fill and carry 420.
     expect(computeRates(s, true).forgeRate).toBe(0);
     expect(s.forge.earned).toBe(0);
-    expect(s.flow.earned).toBe(1);
-    expect(s.flow.progress).toBeCloseTo(420, 6);
+    expect(pair.rollMeter.earned).toBe(1);
+    expect(pair.rollMeter.progress).toBeCloseTo(420, 6);
     expect(result.rollsBanked).toBe(1);
     expect(result.rollsFlow).toBe(1);
     expect(result.rollsForge).toBe(0);

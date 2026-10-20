@@ -3,7 +3,7 @@
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals";
+export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "Headroom" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals" | "Habit class" | "Engineer" | "practice-roll meter" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Breather: "Timed post-flow break with profile-scaled production",
   Oscillator: "Pitched module contributing production",
@@ -31,6 +31,15 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "mutator rolls": "Choose one mutator from two candidates",
   "habit build": "Equipped build nodes apply during that habit’s sessions",
   goals: "Practice targets credited by flow sessions",
+  "Habit class": "A habit’s specialization, keeping its own progress",
+  Engineer: "Earns module rolls through credited practice",
+  "practice-roll meter": "Credited practice fills it toward a module roll",
+  "tree point": "Grants per class level, allocating into rank-capped nodes",
+  Respec: "Returns every allocated point, keeping experience and level",
+  Preset: "A named ordinary allocation the tree applies in one move",
+  Governor: "Discounts the flat cadence without changing the opening fill",
+  Reed: "Lifts practice-minted tiers within the unlocked cap",
+  "Punch card": "Guarantees rare drafts on the pair’s own mint cadence",
 };
 let catalogTermSeq = 0;
 export function termTipHtml(term: CatalogTerm, label: string = term): string {

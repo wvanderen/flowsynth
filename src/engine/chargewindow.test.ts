@@ -3,7 +3,7 @@ import { advance } from "./advance";
 import { endSession, pauseSession, resumeSession, startSession } from "./actions";
 import { createHabit, addPracticeLog } from "./habits";
 import { computeRates } from "./economy";
-import { fresh, give, stubRng } from "./fixtures";
+import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { serialize, deserialize } from "./save";
 import { writeNote } from "./notes";
 import { hex } from "./hex";
@@ -95,6 +95,7 @@ describe("the focus generator's reserve", () => {
 
   it("the reserve is spent as the generator's output early in the next session", () => {
     const s = fresh();
+    const { pair } = giveHabit(s);
     startSession(s, 600);
     advance(s, 600);
     receiving(s);
@@ -112,11 +113,11 @@ describe("the focus generator's reserve", () => {
     expect(theGenerator(s).reserve).toBeCloseTo(0, 6);
 
     // The reserve is empty: the next minute moves this branch by nothing —
-    // practice is the flow meter's diet, filling on beside it.
+    // practice is the practice meter's diet, filling on beside it.
     advance(s, 60, rng);
     expect(s.forge.progress).toBeCloseTo(0, 6);
     expect(s.forge.earned).toBe(1);
-    expect(s.flow.progress).toBeCloseTo(540, 6);
+    expect(pair.rollMeter.progress).toBeCloseTo(540, 6);
   });
 
   it("reserve time buys charge, never nous: the board's rate is unchanged", () => {
@@ -163,6 +164,7 @@ describe("the focus generator's reserve", () => {
 
   it("pausing freezes the reserve; the drained reserve yields no output", () => {
     const s = fresh();
+    const { pair } = giveHabit(s);
     startSession(s, 600);
     advance(s, 600);
     receiving(s);
@@ -178,16 +180,17 @@ describe("the focus generator's reserve", () => {
     advance(s, 30);
     expect(theGenerator(s).reserve).toBeCloseTo(0, 6);
     // The reserve drained across the two live legs — 30 + 30 charge — over
-    // this branch's clean start (the prep session filled only the flow
+    // this branch's clean start (the prep session filled only the practice
     // meter): the 60 threshold crosses at the end, and the pause moved
     // nothing.
     expect(s.forge.earned).toBe(1);
     expect(s.forge.progress).toBeCloseTo(0, 6);
-    expect(s.flow.progress).toBeCloseTo(480, 6);
+    expect(pair.rollMeter.progress).toBeCloseTo(480, 6);
   });
 
   it("reserves stack by extending the remaining duration, never the strength", () => {
     const s = fresh();
+    const { pair } = giveHabit(s);
     // Owned in the tray: the generator banks both windows and never emits
     // during them (an undeployed generator produces nothing).
     give(s, "focusKeyed", null);
@@ -201,7 +204,7 @@ describe("the focus generator's reserve", () => {
     // Deployed beside the receiving forge, it spends both windows at
     // constant strength 1 (the second window extended the first instead of
     // amplifying it): the 60 threshold crosses, 60 carries into the grown
-    // one. Practice filled only the flow meter.
+    // one. Practice filled only the practice meter.
     theGenerator(s).pos = hex(2, 0);
     give(s, "forge", hex(1, 0));
     startSession(s, null);
@@ -209,7 +212,7 @@ describe("the focus generator's reserve", () => {
     expect(s.forge.earned).toBe(1);
     expect(s.forge.progress).toBeCloseTo(60, 6);
     expect(theGenerator(s).reserve).toBeCloseTo(0, 6);
-    expect(s.flow.progress).toBeCloseTo(1140, 6);
+    expect(pair.rollMeter.progress).toBeCloseTo(1140, 6);
   });
 
   it("a step that outlives the reserve splits at the boundary, never over-crediting", () => {
@@ -234,15 +237,17 @@ describe("the focus generator's reserve", () => {
 
   it("no banked reserve means silence (ADR-0018)", () => {
     const s = fresh();
+    const { pair } = giveHabit(s);
     receiving(s);
     startSession(s, null);
     advance(s, 10);
     // No reserve is banked yet — session one only accrues it — so no charge
     // flows at all (charge is a reserve, never a live drip). This branch
-    // stays silent; the 10 credited seconds fill the flow meter (ADR-0041).
+    // stays silent; the 10 credited seconds fill the practice meter
+    // (issue #423).
     expect(computeRates(s, true).forgeRate).toBe(0);
     expect(s.forge.progress).toBeCloseTo(0, 6);
-    expect(s.flow.progress).toBeCloseTo(10, 6);
+    expect(pair.rollMeter.progress).toBeCloseTo(10, 6);
     expect(theGenerator(s).reserve).toBe(0);
   });
 

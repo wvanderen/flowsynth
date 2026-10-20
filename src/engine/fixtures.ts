@@ -1,10 +1,28 @@
 import { createInitialState, createModule } from "./state";
+import { createHabit, selectHabit } from "./habits";
+import { createHabitClasses, pairOf } from "./classes";
 import { investment } from "./economy";
 import { isOscillatorType } from "./constants";
-import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "./types";
+import type { ClassPairState, GameState, Habit, Hex, ModuleInstance, ModuleType, RateSnapshot } from "./types";
 
 export function fresh(): GameState {
   return createInitialState();
+}
+
+// A habit with its Engineer pair selected — the fixture for anything that
+// keys off the active habit–class pair (issue #423). Returns the pair so
+// tests can rig its meter and tree directly.
+export function giveHabit(state: GameState, name = "Piano"): { habit: Habit; pair: ClassPairState } {
+  const created = createHabit(state, name);
+  if (!created.ok || !created.habit) throw new Error("fixture habit failed");
+  selectHabit(state, created.habit.id);
+  return { habit: created.habit, pair: pairOf(created.habit) };
+}
+
+// A complete hand-built habit shape for tests that push habits directly —
+// the save's shape, launch class wear included (issue #423).
+export function plainHabit(id = "h1", name = "Piano"): Habit {
+  return { id, name, seconds: 0, archived: false, build: [], classId: "engineer", classes: createHabitClasses() };
 }
 
 export function give(state: GameState, type: ModuleType, pos: Hex | null, level = 0): ModuleInstance {

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buyDraftUpgrade, chooseRoll, endSession, prestige, scrapModule, skipRoll, startSession } from "./actions";
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE, CATEGORY_OF, TYPE_RARITY } from "./constants";
-import { fresh, stubRng } from "./fixtures";
+import { fresh, giveHabit, stubRng } from "./fixtures";
 import { draftTierChanceOf, generateOffer, nextDraftUpgradePrice } from "./rolls";
 import { deserialize, serialize } from "./save";
 import type { Category, GameState, ModuleType } from "./types";
@@ -124,7 +124,7 @@ describe("the Draft Loom's tier bonus", () => {
     const s = fresh();
     s.draftTierBonus = 1;
     s.forge.earned = 5;
-    s.flow.earned = 5;
+    giveHabit(s).pair.rollMeter.earned = 5;
     // Slot one: common band, oscillator category, the additive — its tier
     // roll 0.0 lifts it to tier 1.
     const offer = generateOffer(s, stubRng([0.0, 0.0, 0.0, 0.0, 0.5, 0.5, 0.0, 0.99, 0.9, 0.95, 0.2, 0.99]));

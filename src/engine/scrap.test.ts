@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { chooseRoll, combine, endSession, prestige, scrapModule, skipRoll, startSession } from "./actions";
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE } from "./constants";
-import { fresh, give, stubRng } from "./fixtures";
+import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { generateOffer } from "./rolls";
 import { moduleScrapValue, scrapValueOf, skipPayoutOf } from "./scrap";
 import { deserialize, serialize } from "./save";
@@ -125,7 +125,7 @@ describe("the skip action", () => {
     const common = 1 - BALANCE.rarityProbability.uncommon - BALANCE.rarityProbability.rare - 1e-6;
     const s = fresh();
     s.forge.earned = 5;
-    s.flow.earned = 5;
+    giveHabit(s).pair.rollMeter.earned = 5;
     const offer = generateOffer(s, stubRng([common, 0.0, 0.0, common, 0.0, 0.0, 1 - 1e-6, 0.9, 0.999]));
     s.bankedRolls.push(offer);
     const payout = skipPayoutOf(offer);

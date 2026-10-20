@@ -3,7 +3,7 @@ import { breakHorizon, endSession, prestige, startSession } from "./actions";
 import { ARETE_HORIZON, claimOf, horizonReached } from "./accumulator";
 import { BALANCE } from "./constants";
 import { advance } from "./advance";
-import { fresh, give } from "./fixtures";
+import { fresh, give, plainHabit } from "./fixtures";
 import { serialize, deserialize } from "./save";
 import { hex } from "./hex";
 import { levelCost } from "./economy";
@@ -126,12 +126,19 @@ describe("the prestige action", () => {
     expect(s.purchased).toEqual({ generator: true, infusor: true, forge: true });
   });
 
-  it("the flow meter's fill and earned count survive prestige intact (ADR-0041)", () => {
+  it("the pairs' meters and class progress survive prestige intact (issue #423)", () => {
     const s = atHorizon();
-    s.flow = { progress: 900, earned: 4 };
+    s.habits.push(plainHabit("h1"));
+    s.habits[0]!.classes.engineer!.rollMeter = { progress: 900, earned: 4 };
+    s.habits[0]!.classes.engineer!.experience = 7200;
+    s.habits[0]!.classes.engineer!.level = 1;
+    s.habits[0]!.classes.engineer!.points = 1;
     s.bankedRolls = [];
     prestige(s);
-    expect(s.flow).toEqual({ progress: 900, earned: 4 });
+    expect(s.habits[0]!.classes.engineer!.rollMeter).toEqual({ progress: 900, earned: 4 });
+    expect(s.habits[0]!.classes.engineer!.experience).toBe(7200);
+    expect(s.habits[0]!.classes.engineer!.level).toBe(1);
+    expect(s.habits[0]!.classes.engineer!.points).toBe(1);
     // The reset mints nothing and un-banks nothing: the queue persists too.
     expect(s.bankedRolls).toHaveLength(0);
   });
@@ -139,7 +146,7 @@ describe("the prestige action", () => {
   it("persists achievements, the life record, and lifetime totalEarned", () => {
     const s = atHorizon();
     s.achievements = { "first-light": 1_000 };
-    s.habits.push({ id: "h1", name: "Piano", seconds: 600, archived: false, build: [] });
+    s.habits.push(plainHabit("h1"));
     s.activeHabitId = "h1";
     s.practiceLog.push({ id: "p1", habitId: "h1", seconds: 60, source: "live", at: 1_000 });
     s.notes.push({ id: "n1", sessionId: 1, atElapsed: 30, text: "kept", habitId: "h1", at: 1_000 });

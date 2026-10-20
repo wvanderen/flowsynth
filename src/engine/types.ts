@@ -217,6 +217,35 @@ export interface Meter {
   earned: number;
 }
 
+// The habit-class layer (ADR-0074, issue #423): a class is a specialization
+// a habit wears; progression belongs to the habit–class PAIR, never to the
+// player or the habit across classes. `engineer` is the launch class; the
+// id union and the per-pair record are the whole schema a second class
+// joins — a new key under `Habit.classes`, no reshaping of saves.
+export type ClassId = "engineer";
+
+// One habit–class pair's progression. Experience accrues only from credited
+// flow time with this pair selected (live advance and honesty-credited
+// reconciliation — never manual logs, never breathers); authored level
+// thresholds grant tree points; allocations are ordinary, freely
+// re-assignable ranks. The practice-roll meter replaces the retired
+// player-wide flow meter (ADR-0041 as replaced by ADR-0074): credited
+// seconds fill it while the pair is selected, it freezes otherwise, and
+// each crossing banks a module roll into the shared queue.
+export interface ClassPairState {
+  // Credited flow seconds earned with this pair selected — the class XP.
+  experience: number;
+  level: number;
+  // Unspent tree points.
+  points: number;
+  // Allocated ranks by node id. Ordinary points: respec and presets
+  // rewrite them freely, never experience or level.
+  spent: Record<string, number>;
+  // The pair's practice-roll meter: progress in credited seconds, earned
+  // = module rolls minted. Freezes while another pair is selected.
+  rollMeter: Meter;
+}
+
 // The starter shelf (ADR-0013, amended by ADR-0022): one-time catalog
 // offers completing the non-synthesizer landscape — the generator, one
 // infusor, and the Forge. Synthesizers come only from the opening grant and
@@ -420,6 +449,18 @@ export interface Habit {
   // They persist through prestige — real-life time is never un-earned.
   // Lenient-defaulted to [] at load.
   build: string[];
+  // The habit's selected class (ADR-0074): the specialization its next
+  // session practices under. Locked for the whole session like the habit
+  // itself; changes happen between sessions. Lenient-defaulted to
+  // "engineer" at load — the launch class is every habit's default wear.
+  classId: ClassId;
+  // The per-pair progression ledger (ADR-0074): one entry per class the
+  // habit has practiced under, keyed by class id. Switching classes or
+  // habits never moves or destroys an entry — experience, level, points,
+  // allocations, and partial roll progress all freeze in place. Only the
+  // selected pair accrues. Lenient-defaulted to a fresh engineer pair at
+  // load; unknown keys drop.
+  classes: Record<ClassId, ClassPairState>;
 }
 
 export interface PracticeEntry {
@@ -616,11 +657,6 @@ export interface GameState {
   // the Mutator tray's queue. Fill and earned count persist through
   // prestige; lenient-defaults to an empty meter.
   mutatorForge: Meter;
-  // The flow meter (ADR-0041): the player-wide meter credited practice
-  // fills, sibling of Forge progress — never a branch of the Forge family.
-  // Each crossing banks a module roll into the one shared queue. Fill and
-  // earned count persist through prestige (the #170 boundary class).
-  flow: Meter;
   // The opening arc's one pop-up (board-redesign spec §8): the dismissal
   // sets this once, so the card fires exactly once, ever. Lenient-defaults
   // to false at load — a save written before the card existed is still
@@ -644,6 +680,16 @@ export interface GameState {
   // records, browsed in the Time app. Kept in full — no pruning, no caps.
   sessionRecords: SessionRecord[];
   goals: Goal[];
+  // The goal-generator fuel pool (issue #423): the bounded budget behind
+  // every goal completion's generator credit. It accrues at
+  // BALANCE.goalFuelPerCreditedSecond per credited practice second — the
+  // same live legs class development rides — and completions draw it down
+  // through the one credit seam (reserves.creditGoalEarning), so more
+  // goals, shorter targets, and repeated replacement cannot raise the
+  // generator credit the same practice time yields. A rule, never a
+  // resource: no surface displays it. Floors at zero; lenient-defaulted
+  // to 0 at load.
+  goalFuel: number;
   // The achievement ledger (ADR-0015): achievement id → unlockedAt (epoch
   // ms). Definitions live in code, never in the save.
   achievements: Record<string, number>;

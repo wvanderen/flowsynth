@@ -19,6 +19,7 @@ import { BALANCE, ROLL_POOL } from "./constants";
 import { boosterResponseOf } from "./profiles";
 import { computeRates, emittedStrength, receivedStrength, ritualAmpOf } from "./economy";
 import { addPracticeLog, createHabit, selectHabit } from "./habits";
+import { createHabitClasses } from "./classes";
 import { fresh, give } from "./fixtures";
 import { hex } from "./hex";
 import { deserialize, serialize } from "./save";
@@ -395,7 +396,7 @@ describe("persistence", () => {
   });
 
   it("normalizeHabitBuilds drops unknown ids and duplicates, never crashes", () => {
-    const habit: Habit = { id: "h1", name: "Piano", seconds: 10, archived: false, build: ["weights", "ghost", "weights"] };
+    const habit: Habit = { id: "h1", name: "Piano", seconds: 10, archived: false, build: ["weights", "ghost", "weights"], classId: "engineer", classes: createHabitClasses() };
     normalizeHabitBuilds([habit]);
     expect(habit.build).toEqual(["weights"]);
   });

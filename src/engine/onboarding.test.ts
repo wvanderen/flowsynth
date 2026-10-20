@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buyCell,
-  buyGoalCapacity,
+  buyDraftUpgrade,
   buyShelfModule,
   dismissSummary,
   endSession,
@@ -12,7 +12,7 @@ import {
 } from "./actions";
 import { advance } from "./advance";
 import { SHELF_TYPES } from "./constants";
-import { fresh, give, stubRng } from "./fixtures";
+import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { hex } from "./hex";
 import { createHabit, selectHabit } from "./habits";
 import { deserialize, serialize } from "./save";
@@ -56,6 +56,7 @@ describe("the enter prompt's open-ended shape (§5.5, §7)", () => {
 describe("the loud summary (§5.7) — every exit path, identical beats", () => {
   it("an early exit still summarizes: earned, practice minutes, rate, unlock row", () => {
     const s = fresh();
+    giveHabit(s);
     startSession(s, null);
     advance(s, 300);
     expect(endSession(s, 1_000).ok).toBe(true);
@@ -73,6 +74,7 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
 
   it("the summary's rolls line splits by source when both fired (ADR-0041)", () => {
     const s = fresh();
+    giveHabit(s);
     give(s, "forge", hex(1, 0));
     give(s, "focusKeyed", hex(2, 0));
     s.modules.find((m) => m.type === "focusKeyed")!.reserve = 60;
@@ -86,8 +88,9 @@ describe("the loud summary (§5.7) — every exit path, identical beats", () => 
     expect(s.summary!.rollsForge).toBe(1);
   });
 
-  it("a practice-only session attributes the roll to the flow meter alone", () => {
+  it("a practice-only session attributes the roll to the practice meter alone", () => {
     const s = fresh();
+    giveHabit(s);
     startSession(s, null);
     advance(s, 180, stubRng(new Array(9).fill(0.3)));
     endSession(s, 1_000);
@@ -214,11 +217,10 @@ describe("nothing unlocks or purchases mid-session-one (§5.6)", () => {
       expect(buyShelfModule(s, type).ok).toBe(false);
     }
     expect(buyCell(s, hex(2, 0)).ok).toBe(false);
-    expect(buyGoalCapacity(s).ok).toBe(false);
+    expect(buyDraftUpgrade(s).ok).toBe(false);
     expect(upgradeModule(s, s.modules[0]!.id).ok).toBe(false);
     expect(s.purchased.generator).toBe(false);
     expect(s.cellsBought).toBe(0);
-    expect(s.goalCapacityBought).toBe(0);
     endSession(s);
   });
 });

@@ -64,9 +64,25 @@ export function creditNoteEarning(state: GameState, storedText: string): void {
 // generator banks its profile's goal coefficient times the completion
 // base — the focus equivalent of the goal's credited seconds, prorated by
 // the goal's live share, so manual-only completions bank nothing and
-// mixed practice banks its live share.
+// mixed practice banks its live share — under the bounded fuel budget
+// (issue #423): the desired total draws against state.goalFuel, scaling
+// every generator's credit by the same share when the pool cannot cover
+// it in full and flooring at zero. More goals, shorter targets, and
+// repeated replacement cannot raise the credit the same credited time
+// yields: the pool accrues only at BALANCE.goalFuelPerCreditedSecond per
+// credited practice second, on the legs that budget it.
 export function creditGoalEarning(state: GameState, goalSeconds: number, liveShare: number): void {
   if (!(goalSeconds > EPS) || !(liveShare > EPS)) return;
   const base = goalCompletionBase(goalSeconds, liveShare);
-  creditEachGenerator(state, (profile, power) => profile.goal * base * power);
+  let desired = 0;
+  for (const module of state.modules) {
+    const profile = generatorProfileOf(module.type);
+    if (!profile) continue;
+    desired += profile.goal * base * hostPower(state, module);
+  }
+  if (!(desired > EPS)) return;
+  const scale = Math.min(1, Math.max(0, state.goalFuel) / desired);
+  if (!(scale > EPS)) return;
+  creditEachGenerator(state, (profile, power) => profile.goal * base * scale * power);
+  state.goalFuel = Math.max(0, state.goalFuel - desired * scale);
 }

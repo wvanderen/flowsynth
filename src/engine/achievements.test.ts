@@ -107,12 +107,12 @@ describe("the achievement registry", () => {
     const s = fresh();
     completeSession(s);
     // One practice-minted roll, taken: the total earned minus the queue.
-    s.flow.earned = 1;
+    s.habits[0]!.classes.engineer!.rollMeter.earned = 1;
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["roll-credit"]);
     // One from each source, both still waiting: none was taken yet.
     const second = fresh();
     completeSession(second);
-    second.flow.earned = 1;
+    second.habits[0]!.classes.engineer!.rollMeter.earned = 1;
     second.forge.earned = 1;
     for (const id of ["wait-a", "wait-b"]) {
       second.bankedRolls.push({

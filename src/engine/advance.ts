@@ -4,9 +4,10 @@ import { syncChordDiscoveries } from "./library";
 import { activeBuildGeneratorStrength, chargeDelivered, emittedStrength, maxChordFactorOf, deployed, sessionClockOf, syncRates } from "./economy";
 import { lifetimeBreatherSecondsOf, nextRestBoundaryOf, nextTemporalBoundaryOf } from "./profiles";
 import { summaryTermsOf } from "./allocation";
-import { addFlowProgress, addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
+import { addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
 import { accrueLivePractice } from "./habits";
-import { accrueGoalProgress, secondsUntilGoalCompletion } from "./goals";
+import { accrueGoalProgress, accrueGoalFuel, secondsUntilGoalCompletion } from "./goals";
+import { accrueClassDevelopment } from "./classes";
 import type { AdvanceResult, GameState, ModuleInstance, RateSnapshot } from "./types";
 
 // Where a span's produced nous lands and whether it credits practice
@@ -147,9 +148,10 @@ export function advance(
     // step; production is exactly what the board's modules make (§2.1).
     // Board-side meters (Forge progress, received charge) run in both sinks —
     // the trust table redirects only nous and practice minutes (§1); the
-    // bucket holds nous only. Practice is the flow meter's whole diet
-    // (ADR-0041): it joins below, live-sink only, beside the credited time
-    // it keys off — it feeds no Forge branch's threshold.
+    // bucket holds nous only. Practice is the practice-roll meter's whole
+    // diet (ADR-0041 as pair-owned by issue #423): it joins below, live-sink
+    // only, beside the credited time it keys off — it feeds no Forge
+    // branch's threshold.
     // The gated production pass (issue #258): development boards earn from
     // the selected whole chords only, recomputed every step so charge,
     // upgrades, and placement reselections land. The retention hint rides
@@ -185,12 +187,20 @@ export function advance(
       // minutes above leave habit, goals, and C untouched.
       session.accounting.creditedSeconds += spanSeconds;
       accrueLivePractice(state, spanSeconds);
+      // The goal-generator fuel (issue #423) accrues ahead of the
+      // completion ticks in the same span, so a completion draws the
+      // budget that span itself accrued.
+      accrueGoalFuel(state, spanSeconds);
       spanResult.goalsCompleted += accrueGoalProgress(state, state.activeHabitId, spanSeconds);
-      // The flow meter (ADR-0041): every credited practice second fills the
-      // player-wide meter one-for-one, crossing its fixed cadence — one fast
-      // opening fill, then flat forever. Received charge feeds only the Forge
-      // branches, above; the two sources share one banked-roll queue.
-      spanResult.rollsFlow += addFlowProgress(state, spanSeconds, rng);
+      // The class legs (issue #423, ADR-0074): the same credited seconds
+      // develop the active habit–class pair — class experience, tree
+      // points at the authored thresholds, and the pair's practice-roll
+      // meter, whose crossings bank module rolls into the shared queue.
+      // The retired player-wide flow meter's whole diet moves here,
+      // pair-owned: nothing accrues without a selected pair, so
+      // unstructured sessions run production and charge forging and earn
+      // nothing class-side.
+      spanResult.rollsFlow += accrueClassDevelopment(state, spanSeconds, rng);
       spanResult.rollsBanked += spanResult.rollsFlow;
     }
     // The session-tick check (ADR-0015): charge exists only live in flow, so

@@ -441,14 +441,14 @@ The focus app for recording notes — during a flow session or between sessions.
 A note tagged with the session's selected habit at capture, surfaced in that habit's development summary and chipped in the Notes stream. Unstructured and upgrade-mode notes go untagged.
 
 **Goals app**:
-The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact every owned generator reads, crediting its reserve its profile's multiple of the focus equivalent prorated by the goal's live share (issue #371). Its capacity grows through the Channel Strips purchase (the console long goal).
+The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact every owned generator reads, crediting its reserve its profile's multiple of the focus equivalent prorated by the goal's live share (issue #371), under the goal-generator fuel budget (issue #423). Each habit owns a small fixed slot capacity (issue #423) — the shared slot economy and its Channel Strips purchase retired with the World experiment.
 
 **Goal**:
-A practice condition to fulfill, such as practicing piano for twenty minutes or practicing four specified habits in a day, accruing progress only while active. Goals may qualify practice by habit or other criteria, and a session may advance several goals.
-_Avoid_: Task
+A practice condition to fulfill, owned by one habit (issue #423): only the selected habit's goals display, and only credited practice for that habit advances them. Progress accrues only while active, and a session may advance several of the habit's goals.
+_Avoid_: Task, any-habit goal (the retired cross-habit template)
 
 **Goal slot**:
-Capacity for one tracked goal within the Goals app; available slots limit the number of goals the player can track.
+Capacity for one tracked goal within a habit's fixed set (issue #423); each habit owns the same small capacity, never purchasable.
 
 **Goal template**:
 A configurable definition of valid practice conditions within the Goals app; players select habits and targets within the template.
@@ -543,10 +543,42 @@ The complete append-only run of session records, browsed in the Time app's list 
 **Miss marker**:
 The muted list-row flag on session records carrying a missed honesty event. Muted grey, never red — accounting, not judgment.
 
-### World progression design (agreed direction; not yet implemented)
+### World progression design (the class layer ships — issue #423; the World layer remains agreed direction)
 
 **World layer**:
 The progression layer whose enemies give the module board's production and charge a purpose and resistance. Its encounters run automatically during flow; preparation happens between sessions.
+
+**Practice-roll meter**:
+The habit–class pair's own roll meter (issue #423): credited flow time with the pair selected fills it one-for-one, it freezes while another habit or class is selected, and each crossing banks a module roll into the shared queue. The cadence keeps the one fast opening fill then flat shape; the Engineer tree's cadence upgrades discount the flat block only. Its fill reads only where the meter renders — the Focus sheet's habit/class face — and it persists through prestige. It replaces the retired player-wide flow meter (ADR-0041 as replaced by ADR-0074); the migration pays a migrated save's shared partial progress out as one final banked roll.
+_Avoid_: flow meter (the retired player-wide sense), class meter
+
+**Tree point**:
+One unit of Engineer tree currency, granted per crossed authored level threshold; allocated into bounded-rank nodes and returned wholesale by respec. Points are ordinary: presets spend the same freely adjustable points, never exclusive benefits. The balance reads only in the habit/class face.
+_Avoid_: skill point, perk point
+
+**Respec**:
+The free return of every allocated tree point to the balance, between sessions. Experience, level, and the practice-roll meter are untouched — reassignment is the whole act.
+_Avoid_: reset (the prestige sense), refund
+
+**Preset**:
+An authored, named allocation the tree offers — the useful default out of the box, then the branches' shapes. Applying one writes an ordinary allocation within the earned budget and the node prerequisites; unlisted nodes reset. Nothing exclusive, nothing extra.
+_Avoid_: loadout (the build sense), bundle
+
+**Governor**:
+The Engineer tree's cadence node (draft-control branch, two ranks): each owned rank discounts the flat practice-roll cadence block by its authored share — the opening fill never moves.
+_Avoid_: cadence upgrade (as a name), throttle
+
+**Reed**:
+The Engineer tree's merge-progression node (two ranks, class level 3): each owned rank raises the chance that the pair's practice-minted candidates mint one merge tier higher, clamped to the unlocked cap. It shapes the pair's own mints, never another source's.
+_Avoid_: tier boost (as a name)
+
+**Punch card**:
+The Engineer tree's draft-quality node (one rank, class level 5): every nth practice mint from the pair weaves as a guaranteed-rare draft, on the pair's own cadence.
+_Avoid_: rare roll (as a name), jackpot
+
+**Goal-generator fuel**:
+The bounded budget behind goal completions' generator credit (issue #423): it accrues at a fixed rate per credited practice second into a pool the completions draw down through the one credit seam, so more goals, shorter targets, and repeated replacement cannot raise the credit the same practice time yields. A rule, never a resource — no surface displays it, and the rate is a hypothesis knob in BALANCE.
+_Avoid_: fuel bar, goal energy
 
 **Habit class**:
 A freely switchable specialization through which credited flow time with a selected habit shapes its gameplay contribution. Each habit–class pair retains its own experience and upgrade tree; switching classes preserves that history without transferring it to another habit.

@@ -154,14 +154,28 @@ export interface Balance {
   // The opening grant (ADR-0022): affords — but no longer exactly equals —
   // the first upgrade of the pre-placed synthesizer. Provisional tuning.
   openingGrant: number;
-  // Console long goals (ADR-0012 as amended by ADR-0034, issue #150): each
-  // purchase adds one goal slot and reveals the next price, much steeper —
-  // the price is the pacing, so successive purchases are fine when
-  // affordable. Provisional tuning; goal capacity is the first named beat.
+  // Console long goals (ADR-0012 as amended by ADR-0034, issue #150):
+  // RETIRED by the World experiment (issue #423) — the shared goal-slot
+  // economy and its Channel Strips purchase no longer sell, and each habit
+  // owns a small fixed capacity (habitGoalSlots). The purchase ladder's
+  // figures stay for the migration's exact nous refund (#427), which reads
+  // the same price function the purchases charged; goalBaseSlots is the
+  // pre-experiment shared figure, likewise kept only for that audit.
   longGoalFirstCost: number;
   longGoalGrowthNumerator: bigint;
   longGoalGrowthDenominator: bigint;
   goalBaseSlots: number;
+  // The per-habit goal capacity (issue #423): each habit owns this many
+  // goal slots, fixed — capacity is no longer purchasable. Provisional
+  // tuning.
+  habitGoalSlots: number;
+  // The goal-generator fuel rate (issue #423): the budget behind goal
+  // completions' generator credit, accrued per credited practice second
+  // into the goalFuel pool that completions draw down. Anchored to the
+  // focus specialist's coefficient scale so a full slot set of steady
+  // goals lands near the budget the same practice time affords; the
+  // figure is a hypothesis knob pending simulation evidence.
+  goalFuelPerCreditedSecond: number;
   forgeInitialThreshold: number;
   forgeThresholdGrowth: number;
   // The Mutator Forge branch (ADR-0043, issue #198): ADR-0009's shared-meter
@@ -198,13 +212,37 @@ export interface Balance {
   // free first slot costs first + (n-1)n/2 Arete — the 2/3/5/8/12 shape,
   // unbounded. Provisional tuning.
   mutatorSlotFirstCost: number;
-  // The flow meter (ADR-0041): credited practice seconds fill it directly —
-  // the fill is measured in seconds, no rate leg. The opening threshold
-  // crosses once fast so the opening still teaches the loop (≈ 3 minutes,
-  // tuning 2–5), then every later crossing sits one flat cadence block out
-  // — one module roll per ≈ 30 credited minutes, forever, never scaling.
+  // The flow meter's fixed cadence (ADR-0041), now the per-pair
+  // practice-roll meter's (issue #423): credited practice seconds fill the
+  // selecting pair's meter one-for-one — the fill is measured in credited
+  // seconds directly, so the threshold is a duration. The opening
+  // threshold crosses once fast so the opening still teaches the loop
+  // (≈ 3 minutes, tuning 2–5), then every later crossing sits one flat
+  // cadence block out — one module roll per ≈ 30 credited minutes, never
+  // scaling. The Engineer tree's cadence node discounts the FLAT block
+  // only (the opening fill stays the teacher); the figures below are
+  // hypothesis knobs pending the re-derived simulation evidence.
   flowOpeningSeconds: number;
   flowCadenceSeconds: number;
+  // ── The Engineer tree (issue #423, ADR-0074) ────────────────────────
+  // Authored level thresholds in credited seconds with the pair selected;
+  // each crossed threshold grants one tree point, and the ladder's end is
+  // the class level cap. Provisional tuning throughout — exact thresholds
+  // are hypothesis knobs pending simulation evidence.
+  engineerLevelThresholds: readonly number[];
+  // The Governor node's bounded cadence discount: each owned rank cuts the
+  // flat practice-roll cadence block by this share (the opening fill
+  // never moves). Two ranks → the flat block's floor is 84% of authored.
+  engineerCadenceDiscountPerRank: number;
+  // The Reed node's tier lift: each owned rank adds this much chance that
+  // a practice-minted candidate mints one merge tier higher, clamped to
+  // the unlocked cap — the merge-progression branch shaping the pair's
+  // own mints, never another source's.
+  engineerTierChancePerRank: number;
+  // The Punch card node: with the rank owned, every nth practice-minted
+  // offer (n = the figure, counting the pair's earned crossings) weaves as
+  // a guaranteed-rare draft — the draft-control branch's quality shape.
+  engineerGuaranteedWeaveNth: number;
   // The note character axis's per-note cap (issue #371): character earning
   // flattens here per note — charge, before the module's power scaling.
   // The creation bonus rides on top, capped separately by the minimum
@@ -318,6 +356,8 @@ export const BALANCE: Balance = {
   longGoalGrowthNumerator: 5n,
   longGoalGrowthDenominator: 1n,
   goalBaseSlots: 2,
+  habitGoalSlots: 3,
+  goalFuelPerCreditedSecond: 0.1,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
   mutatorForgeInitialThreshold: 240,
@@ -331,6 +371,12 @@ export const BALANCE: Balance = {
   mutatorSlotFirstCost: 2,
   flowOpeningSeconds: 180,
   flowCadenceSeconds: 1800,
+  // Two, six, fourteen, twenty-eight, fifty, eighty credited hours with
+  // the pair selected: six levels, six tree points. Provisional tuning.
+  engineerLevelThresholds: [2 * 3600, 6 * 3600, 14 * 3600, 28 * 3600, 50 * 3600, 80 * 3600],
+  engineerCadenceDiscountPerRank: 0.08,
+  engineerTierChancePerRank: 0.15,
+  engineerGuaranteedWeaveNth: 6,
   noteCharCreditCap: 300,
   noteCreationMinChars: 20,
   scrapValue: { common: 5, uncommon: 15, rare: 40 },
@@ -672,10 +718,10 @@ export const REFLECTION_SLIDER_MIN = 1;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-// ADR-0017's pattern at the v10 boundary (issue #371): SAVE_VERSION 10 —
-// the charge-quantity cut. V9 saves migrate in place (each owned module's
-// stored reserve seconds convert to the charge quantity that delivers the
-// same total at the module's authored power — duration and delivered charge
-// both stand); anything older rejects with the start-fresh message, and
-// the chain past one step stays empty.
-export const SAVE_VERSION = 10;
+// ADR-0017's pattern at the v11 boundary (issue #423): SAVE_VERSION 11 —
+// the habit-class cut. The v10 → v11 conversion (Engineer XP conversion,
+// the flow meter's final payout, the retired purchases' refunds) belongs
+// to the migration brief (#427) and does not exist yet: v10 saves load
+// through the lenient-default block alone, and the dead v9 step is
+// retired with its version.
+export const SAVE_VERSION = 11;

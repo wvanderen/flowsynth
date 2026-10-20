@@ -7,7 +7,6 @@ import {
   buyCatalogEntry,
   buyCell,
   buyDraftUpgrade,
-  buyGoalCapacity,
   buyMergeCapIncrease,
   buyRowUnlock,
   buyShelfModule,
@@ -75,10 +74,11 @@ import {
   selectHabit,
 } from "../engine/habits";
 import { equipBuildNode, unequipBuildNode } from "../engine/builds";
+import { allocateClassNode, applyClassPreset, classDefOf, respecClassTree, selectHabitClass } from "../engine/classes";
 import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { Category, GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, ShelfType, SpecialDraftKind } from "../engine/types";
+import type { Category, ClassId, GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, ShelfType, SpecialDraftKind } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render } from "./render";
 import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
@@ -1443,12 +1443,6 @@ export class App {
     this.act(buyMergeCapIncrease(this.state), `Merge cap raised — copies now combine to ${tierWord(unlockedMergeCap(this.state))}.`);
   }
 
-  // The first console long goal (ADR-0012 as amended by ADR-0034): goal
-  // capacity, one slot per purchase from the Goals panel's compact row.
-  buyGoalCapacityAction(): void {
-    this.act(buyGoalCapacity(this.state), "Channel Strip added — one more goal slot.");
-  }
-
   // ── The Mutator layer's gestures (issue #199) ───────────────────────────
   // The tabbed second grid over the board: every landing routes through the
   // engine actions from #198 — unlockMutatorSlot, placeMutator,
@@ -2368,6 +2362,25 @@ export class App {
 
   unequipBuildNodeAction(habitId: string, nodeId: string): void {
     this.habitAction(() => unequipBuildNode(this.state, habitId, nodeId), "Node unequipped.");
+  }
+
+  // ── The habit-class layer (issue #423) ─────────────────────────────
+
+  selectHabitClassAction(habitId: string, classId: ClassId): void {
+    const def = classDefOf(classId);
+    this.habitAction(() => selectHabitClass(this.state, habitId, classId), `${def.name} selected.`);
+  }
+
+  allocateClassNodeAction(habitId: string, nodeId: string): void {
+    this.habitAction(() => allocateClassNode(this.state, habitId, nodeId), "Point allocated — respec is free.");
+  }
+
+  respecClassTreeAction(habitId: string): void {
+    this.habitAction(() => respecClassTree(this.state, habitId), "All tree points returned.");
+  }
+
+  applyClassPresetAction(habitId: string, presetId: string): void {
+    this.habitAction(() => applyClassPreset(this.state, habitId, presetId), "Preset applied — the points stay freely adjustable.");
   }
 
   // ── Goals (#6) ──────────────────────────────────────────────────────────

@@ -1,17 +1,20 @@
 import { EPS } from "./constants";
 import { syncAchievements } from "./achievements";
+import { createHabitClasses } from "./classes";
 import { accrueGoalProgress, rollGoalOccurrences } from "./goals";
 import type { GameState, Habit, PracticeEntry } from "./types";
 
 export type { Habit, PracticeEntry };
 
-// Habits (issue #5). A habit names what you are practicing; one may be
-// selected as the session's active habit, locked for the session (ADR-0001).
-// Development accrues from live flow time and manual practice logs — manual
-// logs never produce nous or charge (ADR-0012's boundary rule). The Habit
-// app is a fixed-function console instrument (ADR-0012): no module, no
-// power curve; development always advances one-for-one until the console
-// long goals arrive.
+// Habits (issue #5; class-wearing since issue #423). A habit names what
+// you are practicing; one may be selected as the session's active habit,
+// locked for the session (ADR-0001). Development accrues from live flow
+// time and manual practice logs — manual logs never produce nous or
+// charge (ADR-0012's boundary rule). The Habit app is a fixed-function
+// console instrument (ADR-0012): no module, no power curve; development
+// always advances one-for-one until the console long goals arrive. Every
+// habit wears the launch class (Engineer) from creation; its pair's
+// progression lives under the habit and never transfers.
 export function activeHabit(state: GameState): Habit | undefined {
   return state.habits.find((h) => h.id === state.activeHabitId && !h.archived);
 }
@@ -24,7 +27,17 @@ export function createHabit(state: GameState, name: string): { ok: boolean; reas
   if (state.mode !== "upgrade") return { ok: false, reason: "Habits are managed between sessions." };
   const trimmed = cleanName(name);
   if (!trimmed) return { ok: false, reason: "Give the habit a name." };
-  const habit: Habit = { id: `h${state.nextId++}`, name: trimmed, seconds: 0, archived: false, build: [] };
+  const habit: Habit = {
+    id: `h${state.nextId++}`,
+    name: trimmed,
+    seconds: 0,
+    archived: false,
+    build: [],
+    // Every habit wears the launch class from creation (issue #423); its
+    // Engineer pair starts at zero and accrues only from credited flow.
+    classId: "engineer",
+    classes: createHabitClasses(),
+  };
   state.habits.push(habit);
   return { ok: true, habit };
 }
@@ -48,6 +61,10 @@ export function archiveHabit(state: GameState, id: string): { ok: boolean; reaso
   return { ok: true };
 }
 
+// The session lock (ADR-0001, extended by issue #423): habit selection is
+// an upgrade-mode action — the lock holds for the entire session,
+// pauses included, and the class selection behind it shares the same
+// refusal surface. "Between sessions" is the gate's whole vocabulary.
 export function selectHabit(state: GameState, id: string | null): { ok: boolean; reason?: string } {
   if (state.mode !== "upgrade") return { ok: false, reason: "The active habit is locked during flow." };
   if (id !== null && !state.habits.some((h) => h.id === id && !h.archived)) {
