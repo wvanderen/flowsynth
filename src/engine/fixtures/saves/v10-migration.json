@@ -1,0 +1,419 @@
+{
+  "app": "flowsynth",
+  "version": 10,
+  "savedAt": 1700000900000,
+  "state": {
+    "mode": "upgrade",
+    "sessionIndex": 1,
+    "sessionsCompleted": 1,
+    "unstructuredSessions": 0,
+    "plannedSessionsCompleted": 0,
+    "combinations": 0,
+    "nous": 150,
+    "totalEarned": 4000,
+    "eraEarned": 4000,
+    "arete": 3,
+    "scrap": 25,
+    "draftTierBonus": 1,
+    "specialDrafts": {
+      "category": 0,
+      "rare": 1,
+      "tier": 0
+    },
+    "mergeCapPurchases": 1,
+    "prestiges": 0,
+    "muted": false,
+    "notificationAsked": false,
+    "modules": [
+      {
+        "id": "m1",
+        "type": "additive",
+        "tier": 0,
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 0,
+          "r": 0
+        },
+        "reserve": 0,
+        "shift": null,
+        "target": null
+      },
+      {
+        "id": "m2",
+        "type": "forge",
+        "tier": 0,
+        "level": 2,
+        "invested": 6,
+        "pos": {
+          "q": 1,
+          "r": 0
+        },
+        "reserve": 0,
+        "shift": null,
+        "target": null
+      },
+      {
+        "id": "m3",
+        "type": "mutatorForge",
+        "tier": 0,
+        "level": 0,
+        "invested": 0,
+        "pos": {
+          "q": 0,
+          "r": 1
+        },
+        "reserve": 0,
+        "shift": null,
+        "target": null
+      },
+      {
+        "id": "m4",
+        "type": "infusor",
+        "tier": 0,
+        "level": 1,
+        "invested": 2,
+        "pos": {
+          "q": 2,
+          "r": 0
+        },
+        "reserve": 0,
+        "shift": null,
+        "target": null
+      }
+    ],
+    "cells": [
+      {
+        "q": 0,
+        "r": 0
+      },
+      {
+        "q": 1,
+        "r": 0
+      },
+      {
+        "q": 0,
+        "r": 1
+      },
+      {
+        "q": 2,
+        "r": 0
+      },
+      {
+        "q": -1,
+        "r": 0
+      }
+    ],
+    "cellsBought": 2,
+    "gatedRows": [
+      0,
+      1,
+      -1
+    ],
+    "unlockedRows": [
+      2
+    ],
+    "catalogEntryOwned": true,
+    "rollPoolJoined": true,
+    "capacityBought": 0,
+    "capacityCeilings": 1,
+    "capacityDiscounts": 1,
+    "mutatorSlots": [
+      {
+        "q": 0,
+        "r": 1
+      },
+      {
+        "q": 1,
+        "r": 0
+      },
+      {
+        "q": 2,
+        "r": 0
+      }
+    ],
+    "mutators": [
+      {
+        "id": "mu1",
+        "family": "power",
+        "rarity": "uncommon",
+        "pos": {
+          "q": 0,
+          "r": 1
+        }
+      },
+      {
+        "id": "mu2",
+        "family": "charge",
+        "rarity": "rare",
+        "pos": null
+      }
+    ],
+    "forge": {
+      "progress": 40,
+      "earned": 3
+    },
+    "mutatorForge": {
+      "progress": 33,
+      "earned": 2
+    },
+    "arcCardSeen": false,
+    "bankedRolls": [
+      {
+        "id": "offer1",
+        "candidates": [
+          {
+            "id": "c1",
+            "type": "additive",
+            "tier": 0
+          },
+          {
+            "id": "c2",
+            "type": "spacer",
+            "tier": 2
+          },
+          {
+            "id": "c3",
+            "type": "infusor",
+            "tier": 0
+          }
+        ]
+      }
+    ],
+    "bankedMutatorRolls": [
+      {
+        "id": "mo1",
+        "candidates": [
+          {
+            "id": "mc1",
+            "family": "resonance",
+            "rarity": "common"
+          },
+          {
+            "id": "mc2",
+            "family": "power",
+            "rarity": "rare"
+          }
+        ]
+      }
+    ],
+    "purchased": {
+      "generator": false,
+      "infusor": false,
+      "forge": false
+    },
+    "goalCapacityBought": 2,
+    "notes": [
+      {
+        "id": "n1",
+        "sessionId": 1,
+        "atElapsed": 90,
+        "text": "slower left hand",
+        "habitId": "h1",
+        "at": 1700000150000
+      }
+    ],
+    "habits": [
+      {
+        "id": "h1",
+        "name": "Piano",
+        "seconds": 36000,
+        "archived": false,
+        "build": []
+      },
+      {
+        "id": "h2",
+        "name": "Reading",
+        "seconds": 8000,
+        "archived": false,
+        "build": []
+      }
+    ],
+    "activeHabitId": "h1",
+    "practiceLog": [
+      {
+        "id": "p1",
+        "habitId": "h1",
+        "seconds": 1200,
+        "source": "live",
+        "at": 1700000100000
+      },
+      {
+        "id": "p2",
+        "habitId": "h1",
+        "seconds": 600,
+        "source": "manual",
+        "at": 1700000200000
+      }
+    ],
+    "sessionRecords": [
+      {
+        "sessionNumber": 1,
+        "startedAt": 1700000000000,
+        "endedAt": 1700000600000,
+        "habitId": "h1",
+        "mode": "planned",
+        "plannedTarget": 600,
+        "creditedSeconds": 600,
+        "earned": 42,
+        "honestyEvents": [],
+        "reflection": {
+          "text": "steady",
+          "slider": 4
+        },
+        "goalsAdvanced": [
+          {
+            "goalId": "g1",
+            "seconds": 300
+          }
+        ],
+        "achievements": [
+          "first-light"
+        ],
+        "breather": null
+      }
+    ],
+    "goals": [
+      {
+        "id": "g1",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": "h1",
+          "minutes": 20
+        },
+        "schedule": {
+          "kind": "daily"
+        },
+        "occurrenceKey": "2026-10-19",
+        "color": "vermillion",
+        "progressSeconds": 600,
+        "completed": true,
+        "completedCount": 3,
+        "createdAt": 1690000000000
+      },
+      {
+        "id": "g2",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": "h1",
+          "minutes": 45
+        },
+        "schedule": {
+          "kind": "once"
+        },
+        "occurrenceKey": "once",
+        "color": "vermillion",
+        "progressSeconds": 900,
+        "completed": false,
+        "completedCount": 0,
+        "createdAt": 1691000000000
+      },
+      {
+        "id": "g3",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": "h1",
+          "minutes": 30
+        },
+        "schedule": {
+          "kind": "weekly"
+        },
+        "occurrenceKey": "2026-W42",
+        "color": "vermillion",
+        "progressSeconds": 300,
+        "completed": false,
+        "completedCount": 0,
+        "createdAt": 1692000000000
+      },
+      {
+        "id": "g4",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": null,
+          "minutes": 60
+        },
+        "schedule": {
+          "kind": "once"
+        },
+        "occurrenceKey": "once",
+        "color": "vermillion",
+        "progressSeconds": 1200,
+        "completed": false,
+        "completedCount": 1,
+        "createdAt": 1692500000000
+      },
+      {
+        "id": "g5",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": "h1",
+          "minutes": 15
+        },
+        "schedule": {
+          "kind": "daily"
+        },
+        "occurrenceKey": "2026-10-19",
+        "color": "vermillion",
+        "progressSeconds": 0,
+        "completed": false,
+        "completedCount": 0,
+        "createdAt": 1693000000000
+      },
+      {
+        "id": "g6",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": "h2",
+          "minutes": 30
+        },
+        "schedule": {
+          "kind": "daily"
+        },
+        "occurrenceKey": "2026-10-19",
+        "color": "vermillion",
+        "progressSeconds": 120,
+        "completed": false,
+        "completedCount": 0,
+        "createdAt": 1693000000001
+      },
+      {
+        "id": "g7",
+        "condition": {
+          "kind": "habit-minutes",
+          "habitId": "h2",
+          "minutes": 60
+        },
+        "schedule": {
+          "kind": "once"
+        },
+        "occurrenceKey": "once",
+        "color": "vermillion",
+        "progressSeconds": 0,
+        "completed": false,
+        "completedCount": 0,
+        "createdAt": 1693000000002
+      }
+    ],
+    "achievements": {
+      "first-light": 1700000000000,
+      "breaking-the-horizon": 1700000000001,
+      "mutator-entry": 1700000000002,
+      "roll-pool-join": 1700000000003,
+      "roll-credit": 1700000000004
+    },
+    "chordDiscovery": {},
+    "activeChords": [],
+    "session": null,
+    "summary": null,
+    "breather": null,
+    "lastSessionClock": 0,
+    "breathersCompleted": 0,
+    "breatherSeconds": 0,
+    "nextId": 10,
+    "horizonBroken": true,
+    "flow": {
+      "progress": 300,
+      "earned": 1
+    }
+  }
+}
