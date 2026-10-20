@@ -2248,13 +2248,10 @@ body.hex-detail-open .upgrade-all {
 .hex-stack-face.empty .face-note { font-size: 13px; }
 /* The mutator chassis: the arete register, the slot face's own voice at
    detail scale. */
-.hex-stack-mut { color: var(--arete); }
-.hex-stack-mut .mut-slot-hex { stroke-width: 1.6; }
-.hex-stack-mut .mut-slot-hex.muted { stroke: var(--line); fill: color-mix(in srgb, var(--panel-deep) 55%, transparent); stroke-dasharray: none; }
-.hex-stack-mut .mut-slot-family { font-size: 12px; letter-spacing: 0.14em; }
-.hex-stack-mut .mut-slot-effect { font-size: 10px; }
-.hex-stack-mut .mut-slot-verdict { font-size: 10px; }
-.hex-stack-mut .mut-slot-ticks circle { fill: var(--arete); }
+.world-stack { color: var(--world); }
+.world-stack .world-plate { stroke-width: 1.8; }
+.world-stack .world-word { font-size: 12px; letter-spacing: 0.14em; }
+.world-stack .world-fig { font-size: 10px; }
 .hex-stack-mut .hex-stack-lock {
   fill: none;
   stroke: var(--muted);
@@ -2709,7 +2706,7 @@ body.hex-detail-open .upgrade-all {
   pointer-events: none;
 }
 .tray-column .inventory-tray,
-.tray-column .mutator-tray { pointer-events: auto; }
+.tray-column .world-tray { pointer-events: auto; }
 .tray-column[hidden] { display: none; }
 /* The board tabs carry the column's one switch (issue #272 review) — the
    column wears no second one; the faces read ui.mutLayer alone. */
@@ -2855,13 +2852,13 @@ body.hex-detail-open .upgrade-all {
   /* The state grammar's firm inset marker — readable without color. */
   box-shadow: inset 0 -3px var(--ink);
 }
-.legend-symbol[data-legend-layer="mutators"].active {
-  color: var(--arete);
-  background: var(--arete-faint);
+.legend-symbol[data-legend-layer="world"].active {
+  color: var(--world);
+  background: var(--world-faint);
 }
-/* Pre-entry the Mutators face is locked-but-visible (issue #273): the
-   state grammar's muted outline plus the lock mark — the click walks to
-   the catalog's entry screen, it never flips the mode. */
+/* Pre-reveal the World face is locked-but-visible (issue #426): the
+   state grammar's muted outline plus the lock mark — the click previews
+   the reveal in figures, it never flips the layer. */
 .legend-symbol.locked {
   color: var(--muted);
   box-shadow: inset 0 0 0 1px var(--line);
@@ -2871,10 +2868,10 @@ body.hex-detail-open .upgrade-all {
 .legend-symbol.locked:hover { color: var(--muted); background: transparent; }
 .legend-symbol:focus-visible { outline-offset: 1px; }
 .legend-symbol.locked svg { width: 12px; height: 12px; }
-.mut-tab-lock { width: 12px; height: 10px; }
+.world-tab-lock { width: 12px; height: 10px; }
 /* The legend's locked mark speaks alone at the symbols' own weight —
    the padlock scales to the layer marks' size, never a second glyph. */
-.legend-symbol.locked .mut-tab-lock { width: 17px; height: 14px; }
+.legend-symbol.locked .world-tab-lock { width: 17px; height: 14px; }
 
 /* Cancellation feedback stays above the phone thumb bar and clear of
    board gestures. The live region announces the same words separately. */
@@ -2902,83 +2899,101 @@ body.hex-detail-open .upgrade-all {
    included. The old stylesheet hiding is gone with the leak: there is
    nothing left for it to hide. */
 
-/* The Modules tab's presence outline: thin arete, hugging the chassis,
-   clear of the rarity rings. Presence only — it never speaks. */
-.mut-presence {
-  fill: none;
-  stroke: var(--arete);
-  stroke-width: 2;
-  opacity: 0.9;
-  pointer-events: none;
-}
+/* ── The World layer's plates (issue #426) ────────────
+   The second face's own silhouette from the design round: the square-cut
+   plate in the layer's steel register, one per coordinate. States ride
+   the shared grammar — muted outline reserved, firm discovered, engraved
+   cleared, dashed open — never color alone; the figures live where the
+   mechanics live. */
 
-/* The Mutators tab's slot faces: one per unlocked cell, in words. */
-.mut-slot-hex {
-  fill: var(--arete-tint);
-  stroke: var(--arete);
+/* The hatch: the reserved plate's claimed-but-unknown read. */
+.world-hatch {
+  fill: url(#world-hatch);
+  stroke: none;
+  pointer-events: none;
+}
+.world-plate {
+  fill: var(--hex-face);
+  stroke: var(--world-line);
   stroke-width: 2;
 }
-.mut-slot-hex.dashed {
-  fill: color-mix(in srgb, var(--arete) 3%, transparent);
-  stroke-dasharray: 7 6;
-  stroke-width: 1.8;
+.world-plate.firm {
+  stroke: var(--world);
+  stroke-width: 2.4;
+  fill: color-mix(in srgb, var(--world) 6%, var(--hex-face));
 }
-.mut-slot-face .mut-slot-glyph, .mut-slot-face .mut-slot-ticks {
-  color: var(--arete);
-  fill: var(--arete);
-  pointer-events: none;
+.world-plate.reserved {
+  fill: color-mix(in srgb, var(--panel-deep) 40%, var(--hex-face));
+  stroke: var(--line-strong);
+  stroke-width: 2;
 }
-.mut-slot-family {
-  font: 600 11px var(--mono);
-  fill: var(--arete);
-  letter-spacing: 0.12em;
-  pointer-events: none;
-}
-.mut-slot-effect { font-size: 12px; fill: var(--ink); pointer-events: none; }
-.mut-slot-verdict { font-size: 10px; fill: var(--muted); pointer-events: none; }
-.mut-slot-face.mut-inert .mut-slot-effect { fill: var(--muted); }
-.mut-slot-open .mut-slot-family { opacity: 0.85; }
-/* The unsplotted faces (issue #386): the state grammar across the whole
-   layer — the clear outline marks where a Mutator slot can attach, the
-   muted one where it cannot yet; neither takes a pointer, a tab stop, or
-   a host word. */
-.mut-slot-hex.clear {
-  fill: color-mix(in srgb, var(--arete) 4%, transparent);
-  stroke-width: 1.8;
-}
-.mut-slot-noslot .mut-slot-family { opacity: 0.9; }
-.mut-slot-locked .mut-slot-hex.muted {
-  fill: color-mix(in srgb, var(--panel-deep) 55%, transparent);
-  stroke: var(--line);
-  stroke-dasharray: none;
+.world-plate.engraved {
+  fill: none;
+  stroke: var(--line-strong);
   stroke-width: 1.4;
 }
-.mut-slot-locked .mut-slot-family { fill: var(--muted); }
-.mut-slot-noslot:not(.mut-unlock-target), .mut-slot-locked { pointer-events: none; }
-.mut-unlock-target { cursor: pointer; }
-.mut-pulse { animation: mut-pulse 1.4s ease-in-out infinite; }
-@keyframes mut-pulse { 50% { stroke-width: 3.6; } }
-/* Reduced motion keeps the static dashed target: the arm reads without
-   animation, and the pill and Esc carry the cancellation. */
+.world-plate.open {
+  fill: none;
+  stroke: var(--line);
+  stroke-dasharray: 5 5;
+  stroke-width: 1.6;
+}
+.world-word {
+  font: 600 11px var(--font-condensed);
+  letter-spacing: 0.09em;
+  fill: var(--muted);
+  pointer-events: none;
+}
+.world-fig {
+  font: 500 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+  fill: var(--ink);
+  pointer-events: none;
+}
+.world-fig.charge { fill: var(--charge); }
+.world-fig.penalty { fill: var(--world-bright); }
+.world-fig.dim { fill: var(--muted); }
+.world-glyph {
+  fill: none;
+  stroke: var(--world);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.world-glyph.dimmed { stroke: var(--line-strong); }
+.world-bar { fill: none; stroke: var(--line); stroke-width: 1; pointer-events: none; }
+.world-bar-fill { fill: var(--charge); pointer-events: none; }
+/* Quiet activity (the instrument standards): the fed weapon's fill
+   breathes at low amplitude; nothing flashes, nothing attacks. */
+@media (prefers-reduced-motion: no-preference) {
+  .world-bar-fill.live { animation: world-breath 3.2s ease-in-out infinite; }
+  @keyframes world-breath { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.95; } }
+}
+.world-plate.pulse { animation: world-pulse 1.4s ease-in-out infinite; }
+@keyframes world-pulse { 50% { stroke-width: 3.2; } }
+/* Reduced motion: fully static — the pulse reads as the dashed target
+   alone, the breath as the static fill; the pill carries the arm. */
 @media (prefers-reduced-motion: reduce) {
-  .mut-pulse { animation: none; }
+  .world-plate.pulse { animation: none; }
+  .world-bar-fill.live { animation: none; opacity: 0.7; }
 }
 
-/* The invisible grab surfaces over the slot faces. Touch drags are drags,
+/* The invisible grab surfaces over the plates. Touch drags are drags,
    never scrolls — the same contract the board's own drag surfaces wear. */
-.mut-hit { fill: none; stroke: transparent; pointer-events: all; cursor: grab; touch-action: none; }
+.world-hit { fill: none; stroke: transparent; pointer-events: all; cursor: grab; touch-action: none; }
+.world-plate.open ~ .world-hit, [data-key^="world-open"] .world-hit { cursor: pointer; }
 
-/* The land registers on slot faces (the drop preview's second-layer
-   voice): green for open, the switch tint for a coming combine, its dim
-   form for a swap. */
-.mut-land-open .mut-slot-hex { stroke: var(--charge); fill: var(--charge-tint); }
-.mut-land-combine .mut-slot-hex { stroke: var(--switch); stroke-width: 3.4; fill: var(--switch-faint-strong); }
-.mut-land-swap .mut-slot-hex { stroke: var(--switch); fill: var(--switch-faint); }
+/* The land registers on the plates (the drop preview's second-face
+   voice): the charge tint for an open landing, the muted refusal for a
+   blocked one — the refusal never blinks, it just declines. */
+.world-land-open { stroke: var(--charge) !important; fill: var(--charge-tint) !important; }
+.world-land-blocked { stroke: var(--line) !important; fill: color-mix(in srgb, var(--panel-deep) 30%, transparent) !important; }
 
-/* The Mutator tray (issue #272): the tray column's Mutators face —
-   arete-register tiles in the minimal mark under the column's head. The
-   unlock button rides the face's end until Add takes the arm (#273). */
-.mutator-tray {
+/* The World tray (issue #426): the tray column's World face — steel-
+   register tiles in the minimal plate mark under the column's head. The
+   Mutator tray retired with the Mutator Grid's surfaces. */
+.world-tray {
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
@@ -2992,9 +3007,9 @@ body.hex-detail-open .upgrade-all {
   backdrop-filter: blur(3px);
   overflow-y: auto;
 }
-.mutator-tray[hidden] { display: none; }
-.mutator-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
-.mutator-tray .tray-items { width: 100%; }
+.world-tray[hidden] { display: none; }
+.world-tray.drag-over { border-color: var(--charge); background: var(--charge-tint); }
+.world-tray .inventory-list { width: 100%; }
 .mut-tile {
   all: unset;
   cursor: pointer;
@@ -3008,10 +3023,13 @@ body.hex-detail-open .upgrade-all {
 .mut-tile .mut-tile-glyph { color: currentColor; }
 .mut-tile .mut-tile-ticks { fill: currentColor; }
 .mut-tile .mut-tile-effect { font-size: 11px; fill: var(--muted); }
+.world-tile .mut-tile-hex { fill: none; }
+.world-tile-plate { fill: none; stroke: currentColor; stroke-width: 4.5; }
 
-/* The armed unlock's pill: one cost spot over the board's top edge, the
-   armed-purchase pattern's second-layer voice. */
-.mut-unlock-pill {
+/* The armed placement's pill (issue #426): the arm's one spot over the
+   board's top edge — World placement is free, so the pill carries only
+   the cancel. */
+.world-place-pill {
   position: absolute;
   top: 10px;
   left: 50%;
@@ -3028,10 +3046,10 @@ body.hex-detail-open .upgrade-all {
   font: 600 11px/1 var(--font-condensed);
   letter-spacing: 0.04em;
 }
-.mut-unlock-pill[hidden] { display: none; }
-.mut-unlock-pill:hover { background: var(--arete-faint); }
-.mut-unlock-pill .mono { color: var(--arete); }
-.mut-unlock-pill .mut-esc {
+.world-place-pill[hidden] { display: none; }
+.world-place-pill:hover { background: var(--world-faint); }
+.world-place-pill .mono { color: var(--world); }
+.world-place-pill .mut-esc {
   padding: 2px 6px;
   border: 1px solid var(--line-strong);
   font: 600 9px/1 var(--font-condensed);
@@ -3610,8 +3628,8 @@ body.hex-detail-open .upgrade-all {
      mid-height — the dock's old post — clear of the thumb bar, the lower
      lanes, and the sheet's gutter (issue #389). */
   .layer-legend { left: 8px; top: 50%; bottom: auto; transform: translateY(-50%); }
-  .mutator-tray { display: none !important; }
-  .mut-unlock-pill { top: 46px; }
+  .world-tray { padding: 8px; }
+  .world-place-pill { top: 46px; }
   .cell-arm-pill { top: 46px; }
   /* The arc card rides above the board's lower lanes (issue #350): the
      horizon bar's (64 + 46) and, above it, the zoom cluster's — three
@@ -4238,11 +4256,11 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   .inventory-merge { padding-inline: 12px; }
 }
 
-.mutator-tray.inventory-browser { align-items: stretch; padding: 1px; background: var(--line-strong); border: 0; clip-path: var(--inst-clip); overflow: hidden; }
+.world-tray.inventory-browser { align-items: stretch; padding: 1px; background: var(--line-strong); border: 0; clip-path: var(--inst-clip); overflow: hidden; }
 
 .inventory-subview .inventory-body { overflow-y: auto; }
 .inventory-list { flex: 1 1 auto; }
-.mutator-tray.inventory-browser { flex: 0 1 auto; max-height: 100%; }
+.world-tray.inventory-browser { flex: 0 1 auto; max-height: 100%; }
 
 /* A clipped rim needs a second clipped face; a rectangular CSS border
    disappears along the diagonal cuts. Use the shared instrument build. */
@@ -4293,3 +4311,69 @@ body.hex-detail-open .tray-column { z-index: 24; }
 .inventory-level { white-space: nowrap; }
 
 .class-rank-action { min-width: 44px; min-height: 44px; flex-shrink: 0; padding: 4px; font-size: 11px; }
+
+/* ── The World layer's furniture (issue #426) ───────── */
+
+/* The weapon's between-session target priority control: the rail's own
+   rows under the World face — open divisions, square-cut steppers, no
+   cards. Rows dim when the enemy cannot currently be engaged; the
+   preference's own rows read plain. */
+.world-priority {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-top: 1px solid var(--line-soft);
+  width: 100%;
+}
+.world-priority-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 0 6px;
+  font: 600 11px var(--font-condensed);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+.world-priority-head button {
+  all: unset;
+  cursor: pointer;
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--line-strong);
+  font: 600 10px var(--font-condensed);
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+.world-priority-head button:hover { background: var(--hover-bg); }
+.world-priority-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px solid var(--line-soft);
+  font: 12px var(--font-sans);
+}
+.world-priority-row.dim { color: var(--muted); }
+.world-priority-order { color: var(--muted); min-width: 14px; text-align: right; }
+.world-priority-name { flex: 1; }
+.world-priority-controls { display: flex; gap: 4px; }
+.world-priority-move {
+  all: unset;
+  cursor: pointer;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font: 12px var(--mono);
+}
+.world-priority-move:hover:not([disabled]) { background: var(--hover-bg); border-color: var(--line-strong); }
+.world-priority-move[disabled] { color: var(--line-strong); cursor: default; }
+
+/* The catalog's World section preview mark (the Column's tile), and the
+   grant modal's presented face. */
+.world-preview svg, .grant-face svg { width: 44px; height: 44px; color: var(--world); }
+.grant-face { display: flex; justify-content: center; padding: 18px 0 6px; }
+.hex-detail-world-line { margin: 4px 0 0; font: 12px var(--font-sans); color: var(--ink); }

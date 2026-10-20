@@ -1,6 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { startSession } from "../engine/actions";
+import { BALANCE } from "../engine/constants";
 import { STORAGE_KEY } from "../engine/save";
 import { give } from "../engine/fixtures";
 import { createAppFixture } from "./testing/app-fixture";
@@ -47,8 +48,9 @@ describe("App lifetime", () => {
     app.dispose();
     const current = fixture.boot();
     current.state.catalogEntryOwned = true;
+    current.state.eraEarned = BALANCE.world.entryNous * 1.5;
     current.ui.buyingCell = true;
-    current.mutSetLayer("mutators");
+    current.setBoardLayer("world");
     const toast = document.getElementById("mode-toast")!;
     expect(toast.hidden).toBe(false);
     current.dispose();
@@ -142,24 +144,23 @@ describe("App lifetime", () => {
     expect(render).not.toHaveBeenCalled();
   });
 
-  it("cancels a carried mutator without committing its later release", () => {
+  it("cancels a carried World occupant without committing its later release", () => {
     const app = fixture.boot();
     app.state.catalogEntryOwned = true;
-    app.state.mutatorSlots = [{ q: 0, r: 0 }];
-    const item = { id: "owned-mutator", family: "power" as const, rarity: "common" as const, pos: { q: 0, r: 0 } };
-    app.state.mutators = [item];
-    app.ui.mutLayer = "mutators";
+    app.state.eraEarned = BALANCE.world.entryNous * 1.5;
+    app.state.world.weapons.push({ id: "owned-weapon", type: "chargeBlade", pos: { q: 1, r: 0 }, store: 0, cooldown: 0, targetPriority: [] });
+    app.ui.boardLayer = "world";
     app.render();
-    const node = document.querySelector('[data-mut-slot="0,0"]')!;
+    const node = document.querySelector('[data-world-cell="1,0"]')!;
     Object.defineProperty(document, "elementFromPoint", { configurable: true, value: () => node });
     node.dispatchEvent(pointer("pointerdown"));
     document.dispatchEvent(pointer("pointermove", 20, 20));
-    expect(document.querySelector(".mut-ghost")).not.toBeNull();
+    expect(document.querySelector(".world-ghost")).not.toBeNull();
     app.dispose();
-    expect(document.querySelector(".mut-ghost")).toBeNull();
-    expect(app.cancelMutDrag).toBeNull();
+    expect(document.querySelector(".world-ghost")).toBeNull();
+    expect(app.cancelWorldDrag).toBeNull();
     document.dispatchEvent(pointer("pointerup", 20, 20));
-    expect(item.pos).toEqual({ q: 0, r: 0 });
+    expect(app.state.world.weapons.find((w) => w.id === "owned-weapon")!.pos).toEqual({ q: 1, r: 0 });
   });
 
   it("ignores file reads that complete after release", async () => {

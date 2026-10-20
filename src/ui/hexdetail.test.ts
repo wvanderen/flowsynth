@@ -9,7 +9,8 @@ import { startSession, endSession } from "../engine/actions";
 import { renderHexDetail } from "./hexdetail";
 import { formatInt, formatNumber } from "./format";
 import { levelsCost, displayedRates, deployedAt } from "../engine/economy";
-import type { MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
+import { BALANCE } from "../engine/constants";
+import { createWeapon, createWorldColumn } from "../engine/state";
 
 // The Hex detail (issue #295): the module bloom's successor — an owned
 // cell's full-stack cross-section replacing the grid. The presentation is
@@ -34,25 +35,31 @@ afterEach(() => fixture.release());
 const detail = () => document.getElementById("hex-detail")!;
 const open = () => !detail().hidden;
 const sections = () => [...detail().querySelectorAll<HTMLElement>(".hex-detail-layer")];
-const section = (face: "modules" | "mutators") =>
+const section = (face: "modules" | "world") =>
   detail().querySelector<HTMLElement>(`.hex-detail-layer.${face}`)!;
-const faceSvg = (face: "modules" | "mutators") => section(face).querySelector<SVGElement>(".hex-stack-chassis svg")!;
+const faceSvg = (face: "modules" | "world") => section(face).querySelector<SVGElement>(".hex-stack-chassis svg")!;
 const grid = () => document.getElementById("grid") as unknown as SVGSVGElement;
+const worldTip = (): string | null => {
+  const trigger = section("world").querySelector("[data-detail-face]")!;
+  const id = trigger.getAttribute("aria-describedby")!;
+  return document.getElementById(id)?.textContent ?? section("world").querySelector(".inst-tip-body")?.textContent ?? null;
+};
 
-function mut(id: string, family: MutatorFamily, rarity: Rarity, pos: Hex_json | null): MutatorInstance {
-  return { id, family, rarity, pos };
-}
-type Hex_json = { q: number; r: number };
-
-// An era past the entry: one slot hosting the opening synth, Arete for
-// the ladder, the tray twin waiting.
+// An era past the World reveal: the entry owned, era-earned past the 1T
+// threshold, a placed weapon and a placed Column over the opening cells,
+// a tray twin of each, and Arete for the World section.
 function seedEra(): void {
   const s = app.state;
   s.mode = "upgrade";
   s.catalogEntryOwned = true;
   s.arete = 20;
-  s.mutatorSlots = [hex(0, 0)];
-  s.mutators = [mut("mu1", "power", "common", hex(0, 0)), mut("mu2", "power", "common", null)];
+  s.eraEarned = BALANCE.world.entryNous * 1.5;
+  const weapon = createWeapon(s, "chargeBlade");
+  weapon.pos = hex(1, 0);
+  s.world.weapons.push(weapon, createWeapon(s, "chargeBlade"));
+  const column = createWorldColumn(s);
+  column.pos = hex(0, 1);
+  s.world.columns.push(column, createWorldColumn(s));
   app.render();
 }
 
@@ -164,7 +171,7 @@ describe("opening the cross-section (issue #295)", () => {
   it("the phone cell picker navigates owned cells and retains the focused layer", () => {
     setAppWidth(390);
     seedEra();
-    app.openDetail(hex(0, 0), "mutators");
+    app.openDetail(hex(0, 0), "world");
     const picker = detail().querySelector<HTMLSelectElement>("[data-ctx-navigation]")!;
     expect(picker.closest("label")?.textContent).toContain("Open hex");
     expect(picker.options.length).toBe(app.state.cells.length);
@@ -172,7 +179,7 @@ describe("opening the cross-section (issue #295)", () => {
     picker.focus();
     picker.value = "1,0";
     picker.dispatchEvent(new Event("change", { bubbles: true }));
-    expect(app.ui.detail).toEqual({ pos: hex(1, 0), face: "mutators" });
+    expect(app.ui.detail).toEqual({ pos: hex(1, 0), face: "world" });
     const replacement = detail().querySelector<HTMLSelectElement>("[data-ctx-navigation]")!;
     expect(replacement.value).toBe("1,0");
     expect(document.activeElement).toBe(replacement);
@@ -201,18 +208,18 @@ describe("opening the cross-section (issue #295)", () => {
     expect(modules.querySelector("#detail-upgrade")).toBeNull();
   });
 
-  it("the fixed stack shows both faces, Mutators above Modules, never reordered", () => {
+  it("the fixed stack shows both faces, World above Modules, never reordered", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
-    const faces = sections().map((node) => node.classList.contains("mutators") ? "mutators" : "modules");
-    expect(faces).toEqual(["mutators", "modules"]);
+    const faces = sections().map((node) => node.classList.contains("world") ? "world" : "modules");
+    expect(faces).toEqual(["world", "modules"]);
     // Selecting the Modules face changes emphasis without reordering.
     document.querySelector<HTMLButtonElement>('[data-detail-face="modules"]')!.click();
-    const after = sections().map((node) => node.classList.contains("mutators") ? "mutators" : "modules");
-    expect(after).toEqual(["mutators", "modules"]);
+    const after = sections().map((node) => node.classList.contains("world") ? "world" : "modules");
+    expect(after).toEqual(["world", "modules"]);
     expect(section("modules").classList.contains("selected")).toBe(true);
-    expect(section("mutators").classList.contains("selected")).toBe(false);
+    expect(section("world").classList.contains("selected")).toBe(false);
   });
 
   it("a face selection emphasizes its section, focuses its control, and syncs the legend", () => {
@@ -222,18 +229,18 @@ describe("opening the cross-section (issue #295)", () => {
     // The legend opens synchronized with the click's layer.
     const legend = () => document.getElementById("layer-legend")!;
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(true);
-    // Selecting the Mutators face through the legend moves emphasis, the
+    // Selecting the World face through the legend moves emphasis, the
     // marker, and the focus.
-    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.detail!.face).toBe("mutators");
-    expect(section("mutators").classList.contains("selected")).toBe(true);
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
+    expect(app.ui.detail!.face).toBe("world");
+    expect(section("world").classList.contains("selected")).toBe(true);
     expect(section("modules").classList.contains("selected")).toBe(false);
-    expect(legend().querySelector<HTMLElement>('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    expect(legend().querySelector<HTMLElement>('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(false);
-    expect(document.activeElement).toBe(section("mutators").querySelector("[data-detail-face]"));
-    // Post-entry the grid's layer follows the selection, so the return
+    expect(document.activeElement).toBe(section("world").querySelector("[data-detail-face]"));
+    // Post-reveal the grid's layer follows the selection, so the return
     // lands on the face the player last read.
-    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.boardLayer).toBe("world");
     // A face's own chassis selects too.
     document.querySelector<HTMLButtonElement>('[data-detail-face="modules"]')!.click();
     expect(app.ui.detail!.face).toBe("modules");
@@ -247,7 +254,7 @@ describe("opening the cross-section (issue #295)", () => {
     // readable without color — and the stylesheet shows it on the
     // emphasized layer only.
     expect(section("modules").querySelector(".hex-stack-marker")).not.toBeNull();
-    expect(section("mutators").querySelector(".hex-stack-marker")).not.toBeNull();
+    expect(section("world").querySelector(".hex-stack-marker")).not.toBeNull();
     const css = readFileSync("src/ui/style.css", "utf8");
     expect(css).toMatch(/\.hex-detail-layer\.selected \.hex-stack-marker[^{]*\{[^}]*display:\s*block/);
     expect(css).toMatch(/\.hex-stack-marker[^{]*\{[^}]*display:\s*none/);
@@ -264,157 +271,105 @@ describe("opening the cross-section (issue #295)", () => {
   });
 });
 
-describe("the Mutators face in detail", () => {
-  it("pre-entry the locked place wears the muted outline; the entry walk stays with the surrounding navigation", () => {
+describe("the World face in detail", () => {
+  it("pre-reveal the locked plate stands muted; no world faces render anywhere", () => {
     app.render();
-    clickCell(0, 1);
-    const mutators = section("mutators");
-    expect(mutators.querySelector("svg.locked, .hex-stack-mut.locked")).not.toBeNull();
-    expect(faceSvg("mutators").textContent).toContain("LOCKED");
-    // A locked layer is never selectable: the detail stays on Modules,
-    // whether the locked face or the legend's locked symbol asks.
-    mutators.querySelector<HTMLButtonElement>('[data-detail-face="mutators"]')!.click();
-    expect(app.ui.detail!.face).toBe("modules");
-    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.detail!.face).toBe("modules");
-    expect(section("modules").classList.contains("selected")).toBe(true);
-    // The layer's mechanics ride the tooltip: focus discloses the entry rule.
-    const trigger = mutators.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
-    trigger.focus();
-    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(true);
-    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("Mutator entry");
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.classList.contains("inst-show")).toBe(false);
-    // No destination button stands in the detail (issue #388): the Catalog
-    // entry belongs to the surrounding navigation — the legend's locked
-    // walk and the dock's Catalog door, both reachable with the detail open.
-    expect(document.getElementById("detail-mutator-entry")).toBeNull();
-    expect(detail().querySelector("[data-op]")).toBeNull();
-    expect(document.querySelector('#board-tools [data-op="catalog"]')).not.toBeNull();
+    clickCell(0, 0);
+    expect(section("world").textContent).toContain("LOCKED");
+    expect(app.setBoardLayer("world")).toBeUndefined();
+    // The locked legend click previews without flipping: the layer cannot stand.
+    expect(app.ui.boardLayer).toBe("modules");
+    expect(grid().querySelector("[data-world-cell]")).toBeNull();
   });
 
-  it("the detail carries cell-specific actions only; global destinations stay in the navigation", () => {
+  it("post-reveal the coordinate's plate wears its state: occupant, open, reserved", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
-    // Only cell-specific actions ride the surfaces: the upgrade band
-    // and the occupied slot's declaration. Inventory owns retrieval.
-    expect(detail().querySelectorAll("[data-op]").length).toBe(0);
-    expect(document.getElementById("detail-module-retrieve")).toBeNull();
-    expect(document.getElementById("detail-upgrade")).not.toBeNull();
-    // The dock's doors still work over the detail — the destinations were
-    // never lost, only un-duplicated.
-    document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!.click();
-    expect(app.ui.modal).toBe("catalog");
-    app.closeModal();
-    expect(open()).toBe(true);
-    document.querySelector<HTMLButtonElement>('#board-tools [data-op="forge"]')!.click();
-    expect(app.ui.modal).toBe("forge");
-    app.closeModal();
-    expect(open()).toBe(true);
+    // The opening cell (0,0) is open space — the quiet dashed plate; the
+    // enemy position w0 sits reserved off the owned patch.
+    expect(section("world").querySelector(".world-plate.open")).not.toBeNull();
+    // The tooltip carries the state's one line.
+    const tip = section("world").querySelector(".inst-tip-body")!;
+    expect(tip.textContent).toContain("Open World cell");
   });
 
-  it("post-entry a slotless eligible cell prices the unlock and buys it directly", () => {
+  it("a weapon's enlarged face carries its stores, its routing, and the target priority rail", () => {
     seedEra();
-    app.state.cells.push(hex(0, 1));
-    app.render();
-    clickCell(0, 1);
-    // The action rail follows focus (ADR-0072): the unlock stands when the
-    // Mutators face holds it.
-    app.detailFace("mutators");
-    const button = document.getElementById("detail-mutator-unlock")! as HTMLButtonElement;
-    expect(button.textContent).toContain("Unlock slot");
-    expect(button.textContent).toContain(`${formatInt(2)} ◇`);
-    button.click();
-    expect(app.state.mutatorSlots.some((slot) => sameHex(slot, hex(0, 1)))).toBe(true);
-    expect(app.state.arete).toBe(18);
-    // The stack refreshes into the vacant-slot state.
-    expect(section("mutators").textContent).toContain("OPEN SLOT");
-    expect(section("mutators").textContent).toContain("inert · no host");
-  });
-
-  it("the first slot is free on any owned cell", () => {
-    app.state.mode = "upgrade";
-    app.state.catalogEntryOwned = true;
-    app.state.arete = 5;
     app.render();
     clickCell(1, 0);
-    app.detailFace("mutators");
-    const button = document.getElementById("detail-mutator-unlock")! as HTMLButtonElement;
-    expect(button.textContent).toContain("free");
-    button.click();
-    expect(app.state.mutatorSlots).toHaveLength(1);
-    expect(app.state.arete).toBe(5);
+    app.detailFace("world");
+    const tip = worldTip()!;
+    expect(tip).toContain("Charge Blade");
+    expect(tip).toContain("⌁0/30");
+    // Unfed is the face's own word, never a tooltip apology.
+    expect(section("world").querySelector(".world-stack")!.textContent).toContain("UNFED");
+    // The rail holds the retrieve and the between-sessions priority control.
+    expect(document.getElementById("detail-world-retrieve")).not.toBeNull();
+    expect(detail().querySelector(".world-priority")).not.toBeNull();
+    expect(detail().querySelectorAll(".world-priority-row")).toHaveLength(9);
+    expect(detail().querySelector(".world-priority-head")!.textContent).toContain("roster default");
   });
 
-  it("an ineligible cell wears the locked state and names the adjacency prerequisite", () => {
+  it("the priority controls reorder and reset through the engine action", () => {
     seedEra();
-    // Owned beside an occupied module, yet not beside the unlocked slot:
-    // adjacency means the Mutator patch, never a mere module cell.
-    // ((1,0) is a starter cell; (2,0) is the far candidate.)
-    app.state.cells.push(hex(2, 0));
-    give(app.state, "additive", hex(1, 0));
     app.render();
-    clickCell(2, 0);
-    // The locked state (issue #388): muted outline, the lock mark, LOCKED
-    // in words — the board layer's own face (issue #386), readable
-    // without color.
-    expect(faceSvg("mutators").textContent).toContain("LOCKED");
-    expect(faceSvg("mutators")!.querySelector(".mut-slot-hex.muted")).not.toBeNull();
-    expect(faceSvg("mutators")!.querySelector(".hex-stack-lock")).not.toBeNull();
-    expect(document.getElementById("detail-mutator-unlock")).toBeNull();
-    // The accessible help names the prerequisite concretely, riding the
-    // chassis's own description and disclosed by focus.
-    const trigger = section("mutators").querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
-    trigger.focus();
-    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
-    expect(body.classList.contains("inst-show")).toBe(true);
-    expect(body.textContent).toBe("Unlock an adjacent Mutator slot first");
-    // No rail stands for a locked position — the refusal is the face's.
-    expect(detail().querySelector(".hex-detail-noslot")).toBeNull();
-    expect(section("mutators").textContent).not.toContain("beside the patch");
-    // An eligible owned cell right beside the patch keeps the priced
-    // unlock — eligibility and price stay distinct states, and both stay
-    // distinct from an open slot. The rail follows focus: the Mutators
-    // face holds it for the unlock to stand (ADR-0072).
     clickCell(1, 0);
-    app.detailFace("mutators");
-    const unlock = document.getElementById("detail-mutator-unlock")! as HTMLButtonElement;
-    expect(unlock.textContent).toContain("Unlock slot");
-    unlock.click();
-    expect(app.state.mutatorSlots.some((slot) => sameHex(slot, hex(1, 0)))).toBe(true);
-  });
-  it("a placed mutator's declaration is its own face above the stack — hosts is never said", () => {
-    seedEra();
-    app.render();
-    clickCell(0, 0);
-    const mutators = section("mutators");
-    expect(faceSvg("mutators").textContent).toContain("POWER");
-    // The face carries the compact declaration; the full sentence rides
-    // the tooltip layer.
-    expect(faceSvg("mutators").textContent).toContain("+50%");
-    const trigger = mutators.querySelector<HTMLButtonElement>(".inst-tip-trigger")!;
-    trigger.focus();
-    expect(document.getElementById(trigger.getAttribute("aria-describedby")!)!.textContent).toContain("+50% to this module's power");
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    // The hosting relation is the stack itself: the module occupies the
-    // position directly below, so no face repeats "hosts" — and no text
-    // column repeats the mutator beside its module.
-    expect(mutators.textContent).not.toContain("hosts");
-    expect(section("modules").querySelector(".hex-detail-mutline")).toBeNull();
-    app.mutRetrieve("mu1");
-    expect(app.state.mutators.find((m) => m.id === "mu1")!.pos).toBeNull();
-    expect(section("mutators").textContent).toContain("OPEN SLOT");
+    app.detailFace("world");
+    const raise = detail().querySelector<HTMLButtonElement>("[data-world-priority='w1'][data-dir='-1']")!;
+    raise.click();
+    // The move stores the explicit order — preference first, authored
+    // roster behind it.
+    expect(app.state.world.weapons[0]!.targetPriority[0]).toBe("w1");
+    expect(detail().querySelector(".world-priority-head")!.textContent).not.toContain("roster default");
+    detail().querySelector<HTMLButtonElement>("[data-world-priority-reset]")!.click();
+    expect(app.state.world.weapons[0]!.targetPriority).toEqual([]);
   });
 
-  it("an inert mutator promises no effect on its own face", () => {
+  it("the priority control locks in flow — the rail leaves with the rest of the editing furniture", () => {
     seedEra();
-    app.state.mutators[0]!.family = "resonance";
+    startSession(app.state, 600);
     app.render();
-    clickCell(0, 0);
-    const mutators = section("mutators");
-    expect(mutators.textContent).toContain("inert · no chord");
-    expect(mutators.textContent).not.toContain("+");
+    clickCell(1, 0);
+    app.detailFace("world");
+    expect(detail().querySelector(".world-priority")).toBeNull();
+    expect(document.getElementById("detail-world-retrieve")).toBeNull();
+    endSession(app.state);
+  });
+
+  it("a Column's enlarged face reads its lift; an enemy's reads its HP and penalty", () => {
+    seedEra();
+    app.render();
+    clickCell(0, 1);
+    app.detailFace("world");
+    expect(worldTip()!).toContain("Charge Column");
+    // The enemy position w0 sits at (-1,0): undiscovered, so reserved —
+    // the board's second face carries the plate once the detail stands down.
+    app.setBoardLayer("world");
+    app.closeDetail();
+    const reserved = grid().querySelector('[data-key="world-w0"]')!;
+    expect(reserved.textContent).toContain("RESERVED");
+  });
+
+  it("the rail's retrieve lands the occupant in the World tray", () => {
+    seedEra();
+    app.render();
+    clickCell(1, 0);
+    app.detailFace("world");
+    document.getElementById("detail-world-retrieve")!.click();
+    expect(app.state.world.weapons[0]!.pos).toBeNull();
+    expect(document.getElementById("status")!.textContent).toContain("retrieved to the World tray");
+    expect(app.ui.detail!.face).toBe("world");
+  });
+
+  it("the cleared enemy's plate carries the era bonus engraved", () => {
+    seedEra();
+    app.state.world.enemies["w0"] = { discovered: true, hp: 0 };
+    app.render();
+    app.setBoardLayer("world");
+    const cleared = grid().querySelector('[data-key="world-w0"]')!;
+    expect(cleared.textContent).toContain("CLEARED");
+    expect(cleared.textContent).toContain("+8% ν");
   });
 });
 
@@ -586,7 +541,7 @@ describe("read-only during flow (issue #295)", () => {
     expect(faceSvg("modules").textContent).toContain(`+${formatNumber(value)} ν/s`);
     expect(document.getElementById("detail-upgrade")).toBeNull();
     expect(section("modules").querySelector(".hex-dial")).toBeNull();
-    expect(document.getElementById("detail-mutator-retrieve")).toBeNull();
+    expect(document.getElementById("detail-world-retrieve")).toBeNull();
     endSession(app.state);
   });
 
@@ -597,23 +552,18 @@ describe("read-only during flow (issue #295)", () => {
     clickCell(0, 1);
     expect(open()).toBe(true);
     expect(section("modules").getAttribute("aria-label")).toContain("empty place");
-    expect(document.getElementById("detail-mutator-unlock")).toBeNull();
-    expect(document.getElementById("detail-mutator-entry")).toBeNull();
     endSession(app.state);
   });
 
-  it("the Mutators face reads live too: the hosted resonance wears the live chord register's verdict", () => {
+  it("the World face reads live too: the weapon's stores ride the flow snapshot", () => {
     seedEra();
-    // The lone opening synth hosts the resonance and sings no chord — the
-    // verdict is the snapshot's own, so flow's live pass must speak it.
-    app.state.mutators[0].family = "resonance";
     startSession(app.state, 600);
+    app.state.world.weapons[0]!.store = 12;
     app.render();
-    app.openDetail(hex(0, 0), "mutators");
+    app.openDetail(hex(1, 0), "world");
     expect(open()).toBe(true);
     expect(detail().querySelector(".hex-detail-readonly")).not.toBeNull();
-    expect(section("mutators").textContent).toContain("inert · no chord");
-    expect(section("mutators").textContent).toContain("RESONANCE");
+    expect(section("world").querySelector(".inst-tip-body")!.textContent).toContain("⌁12/30");
     endSession(app.state);
   });
 });
@@ -636,13 +586,13 @@ describe("the return contract (issue #295)", () => {
     app.ui.pan = { x: 10, y: -20 };
     app.render();
     clickCell(0, 0);
-    document.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
+    document.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
     document.getElementById("hex-detail-return")!.click();
     expect(app.ui.detail).toBeNull();
     expect(document.body.classList.contains("hex-detail-open")).toBe(false);
     // The layer the player last read stands; position and zoom never moved.
-    expect(app.ui.mutLayer).toBe("mutators");
-    expect(document.body.classList.contains("mut-layer-live")).toBe(true);
+    expect(app.ui.boardLayer).toBe("world");
+    expect(document.body.classList.contains("world-layer-live")).toBe(true);
     expect(app.ui.zoom).toBe(2);
     expect(app.ui.pan).toEqual({ x: 10, y: -20 });
   });
@@ -759,25 +709,25 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(css).toMatch(/\.legend-symbol:focus-visible[^{]*\{[^}]*outline/);
   });
 
-  it("pre-entry the Mutators symbol stands locked-but-visible; its own tooltip carries the lock", () => {
+  it("pre-reveal the World symbol stands locked-but-visible; its click previews the reveal, never flipping (issue #426)", () => {
     app.render();
     const legend = document.getElementById("layer-legend")!;
-    const mutators = legend.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!;
-    expect(mutators.classList.contains("locked")).toBe(true);
+    const world = legend.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!;
+    expect(world.classList.contains("locked")).toBe(true);
     // One mark per state: the padlock alone stands for the locked layer —
-    // the arete register joins only when the layer unlocks.
-    expect(mutators.querySelector(".mut-tab-lock")).not.toBeNull();
-    expect(mutators.querySelectorAll("svg")).toHaveLength(1);
-    expect(mutators.getAttribute("aria-pressed")).toBe("false");
-    // No ⓘ rides the legend (issue #314 review): the symbol's native
-    // tooltip says the lock mechanic, and the click walks to the
-    // Catalog's ◇ entry, never flipping the mode.
+    // the plate register joins only when the layer reveals.
+    expect(world.querySelector(".world-tab-lock")).not.toBeNull();
+    expect(world.querySelectorAll("svg")).toHaveLength(1);
+    expect(world.getAttribute("aria-pressed")).toBe("false");
+    // No ⓘ rides the legend: the symbol's native tooltip says the lock
+    // mechanic, and the click previews the reveal in figures — the World
+    // arrives, it is not bought — never flipping the mode.
     expect(legend.querySelector(".inst-tip-trigger")).toBeNull();
-    expect(mutators.getAttribute("title")).toContain("locked; unlocks with the Mutator entry");
-    mutators.click();
-    expect(app.ui.mutLayer).toBe("modules");
-    expect(app.ui.modal).toBe("catalog");
-    expect(app.ui.catalogFace).toBe("arete");
+    expect(world.getAttribute("title")).toContain("reveals at");
+    world.click();
+    expect(app.ui.boardLayer).toBe("modules");
+    expect(app.ui.modal).toBeNull();
+    expect(document.getElementById("status")!.textContent).toContain("era-earned");
   });
 
   it("the legend is the one switch: the tray sheet carries the same symbols", () => {
@@ -788,19 +738,19 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(switchHost.querySelectorAll("[data-legend-layer]")).toHaveLength(2);
     expect(document.querySelectorAll("#layer-legend [data-legend-layer], .tray-switch [data-legend-layer]").length).toBe(4);
     // Switching from the sheet flips the one state the legend reads.
-    sheet.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.mutLayer).toBe("mutators");
+    sheet.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
+    expect(app.ui.boardLayer).toBe("world");
     app.closeModal();
     app.render();
-    expect(document.querySelector('#layer-legend [data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    expect(document.querySelector('#layer-legend [data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
   });
 
-  it("on the Mutators layer, an idle slot click opens the detail on that face", () => {
+  it("on the World layer, an idle plate click opens the detail on that face", () => {
     seedEra();
-    app.mutSetLayer("mutators");
-    document.querySelector<SVGGElement>('[data-mut-slot="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "mutators" });
-    expect(section("mutators").classList.contains("selected")).toBe(true);
+    app.setBoardLayer("world");
+    document.querySelector<SVGGElement>('[data-world-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.ui.detail).toEqual({ pos: hex(0, 0), face: "world" });
+    expect(section("world").classList.contains("selected")).toBe(true);
   });
 
   it("flow keeps the legend as the one switch: emphasis follows, the stack stays read-only (issue #387)", () => {
@@ -813,24 +763,24 @@ describe("the vertical layer legend (issue #295)", () => {
     // The stack still shows both faces in the fixed order, read-only, and
     // the legend stands beside it — the session's shared switch.
     expect(sections()).toHaveLength(2);
-    expect(sections()[0].classList.contains("mutators")).toBe(true);
+    expect(sections()[0].classList.contains("world")).toBe(true);
     expect(detail().querySelector(".hex-detail-readonly")).not.toBeNull();
     const legend = document.getElementById("layer-legend")!;
     expect(legend.querySelector('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(true);
     // The legend emphasizes the face without reordering the stack.
-    legend.querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.detail!.face).toBe("mutators");
-    expect(section("mutators").classList.contains("selected")).toBe(true);
-    expect(legend.querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    legend.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
+    expect(app.ui.detail!.face).toBe("world");
+    expect(section("world").classList.contains("selected")).toBe(true);
+    expect(legend.querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     expect(sections()).toHaveLength(2);
-    expect(sections()[0].classList.contains("mutators")).toBe(true);
+    expect(sections()[0].classList.contains("world")).toBe(true);
     // The grid's layer followed the emphasis: the return lands where the
-    // player read, the Mutators layer standing read-only.
-    expect(app.ui.mutLayer).toBe("mutators");
+    // player read, the World layer standing read-only.
+    expect(app.ui.boardLayer).toBe("world");
     document.getElementById("hex-detail-return")!.click();
     expect(app.ui.detail).toBeNull();
-    expect(document.body.classList.contains("mut-layer-live")).toBe(true);
-    expect(document.querySelector("#grid [data-mut-slot]")).not.toBeNull();
+    expect(document.body.classList.contains("world-layer-live")).toBe(true);
+    expect(document.querySelector("#grid [data-world-cell]")).not.toBeNull();
     endSession(app.state);
   });
 
@@ -840,22 +790,22 @@ describe("the vertical layer legend (issue #295)", () => {
     app.ui.zoom = 2;
     app.ui.pan = { x: 10, y: -20 };
     app.render();
-    // The session reads the Mutators layer, then inspects a slot.
-    app.mutSetLayer("mutators");
-    document.querySelector<SVGGElement>('[data-mut-slot="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    // The session reads the World layer, then inspects a plate.
+    app.setBoardLayer("world");
+    document.querySelector<SVGGElement>('[data-world-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(open()).toBe(true);
     // Escape returns the grid: no additional layer switch, the read layer
     // stands, and position and zoom never moved.
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
     expect(app.ui.detail).toBeNull();
-    expect(app.ui.mutLayer).toBe("mutators");
-    expect(document.body.classList.contains("mut-layer-live")).toBe(true);
+    expect(app.ui.boardLayer).toBe("world");
+    expect(document.body.classList.contains("world-layer-live")).toBe(true);
     expect(app.ui.zoom).toBe(2);
     expect(app.ui.pan).toEqual({ x: 10, y: -20 });
     // The explicit Return answers the same contract from a fresh inspection.
-    document.querySelector<SVGGElement>('[data-mut-slot="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    document.querySelector<SVGGElement>('[data-world-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     document.getElementById("hex-detail-return")!.click();
-    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.boardLayer).toBe("world");
     expect(app.ui.zoom).toBe(2);
     expect(app.ui.pan).toEqual({ x: 10, y: -20 });
     endSession(app.state);
@@ -976,7 +926,7 @@ describe("live detail review regressions (PR #301)", () => {
 
 // One browser serves the grid and the opened coordinate.
 describe("the shared inventory in Hex detail", () => {
-  const inventory = () => document.getElementById(app.ui.mutLayer === "modules" ? "inventory-zone" : "mutator-tray")!;
+  const inventory = () => document.getElementById(app.ui.boardLayer === "modules" ? "inventory-zone" : "world-tray")!;
   const inspectAndPlace = (id: string, mutator = false) => {
     inventory().querySelector<HTMLButtonElement>(`[${mutator ? "data-mut-tray" : "data-inv"}="${id}"]`)!.click();
     inventory().querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
@@ -1046,28 +996,33 @@ describe("the shared inventory in Hex detail", () => {
     expect(app.state.modules).toHaveLength(2);
   });
 
-  it("omits redundant store controls on both detail faces", () => {
+  it("omits redundant store controls on the module face", () => {
     seedEra(); clickCell(0, 0);
-    expect(detail().querySelector("#detail-module-retrieve, #detail-mutator-retrieve")).toBeNull();
+    expect(detail().querySelector("#detail-module-retrieve, #detail-world-retrieve")).toBeNull();
     expect(app.state.modules.find(m => m.id === "m1")!.pos).toEqual(hex(0, 0));
-    expect(app.state.mutators.find(m => m.id === "mu1")!.pos).toEqual(hex(0, 0));
   });
 
-  it("places and swaps mutators through the same inspection path", () => {
-    seedEra(); clickCell(0, 0); app.detailFace("mutators");
-    inspectAndPlace("mu2", true);
-    expect(app.state.mutators.find(m => m.id === "mu2")!.pos).toEqual(hex(0, 0));
-    expect(app.state.mutators.find(m => m.id === "mu1")!.pos).toBeNull();
-    expect(app.ui.mutCombineOffer).toBeNull();
-    expect(app.ui.detail!.face).toBe("mutators");
+  it("places a World occupant from the tray sheet's inspection into the detail's cell", () => {
+    seedEra(); clickCell(0, 0);
+    app.openModal("inventory");
+    document.querySelector<HTMLButtonElement>('#modal-content [data-legend-layer="world"]')!.click();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-world-tray]')!.click();
+    document.querySelector<HTMLButtonElement>('#modal-content [data-world-place]')!.click();
+    // The tray twin (weapon #2) lands on the opened cell; no swap exists
+    // on the World face — an occupied cell refuses.
+    expect(app.state.world.weapons[1]!.pos).toEqual(hex(0, 0));
+    expect(app.ui.detail!.face).toBe("world");
   });
 
-  it("drags a mutator onto an open enlarged slot and retrieves it back", () => {
-    seedEra(); app.mutRetrieve("mu1"); clickCell(0, 0); app.detailFace("mutators");
-    dragTo(inventory().querySelector('[data-mut-tray="mu2"]')!, detail().querySelector('[data-detail-face="mutators"]')!);
-    expect(app.state.mutators.find(m => m.id === "mu2")!.pos).toEqual(hex(0, 0));
-    dragTo(detail().querySelector('[data-detail-face="mutators"]')!, inventory());
-    expect(app.state.mutators.find(m => m.id === "mu2")!.pos).toBeNull();
+  it("drags a tray weapon onto the enlarged open face and retrieves it back", () => {
+    seedEra(); clickCell(0, 0); app.detailFace("world");
+    document.querySelector<HTMLButtonElement>('#modal-content [data-legend-layer="world"]')?.click();
+    app.openModal("inventory");
+    document.querySelector<HTMLButtonElement>('#modal-content [data-legend-layer="world"]')!.click();
+    dragTo(document.querySelector('#modal-content [data-world-tray]')!, detail().querySelector('[data-detail-face="world"]')!);
+    expect(app.state.world.weapons[1]!.pos).toEqual(hex(0, 0));
+    dragTo(detail().querySelector('[data-detail-face="world"]')!, document.getElementById("world-tray") ?? document.getElementById("modal-content")!);
+    expect(app.state.world.weapons[1]!.pos).toBeNull();
   });
 
   it("Escape returns from inspection before returning to the grid", () => {
@@ -1093,31 +1048,11 @@ describe("the shared inventory in Hex detail", () => {
   it("flow exposes no placement or retrieval targets", () => {
     app.state.sessionsCompleted = 1; startSession(app.state, 600);
     app.render(); clickCell(0, 0);
-    expect(detail().querySelector('[data-cell], [data-mut-slot]')).toBeNull();
+    expect(detail().querySelector('[data-cell]')).toBeNull();
     expect(document.getElementById("detail-module-retrieve")).toBeNull();
     const before = JSON.stringify(app.state);
     app.detailPlaceModule("m1");
     expect(JSON.stringify(app.state)).toBe(before);
     endSession(app.state);
   });
-  it("slot availability follows affordability and a refused click preserves the slot", () => {
-    seedEra();
-    app.state.arete = 0;
-    clickCell(1, 0);
-    app.detailFace("mutators");
-    const button = document.getElementById("detail-mutator-unlock")!;
-    expect(button.getAttribute("aria-disabled")).toBe("true");
-    expect(button.classList.contains("st-unavailable")).toBe(true);
-    expect(button.textContent).toContain("need Arete");
-    button.focus();
-    expect(document.getElementById(button.getAttribute("aria-describedby")!)!.textContent).toContain("Not enough Arete");
-    button.click();
-    expect(app.state.mutatorSlots).toHaveLength(1);
-    app.state.arete = 100;
-    app.render();
-    expect(document.getElementById("detail-mutator-unlock")!.getAttribute("aria-disabled")).toBe("false");
-    document.getElementById("detail-mutator-unlock")!.click();
-    expect(app.state.mutatorSlots).toHaveLength(2);
-  });
-
 });
