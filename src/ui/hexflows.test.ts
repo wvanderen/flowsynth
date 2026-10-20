@@ -53,71 +53,6 @@ function seedEra(): void {
   app.render();
 }
 
-describe("the mutator's cross-layer wave (issue #297)", () => {
-  it("a live mutator draws the solid wave toward the module layer, breakdown folding it into power", () => {
-    seedEra();
-    clickCell(0, 0);
-    const node = trigger("mutator");
-    expect(node).not.toBeNull();
-    expect(node.classList.contains("flow-active")).toBe(true);
-    expect(node.getAttribute("aria-label")).toContain("Power mutator effect");
-    // The wave itself: svg, no figures at a glance (the numbers ride the
-    // disclosure), and the arrow points at the affected layer below.
-    expect(node.querySelector("svg")).not.toBeNull();
-    expect(node.textContent ?? "").not.toMatch(/[0-9]/);
-    const snap = displayedRates(app.state, true);
-    const body = breakdownOf(node);
-    // The contribution: the mutator's magnitude and the power term it
-    // folds into — the engine's own figures, never a second source.
-    expect(body.textContent).toContain("Power mutator · common");
-    expect(body.textContent).toContain("+50%");
-    expect(body.textContent).toContain("Folded into power");
-    expect(body.textContent).toContain(`${formatNumber(1)} → ${formatNumber(1.5)}`);
-    // The outcome stated once, as the module's actual ν/s.
-    const value = snap.contributions.get("m1")!.value;
-    expect(value).toBeCloseTo(0.15, 5);
-    expect(body.textContent).toContain("Final output");
-    expect(body.textContent).toContain(`+${formatNumber(value)} ν/s`);
-  });
-
-  it("a hostless mutator draws the quiet dashed wave and promises no outcome", () => {
-    seedEra();
-    app.state.mutatorSlots.push(hex(0, 1));
-    app.state.mutators[1]!.pos = hex(0, 1);
-    app.render();
-    clickCell(0, 1);
-    const node = trigger("mutator");
-    expect(node.classList.contains("flow-inert")).toBe(true);
-    expect(node.getAttribute("aria-label")).toContain("inert · no host");
-    const body = breakdownOf(node);
-    expect(body.textContent).toContain("inert · no host");
-    // No module, no outcome row: the empty place implies nothing.
-    expect(body.textContent).not.toContain("Final output");
-    // No incoming connections stand on an empty place.
-    expect(trigger("charge")).toBeNull();
-    expect(trigger("chord")).toBeNull();
-  });
-
-  it("resonance on a chordless host draws the dashed wave beside the module's own outcome", () => {
-    seedEra();
-    app.state.mutators[0]!.family = "resonance";
-    app.render();
-    clickCell(0, 0);
-    const node = trigger("mutator");
-    expect(node.classList.contains("flow-inert")).toBe(true);
-    expect(breakdownOf(node).textContent).toContain("inert · no chord");
-    // The host still speaks its outcome — the verdict is the mutator's,
-    // not the module's.
-    expect(breakdownOf(node).textContent).toContain("Final output");
-  });
-
-  it("no mutator, no wave: the stack carries no cross-layer connection", () => {
-    app.render();
-    clickCell(0, 0);
-    expect(trigger("mutator")).toBeNull();
-  });
-});
-
 describe("the incoming charge wave (issue #297)", () => {
   it("an uncharged receiver draws the quiet dashed wave", () => {
     app.render();
@@ -275,7 +210,7 @@ describe("the disclosures (issue #297)", () => {
     give(app.state, "additive", hex(0, 1));
     seedEra();
     clickCell(0, 0);
-    for (const kind of ["mutator", "charge", "chord"] as const) {
+    for (const kind of ["charge", "chord"] as const) {
       const node = trigger(kind);
       expect(node.getAttribute("aria-describedby")).toBeTruthy();
       expect(breakdownOf(node).getAttribute("role")).toBe("tooltip");
@@ -401,7 +336,10 @@ describe("PR #304 review regressions", () => {
     pauseSession(app.state);
     app.render();
     expect(detail().querySelector(".flow-live")).toBeNull();
-    expect(trigger("mutator").classList.contains("flow-active")).toBe(true);
+    // The waves keep their posts while the motion stops; the chord output
+    // below is unchanged.
+    expect(trigger("charge")).not.toBeNull();
+    expect(trigger("chord")).not.toBeNull();
     resumeSession(app.state);
     app.render();
     expect(detail().querySelector(".flow-live")).not.toBeNull();
@@ -437,7 +375,7 @@ describe("PR #304 review regressions", () => {
     app.render();
     clickCell(0, 0);
     const snap = displayedRates(app.state, true);
-    for (const kind of ["mutator", "charge", "chord"] as const) {
+    for (const kind of ["charge", "chord"] as const) {
       const body = breakdownOf(trigger(kind));
       expect(body.textContent).toContain("Build synth term×1.05");
       expect(body.textContent).toContain(`Booster uplift×${formatNumber(1 + snap.contributions.get("m1")!.infusorBonus)}`);

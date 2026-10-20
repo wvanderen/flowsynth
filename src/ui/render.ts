@@ -4,7 +4,7 @@ import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRa
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { bankableClaimOf } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
-import { combinePreview, combineMutatorsPreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
+import { combinePreview, levelable, type CombinePreview, upgradeAllPreview } from "../engine/actions";
 import { skipPayoutOf } from "../engine/scrap";
 import { deployedAt } from "../engine/economy";
 import { sameHex } from "../engine/hex";
@@ -21,7 +21,7 @@ import { activeBuildFactors } from "../engine/builds";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { Category, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, MutatorInstance, NamedChordTerm, Rarity, RateSnapshot, SpecialDraftKind } from "../engine/types";
+import type { Category, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, NamedChordTerm, RateSnapshot, SpecialDraftKind, WeaponType } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
@@ -50,7 +50,8 @@ import { renderInventoryContent, openInventoryForDrag } from "./inventory";
 import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
-import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, rarityMark, tierNumeral, tierWord } from "./meta";
+import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, WORLD_META, rarityMark, tierNumeral, tierWord } from "./meta";
+import { columnCost, honeCostOf } from "../engine/world";
 import { typeRarityOf } from "../engine/constants";
 import { formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderHorizonBar, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
@@ -62,20 +63,27 @@ import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster, syncGlo
 import { beginLayoutPass, containerWidth, endLayoutPass, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX, viewportWidth, scrollTopOf } from "./container";
 import { liveAttr, liveSet } from "./live";
 import {
-  bindMutatorLayer,
-  hexFromAttr,
-  mutatorAskHtml,
-  mutatorEffectText,
-  mutatorBoardLive,
-  mutGridDecorations,
-  mutatorSlotPrice,
   mutatorTileInner,
-  mutatorTileSvg,
-  layerLegendHtml,
+  mutatorEffectText,
   FAMILY_WORD,
-  renderMutatorPill,
-  renderLayerLegend,
 } from "./mutators";
+import { hexFromAttr } from "./world";
+import {
+  bindWorldLayer,
+  worldBoardLive,
+  worldGridDecorations,
+  worldLensCoordinates,
+  worldAskHtml,
+  worldPlacementPreview,
+  worldPreviewHtml,
+  worldCountBadge,
+  worldTileSvg,
+  renderWorldPill,
+  renderWorldTrayContent,
+  bindWorldDrag,
+  layerLegendHtml,
+  renderLayerLegend,
+} from "./world";
 
 // The adjacent-center distance the chord overlay's edge trace needs: on
 // this pointy-top lattice every neighboring center sits exactly this far
@@ -147,12 +155,12 @@ export function render(app: App): void {
     renderZoomCluster(app);
     renderHorizonBar(app);
     renderGameInfoStrip(app, live);
-    // The Mutator Grid's furniture (issue #199): the vertical layer legend,
-    // the pinned tray strip, the armed unlock's pill — each a no-op wherever
-    // its moment isn't now.
+    // The second face's furniture (issue #426): the vertical layer legend
+    // and the armed placement's pill — each a no-op wherever its moment
+    // isn't now.
     renderLayerLegend(app);
 
-    renderMutatorPill(app);
+    renderWorldPill(app);
     renderModal(app, live, projected);
     renderDev(app, devStage);
     renderDevBoard(app);
@@ -896,15 +904,11 @@ function toolActions(): ToolAction[] {
         if (app.ui.modal === "inventory") app.closeModal();
         // Add expands the board — a grid gesture (#295): from the detail it
         // returns the grid first, then arms per the mode's own contract.
+        // On the World face the purchase's frontier lives on Modules, so
+        // the Add walks there first (issue #426).
         if (app.ui.detail) app.closeDetail();
-        if (app.state.mode === "upgrade" && app.ui.mutLayer === "mutators") {
-          if (!app.state.catalogEntryOwned) {
-            app.openMutatorEntry();
-            return;
-          }
-          if (app.ui.mutUnlockArmed) app.mutCancelGestures();
-          else app.mutArmUnlock();
-          return;
+        if (app.state.mode === "upgrade" && app.ui.boardLayer === "world") {
+          app.setBoardLayer("modules");
         }
         if (app.ui.buyingCell) app.cancelCellPurchase();
         else app.armCellPurchase();
@@ -914,18 +918,14 @@ function toolActions(): ToolAction[] {
       // detail writer under #354's live pass).
       title: (app, projected) => {
         if (app.state.mode !== "upgrade") return "Add — purchases happen between sessions";
-        if (app.state.catalogEntryOwned && app.ui.mutLayer === "mutators") {
-          return app.ui.mutUnlockArmed
-            ? "Pick an eligible cell · Esc cancels"
-            : `Unlock a Mutator slot — ${mutatorSlotPrice(app.state) === 0 ? "the first is free" : `${formatInt(mutatorSlotPrice(app.state))} Arete`}`;
-        }
+        if (app.ui.boardLayer === "world") return "Add — cell purchases live on the Modules face";
         if (app.ui.buyingCell) return "Pick a frontier hex · Esc cancels";
         const price = cellCost(app.state.cellsBought);
         const countdown = practiceCountdown(price, wholeNous(app.state), projected.rate);
         return `Add — ${formatInt(price)} ν${countdown ? ` · ${countdown}` : ""}`;
       },
       disabled: (app) => app.state.mode !== "upgrade",
-      active: (app) => app.ui.buyingCell || app.ui.mutUnlockArmed,
+      active: (app) => app.ui.buyingCell,
     },
     {
       // The tray's phone face (issue #272): the wide-surface dock lost the
@@ -1006,7 +1006,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
   const dockActions = actions.filter((action) => action.op !== "collection" && action.op !== "inventory");
   const forgeCount = state.bankedRolls.length + state.bankedMutatorRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
-  const key = JSON.stringify(["dock", state.mode, ui.mutLayer, ui.mutUnlockArmed, forgeCount, ui.buyingCell, trayCount]);
+  const key = JSON.stringify(["dock", state.mode, ui.boardLayer, ui.worldArmed, forgeCount, ui.buyingCell, trayCount, worldCountBadge(app)]);
 
   for (const [target, list] of [
     [host, dockActions],
@@ -1094,14 +1094,12 @@ function renderTools(app: App, projected: RateSnapshot): void {
     if (forgeButton) forgeButton.setAttribute("aria-disabled", String(actions.find((a) => a.op === "forge")!.disabled?.(app) ?? false));
     const cellButton = target.querySelector<HTMLButtonElement>('[data-op="cell"]');
     if (cellButton && state.mode === "upgrade") {
-      // The Add icon carries the mode's arm: the cell price in module
-      // mode, the slot-unlock arm in mutator mode (issue #272 review).
-      // The detail text is the generic pass's write — the title closure
-      // owns every arm's read.
-      const mutatorArm = state.catalogEntryOwned && ui.mutLayer === "mutators";
-      cellButton.classList.toggle("active", mutatorArm ? ui.mutUnlockArmed : ui.buyingCell);
-      cellButton.setAttribute("aria-pressed", String(mutatorArm ? ui.mutUnlockArmed : ui.buyingCell));
-      if (mutatorArm || ui.buyingCell) {
+      // The Add icon carries the cell arm (issue #426: the World face has
+      // no Add arm — the walk to Modules is the gesture). The detail text
+      // is the generic pass's write — the title closure owns the read.
+      cellButton.classList.toggle("active", ui.buyingCell);
+      cellButton.setAttribute("aria-pressed", String(ui.buyingCell));
+      if (ui.buyingCell) {
         cellButton.setAttribute("aria-disabled", "false");
       } else {
         cellButton.setAttribute("aria-disabled", String(wholeNous(state) < cellCost(state.cellsBought)));
@@ -1182,7 +1180,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // no placement armed, no hover can be live — stale state never survives a
   // render. The Mutator layer's preview obeys the same rule (issue #199).
   if (!app.dragging && !ui.placing) ui.dropHover = null;
-  if (!app.ui.mutCarrying) ui.mutDropHover = null;
+  if (!ui.worldCarrying && !ui.worldArmed) ui.worldDropHover = null;
   // A state change always rides a render (act), so the placement
   // projection never outlives the pass that could stale it (#260) — the
   // hover refresh recomputes it on demand.
@@ -1197,7 +1195,12 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   const rawFrontier = upgrade && ui.buyingCell ? app.frontierCells() : [];
   const bands = upgrade && ui.buyingCell && catalogOpen(state) ? rowUnlockBands(state, rawFrontier) : [];
   const frontier = rawFrontier.filter((pos) => positionInRange(state, pos));
-  const allCells = [...state.cells, ...frontier, ...bands.flatMap((band) => band.hexes)];
+  // The World face's authored positions join the bounds while the layer
+  // stands (issue #426): enemies sit on coordinates the owned patch may
+  // not cover, and the lens holds the whole face.
+  const worldLive = worldBoardLive(app);
+  const worldCoords = worldLive ? worldLensCoordinates() : [];
+  const allCells = [...state.cells, ...frontier, ...worldCoords, ...bands.flatMap((band) => band.hexes)];
   const coords = allCells.map(point);
   // The lens's base (§7): the board's own bounds with breathing room —
   // the top pad carries the chord chips, which float ~1.2 hex radii above
@@ -1211,14 +1214,14 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
 
   const flow = flowLive(state);
   const snapshot = live;
-  // The Mutators layer owns the board's drawing (issues #298 and #386):
-  // while it stands — flow reading it now too (issue #387) — the renderer
-  // emits the layer's faces alone: module faces, the empty-cell artwork,
-  // chord marks, charge leads, and the would-form ghosts never enter the
-  // svg, so nothing can leak beneath and no module gesture surface
-  // survives to collide with the layer's. The lens still reads the owned
-  // lattice, so zoom and pan hold still across the switch.
-  const mutLive = mutatorBoardLive(app);
+  // The World layer owns the board's drawing (issue #426, the Mutator
+  // Grid's discipline, issues #298 and #386): while it stands — flow
+  // reading it now too — the renderer emits the layer's plates alone:
+  // module faces, the empty-cell artwork, chord marks, charge leads, and
+  // the would-form ghosts never enter the svg, so nothing can leak beneath
+  // and no module gesture surface survives to collide with the layer's.
+  // The lens still reads the owned lattice and the authored positions, so
+  // zoom and pan hold still across the switch.
   // The chord annotation is always on (§6, #137): every formed chord wears
   // its colored work — no chord view, no toggle. The marks arrive from
   // refreshChordOverlay (render's one computation, issue #296) — the readout
@@ -1232,7 +1235,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // or a generator whose charge window is spent — sits dim and static as
   // wiring previews (ADR-0002).
   let html = `${CHARGE_LEAD_DEFS}${SPACER_WINDOW_DEFS}`;
-  if (!mutLive) {
+  if (!worldLive) {
     for (const { generator, receiver, emitting } of chargeLeads(state, flow)) {
       if (generator.pos === null || receiver.pos === null) continue;
       const [x1, y1] = point(generator.pos);
@@ -1256,7 +1259,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
       .join("")}</g>`;
   }
 
-  if (!mutLive) {
+  if (!worldLive) {
     for (const pos of state.cells) {
       const [x, y] = point(pos);
       const module = deployedAt(state, pos);
@@ -1314,12 +1317,12 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // note-corner polygons — #201), promising in the vocabulary the chord
   // will land in. No module gesture can stand on the Mutators layer, so
   // the group never draws there (issue #386).
-  if (!mutLive) html += `<g data-key="ghost-chords">${ghostMarksHtml(app, projected)}</g>`;
+  if (!worldLive) html += `<g data-key="ghost-chords">${ghostMarksHtml(app, projected)}</g>`;
 
   // The Mutator Grid's drawing (issue #199): the second layer's faces — one
   // per owned coordinate while the Mutators tab stands (issue #386), the
   // presence outlines while Modules does.
-  html += mutGridDecorations(app, projected);
+  html += worldGridDecorations(app, projected);
 
   updateSvg(svg, html);
   // The breathe rides the lens (issue #348): hexes the current view can't
@@ -1327,7 +1330,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   syncGlowLens(svg, lens.view);
   bindGridEvents(app, svg);
   bindFaceBuys(app, svg);
-  bindMutatorLayer(app, svg);
+  bindWorldLayer(app, svg);
   updateChordReadout(app);
   updateChordEmphasis(app);
 }
@@ -1450,21 +1453,13 @@ const chordReadoutCache = new WeakMap<App, ChordReadoutCache>();
 // producers carry the figure: nothing else produces nous, and the Forge's
 // progress-per-second is not ν/s. Hidden when nothing asks. HTML beside
 // the board, so the Hex detail can never cover it and it never moves.
-function updateChordReadout(app: App): void {
+export function updateChordReadout(app: App): void {
   const host = byId("chord-readout");
   if (!host) return;
   wireTooltips(host, app.signal);
   const cache = chordReadoutCache.get(app);
   const snapshot = cache?.snapshot;
   const hover = app.ui.chordHover;
-  // The Mutator layer's ask (issue #199): the hovered slot's full
-  // declaration — or the vacant slot's inert-until-a-host promise — in the
-  // arete register. One spot, never floating over the board.
-  if (hover?.kind === "mutator") {
-    host.hidden = false;
-    setReadoutHtml(host, mutatorAskHtml(app.state, hover.pos, snapshot ?? displayedRates(app.state, true)));
-    return;
-  }
   // The placement projection (issue #260): while a drop hovers a valid
   // target — a cell the register would take, or the tray under a carried
   // module — the gesture owns the reserved spot. The row is transient by
@@ -1474,6 +1469,26 @@ function updateChordReadout(app: App): void {
   if (preview) {
     host.hidden = false;
     setReadoutHtml(host, placementPreviewHtml(app, preview));
+    return;
+  }
+  // The World placement's lift preview (issue #426): the moved occupant's
+  // and its neighbors' routing before → after, from the engine's one lift
+  // function — the gesture owns the same reserved spot.
+  const worldHover = app.ui.worldDropHover;
+  if (worldHover) {
+    const worldPreview = worldPlacementPreview(app.state, worldHover.id, worldHover.pos);
+    if (worldPreview) {
+      host.hidden = false;
+      setReadoutHtml(host, worldPreviewHtml(worldPreview));
+      return;
+    }
+  }
+  // The World layer's ask (issue #426): the hovered plate's full
+  // declaration in the World register. One spot, never floating over the
+  // board.
+  if (!worldHover && hover?.kind === "world") {
+    host.hidden = false;
+    setReadoutHtml(host, worldAskHtml(app, hover.pos, snapshot ?? displayedRates(app.state, true)));
     return;
   }
   const hovered =
@@ -1775,13 +1790,13 @@ const moduleChips = (module: ModuleInstance, marks: ChordMark[]): ChordMark[] =>
 
 // The marks the current ask names (§6): a seam names its one chord, a
 // module names every chord it sings in — the conducting spacer by
-// containment, the same rule its readout reads (#201). A mutator slot's
+// containment, the same rule its readout reads (#201). A World plate's
 // ask names no marks — it takes the readout's whole row for itself. One
 // resolution serves every ask consumer: the reserved readout's chips, the
 // Hex detail's chord row, and active-chord inspection.
 function marksForAsk(app: App): ChordMark[] {
   const hover = app.ui.chordHover;
-  if (!hover || hover.kind === "mutator") return [];
+  if (!hover || hover.kind === "world") return [];
   const marks = chordReadoutCache.get(app)?.marks ?? [];
   if (hover.kind === "chord") return marks.filter((m) => m.key === hover.key && !m.inactive);
   const module = app.state.modules.find((m) => m.id === hover.moduleId);
@@ -1792,7 +1807,7 @@ function marksForAsk(app: App): ChordMark[] {
 function updateChordEmphasis(app: App): void {
   const group = document.querySelector('#grid [data-key="chord-marks"]');
   if (!group) return;
-  const inspecting = app.ui.chordHover !== null && app.ui.chordHover?.kind !== "mutator";
+  const inspecting = app.ui.chordHover !== null && app.ui.chordHover?.kind !== "world";
   const related = new Set(marksForAsk(app).filter((mark) => !mark.inactive).map((mark) => mark.key));
   for (const node of group.querySelectorAll(".chord-mark")) {
     const focused = inspecting && related.has(node.getAttribute("data-chord") ?? "");
@@ -1806,6 +1821,9 @@ function updateChordEmphasis(app: App): void {
 function setChordHover(app: App, hover: ChordHover | null): void {
   if (app.released) return;
   const next = hover ?? null;
+  if (app.ui.worldArmed && !app.ui.worldCarrying) {
+    app.setWorldDropHover(app.ui.worldArmed, next?.kind === "world" ? next.pos : null);
+  }
   if (sameChordHover(app.ui.chordHover, next)) return;
   app.ui.chordHover = next;
   updateChordReadout(app);
@@ -1816,7 +1834,7 @@ function sameChordHover(a: ChordHover | null, b: ChordHover | null): boolean {
   if (a === null || b === null) return a === b;
   if (a.kind === "chord" && b.kind === "chord") return a.key === b.key;
   if (a.kind === "module" && b.kind === "module") return a.moduleId === b.moduleId;
-  if (a.kind === "mutator" && b.kind === "mutator") return sameHex(a.pos, b.pos);
+  if (a.kind === "world" && b.kind === "world") return sameHex(a.pos, b.pos);
   return false;
 }
 
@@ -2309,8 +2327,8 @@ function bindGridEvents(app: App, svg: SVGSVGElement): void {
 }
 
 // The grid never replaces its svg across renders, so the chord-hover
-// question binds once, delegating: over a Mutator slot, that mutator's
-// declaration (issue #199); over a chord's seam, that chord; over a module
+// question binds once, delegating: over a World plate, that face's
+// declaration (issue #426); over a chord's seam, that chord; over a module
 // cell, every chord the module sings in; anywhere else, none. Ghost marks
 // never answer — they promise chords that don't exist yet.
 const boundGrids = new WeakSet<SVGSVGElement>();
@@ -2319,13 +2337,13 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
   if (boundGrids.has(svg)) return;
   boundGrids.add(svg);
   const ask = (event: Event) => {
-    if (app.dragging || app.ui.mutCarrying) return;
+    if (app.dragging || app.ui.worldCarrying) return;
     const target = event.target as Element;
-    const slotNode = target.closest?.("[data-mut-slot]");
-    if (slotNode) {
-      const pos = hexFromAttr(slotNode.getAttribute("data-mut-slot"));
+    const plateNode = target.closest?.("[data-world-cell]");
+    if (plateNode) {
+      const pos = hexFromAttr(plateNode.getAttribute("data-world-cell"));
       if (pos) {
-        setChordHover(app, { kind: "mutator", pos });
+        setChordHover(app, { kind: "world", pos });
         return;
       }
     }
@@ -2342,6 +2360,10 @@ function bindSeamHover(app: App, svg: SVGSVGElement): void {
   };
   app.listen(svg, "pointerover", ask);
   app.listen(svg, "focusin", ask);
+  app.listen(svg, "focusout", (event) => {
+    const next = (event as FocusEvent).relatedTarget;
+    if (!(next instanceof Node) || !svg.contains(next)) setChordHover(app, null);
+  });
   app.listen(byId("chord-readout"), "pointerleave", (event) => {
     const next = (event as PointerEvent).relatedTarget;
     if (next instanceof Node && svg.contains(next)) return;
@@ -2466,14 +2488,15 @@ function rosterMergeKey(state: GameState): string {
 // One visit-local browser serves both layers and the phone sheet.
 function renderInventoryTray(app: App): void {
   const moduleTray = byId("inventory-zone");
-  const mutatorTray = byId("mutator-tray");
-  if (!moduleTray || !mutatorTray) return;
-  const modules = app.ui.mutLayer === "modules";
+  const worldTray = byId("world-tray");
+  if (!moduleTray || !worldTray) return;
+  const modules = app.ui.boardLayer === "modules";
   moduleTray.classList.toggle("off", app.state.mode !== "upgrade" || !modules);
-  mutatorTray.hidden = app.state.mode !== "upgrade" || modules;
-  const tray = modules ? moduleTray : mutatorTray;
+  worldTray.hidden = app.state.mode !== "upgrade" || modules;
+  const tray = modules ? moduleTray : worldTray;
   tray.closest<HTMLElement>(".tray-column")?.classList.toggle("collapsed", app.ui.inventory.collapsed && !app.ui.inventory.dragOpen);
-  renderInventoryContent(app, tray, false, (element, id) => bindPointerDrag(app, element, id));
+  if (modules) renderInventoryContent(app, tray, false, (element, id) => bindPointerDrag(app, element, id));
+  else renderWorldTrayContent(app, tray, false, (element, id) => bindWorldDrag(app, element, id, "tray"));
 }
 
 // The opening arc's one pop-up (§8, issue #138): after the second
@@ -2519,10 +2542,6 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // honored before the pass continues.
   if (app.ui.modal === "combine" && combineOfferTerms(app) === null) {
     app.ui.combineOffer = null;
-    app.abandonModal();
-  }
-  if (app.ui.modal === "mutcombine" && mutCombineOfferTerms(app) === null) {
-    app.ui.mutCombineOffer = null;
     app.abandonModal();
   }
   const kind = app.ui.modal;
@@ -2632,22 +2651,18 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                       // the control's count and the tiles' eligible marks
                       // change with any twin's tier or investment, wherever
                       // it sits, so a sweep from the sheet re-renders it.
-                      rosterMergeKey(app.state), app.ui.inventory,
+                      rosterMergeKey(app.state), app.ui.inventory, app.ui.worldTray,
                       // The tray sheet's face rides the global switch, and
-                      // the Mutators face re-reads the tray (issue #272).
-                      // The entry's ownership rides too: the purchase
-                      // unlocks the switch's locked face (issue #273).
-                      app.ui.mutLayer,
-                      app.state.catalogEntryOwned,
-                      app.state.mutators.filter((m) => m.pos === null).map((m) => `${m.id}:${m.family}:${m.rarity}`),
+                      // the World face re-reads the tray (issue #426).
+                      app.ui.boardLayer,
+                      app.state.world.weapons.map((w) => `${w.id}:${w.pos}:${w.store}:${w.targetPriority}`),
+                      app.state.world.columns.map((c) => `${c.id}:${c.pos}`),
                     ]
                   // The combine review's identity: the offered pair (issue
                   // #152). The terms are read fresh on rebuild.
                   : kind === "combine"
                     ? [app.ui.combineOffer?.dragId ?? null, app.ui.combineOffer?.targetId ?? null]
-                    : kind === "mutcombine"
-                      ? [app.ui.mutCombineOffer?.dragId ?? null, app.ui.mutCombineOffer?.targetId ?? null]
-                      : null;
+                    : null;
   // The Notes modal's key (issue #332) is its own shape: face, session
   // presence, and the stream — never the mode or the pool. A pause or
   // resume, a boundary, an overrun must never rebuild the dialog out from
@@ -2683,13 +2698,13 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
   else if (kind === "prestige") renderPrestigeModal(app, content);
+  else if (kind === "grant") renderGrantModal(app, content);
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
   else if (kind === "rate") renderRateModal(app, content, live);
   else if (kind === "notes") renderNotesModal(app, content);
   else if (kind === "inventory") renderInventorySheetModal(app, content);
   else if (kind === "combine") renderCombineModal(app, content);
-  else if (kind === "mutcombine") renderMutCombineModal(app, content);
   // The Notes modal lands focus itself (issue #332): the composer on
   // CAPTURE, the standing tab on LOGGED — never the generic first button.
   // Every other dialog lands on its first control (issue #346), the open
@@ -2765,17 +2780,19 @@ function renderInventorySheetModal(app: App, content: HTMLElement): void {
     ${app.state.mode === "upgrade" ? `<div class="layer-legend tray-switch" role="group" aria-label="Tray face">${layerLegendHtml(app)}</div>` : ""}
     <div class="inventory-sheet-browser"></div></div>`;
   const host = content.querySelector<HTMLElement>(".inventory-sheet-browser")!;
-  renderInventoryContent(app, host, true, (element, id) => bindPointerDrag(app, element, id));
+  const modules = app.ui.boardLayer === "modules";
+  if (modules) renderInventoryContent(app, host, true, (element, id) => bindPointerDrag(app, element, id));
+  else renderWorldTrayContent(app, host, true, (element, id) => bindWorldDrag(app, element, id, "tray"));
   content.querySelectorAll<HTMLButtonElement>("[data-legend-layer]").forEach((button) => {
-    const selected = button.dataset.legendLayer === app.ui.mutLayer;
+    const selected = button.dataset.legendLayer === app.ui.boardLayer;
     button.classList.toggle("active", selected);
     button.setAttribute("aria-pressed", String(selected));
     if (button.dataset.inventoryBound) return;
     button.dataset.inventoryBound = "true";
     app.listen(button, "click", () => {
-      const layer = button.dataset.legendLayer as "modules" | "mutators";
-      app.ui.inventory.inspect = null; app.ui.inventory.merge = null;
-      if (app.ui.detail) app.detailFace(layer); else app.mutSetLayer(layer);
+      const layer = button.dataset.legendLayer as "modules" | "world";
+      app.ui.inventory.inspect = null; app.ui.inventory.merge = null; app.ui.worldTray.inspect = null;
+      if (app.ui.detail) app.detailFace(layer); else app.setBoardLayer(layer);
     });
   });
   const close = content.querySelector<HTMLElement>("#close-modal");
@@ -2850,48 +2867,23 @@ function wireClose(app: App): void {
   app.listen(byId("close-modal"), "click", () => app.closeModal());
 }
 
-// The mutator combine review's terms (issue #199), read fresh: null
-// whenever the offer is gone or its pair can no longer combine — mode
-// flipped, a twin taken — so a dead offer can never reach the dialog's
-// markup. Mutators carry no levels, so the terms are two rows.
-function mutCombineOfferTerms(
-  app: App,
-): { drag: MutatorInstance; target: MutatorInstance; nextRarity: Rarity } | null {
-  const offer = app.ui.mutCombineOffer;
-  const drag = offer ? app.state.mutators.find((m) => m.id === offer.dragId) : undefined;
-  const target = offer ? app.state.mutators.find((m) => m.id === offer.targetId) : undefined;
-  if (!offer || !drag || !target) return null;
-  const preview = combineMutatorsPreview(app.state, offer.dragId, offer.targetId);
-  return preview ? { drag, target, nextRarity: preview.nextRarity } : null;
-}
-
-// The mutator combine review (issue #199): the drop-and-confirm gesture's
-// second-layer voice — resulting rarity and family, the no-levels rule
-// said plainly, and the destination. Cancel (button, ✕, backdrop, Esc)
-// lands in closeModal and leaves both copies untouched; confirm performs
-// the combine and the result lands where the drop target was.
-function renderMutCombineModal(app: App, content: HTMLElement): void {
-  const { drag, target, nextRarity } = mutCombineOfferTerms(app)!;
-  const tile = (item: MutatorInstance): string =>
-    `<span class="mut-combine-tile">${mutatorTileSvg(item)}<small>${rarityMark(item.rarity)} ${FAMILY_WORD[item.family]}</small></span>`;
-  const destination =
-    target.pos === null ? "The combined mutator waits in the Mutator tray." : `The combined mutator holds the ${cellNoteOf(target.pos)} slot.`;
+// The starter-weapon grant's one presentation (issue #426, priority 5):
+// the first World-eligible claim lands the Charge Blade at the moment it
+// banks, and this modal is where the player meets it — the plate, the
+// name, the one line that says where it waits. Once, ever: the granted
+// flag keeps the engine from minting a second, and the modal only ever
+// opens on the landing that set it.
+function renderGrantModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
-    ${modalTop("COMBINE MUTATORS")}
-    <h2 id="modal-title">Combine these two?</h2>
-    <p class="lead mut-combine-pair">${tile(drag)} <b>+</b> ${tile(target)}</p>
-    <div class="combine-terms">
-      <div class="stat-row"><span>Resulting rarity</span><span>${rarityMark(nextRarity)}</span></div>
-      <div class="stat-row"><span>Family</span><span class="mono">${FAMILY_WORD[drag.family]}</span></div>
-    </div>
-    <p class="lead muted">Mutators carry no levels — nothing is retained or refunded.</p>
-    <p class="lead muted">${destination}</p>
+    ${modalTop("GRANTED")}
+    <h2 id="modal-title">The Charge Blade is yours</h2>
+    <div class="grant-face" aria-hidden="true">${worldTileSvg("weapon")}</div>
+    <p class="lead">A ${termTipHtml("Charge Blade")} waits in the ${termTipHtml("World tray")} — place it over an owned cell, feed it from a ${termTipHtml("Charge Column")}, and it engages the adjacent enemies on its own cadence.</p>
+    <p class="lead muted">The World face stands with the era: it reopens at ${formatNumber(BALANCE.world.entryNous)} era-earned.</p>
     <div class="modal-actions">
-      <button id="mut-combine-cancel">Keep both</button>
-      <button id="mut-combine-confirm" class="primary">Combine</button>
+      <button id="grant-close" class="primary">Continue</button>
     </div>`;
-  app.listen(byId("mut-combine-cancel"), "click", () => app.closeModal());
-  app.listen(byId("mut-combine-confirm"), "click", () => app.confirmMutCombine());
+  app.listen(byId("grant-close"), "click", () => app.closeModal());
   wireClose(app);
 }
 
@@ -3141,6 +3133,8 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   app.listen(byId("buy-arete-beam"), "click", () => app.buyMergeCapAction());
   app.listen(byId("buy-arete-entry"), "click", () => app.buyCatalogEntryAction());
   app.listen(byId("buy-arete-pool"), "click", () => app.joinRollPoolAction());
+  app.listen(byId("buy-world-column"), "click", () => app.buyChargeColumnAction());
+  app.listen(byId("buy-world-hone"), "click", () => app.buyHoneRankAction("chargeBlade"));
   // The scrap face's purchases and rolls (issues #378, #379): the same
   // handlers the rows carried on the Forge, one sheet home now.
   app.listen(content.querySelector<HTMLButtonElement>("[data-buy-draft-upgrade]"), "click", () => app.buyDraftUpgradeAction());
@@ -3399,13 +3393,13 @@ function catalogOwnedHtml(word: string): string {
 const ACCELERATOR_PLACEHOLDER_PRICE = 3;
 
 // The arete face: the single centered lock screen until the Mutator entry
-// is bought, then two sections (issue #310 steering) — Upgrades (the
-// entry's ACQUIRED rewards line, the capacity products, the inert
-// Accelerator placeholder) and Module Types (the Mutator Forge pool
-// join, previewed by the module's own face, empty once joined). The lock
-// screen is the face's one offer — the entry itself; the sections appear
-// only once it stands acquired. Headroom retired with the frontier claim
-// curve (issue #425): the World section joins the face with its own brief.
+// is bought, then its sections (issue #310 steering) — World first (the
+// co-listing order: World leads, issue #426), then Upgrades (the capacity
+// products, the inert Accelerator placeholder) and Module Types (the roll
+// pool join, previewed by the module's own face). The Mutator tree's own
+// entry retired with the Mutator Grid's surfaces (issue #426); the face
+// restructures around what remains without orphaned placeholders. Prices
+// mute when unaffordable or in flow ("spent between sessions").
 function catalogAreteFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -3419,12 +3413,15 @@ function catalogAreteFaceHtml(app: App): string {
   const joined = state.rollPoolJoined;
   return `<div class="catalog-sections">
     <section>
+      <h2 class="t-condensed">World</h2>
+      <div class="catalog-rows">
+        ${catalogColumnRowHtml(app)}
+        ${catalogHoneRowHtml(app, "chargeBlade")}
+      </div>
+    </section>
+    <section>
       <h2 class="t-condensed">Upgrades</h2>
       <div class="catalog-rows">
-        <article class="catalog-row">
-          <div><h3 class="t-condensed">Mutator layer</h3><p class="t-note">Unlocks: Mutator Grid · 1 Mutator slot · 1 Mutator roll · this catalog</p></div>
-          ${catalogOwnedHtml("ACQUIRED")}
-        </article>
         ${areteLadderRowHtml(app, "extenders")}
         ${areteLadderRowHtml(app, "catalysts")}
         ${areteLadderRowHtml(app, "beam")}
@@ -3449,6 +3446,40 @@ function catalogAreteFaceHtml(app: App): string {
     </section>
   </div>
   ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
+}
+
+// The Charge Column's ladder row (issue #426, priority 6): the entry is
+// the Column itself — never a per-copy upsell and never `memorized`
+// (persistence rides the reset contract, not the memorized family). The
+// owned count reads beside the name; the price rides the authored
+// escalation.
+function catalogColumnRowHtml(app: App): string {
+  const { state } = app;
+  const owned = state.world.columns.length;
+  const price = columnCost(owned);
+  return `<article class="catalog-row">
+    <div class="with-preview"><span class="module-preview world-preview">${worldTileSvg("column")}</span><div><h3 class="t-condensed">${termTipHtml("Charge Column")} <span class="mono">${owned}</span></h3><p class="t-note">Copies its cell's received ${termTipHtml("charge")} to adjacent weapons · placed free</p></div></div>
+    ${areteBuyButtonHtml(app, "buy-world-column", price)}
+  </article>`;
+}
+
+// The Hone row (issue #426, priority 6): one entry per weapon type, each
+// rank persistently raising the type's attack power for every copy — the
+// type's power owned, never a per-copy purchase. The authored ladder's end
+// lands the engraved word; weapons appear nowhere as purchases.
+function catalogHoneRowHtml(app: App, type: WeaponType): string {
+  const { state } = app;
+  const rank = state.world.hone[type];
+  const price = honeCostOf(state, type);
+  const perRank = BALANCE.world.honeAttackPerRank;
+  const name = WORLD_META[type].name;
+  const ladderLength = BALANCE.world.honeCosts.length;
+  return `<article class="catalog-row">
+    <div><h3 class="t-condensed">${termTipHtml("Hone")} <span class="mono">${rank}/${ladderLength}</span></h3><p class="t-note">+${perRank} attack per rank · every ${termTipHtml(name as CatalogTerm)} · ${termTipHtml("memorized")}</p>${
+      price === null ? "" : `<p class="t-note mono">ATK ${BALANCE.world.attackBase + rank * perRank} → ${BALANCE.world.attackBase + (rank + 1) * perRank}</p>`
+    }</div>
+    ${price === null ? catalogOwnedHtml("honed") : areteBuyButtonHtml(app, "buy-world-hone", price)}
+  </article>`;
 }
 
 function forgeEffect(type: ModuleInstance["type"], tier: number): string {
@@ -4005,7 +4036,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
     <button data-dev="target">→ target</button>
     <button data-dev="nous">+100ν</button>
     <button data-dev="synth">+synth</button>
-    <button data-dev="mutera">mutator era</button>
+    <button data-dev="worldera">World era</button>
     <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>`;
   // The grip (ADR-0050): a pointer-capture drag — the press records the
   // panel's offset inside the stage, the moves carry it clamped within,
@@ -4031,7 +4062,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       if (key === "target") app.devToTarget();
       else if (key === "nous") app.devNous();
       else if (key === "synth") app.devSynth();
-      else if (key === "mutera") app.devMutatorEra();
+      else if (key === "worldera") app.devWorldEra();
       else if (key === "board") app.devToggleBoard();
       else app.devAdvance(Number(key));
     });

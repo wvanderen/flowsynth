@@ -3,6 +3,7 @@ import {
   advanceWorldCharge,
   attackPowerOf,
   columnCost,
+  columnLiftsOf,
   combatBoundaryOf,
   eligibleTargetsOf,
   enemyDefAt,
@@ -901,5 +902,63 @@ describe("shipped tuning defaults are hypothesis knobs — calibration unavailab
     expect(BALANCE.world.attackBase).toBe(4);
     expect(BALANCE.world.storageCap).toBe(30);
     expect(BALANCE.world.columnFirstPrice).toBe(1);
+  });
+});
+
+describe("the lift read (issue #426): one conservation arithmetic for the walk and the UI", () => {
+  it("the walk applies the split against live headroom; the read shows the routing", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(1, 0));
+    generator.reserve = 1000;
+    const host = give(s, "additive", hex(0, 1));
+    s.world.columns.push({ id: "col1", pos: hex(0, 1) });
+    const weapon = grantWeapon(s, hex(1, 0), 0);
+    const snapshot = { chargeStrength: new Map([[host.id, 5]]) } as never;
+    const lift = columnLiftsOf(s, snapshot);
+    expect(lift.byColumn.get("col1")).toBeCloseTo(5, 10);
+    expect(lift.byWeapon.get(weapon.id)).toBeCloseTo(5, 10);
+    // The walk's accepted amount is the read's rate times the span while
+    // storage headroom lasts.
+    advanceWorldCharge(s, snapshot, 4);
+    expect(weapon.store).toBeCloseTo(20, 9);
+  });
+
+  it("the preview's override re-positions one occupant and touches nothing else", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(1, 0));
+    generator.reserve = 1000;
+    const host = give(s, "additive", hex(0, 1));
+    s.world.columns.push({ id: "col1", pos: hex(0, 1) });
+    const fed = grantWeapon(s, hex(1, 0), 0);
+    const far = grantWeapon(s, hex(4, 0), 0);
+    const snapshot = { chargeStrength: new Map([[host.id, 5]]) } as never;
+    const before = columnLiftsOf(s, snapshot);
+    expect(before.byWeapon.get(fed.id)!).toBeCloseTo(5, 10);
+    expect(before.byWeapon.has(far.id)).toBe(false);
+    // Moving the far weapon beside the Column admits it to the split —
+    // half each — while the state itself never moved.
+    const preview = columnLiftsOf(s, snapshot, { id: far.id, pos: hex(1, 0) });
+    expect(preview.byWeapon.get(fed.id)).toBeCloseTo(2.5, 10);
+    expect(preview.byWeapon.get(far.id)).toBeCloseTo(2.5, 10);
+    expect(far.pos).not.toBeNull();
+    // Moving the Column itself re-homes its lift: over the hostless cell it
+    // copies nothing.
+    const moved = columnLiftsOf(s, snapshot, { id: "col1", pos: hex(2, 0) });
+    expect(moved.byColumn.get("col1")).toBeUndefined();
+    expect(moved.byWeapon.size).toBe(0);
+  });
+
+  it("a Column over a hostless cell lifts nothing, and tray occupants read nowhere", () => {
+    const s = fresh();
+    const generator = give(s, "focusKeyed", hex(1, 0));
+    generator.reserve = 1000;
+    s.cells.push(hex(2, 2));
+    s.world.columns.push({ id: "col1", pos: hex(2, 2) });
+    const trayed = grantWeapon(s, null, 0);
+    const snapshot = { chargeStrength: new Map([[generator.id, 5]]) } as never;
+    const lift = columnLiftsOf(s, snapshot);
+    expect(lift.byColumn.size).toBe(0);
+    expect(lift.byWeapon.size).toBe(0);
+    expect(trayed.pos).toBeNull();
   });
 });

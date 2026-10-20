@@ -63,7 +63,7 @@ describe("Forge drafts (#335)", () => {
   });
 
   it("opens on the board layer and switches without consuming either offer", () => {
-    app.ui.mutLayer = "modules";
+    app.ui.boardLayer = "modules";
     app.openModal("forge");
     expect(panel().querySelectorAll("[data-choice]")).toHaveLength(3);
     expect(panel().querySelectorAll("[data-mut-choice]")).toHaveLength(0);

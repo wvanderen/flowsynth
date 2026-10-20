@@ -189,24 +189,4 @@ describe("inventory row merges", () => {
     b.pos = hex(1, 0); app.confirmInventoryMerge();
     expect(app.state.modules).toContain(a); expect(app.state.modules).toContain(b); expect(a.tier).toBe(0);
   });
-  it("filters, inspects and merges mutators without targeting board copies", () => {
-    app.state.catalogEntryOwned = true;
-    app.state.mutators = [
-      { id: "a", family: "power", rarity: "common", pos: null },
-      { id: "b", family: "power", rarity: "common", pos: null },
-      { id: "c", family: "charge", rarity: "common", pos: null },
-      { id: "d", family: "power", rarity: "common", pos: hex(0, 0) },
-    ];
-    app.mutSetLayer("mutators");
-    const tray = document.getElementById("mutator-tray")!;
-    const select = tray.querySelector<HTMLSelectElement>("[data-inventory-filter]")!;
-    select.value = "power"; select.dispatchEvent(new Event("change"));
-    expect(tray.querySelectorAll("[data-mut-tray]")).toHaveLength(2);
-    click('[data-mut-tray="a"]', tray); expect(app.ui.mutArmedTray).toBeNull();
-    click("[data-inventory-back]", tray); click('[data-inventory-merge="a"]', tray);
-    click("[data-inventory-merge-confirm]", tray);
-    expect(app.state.mutators.find((m) => m.id === "a")!.rarity).toBe("uncommon");
-    expect(app.state.mutators.some((m) => m.id === "b")).toBe(false);
-    expect(app.state.mutators.some((m) => m.id === "d")).toBe(true);
   });
-});

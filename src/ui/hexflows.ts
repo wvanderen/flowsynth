@@ -29,15 +29,13 @@ import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
 // the static wave.
 import { BALANCE, CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
 import { baseTermOf, productionClockFactorOf, temporalTimingOf, usesChordConversion } from "../engine/profiles";
-import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, modulePower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import { buildFactorsFor } from "../engine/builds";
 import { activeHabit } from "../engine/habits";
 import { CHORD_HUES } from "./chordlayer";
 import { formatNumber } from "./format";
 import { boosterUpliftOf, relayStrengthOf, spotlightInactiveVerdict } from "./face";
-import { FAMILY_WORD, mutatorEffectText, mutatorInertVerdict } from "./mutators";
-import { RARITY_LABEL } from "./meta";
 
 /* ── The wave shapes ──────────────────────────────────
    Three distinct shapes — the smooth sine toward the layer below, the
@@ -190,40 +188,6 @@ function flowTipHtml(kind: "mutator" | "charge" | "chord", position: "between" |
     <button class="inst-tip-trigger hex-flow-trigger flow-${state.active ? "active" : "inert"}" id="detail-flow-${kind}" aria-label="${state.label}${state.active ? "" : " — none now"} — open the breakdown" aria-describedby="${state.bodyId}" aria-expanded="false">${waveSvg(dir, state.color)}</button>
     ${breakdownHtml(state.rows, state.bodyId)}
   </span>`;
-}
-
-/* ── The cross-layer mutator connection ───────────────
-   Present only while a mutator occupies the slot — a locked layer, a
-   slotless cell, or a vacant slot draws nothing. Solid while the engine's
-   own verdict calls the mutator live, quiet and dashed when inert (no
-   host, or a chordless host under resonance), always pointing at the
-   layer the effect lands on. */
-
-export function mutatorFlowHtml(state: GameState, pos: { q: number; r: number }, module: ModuleInstance | undefined, snapshot: RateSnapshot, flow: boolean): string {
-  const item = mutatorAt(state, pos);
-  if (!item) return "";
-  const inert = module ? mutatorInertVerdict(state, pos, item, snapshot) : "inert · no host";
-  const magnitude = mutatorMagnitude(item.family, item.rarity);
-  const rows: string[] = [row(`${FAMILY_WORD[item.family]} mutator · ${RARITY_LABEL[item.rarity]}`, mutatorEffectText(item.family, item.rarity).split(" ")[0]!)];
-  if (inert) {
-    rows.push(row(inert, "", "inert"));
-  } else if (module) {
-    if (item.family === "power") {
-      rows.push(row("Folded into power", `${formatNumber(modulePower(module))} → ${formatNumber(hostPower(state, module))}`));
-    } else if (item.family === "resonance") {
-      rows.push(row("Folded into chord factor", `×${formatNumber(1 + magnitude)}`));
-    } else {
-      rows.push(row("Folded into received charge", `×${formatNumber(1 + magnitude)}`));
-    }
-  }
-  if (module) rows.push(...productionRows(state, module, snapshot, "mutator"), outcomeRow(state, module, snapshot, flow));
-  return flowTipHtml("mutator", "between", {
-    active: !inert,
-    label: `${FAMILY_WORD[item.family]} mutator effect${inert ? ` — ${inert}` : ""}`,
-    color: "var(--arete)",
-    rows,
-    bodyId: "detail-flow-mutator-tip",
-  });
 }
 
 /* ── The module's incoming connections ────────────────

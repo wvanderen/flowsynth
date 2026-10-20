@@ -11,13 +11,13 @@ import {
   buyRowUnlock,
   buyShelfModule,
   buySpecialDraft,
+  buyChargeColumn,
+  buyHoneRank,
   chooseMutatorRoll,
   chooseRoll,
   combine,
   combineInventory,
   scrapInventoryBatch,
-  combineMutators,
-  combineMutatorsPreview,
   dismissArcCard as dismissArcCardAction,
   dismissSummary as dismissSessionSummary,
   endBreather as endBreatherAction,
@@ -26,29 +26,33 @@ import {
   mergeAll,
   pauseSession,
   placeModule,
-  placeMutator,
+  placeWorldOccupant,
   prestige,
   recordSummaryReflection,
   resumeSession,
   returnModule,
-  returnMutator,
+  retrieveWorldOccupant,
   scrapModule,
   setBendShift,
   setBoosterTarget,
+  setWeaponTargetPriority,
   skipRoll,
   startBreather as startBreatherAction,
   startSession,
-  unlockMutatorSlot,
   upgradeAll,
   upgradeModuleLevels,
   useSpecialDraft,
   type ActionResult,
   type BulkPurchase,
 } from "../engine/actions";
-import { ARETE_HORIZON, bankableClaimOf } from "../engine/accumulator";
+import { ARETE_HORIZON, bankableClaimOf, frontierEntitlement } from "../engine/accumulator";
+import { columnCost, worldOccupantAt } from "../engine/world";
+import type { WeaponType } from "../engine/types";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
-import { displayedRates, flowLive, mutatorAt, deployedAt } from "../engine/economy";
+import { displayedRates, flowLive, deployedAt } from "../engine/economy";
+import { worldEntered, refreshWorldPreview, worldRevealPreview, worldBoardLive } from "./world";
+import { WORLD_ENEMIES } from "../engine/constants";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
@@ -58,7 +62,8 @@ import { wireTooltips } from "./instrument";
 import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
 import { applyBreatherGap, applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
-import { createInitialState, createModule } from "../engine/state";
+import { createInitialState, createModule, createWeapon, createWorldColumn } from "../engine/state";
+import { BALANCE } from "../engine/constants";
 import type { FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
 import { achievementName, syncAchievements } from "../engine/achievements";
@@ -77,11 +82,11 @@ import { allocateClassNode, applyClassPreset, classDefOf, respecClassTree, selec
 import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { Category, ClassId, GameState, GoalColor, Hex, ModuleInstance, MutatorFamily, MutatorInstance, Rarity, ShelfType, SpecialDraftKind } from "../engine/types";
+import type { Category, ClassId, GameState, GoalColor, Hex, ModuleInstance, ShelfType, SpecialDraftKind } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
-import { render } from "./render";
-import { FAMILY_WORD, mutatorBoardLive, refreshMutPreview } from "./mutators";
-import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME, tierWord } from "./meta";
+import { render, updateChordReadout } from "./render";
+import { FAMILY_WORD } from "./mutators";
+import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME, tierWord, WORLD_META, COLUMN_WORD } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 import { suppressNextClick } from "./click";
 import { createInventoryState, type InventoryState } from "./inventory";
@@ -103,12 +108,12 @@ export type ModalKind =
   | "import"
   | "reset"
   | "prestige"
+  | "grant"
   | "honesty"
   | "summary"
   | "rate"
   | "inventory"
   | "combine"
-  | "mutcombine"
   | "notes"
   | null;
 
@@ -123,24 +128,16 @@ function focusDetailFace(face: DetailFace): void {
 }
 
 // The chord-hover ask (§6): a seam hovered names its one chord; a module
-// hovered names every chord it sings in; a Mutator slot hovered names its
-// mutator's full declaration (issue #199). The reserved readout answers.
+// hovered names every chord it sings in; a World plate hovered names its
+// face's full declaration (issue #426). The reserved readout answers.
 export type ChordHover =
   | { kind: "chord"; key: string }
   | { kind: "module"; moduleId: string }
-  | { kind: "mutator"; pos: Hex };
+  | { kind: "world"; pos: Hex };
 
 // The combine offer's pair (issue #152): the module the player dropped and
 // the matching twin that received the drop.
 export interface CombineOffer {
-  dragId: string;
-  targetId: string;
-}
-
-// The mutator combine offer's pair (issue #199): the same gesture over the
-// Mutator Grid — the mutator carried by the drop and the matching twin that
-// received it. Mutators carry no levels, so the review's terms are shorter.
-export interface MutCombineOffer {
   dragId: string;
   targetId: string;
 }
@@ -166,7 +163,7 @@ export interface DevBoardState {
 // ceiling unlocks.
 export const DEV_BOARD_CAPACITIES = [1, 2, 3, 4, 5] as const;
 
-export type DetailFace = "modules" | "mutators";
+export type DetailFace = "modules" | "world";
 
 // The Focus sheet's on-demand forms (ADR-0050, issue #275): add and log on
 // the HABIT face, create on the GOALS face stand as action buttons until
@@ -263,41 +260,35 @@ export interface UiState {
   bulkCount: 1 | 5 | 10 | "max";
   bulkModuleId: string | null;
   faceMax: boolean;
-  // The Mutator Grid's layer tab (issue #199): which grid the board shows —
-  // the modules (production) or the Mutators (the second layer). Every mode
-  // reads it (issue #387): the legend switches it through flow too, the
-  // session's board read-only. Flow entry still lands the board at rest on
-  // Modules. Light furniture — never saved.
-  mutLayer: "modules" | "mutators";
+  // The board's layer (issue #426, the Mutator Grid's tab's successor):
+  // which grid the board shows — the modules (production) or the World
+  // (the second face). Every mode reads it: the legend switches it through
+  // flow too, the session's board read-only. Flow entry still lands the
+  // board at rest on Modules. Light furniture — never saved.
+  boardLayer: "modules" | "world";
   // The Hex detail (issue #295): the owned cell whose cross-section stands
   // in the grid's place, and the face emphasized inside it. Null rests the
   // grid. Light furniture — never saved; cleared with the transient modes.
   detail: HexDetail | null;
-  // The Mutator tray item armed for click-then-slot placement (issue #199,
-  // mirroring ui.placing). Light furniture — never saved.
-  mutArmedTray: string | null;
-  // The slot-unlock arm (issue #199): armed from the Mutator tray's unlock
-  // button, resolved by clicking an eligible cell — the entry's first slot
-  // free on any owned cell, later ones adjacent to the patch, priced. Light
-  // furniture — never saved.
-  mutUnlockArmed: boolean;
+  // The World tray item armed for click-then-cell placement (issue #426,
+  // mirroring ui.placing), with the kind the pill names. Light furniture —
+  // never saved.
+  worldArmed: string | null;
+  worldArmedKind: "weapon" | "column" | null;
   // The entry sequence's pending automation (issue #274): set when the
   // entry purchase lands, spent when the entry roll's choice is taken or
-  // the Forge modal closes. While it stands, the first slot's landing
-  // auto-opens the roll choice. The choice itself mints to the tray like
-  // any pick — the placement auto-arm is retired (2026-10-18 feedback).
-  // Light furniture — never saved: a reload mid-sequence lands on the
-  // standard surfaces, and nothing replays.
+  // the Forge modal closes. The choice itself mints to the roster like
+  // any pick. Light furniture — never saved: a reload mid-sequence lands
+  // on the standard surfaces, and nothing replays.
   entryRollPending: boolean;
-  // The mutator combine offer (issue #199): the pair a matching drop put up
-  // for review. Cancel clears it and both copies stay untouched. Light
-  // furniture — never saved.
-  mutCombineOffer: MutCombineOffer | null;
-  // The mutator a pointer drag is carrying (issue #199) and the slot its
-  // ghost hovers — the live drop preview over the second layer. Ephemeral:
-  // lives exactly as long as one drag gesture.
-  mutCarrying: string | null;
-  mutDropHover: { mutatorId: string; pos: Hex } | null;
+  // The World tray's inspected occupant (issue #426): the inspection
+  // subview one at a time. Light furniture — never saved.
+  worldTray: { inspect: string | null };
+  // The World occupant a pointer drag is carrying (issue #426) and the
+  // cell its ghost hovers — the live drop preview over the second face.
+  // Ephemeral: lives exactly as long as one drag gesture.
+  worldCarrying: string | null;
+  worldDropHover: { id: string; pos: Hex | null } | null;
   // The chord sheet's selected class (issue #278): the name on the stage.
   // Light furniture — never saved; a null falls back to the first
   // discovered class when the sheet renders.
@@ -395,10 +386,10 @@ export class App {
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups.clear();
     this.dragging = null;
-    this.cancelMutDrag = null;
+    this.cancelWorldDrag = null;
     this.ui.dropHover = null;
-    this.ui.mutCarrying = null;
-    this.ui.mutDropHover = null;
+    this.ui.worldCarrying = null;
+    this.ui.worldDropHover = null;
     this.devBoardCancelStress();
     const audio = this.ownedAudio;
     this.audio = null;
@@ -445,18 +436,18 @@ export class App {
     bulkCount: 1,
     bulkModuleId: null,
     faceMax: false,
-    mutLayer: "modules",
+    boardLayer: "modules",
     inventory: createInventoryState(),
     detail: null,
-    mutArmedTray: null,
-    mutUnlockArmed: false,
+    worldArmed: null,
+    worldArmedKind: null,
     entryRollPending: false,
-    mutCombineOffer: null,
-    mutCarrying: null,
-    mutDropHover: null,
+    worldTray: { inspect: null },
+    worldCarrying: null,
+    worldDropHover: null,
     chordStage: null,
   };
-  cancelMutDrag: (() => void) | null = null;
+  cancelWorldDrag: (() => void) | null = null;
   lastWall: number | null = null;
   // The dual-clock drift baseline at lastWall (§10): a positive step past
   // the noise floor sizes slept gaps; a negative one past it credits the
@@ -729,17 +720,16 @@ export class App {
     // under it re-enters at rest — grid showing, layer reset, the detail's
     // inventory closed with it (issue #296).
     this.ui.detail = null;
-    // The Mutator Grid's armed gestures unwind with the rest (issue #199),
-    // and the board re-enters flow at rest on Modules — the legend stands
-    // by to switch again (issue #387), but a session never inherits
-    // upgrade's arrangement. The entry sequence's automation is
-    // armed furniture by the same rule (issue #274): a session break, an
-    // import, or an adopted save lands on the standard surfaces — the
-    // banked roll waits in the Forge modal, the free slot via Add — and
-    // nothing replays.
-    this.ui.mutLayer = "modules";
+    // The armed World gestures unwind with the rest (issue #426), and the
+    // board re-enters flow at rest on Modules — the legend stands by to
+    // switch again, but a session never inherits upgrade's arrangement.
+    // The entry sequence's automation is armed furniture by the same rule
+    // (issue #274): a session break, an import, or an adopted save lands
+    // on the standard surfaces — the banked roll waits in the Forge modal —
+    // and nothing replays.
+    this.ui.boardLayer = "modules";
     this.ui.entryRollPending = false;
-    this.mutDisarm();
+    this.worldDisarm();
   }
 
   importText(text: string): boolean {
@@ -801,19 +791,24 @@ export class App {
   // The confirm's answer: banks the live claim and begins the next era —
   // levels to base, nous to a fresh grant, charge and the era bar reset;
   // the board, tray, rolls, achievements, life record, and Arete persist.
+  // The first World-eligible claim's starter weapon (issue #426, priority
+  // 5) presents at the moment it lands, once — the grant modal opens on
+  // the same landing that minted it, and the granted flag keeps every
+  // later claim silent.
   confirmPrestige(): void {
     const claim = bankableClaimOf(this.state);
+    const grantsStarter = !this.state.world.starterWeaponGranted && frontierEntitlement(this.state.eraEarned) >= columnCost(0);
     const result = prestige(this.state);
     if (!result.ok) {
       this.say(result.reason ?? "The door is not open.");
       this.render();
       return;
     }
-    this.ui.modal = null;
+    this.ui.modal = grantsStarter ? "grant" : null;
     this.announceUnlocks(result.unlocked, `Banked ${claim} Arete — the next era begins.`);
     this.save();
     this.render();
-    this.restoreModalInvoker();
+    if (!grantsStarter) this.restoreModalInvoker();
   }
 
   say(text: string): void {
@@ -1003,17 +998,17 @@ export class App {
         this.cancelCellPurchase();
         return;
       }
-      // The Mutator layer's Esc walk (issue #199): gesture first.
-      if (this.cancelMutDrag || this.ui.mutUnlockArmed || this.ui.mutArmedTray !== null) {
-        this.mutCancelGestures();
+      // The World layer's Esc walk (issue #426): gesture first.
+      if (this.cancelWorldDrag || this.ui.worldArmed !== null) {
+        this.worldCancelGestures();
         return;
       }
       if (this.ui.detail) {
         this.closeDetail();
         return;
       }
-      if (this.ui.mutLayer === "mutators") {
-        this.mutSetLayer("modules");
+      if (this.ui.boardLayer === "world") {
+        this.setBoardLayer("modules");
         return;
       }
       if (this.ui.app) {
@@ -1389,12 +1384,10 @@ export class App {
     if (result.ok) {
       this.ui.modal = null;
       this.ui.detail = null;
-      this.ui.mutLayer = "mutators";
-      this.mutDisarm();
+      this.worldDisarm();
       this.ui.entryRollPending = true;
-      this.ui.mutUnlockArmed = true;
     }
-    this.act(result, "Mutator tree entered — pick a cell for the free Mutator slot.");
+    this.act(result, "Mutator tree entered.");
     // The purchase's dismissal (issue #346): the sheet closed, focus
     // returns to the walk's opener. A refusal leaves the sheet standing.
     if (result.ok) this.restoreModalInvoker();
@@ -1428,31 +1421,25 @@ export class App {
     this.act(buyMergeCapIncrease(this.state), `Merge cap raised — copies now combine to ${tierWord(unlockedMergeCap(this.state))}.`);
   }
 
-  // ── The Mutator layer's gestures (issue #199) ───────────────────────────
-  // The tabbed second grid over the board: every landing routes through the
-  // engine actions from #198 — unlockMutatorSlot, placeMutator,
-  // returnMutator, combineMutators, chooseMutatorRoll — so the UI can never
-  // drift from the contracts those tests pin. Upgrade-mode-only: each
-  // engine gate owns its refusal, and the renderers simply stop drawing.
+  // ── The World layer's gestures (issue #426) ─────────────────────────────
+  // The second face over the board: every landing routes through the engine
+  // actions from #425 — placeWorldOccupant, retrieveWorldOccupant,
+  // setWeaponTargetPriority — so the UI can never drift from the contracts
+  // those tests pin. Upgrade-mode-only: each engine gate owns its refusal,
+  // and the renderers simply stop drawing.
 
-  // The tab switch — the one Modules / Mutators switch's landing (issues
-  // #272, #273). Two rules ride it:
-  // · Pre-entry the Mutators face is locked-but-visible: requesting it never
-  //   flips the mode — it opens the Catalog on the ◇ entry screen instead.
-  // · A real mode change cancels the armed actions with a toast (the cell
-  //   arm, a tray placement, the slot-unlock arm — #246's contract); the
-  //   Esc walk stays Esc.
-  mutSetLayer(layer: "modules" | "mutators"): void {
-    if (this.ui.mutLayer === layer) return;
-    if (layer === "mutators" && !this.state.catalogEntryOwned) {
-      // The locked walk is a spending surface (issue #387): flow's legend
-      // stays navigable, but the Catalog never opens mid-session — the
-      // refusal is the click's whole answer.
-      if (this.state.mode !== "upgrade") {
-        this.say("Arete is spent between sessions.");
-        return;
-      }
-      this.openMutatorEntry();
+  // The layer switch — the one World / Modules switch's landing. Two rules
+  // ride it:
+  // · Pre-reveal the World face is locked-but-visible: requesting it never
+  //   flips the mode — it previews the reveal's threshold in figures, in
+  //   flow as in upgrade (the World arrives, it is not bought).
+  // · A real layer change cancels the armed actions with a toast (the cell
+  //   arm, a module placement, a World placement arm — #246's contract);
+  //   the Esc walk stays Esc.
+  setBoardLayer(layer: "modules" | "world"): void {
+    if (this.ui.boardLayer === layer) return;
+    if (layer === "world" && !worldEntered(this.state)) {
+      this.say(`The World layer reveals at ${worldRevealPreview()}.`);
       return;
     }
     const cancelled: string[] = [];
@@ -1464,10 +1451,9 @@ export class App {
       this.ui.placing = null;
       cancelled.push("placement");
     }
-    if (this.ui.mutUnlockArmed) cancelled.push("slot unlock");
-    if (this.ui.mutArmedTray !== null) cancelled.push("mutator placement");
-    this.mutDisarm();
-    this.ui.mutLayer = layer;
+    if (this.ui.worldArmed !== null) cancelled.push("World placement");
+    this.worldDisarm();
+    this.ui.boardLayer = layer;
     if (cancelled.length > 0) {
       const message = `Mode changed — ${cancelled.join(" and ")} cancelled.`;
       this.say(message);
@@ -1482,139 +1468,129 @@ export class App {
     this.render();
   }
 
-  // The transient mutator furniture's one teardown: armed gestures and the
-  // combine review's leftover offer (the modal itself closes through
-  // closeModal). clearTransientUi reads this shape too.
-  private mutDisarm(): void {
-    this.cancelMutDrag?.();
-    this.ui.mutArmedTray = null;
-    this.ui.mutUnlockArmed = false;
-    this.ui.mutCarrying = null;
-    this.ui.mutDropHover = null;
+  // The transient World furniture's one teardown. clearTransientUi reads
+  // this shape too.
+  private worldDisarm(): void {
+    this.cancelWorldDrag?.();
+    this.ui.worldArmed = null;
+    this.ui.worldArmedKind = null;
+    this.ui.worldCarrying = null;
+    this.ui.worldDropHover = null;
   }
 
-  mutCancelGestures(): void {
-    this.ui.entryRollPending = false;
-    this.mutDisarm();
-    this.say("Mutator gesture cancelled.");
+  worldCancelGestures(): void {
+    this.worldDisarm();
+    this.say("World gesture cancelled.");
     this.render();
   }
 
-  // The Mutator tray's click-then-slot arm (issue #199): the tap-shaped
-  // placement — tap a tray tile, tap a slot.
-  mutArmTray(id: string): void {
-    this.ui.mutUnlockArmed = false;
-    this.ui.mutArmedTray = this.ui.mutArmedTray === id ? null : id;
-    if (this.ui.mutArmedTray) this.say("Choose a Mutator slot.");
-    this.render();
-  }
-
-  // The slot unlock's arm (issue #199, re-docked by the #272 review): Add
-  // arms it in mutator mode — one pill carries the price and eligible
-  // cells pulse; the click resolution lands in mutPickSlot. The arm never
-  // walks the player to the Mutators face; the mode directs it.
-  mutArmUnlock(): void {
+  // The World tray's click-then-cell arm (issue #426): the tap-shaped
+  // placement — tap a tray tile, tap an open face.
+  worldArmTray(id: string): void {
     if (this.state.mode !== "upgrade") {
-      this.say("Arete is spent between sessions.");
+      this.say("The board is locked between sessions.");
       return;
     }
-    if (!this.state.catalogEntryOwned) {
-      this.say("Enter the Mutator tree first.");
-      return;
-    }
-    this.mutDisarm();
-    this.ui.mutUnlockArmed = true;
+    const kind = this.state.world.columns.some((c) => c.id === id)
+      ? "column"
+      : this.state.world.weapons.some((w) => w.id === id)
+        ? "weapon"
+        : null;
+    if (!kind) return;
+    this.worldDisarm();
+    this.ui.worldArmed = this.ui.worldArmed === id ? null : id;
+    this.ui.worldArmedKind = this.ui.worldArmed ? kind : null;
+    if (this.ui.worldArmed) this.say("Choose an open World cell.");
     this.render();
   }
 
-  // The slot click's one resolution (issue #199, detail by #295): the
-  // armed unlock buys, the armed tray item places (an occupied slot swaps,
-  // occupant to the tray) — and an idle click opens the cell's Hex detail
-  // on the Mutators face, the declaration having moved there. In flow the
-  // idle click is the only resolution (issue #387): the detail opens
-  // read-only, and no arm can stand to buy or place through it.
-  mutPickSlot(pos: Hex): void {
+  // The cell click's one resolution (issue #426, detail by #295): the
+  // armed tray item places — and an idle click opens the cell's Hex detail
+  // on the World face, the declaration having moved there. In flow the
+  // idle click is the only resolution: the detail opens read-only, and no
+  // arm can stand to place through it.
+  worldPickCell(pos: Hex): void {
     const { state, ui } = this;
-    if (!state.catalogEntryOwned) return;
+    if (!worldEntered(state)) return;
     if (state.mode !== "upgrade") {
-      this.openDetail(pos, "mutators");
+      this.openDetail(pos, "world");
       return;
     }
-    const slotted = this.state.mutatorSlots.some((s) => sameHex(s, pos));
-    if (!slotted && !ui.mutUnlockArmed) {
-      this.say("No Mutator slot there.");
+    if (ui.worldArmed !== null) {
+      const id = ui.worldArmed;
+      ui.worldArmed = null;
+      ui.worldArmedKind = null;
+      this.worldPlace(id, pos);
       return;
     }
-    if (ui.mutUnlockArmed) {
-      this.mutUnlockAt(pos);
-      return;
-    }
-    if (ui.mutArmedTray !== null) {
-      const id = ui.mutArmedTray;
-      ui.mutArmedTray = null;
-      this.mutPlace(id, pos);
-      return;
-    }
-    this.openDetail(pos, "mutators");
+    this.openDetail(pos, "world");
   }
 
-  // Right-click retrieve (issue #199): the same chord-breaking gesture as
-  // the board's, over the second layer.
-  mutRightClickSlot(pos: Hex): void {
+  // Right-click retrieve (issue #426): the same chord-breaking gesture as
+  // the board's, over the second face.
+  worldRightClickCell(pos: Hex): void {
     if (this.state.mode !== "upgrade") return;
-    const occupant = mutatorAt(this.state, pos);
-    if (occupant) this.mutRetrieve(occupant.id);
+    const occupant = worldOccupantAt(this.state, pos);
+    if (occupant) this.worldRetrieve(occupant.id);
   }
 
-  // The placement landing shared by the click path and the drag release:
-  // an occupied slot swaps, the occupant waiting in the Mutator tray (the
-  // engine's free-swap rule, mirroring the board's).
-  mutPlace(id: string, pos: Hex): void {
-    const swap = mutatorAt(this.state, pos) !== undefined;
+  // The placement landing shared by the click path and the drag release.
+  // Occupied cells refuse (the engine owns the rule); relocation is free.
+  worldPlace(id: string, pos: Hex): void {
+    this.worldDisarm();
     this.act(
-      placeMutator(this.state, id, pos),
-      swap ? `Mutator placed at ${cellNoteOf(pos)} — the previous one waits in the Mutator tray.` : `Mutator placed at ${cellNoteOf(pos)}.`,
+      placeWorldOccupant(this.state, id, pos),
+      `${this.worldOccupantName(id)} placed at ${cellNoteOf(pos)}.`,
     );
   }
 
-  mutRetrieve(id: string): void {
-    const family = this.state.mutators.find((m) => m.id === id)?.family;
-    this.act(returnMutator(this.state, id), `${family ? FAMILY_WORD[family] : "Mutator"} retrieved to the Mutator tray.`);
+  worldRetrieve(id: string): void {
+    this.act(retrieveWorldOccupant(this.state, id), `${this.worldOccupantName(id)} retrieved to the World tray.`);
   }
 
-  // The mutator combine offer (issue #199): a matching twin under the drop
-  // opens the review before either copy is consumed. Confirm performs the
-  // combine; every cancel path lands in closeModal, which drops the offer
-  // and leaves both copies untouched.
-  mutOfferCombine(dragId: string, targetId: string): void {
-    this.captureModalInvoker();
-    this.ui.mutCombineOffer = { dragId, targetId };
-    this.ui.modal = "mutcombine";
-    this.render();
+  private worldOccupantName(id: string): string {
+    const column = this.state.world.columns.find((c) => c.id === id);
+    if (column) return COLUMN_WORD;
+    const weapon = this.state.world.weapons.find((w) => w.id === id);
+    return weapon ? WORLD_META[weapon.type].name : "Occupant";
   }
 
-  confirmMutCombine(): void {
-    const offer = this.ui.mutCombineOffer;
-    this.ui.mutCombineOffer = null;
-    this.ui.modal = null;
-    if (!offer) {
-      this.render();
-      this.restoreModalInvoker();
-      return;
-    }
-    const preview = combineMutatorsPreview(this.state, offer.dragId, offer.targetId);
-    const result = combineMutators(this.state, offer.dragId, offer.targetId);
-    if (!result.ok) {
-      this.say(result.reason ?? "Those mutators cannot be combined.");
-      this.render();
-      this.restoreModalInvoker();
-      return;
-    }
-    const family = this.state.mutators.find((m) => m.id === preview?.keepId)?.family;
-    this.say(`${family ? FAMILY_WORD[family] : "Mutator"} mutator raised to ${preview?.nextRarity ?? "the next rarity"}.`);
-    this.save();
-    this.render();
-    this.restoreModalInvoker();
+  // The weapon's between-session target priority (issue #426): the rail's
+  // and tray's controls land here, the engine deduplicating and dropping
+  // unknown keys. The move walks the effective order — stored preference
+  // first, authored roster behind.
+  setWeaponPriority(id: string, keys: string[]): void {
+    this.act(setWeaponTargetPriority(this.state, id, keys), "Target priority set.");
+  }
+
+  worldMovePriority(id: string, key: string, dir: number): void {
+    const weapon = this.state.world.weapons.find((w) => w.id === id);
+    if (!weapon) return;
+    const order = [...weapon.targetPriority, ...WORLD_ENEMIES.map((def) => def.key)].filter((entry, index, all) => all.indexOf(entry) === index);
+    const from = order.indexOf(key);
+    const to = Math.max(0, Math.min(order.length - 1, from + dir));
+    if (from === to) return;
+    order.splice(to, 0, ...order.splice(from, 1));
+    this.setWeaponPriority(id, order);
+  }
+
+  // The Arete Catalog's World purchases (issue #426): the Column ladder and
+  // the Hone ranks, each through the shared act() shape.
+  buyChargeColumnAction(): void {
+    this.act(buyChargeColumn(this.state), "Charge Column purchased — it waits in the World tray.");
+  }
+
+  buyHoneRankAction(type: WeaponType): void {
+    this.act(buyHoneRank(this.state, type), `${WORLD_META[type].name} attack power honed.`);
+  }
+
+  // The live drop preview over the second face (issue #426): hover state
+  // changes refresh the land registers in place — never a render.
+  setWorldDropHover(id: string | null, pos: Hex | null): void {
+    if (this.released) return;
+    this.ui.worldDropHover = id && pos ? { id, pos } : null;
+    refreshWorldPreview(this);
+    updateChordReadout(this);
   }
 
   // The mutator roll's choice (issue #199): the chosen candidate mints into
@@ -1637,7 +1613,7 @@ export class App {
     }
     this.ui.entryRollPending = false;
     const more = this.state.bankedMutatorRolls.length > 0 ? ` ${this.state.bankedMutatorRolls.length} more ${this.state.bankedMutatorRolls.length === 1 ? "choice" : "choices"} wait in the Mutator Forge.` : "";
-    this.say(`${FAMILY_WORD[candidate.family]} mutator minted to the Mutator tray — the Mutators layer holds it.${more}`);
+    this.say(`${FAMILY_WORD[candidate.family]} mutator minted to the roster.${more}`);
     this.forgeAfterConsume();
     this.save();
     this.render();
@@ -1646,18 +1622,11 @@ export class App {
     if (this.ui.modal === null) this.restoreModalInvoker();
   }
 
-  // The live drop preview over the second layer (issue #199): hover state
-  // changes refresh the land registers in place — never a render.
-  setMutDropHover(mutatorId: string | null, pos: Hex | null): void {
-    if (this.released) return;
-    this.ui.mutDropHover = mutatorId && pos ? { mutatorId, pos } : null;
-    refreshMutPreview(this);
-  }
-
   // Cell purchase (ADR-0013): armed from the toolbar's cell icon (or the
   // catalog row), resolved by clicking a frontier hex. The buy only lands
   // when a frontier cell is clicked; the icon toggles, Esc and right-click
-  // cancel.
+  // cancel. On the World face the Add walks to Modules first — the
+  // purchase's pulsing frontier lives there.
   armCellPurchase(): void {
     if (this.state.mode !== "upgrade") {
       this.say("Purchases happen between sessions.");
@@ -1820,12 +1789,7 @@ export class App {
   confirmInventoryMerge(): void {
     const offer = this.ui.inventory.merge;
     if (!offer?.partner || this.ui.inventory.scrapMode) return;
-    let result: ActionResult;
-    if (offer.layer === "modules") result = combineInventory(this.state, offer.id, offer.partner);
-    else {
-      const bothStored = [offer.id, offer.partner].every((id) => this.state.mutators.some((m) => m.id === id && m.pos === null));
-      result = bothStored ? combineMutators(this.state, offer.partner, offer.id) : { ok: false, reason: "Choose two matching inventory copies." };
-    }
+    const result = combineInventory(this.state, offer.id, offer.partner);
     if (result.ok) this.ui.inventory.merge = null;
     this.reportCombine(result);
   }
@@ -1912,21 +1876,21 @@ export class App {
 
   // ── The Hex detail (issue #295) ──────────────────────────────────────────
   // The module bloom's successor: an owned cell's full-stack cross-section,
-  // standing where the grid stood — Mutators above Modules in a fixed
+  // standing where the grid stood — the World above Modules in a fixed
   // stack, both visible, the vertical legend synchronized beside them.
   // The grid's placement/drag gestures keep the grid; the detail's own
   // editing surface is read-only during flow.
 
   // The one opener: any owned cell's idle click lands here, whichever
   // layer stood — the armed gestures resolve before this is ever reached
-  // (pickCell and mutPickSlot own their branches). The face defaults to
-  // the layer the click arrived on — never a locked layer (pre-entry the
-  // Mutators face cannot be emphasized, in the detail or anywhere); in
+  // (pickCell and worldPickCell own their branches). The face defaults to
+  // the layer the click arrived on — never a locked layer (pre-reveal the
+  // World face cannot be emphasized, in the detail or anywhere); in
   // flow the cross-section opens read-only.
   openDetail(pos: Hex, face: DetailFace = "modules"): void {
     const owned = this.state.cells.some((cell) => sameHex(cell, pos));
     if (!owned) return;
-    if (face === "mutators" && !this.state.catalogEntryOwned) face = "modules";
+    if (face === "world" && !worldEntered(this.state)) face = "modules";
     this.ui.detail = { pos: { q: pos.q, r: pos.r }, face };
     this.ui.chordHover = null;
     this.render();
@@ -1951,18 +1915,18 @@ export class App {
 
   // A face selection inside the detail (issue #295): emphasis moves, the
   // section's controls take focus, and the vertical legend synchronizes —
-  // the stack order never changes. A layer that has not been unlocked is
-  // never selectable: pre-entry the detail stays on Modules, whatever
+  // the stack order never changes. A layer that has not arrived is
+  // never selectable: pre-reveal the detail stays on Modules, whatever
   // clicks the locked face or its legend symbol. The grid's layer follows
-  // the selection in every mode (issue #387 — flow included, its sync as
-  // read-only as the switch itself), so the return lands on the face the
-  // player last read. The shared inventory follows the selected layer,
-  // retaining each layer's browsing choices.
+  // the selection in every mode (flow included, its sync as read-only as
+  // the switch itself), so the return lands on the face the player last
+  // read. The shared tray follows the selected layer, retaining each
+  // layer's browsing choices.
   detailFace(face: DetailFace): void {
     if (!this.ui.detail || this.ui.detail.face === face) return;
-    if (face === "mutators" && !this.state.catalogEntryOwned) return;
+    if (face === "world" && !worldEntered(this.state)) return;
     this.ui.detail = { ...this.ui.detail, face };
-    if (this.state.catalogEntryOwned) this.ui.mutLayer = face;
+    if (worldEntered(this.state)) this.ui.boardLayer = face;
     this.render();
     // The emphasis lands with the rebuild; the face's chassis takes focus
     // so the keyboard follows the selection.
@@ -1994,50 +1958,16 @@ export class App {
     }
   }
 
-  // The Mutators tray's landing (issue #296): the chosen mutator places
-  // into the detail's slot — an occupied slot swaps, the previous mutator
-  // to the Mutator tray, and matching twins never combine implicitly.
-  detailPlaceMutator(id: string): void {
+  // The World tray's landing (issue #426): the chosen occupant places into
+  // the detail's cell — occupied cells refuse (the engine owns the rule),
+  // and retrieval uses the shared gestures.
+  detailPlaceWorld(id: string): void {
     const detail = this.ui.detail;
     if (!detail || this.state.mode !== "upgrade") return;
-    if (!this.state.mutators.some((m) => m.id === id && m.pos === null)) return;
-    const swap = mutatorAt(this.state, detail.pos) !== undefined;
-    if (
-      this.act(
-        placeMutator(this.state, id, detail.pos),
-        swap ? `Mutator placed at ${cellNoteOf(detail.pos)} — the previous one waits in the Mutator tray.` : `Mutator placed at ${cellNoteOf(detail.pos)}.`,
-      )
-    ) {
+    if (!this.state.world.weapons.some((w) => w.id === id && w.pos === null) && !this.state.world.columns.some((c) => c.id === id && c.pos === null)) return;
+    if (this.act(placeWorldOccupant(this.state, id, detail.pos), `${this.worldOccupantName(id)} placed at ${cellNoteOf(detail.pos)}.`)) {
       focusDetailFace(this.ui.detail!.face);
     }
-  }
-
-  // The detail's direct slot purchase (issue #295): the price rides the
-  // button; the engine owns eligibility and its refusal wording.
-  mutUnlockAt(pos: Hex): void {
-    if (this.state.mode !== "upgrade") {
-      this.say("Arete is spent between sessions.");
-      return;
-    }
-    const first = this.state.mutatorSlots.length === 0;
-    const result = unlockMutatorSlot(this.state, pos);
-    if (!result.ok) {
-      this.say(result.reason ?? "That cell cannot take a Mutator slot.");
-      this.render();
-      return;
-    }
-    this.ui.mutUnlockArmed = false;
-    // Both the grid arm and Hex detail use the entry's first-slot landing.
-    // Return to the grid so the roll choice can arm placement there.
-    if (first && this.ui.entryRollPending && this.state.bankedMutatorRolls.length > 0) {
-      this.ui.detail = null;
-      this.ui.mutLayer = "mutators";
-      this.ui.forgeFace = "mutators";
-      this.ui.modal = "forge";
-    }
-    this.say(`Mutator slot unlocked at ${cellNoteOf(pos)}${first ? "" : ` — ${formatInt(this.state.arete)} Arete left`}.`);
-    this.save();
-    this.render();
   }
 
   openApp(app: FocusApp): void {
@@ -2207,13 +2137,13 @@ export class App {
 
   pickCell(pos: Hex): void {
     const { state, ui } = this;
-    // The Mutators layer owns the board's clicks while it stands (issue
-    // #199, flow included by #387): the module board rests hidden and
-    // pointer-dead beneath it (issue #298), and a focused cell's Enter must
-    // not reach past it either. The layer only stands past the entry
-    // (mutSetLayer and flow entry keep the invariant), so the selection
-    // alone is the test.
-    if (ui.mutLayer === "mutators") return;
+    // The World face owns the board's clicks while it stands (issue #426,
+    // flow included): the module board rests hidden and pointer-dead
+    // beneath it (issue #298), and a focused cell's Enter must not reach
+    // past it either. The face only stands past the reveal (setBoardLayer
+    // and flow entry keep the invariant), so the selection alone is the
+    // test.
+    if (ui.boardLayer === "world") return;
     if (ui.buyingCell) {
       if (state.mode !== "upgrade") return;
       // The arm persists across buys: sweep several cells, then back out
@@ -2476,10 +2406,10 @@ export class App {
 
   rightClickCell(pos: Hex): void {
     if (this.state.mode !== "upgrade") return;
-    if (this.ui.mutLayer === "mutators") {
-      // The second layer owns the gesture: its own retrieve lives on the
-      // slot faces (issue #199).
-      this.mutRightClickSlot(pos);
+    if (this.ui.boardLayer === "world") {
+      // The second face owns the gesture: its own retrieve lives on the
+      // plates (issue #426).
+      this.worldRightClickCell(pos);
       return;
     }
     if (this.ui.buyingCell) {
@@ -2565,29 +2495,15 @@ export class App {
   }
 
   openModal(kind: ModalKind): void {
-    // The catalog door opens on the mode's face — mode wins (issue #273):
-    // mutator mode lands on the ◇ face, module mode on ν, and no last-face
-    // memory outlives the trip. The locked MUTATORS controls' landing goes
-    // through openMutatorEntry, which names its own face instead.
+    // The catalog door opens on the layer's face — layer wins (issue #426,
+    // the mode-wins rule's successor): the World face lands on the ◇ face
+    // its section lives on, module mode on ν, and no last-face memory
+    // outlives the trip.
     if (kind === "catalog") {
-      // Mutator mode ⇒ the ◇ face, module mode ⇒ ν. Mutator mode implies
-      // the catalog is open (the entry costs the first reset's Arete), so
-      // the face it names always stands.
-      this.openCatalogOnFace(this.ui.mutLayer === "mutators" ? "arete" : "nous");
+      this.openCatalogOnFace(this.ui.boardLayer === "world" ? "arete" : "nous");
       return;
     }
     this.openModalDirect(kind);
-  }
-
-  // The locked MUTATORS controls' one landing (issue #273): the Catalog on
-  // the ◇ entry screen — the tab, the tray face, and Add all walk here, the
-  // mode never flips, and nothing arms. The walk is the preview of the
-  // future entry, pre-prestige included: the entry's price mutes (Arete
-  // cannot exist before the first reset banks it), so the screen teaches
-  // without selling. The door's own mode-wins landing keeps its pre-
-  // prestige nous fallback; only this walk names the face outright.
-  openMutatorEntry(): void {
-    this.openCatalogOnFace("arete");
   }
 
   // The catalog's one opener, face named: the mode-wins door and the entry
@@ -2600,7 +2516,7 @@ export class App {
   private openModalDirect(kind: ModalKind): void {
     this.captureModalInvoker();
     if (kind === "forge") {
-      const preferred = this.state.catalogEntryOwned ? this.ui.mutLayer : "modules";
+      const preferred = this.state.catalogEntryOwned && this.ui.boardLayer === "world" ? "mutators" : "modules";
       const pending = preferred === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
       const otherPending = preferred === "modules" ? this.state.bankedMutatorRolls.length : this.state.bankedRolls.length;
       this.ui.forgeFace = !pending && otherPending && this.state.catalogEntryOwned
@@ -2631,10 +2547,10 @@ export class App {
       const inv = this.ui.inventory;
       inv.inspect = null; inv.merge = null; inv.menu = false;
       inv.scrapMode = false; inv.scrapReview = false; inv.selected = [];
+      this.ui.worldTray.inspect = null;
     }
     this.ui.modal = null;
     this.ui.combineOffer = null;
-    this.ui.mutCombineOffer = null;
     this.ui.importError = null;
     this.render();
     // Every dialog hands focus back to the control that opened it
@@ -2741,42 +2657,36 @@ export class App {
     this.render();
   }
 
-  // Dev grant of the whole mutator era (#199 hands-on): the entry, the
-  // Mutator Forge in the tray, two slots wearing a combine pair, an inert
-  // resonance, a vacant slot, a tray item, and Arete for the ladder. The
-  // grant is a coherent era: owning the entry implies the first prestige
-  // happened (the entry spends Arete only prestige banks), so the
-  // prestige count rides too — otherwise the arete face's prestige-count
-  // lock would dead-end the Catalog's tab under the grant.
-  devMutatorEra(): void {
+  // Dev grant of the World era (issue #426 hands-on): the reveal past the
+  // 1T entry, a granted weapon and a purchased Column on the board, a tray
+  // twin, and Arete for the World section. The retired mutator-era grant's
+  // slot/mutator rig retired with the Mutator Grid's surfaces; the
+  // development board keeps a hand onto the second face.
+  devWorldEra(): void {
     const s = this.state;
     s.mode = "upgrade";
     s.prestiges = Math.max(s.prestiges, 1);
     s.catalogEntryOwned = true;
     s.arete = Math.max(s.arete, 20);
-    if (!s.modules.some((m) => m.type === "mutatorForge")) {
-      s.modules.push(createModule(s, "mutatorForge"));
+    s.eraEarned = Math.max(s.eraEarned, BALANCE.world.entryNous * 1.5);
+    if (!s.world.weapons.some((w) => w.pos !== null)) {
+      const weapon = createWeapon(s, "chargeBlade");
+      weapon.pos = hex(1, 0);
+      s.world.weapons.push(weapon);
     }
-    // The era's vacant slot rides an owned cell: slots only ever unlock on
-    // owned coordinates (ADR-0043), and the layer's renderer draws at
-    // owned coordinates alone (issue #386) — the grant buys the cell its
-    // fourth slot sits on.
-    if (!s.cells.some((cell) => sameHex(cell, hex(1, 1)))) s.cells.push(hex(1, 1));
-    s.mutatorSlots = [hex(0, 0), hex(1, 0), hex(0, 1), hex(1, 1)];
-    const item = (family: MutatorFamily, rarity: Rarity, pos: Hex | null): MutatorInstance => ({
-      id: `mu-dev-${s.nextId++}`,
-      family,
-      rarity,
-      pos,
-    });
-    s.mutators = [
-      item("power", "common", hex(0, 0)),
-      item("power", "common", null),
-      item("resonance", "common", hex(1, 1)),
-      item("charge", "uncommon", hex(0, 1)),
-    ];
-    this.ui.mutLayer = "mutators";
-    this.say("Dev: mutator era granted — the Mutators layer stands.");
+    if (!s.world.weapons.some((w) => w.pos === null)) {
+      s.world.weapons.push(createWeapon(s, "chargeBlade"));
+    }
+    if (!s.world.columns.some((c) => c.pos !== null)) {
+      const column = createWorldColumn(s);
+      column.pos = hex(0, 1);
+      s.world.columns.push(column);
+    }
+    if (!s.world.columns.some((c) => c.pos === null)) {
+      s.world.columns.push(createWorldColumn(s));
+    }
+    this.ui.boardLayer = "world";
+    this.say("Dev: World era granted — the second face stands.");
     this.save();
     this.render();
   }
@@ -2971,7 +2881,7 @@ export class App {
     // stands — flow reading it now too (issue #387) — the stylesheet greys
     // the module board and silences its pointers, the grid rendering as
     // the foreground.
-    document.body.classList.toggle("mut-layer-live", mutatorBoardLive(this));
+    document.body.classList.toggle("world-layer-live", worldBoardLive(this));
     // Add-cell mode's rest (#201): the one mode that dims the board — the
     // owned modules rest greyed and pointer-dead behind the pill.
     document.body.classList.toggle("cell-arming", this.state.mode === "upgrade" && this.ui.buyingCell);

@@ -1,4 +1,4 @@
-import type { Category, FocusApp, ModuleType, Rarity, ShelfType, SpecialDraftKind } from "../engine/types";
+import type { Category, FocusApp, ModuleType, Rarity, ShelfType, SpecialDraftKind, WeaponType } from "../engine/types";
 
 // The final names and faceplates (issue #219, wave 1; roster types wave 2):
 // display-layer only — `name` is the full name every tooltip, roster row,
@@ -61,6 +61,17 @@ export const SHELF_DESCRIPTIONS: Partial<Record<ShelfType, string>> = {
 };
 
 export const RARITY_LABEL: Record<Rarity, string> = { common: "common", uncommon: "uncommon", rare: "rare" };
+
+// The World occupants' nameplates (issue #426, naming per the design
+// round's settled vocabulary): `name` is the full name every tooltip, tray
+// row, and toast reads; `short` is the face plate's compact nameplate. The
+// Charge Column's word is its own product's (CONTEXT.md); the weapon types'
+// names are the confirmed register — "Arpeggiator" stays retired.
+export const WORLD_META: Record<WeaponType, { name: string; short: string }> = {
+  chargeBlade: { name: "Charge Blade", short: "BLADE" },
+};
+export const COLUMN_WORD = "Charge Column";
+export const COLUMN_SHORT = "COLUMN";
 
 // The categories' display words (issue #379): the Jacquard Card's category
 // picks read the category by its player-facing word. RITUAL wears its

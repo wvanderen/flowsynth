@@ -55,12 +55,16 @@ const hues = {
 // synthesizer ⇄ nous indigo). Interactive roles pick from the same families.
 // Arete is its own register (issue #197): the prestige resource's violet —
 // the prototype's — worn by every Arete surface; it produces from no
-// category, so it stands beside them rather than under one.
+// category, so it stands beside them rather than under one. The World
+// layer's steel (issue #426's design round) is a layer register, not a
+// resource: the square-cut plates' stroke and wash, kept cold beside the
+// charge green the weapons' figures wear.
 const resources = {
   charge: "#9affa8",
   nous: "#cbcaff",
   "forge-glow": "#eecb82",
   arete: "#b994f5",
+  world: "#a7b7c4",
   // Scrap (issue #377): the recovered collection value — its own token,
   // wearing the forge register's amber family: the value feeds the Forge's
   // draft products. Reuses the forge-glow figure, free to diverge in a
@@ -140,6 +144,13 @@ const semantics = {
   "arete-faint": "color-mix(in srgb, var(--arete) 13%, var(--panel-soft))",
   "arete-tint": "color-mix(in srgb, var(--arete) 9%, transparent)",
   "arete-line": "color-mix(in srgb, var(--arete) 38%, transparent)",
+  // The World register's derivatives (issue #426's design round): the
+  // plates' firm stroke wash and their hover tint, mixed from the one token
+  // the way the arete family is.
+  "world-bright": "color-mix(in srgb, var(--world) 72%, var(--ink))",
+  "world-faint": "color-mix(in srgb, var(--world) 13%, var(--panel-soft))",
+  "world-tint": "color-mix(in srgb, var(--world) 7%, transparent)",
+  "world-line": "color-mix(in srgb, var(--world) 38%, transparent)",
   "forge-faint": "color-mix(in srgb, var(--forge-glow) 15%, var(--panel-soft))",
   "danger-faint": "color-mix(in srgb, var(--danger) 13%, var(--panel-soft))",
   "meter-fill": "color-mix(in srgb, var(--accent) 40%, var(--line))",

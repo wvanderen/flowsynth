@@ -129,15 +129,12 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.cancelPlacing();
   });
 
-  it("the tray sheet wears the mode's switch — flipping it swaps the face and the board tabs follow (issue #272)", () => {
+  it("the tray sheet wears the layer switch — flipping it swaps the face and the board legend follows (issue #426)", () => {
     const s = app.state;
     s.mode = "upgrade";
     s.catalogEntryOwned = true;
-    s.mutatorSlots = [hex(0, 0)];
-    s.mutators = [
-      { id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) },
-      { id: "mu2", family: "charge", rarity: "uncommon", pos: null },
-    ];
+    s.eraEarned = BALANCE.world.entryNous * 1.5;
+    s.world.weapons.push({ id: "wp2", type: "chargeBlade", pos: null, store: 0, cooldown: 0, targetPriority: [] });
     app.returnToInventory("m1");
     app.openModal("inventory");
     const modal = document.getElementById("modal-content")!;
@@ -146,30 +143,29 @@ describe("the thumb bar (§7, portrait phone)", () => {
     const pair = [...modal.querySelectorAll("[data-legend-layer]")];
     expect(pair).toHaveLength(2);
     expect(modal.querySelector('[data-inv="m1"]')).not.toBeNull();
-    expect(modal.querySelector("[data-mut-tray]")).toBeNull();
-    // Flipping the sheet's switch turns the global mode: the sheet swaps
-    // to the arete-register mutator tiles, the board legend follows.
-    (modal.querySelector('[data-legend-layer="mutators"]') as HTMLButtonElement).click();
-    expect(app.ui.mutLayer).toBe("mutators");
-    expect(document.querySelector('#layer-legend [data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    expect(modal.querySelector("[data-world-tray]")).toBeNull();
+    // Flipping the sheet's switch turns the global layer: the sheet swaps
+    // to the steel-register World tiles, the board legend follows.
+    (modal.querySelector('[data-legend-layer="world"]') as HTMLButtonElement).click();
+    expect(app.ui.boardLayer).toBe("world");
+    expect(document.querySelector('#layer-legend [data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     const modalAfter = document.getElementById("modal-content")!;
     expect(modalAfter.querySelector('[data-inv="m1"]')).toBeNull();
-    const tile = modalAfter.querySelector<HTMLButtonElement>('[data-mut-tray="mu2"]')!;
+    const tile = modalAfter.querySelector<HTMLButtonElement>('[data-world-tray="wp2"]')!;
     expect(tile).not.toBeNull();
-    expect(tile.querySelector(".mut-tile-hex")).not.toBeNull();
+    expect(tile.querySelector(".world-tile-plate")).not.toBeNull();
     tile.click();
-    expect(app.ui.mutArmedTray).toBeNull();
-    expect(app.ui.modal).toBe("inventory");
+    expect(app.ui.worldArmed).toBeNull();
     expect(modalAfter.textContent).toContain("Place");
-    modalAfter.querySelector<HTMLButtonElement>("[data-inventory-place]")!.click();
-    expect(app.ui.mutArmedTray).toBe("mu2");
+    modalAfter.querySelector<HTMLButtonElement>("[data-world-place]")!.click();
+    expect(app.ui.worldArmed).toBe("wp2");
     expect(app.ui.modal).toBeNull();
-    // Tapping a mutator tile arms it and puts the sheet away, so the slot
+    // Tapping a World tile arms it and puts the sheet away, so the plate
     // taps land on a visible board.
     tile.click();
     expect(app.ui.modal).toBeNull();
-    expect(app.ui.mutArmedTray).toBe("mu2");
-    app.mutCancelGestures();
+    expect(app.ui.worldArmed).toBe("wp2");
+    app.worldCancelGestures();
   });
 
   it("the tray sheet stands scrimless — the board behind stays live, and a drop onto the sheet retrieves", async () => {
@@ -219,25 +215,30 @@ describe("the thumb bar (§7, portrait phone)", () => {
     app.render();
     document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!.click();
     expect(app.ui.buyingCell).toBe(true);
-    expect(app.ui.mutUnlockArmed).toBe(false);
+    expect(app.ui.worldArmed !== null).toBe(false);
     app.cancelCellPurchase();
-    // Mutator mode: the slot unlock, armed from Add — never a tray card.
-    app.mutSetLayer("mutators");
+    // The World layer: Add walks to Modules and arms the cell purchase —
+    // the World face carries no Add arm (issue #426).
+    app.state.eraEarned = BALANCE.world.entryNous * 1.5;
+    app.setBoardLayer("world");
     app.render();
     const add = document.querySelector<HTMLButtonElement>('#board-tools [data-op="cell"]')!;
-    expect(add.querySelector(".tool-detail")!.textContent).toContain("Unlock a Mutator slot — 2 Arete");
     add.click();
-    expect(app.ui.mutUnlockArmed).toBe(true);
-    expect(app.ui.buyingCell).toBe(false);
-    expect(document.getElementById("mut-unlock-pill")!.hidden).toBe(false);
+    expect(app.ui.boardLayer).toBe("modules");
+    expect(app.ui.buyingCell).toBe(true);
+    expect(app.ui.worldArmed).toBeNull();
+    expect(document.getElementById("cell-arm-pill")!.hidden).toBe(false);
     // The Add tool's tray-sheet pass: arming from the thumb bar puts the
-    // sheet away so the pulsing targets stand on a visible board.
-    app.mutCancelGestures();
+    // sheet away so the pulsing targets stand on a visible board. From the
+    // World layer the Add walks to Modules first (issue #426).
+    app.cancelCellPurchase();
+    app.setBoardLayer("world");
     app.openModal("inventory");
     document.querySelector<HTMLButtonElement>('#thumb-bar [data-op="cell"], #board-tools [data-op="cell"]')!.click();
-    expect(app.ui.mutUnlockArmed).toBe(true);
+    expect(app.ui.buyingCell).toBe(true);
+    expect(app.ui.boardLayer).toBe("modules");
     expect(app.ui.modal).toBeNull();
-    app.mutCancelGestures();
+    app.cancelCellPurchase();
   });
 
   it("the chord sheet's door, index, and stage (issue #230, reworked by #278)", () => {
@@ -627,42 +628,43 @@ describe("the small-screen composition (issue #389)", () => {
     const s = app.state;
     s.mode = "upgrade";
     s.catalogEntryOwned = true;
+    s.eraEarned = BALANCE.world.entryNous * 1.5;
     s.mutatorSlots = [hex(0, 0)];
     s.mutators = [{ id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) }];
     app.render();
     const legend = () => document.getElementById("layer-legend")!;
     // The grid: the strip is the one layer switch.
     expect(legend().hidden).toBe(false);
-    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.mutLayer).toBe("mutators");
-    expect(legend().querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
+    expect(app.ui.boardLayer).toBe("world");
+    expect(legend().querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     // The detail: the same strip emphasizes the faces, in upgrade mode…
-    app.mutSetLayer("modules");
+    app.setBoardLayer("modules");
     clickCell(0, 0);
     expect(app.ui.detail).not.toBeNull();
-    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.detail!.face).toBe("mutators");
-    expect(legend().querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
+    expect(app.ui.detail!.face).toBe("world");
+    expect(legend().querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     // …and in flow, where the detail stands read-only and the entry drops
     // it, so the read-only cross-section re-opens on the locked board.
     app.beginFlow(null);
     expect(app.ui.detail).toBeNull();
     // The strip still switches the locked grid's layer read-only — both
     // ways, so the modules cells return for the detail's click.
-    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.mutLayer).toBe("mutators");
-    expect(legend().querySelector('[data-legend-layer="mutators"]')!.classList.contains("active")).toBe(true);
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
+    expect(app.ui.boardLayer).toBe("world");
+    expect(legend().querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     legend().querySelector<HTMLButtonElement>('[data-legend-layer="modules"]')!.click();
-    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.boardLayer).toBe("modules");
     clickCell(0, 0);
     expect(app.ui.detail).not.toBeNull();
     expect(document.querySelector(".hex-detail-readonly")).not.toBeNull();
-    legend().querySelector<HTMLButtonElement>('[data-legend-layer="mutators"]')!.click();
-    expect(app.ui.detail!.face).toBe("mutators");
+    legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
+    expect(app.ui.detail!.face).toBe("world");
     // Return restores the grid with the layer intact.
     document.getElementById("hex-detail-return")!.click();
     expect(app.ui.detail).toBeNull();
-    expect(app.ui.mutLayer).toBe("mutators");
+    expect(app.ui.boardLayer).toBe("world");
   });
 
   it.each([320, 360, 390])("Upgrade All buys at %ipx and hides during flow", (width) => {

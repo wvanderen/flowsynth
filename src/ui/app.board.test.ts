@@ -632,25 +632,26 @@ describe("the action row (§7)", () => {
   it("the tray column wears no second switch — the board tabs drive its faces (#272)", () => {
     app.state.mode = "upgrade";
     app.state.catalogEntryOwned = true;
+    app.state.eraEarned = BALANCE.world.entryNous * 1.5;
     app.render();
     const zone = document.getElementById("inventory-zone")!;
-    const mutTray = document.getElementById("mutator-tray")!;
+    const worldTray = document.getElementById("world-tray")!;
     // The column carries no switcher of its own: the vertical layer legend
     // at the board's edge is the one Modules / Mutators switch (issue #295).
     expect(document.getElementById("tray-head")).toBeNull();
     expect(document.querySelectorAll("[data-legend-layer]")).toHaveLength(2);
     // The Modules face stands; the Mutators face waits.
     expect(zone.classList.contains("off")).toBe(false);
-    expect(mutTray.hidden).toBe(true);
+    expect(worldTray.hidden).toBe(true);
     // The legend flips the column's face with the global mode.
-    document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="mutators"]')!.click();
-    expect(app.ui.mutLayer).toBe("mutators");
+    document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="world"]')!.click();
+    expect(app.ui.boardLayer).toBe("world");
     expect(zone.classList.contains("off")).toBe(true);
-    expect(mutTray.hidden).toBe(false);
+    expect(worldTray.hidden).toBe(false);
     document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="modules"]')!.click();
-    expect(app.ui.mutLayer).toBe("modules");
+    expect(app.ui.boardLayer).toBe("modules");
     expect(zone.classList.contains("off")).toBe(false);
-    expect(mutTray.hidden).toBe(true);
+    expect(worldTray.hidden).toBe(true);
   });
 
   it("the Forge tool carries the one meter detail (issue #423)", () => {
@@ -920,7 +921,7 @@ describe("the action row (§7)", () => {
     app.render();
     // The chip's drawing is the locked layer legend's own mark, captured
     // before flow clears the legend.
-    const legendLock = document.querySelector<SVGElement>('[data-legend-layer="mutators"] svg')!.innerHTML;
+    const legendLock = document.querySelector<SVGElement>('[data-legend-layer="world"] svg')!.innerHTML;
     app.state.sessionsCompleted = 1;
     startSession(app.state, null);
     app.render();
