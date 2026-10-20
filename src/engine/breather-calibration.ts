@@ -8,6 +8,7 @@ import { applyBreatherGap } from "./trust";
 import { hex } from "./hex";
 import { createHabit, selectHabit } from "./habits";
 import { productionClockFactorOf } from "./profiles";
+import { CATEGORY_OF } from "./constants";
 import type { GameState, ModuleType } from "./types";
 
 // The breather's production-economy calibration harness (issue #417): the
@@ -29,8 +30,11 @@ import type { GameState, ModuleType } from "./types";
 export const ARC_SESSION_SECONDS = 1500;
 export const ARC_NEXT_SESSION_SECONDS = 1800;
 export const ARC_OPENING_SECONDS = 300;
+// The wall-clock stamp the breather starts at — arbitrary, fixed, so the
+// arc's joins land on the same solves every run.
+export const ARC_BREATHER_START = 1000;
 const STEP = 60;
-const NOTE_TEXT = "keep the shoulders down and the wrist loose through the scale run";
+export const NOTE_TEXT = "keep the shoulders down and the wrist loose through the scale run";
 
 // One niche board: fixture seats on real cells (a level when the niche's
 // weight needs one). The opening Sine stays at the origin unless the
@@ -58,7 +62,7 @@ function seat(state: GameState, q: number, r: number): void {
 export const NAKED: BoardBuilder = () => {};
 
 // The starter niche: the shelf trio around the Sine — the Flywheel feeding
-// it charge, the Forge turning on that charge, the Infusor amplifying the
+// it charge, the Forge turning on that charge, the Booster amplifying the
 // voice. The board the first real breathers ride.
 export const STARTER: BoardBuilder = (state) => {
   place(state, "focusKeyed", 1, 0);
@@ -100,7 +104,7 @@ export const RESPONDERS: BoardBuilder = (state) => {
 
 // The specialist niche: #416's wave beside a Flywheel — the S-band
 // signatures the launch spread must stay clearly under, read on the same
-// arc and the same board shape as the responder niche.
+// arc the responder niche rides.
 export const SPECIALISTS: BoardBuilder = (state) => {
   place(state, "release", 1, 0);
   place(state, "standby", 0, 1);
@@ -166,10 +170,16 @@ export interface ArcLeg {
   nextOpeningEarned: number;
   nextSessionEarned: number;
   // The departed clock the breather left behind (0 when declined), the
-  // Afterglow's clock factor there, and its factor at the next open.
+  // Afterglow's clock factor there, at the break's end, and at the next
+  // open.
   clockAfterBreather: number;
   afterglowDuringBreather: number;
+  afterglowAtBreatherEnd: number;
   afterglowAtNextOpen: number;
+  // Per-oscillator ν/s at flow's close and at the breather's open — the
+  // per-voice response read the spread validation quotes.
+  voiceFlow: Record<string, number>;
+  voiceBreather: Record<string, number>;
 }
 
 export interface ArcPair {
@@ -180,6 +190,15 @@ export interface ArcPair {
 function activeKeys(state: GameState): string[] {
   const rates = displayedRates(state);
   return rates.allocation ? [...rates.allocation.activeKeys].sort() : [];
+}
+
+function voiceValues(state: GameState): Record<string, number> {
+  const read: Record<string, number> = {};
+  for (const contribution of displayedRates(state).contributions.values()) {
+    const module = state.modules.find((m) => m.id === contribution.moduleId);
+    if (module && module.pos !== null) read[module.type] = contribution.value;
+  }
+  return read;
 }
 
 function runLeg(board: BoardBuilder, seed: number, take: boolean): ArcLeg {
@@ -203,8 +222,16 @@ function runLeg(board: BoardBuilder, seed: number, take: boolean): ArcLeg {
   // The warmup session: the arc's steady state, never measured.
   session();
   // The minting session: live present time in one-minute steps, one note
-  // written — the ordinary session shape.
-  const sessionEarned = session();
+  // written — the ordinary session shape. The per-voice read happens
+  // inside the session, on the charged, warm basis the breather follows.
+  startSession(state, null, 0);
+  writeNote(state, NOTE_TEXT);
+  let sessionEarned = 0;
+  for (let step = 0; step < ARC_SESSION_SECONDS / STEP; step++) {
+    sessionEarned += advance(state, STEP, rng).nousEarned;
+  }
+  const voiceFlow = voiceValues(state);
+  endSession(state, ARC_SESSION_SECONDS);
   const flowNuPerSecond = sessionEarned / ARC_SESSION_SECONDS;
   const reservesAtClose = reserveSum(state);
   const allowance = state.summary?.breatherAllowance ?? 0;
@@ -236,15 +263,19 @@ function runLeg(board: BoardBuilder, seed: number, take: boolean): ArcLeg {
     nextSessionEarned: 0,
     clockAfterBreather: 0,
     afterglowDuringBreather: 1,
+    afterglowAtBreatherEnd: 1,
     afterglowAtNextOpen: 1,
+    voiceFlow,
+    voiceBreather: voiceFlow,
   };
 
   if (take && allowance > 0) {
     // The join: exactly one re-solve at the mode change, read on the
-    // display seam the UI renders through.
+    // display basis the UI renders through.
     const before = allocationMemoStats.solves;
-    startBreather(state, 1000);
+    startBreather(state, ARC_BREATHER_START);
     leg.breatherKeys = activeKeys(state);
+    leg.voiceBreather = voiceValues(state);
     leg.joinSolves = allocationMemoStats.solves - before;
     leg.afterglowDuringBreather = productionClockFactorOf("afterglow", sessionClockOf(state));
     const forgeBefore = state.forge.progress + state.forge.earned;
@@ -277,6 +308,7 @@ function runLeg(board: BoardBuilder, seed: number, take: boolean): ArcLeg {
     leg.boostedPerMintedMinute = breatherEarned / allowance / flowNuPerSecond;
     leg.dwarfRatio = breatherEarned / sessionEarned;
     leg.clockAfterBreather = sessionClockOf(state);
+    leg.afterglowAtBreatherEnd = productionClockFactorOf("afterglow", sessionClockOf(state));
 
     const endBefore = allocationMemoStats.solves;
     endBreather(state);
@@ -309,11 +341,11 @@ export function runArcPair(board: BoardBuilder, seed: number): ArcPair {
   return { taken: runLeg(board, seed, true), declined: runLeg(board, seed, false) };
 }
 
-// The flywheel's reserve through the breather's first minutes — the
-// unboosted-drain read. The bank landed at close (0.1/s × 1500 credited ×
-// power 1 = 150); the drain samples read the strength the breather really
-// spent.
-export function flywheelReserveAfter(state: GameState, seconds: number, rng: () => number): number {
+// The deployed generator's reserve after `seconds` more of breather — the
+// drain-rate read. The bank landed at close (the focus window); what the
+// sample reads back is the strength the breather really spent.
+export function generatorReserveAfter(state: GameState, seconds: number, rng: () => number): number {
   applyBreatherGap(state, seconds, rng);
-  return state.modules.find((module) => module.type === "focusKeyed")?.reserve ?? 0;
+  const generator = state.modules.find((module) => module.pos !== null && CATEGORY_OF[module.type] === "generator");
+  return generator?.reserve ?? 0;
 }

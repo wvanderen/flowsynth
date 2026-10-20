@@ -32,7 +32,7 @@ The sample niches:
 - **Naked** — the opening Sine alone. The first breather a player can ever
   take (the 10-credited-minute gate) lives here, on a board with no charge
   economy at all.
-- **Starter** — the shelf trio around the Sine: Flywheel, Forge, Infusor.
+- **Starter** — the shelf trio around the Sine: Flywheel, Forge, Booster.
   The board the first real breathers ride.
 - **Charged** — the Saw's home: the charge specialist fed by the Flywheel,
   the profile wave's ×3 delta niche.
@@ -41,9 +41,9 @@ The sample niches:
 - **Responders** — every launch responder (Triangle, Square, Saw, Sideband,
   Afterglow) in one formation beside the Sine's absent mark: the
   maximum-launch-boost board.
-- **Specialists** — #416's wave (Release, Standby, Tail) beside a Flywheel,
-  on the same board shape as Responders: the S-band signatures the launch
-  spread must stay clearly under.
+- **Specialists** — #416's wave (Release, Standby, Tail) beside a Flywheel:
+  the S-band signatures the launch spread must stay clearly under, read on
+  the same arc the Responders niche rides.
 
 ## Criterion 1 — the launch spread (×1.1–×1.25, Sine absent): defended
 
@@ -68,11 +68,12 @@ Reading the columns against the priorities:
   that minted it. The 1:5 divisor times any launched response is bounded
   by construction (R/5 ≤ 0.36 even at the deepened Standby's ×1.8), and
   the measurement confirms it on every niche.
-- **The spread reads as authored**: per-voice ratio-of-ratios on the
-  Responder board (each voice against the Sine's absent mark as control)
-  lands exactly on the authored figures — Triangle ×1.100, Square ×1.100,
-  Saw ×1.200, Sideband ×1.201, Sine ×1.000. The board-level figures above
-  the authored spread (Charged 1.519, Temporal 1.291) are the board's own
+- **The spread reads as authored**: the committed gate re-derives every
+  response per voice on the Responder board — each voice's flow→breather
+  ratio over the Sine's absent mark as control — and lands exactly on the
+  authored figures: Triangle ×1.100, Square ×1.100, Saw ×1.200, Sideband
+  ×1.201, Afterglow ×1.25, Sine ×1.000. The board-level figures above the
+  authored spread (Charged 1.519, Temporal 1.291) are the board's own
   charge leg, not the axis: the breather runs on the reserve the session
   just banked, while the flow mean carries uncharged minutes. That
   composition is the mechanic working — paid rest spends banked charge at
@@ -132,7 +133,7 @@ Three facts keep this from being starvation:
 
 1. **The cost is bounded** — the worst opening window (Charged, −33%)
    is a 5-minute read on one niche; the whole next session never loses
-   more than 7.9%.
+   more than 8.0%.
 2. **The arc never goes behind** — the breather's spend produced at the
    boosted rate while it lasted, so taking the breather is worth +8.6% to
    +12.3% over declining it on every niche. The charge is re-timed, never
@@ -146,20 +147,26 @@ Three facts keep this from being starvation:
 
 The temporal reads behave as breather-spec §1 describes: the breather
 advances the departed session's clock (1500 → 1800 across the 5-minute
-breather), the Afterglow breathes at its peak warmth (×1.25 through the
-break — the compound with its ×1.25 response reading ×1.5625 on that one
-voice during the break, its temporal identity rather than a breather
-signature) and re-warms from ×0.3 when the next session opens; the
-Pulsewell's burst windows keep cycling through the break, spending the
-reserve proportionally faster in bursts and never more of it.
+breather), the Afterglow breathes at its peak warmth (×1.25 from the
+break's open to its end — the compound with its ×1.25 response reading
+×1.5625 on that one voice during the break, its temporal identity rather
+than a breather signature) and re-warms from ×0.3 when the next session
+opens; the Pulsewell's burst windows keep cycling through the break — the
+committed read catches the break opening in the steady stretch, entering
+the ×2.5 burst window thirty-five seconds in, and the reserve reading the
+burst's ×2.5 drain exactly (30 steady seconds at ×0.5 plus 5 burst
+seconds at ×2.5 off the 75 banked) — the cycle spending the earned
+quantity proportionally faster, never more of it.
 
 ## Criterion 4 — the allocation across the breather boundary: verified
 
 The mode join in the allocation fingerprint re-solves **exactly once** at
 the boundary on every niche (memo-solve count across `startBreather` = 1,
-read on the display seam), and the breather's steady steps never solve
-beyond the real input boundaries (reserve depletion, burst windows) — the
-key timelines are piecewise-constant everywhere, never per-tick.
+read on the display basis), the ending mode change re-solves **at most
+once** (zero is a legitimate memo hit when the inputs returned to their
+pre-breather shape), and the breather's steady steps never solve beyond
+the real input boundaries (reserve depletion, burst windows) — the key
+timelines are piecewise-constant everywhere, never per-tick.
 
 Where a differing breather optimum genuinely exists, the re-pick is
 coherent. The re-pick niche (a contended C4 between a Fifth whose partner
@@ -173,13 +180,13 @@ Equal-output retention holds; nothing thrashes.
 
 ## Criterion 5 — specialist headroom: held
 
-Same board shape, different voices: the Responders niche (launch spread)
-yields 1.169 boosted minutes per minted minute; the Specialists niche
-(#416's S band) yields 1.455 on the identical arc — a 1.24× separation on
-the observable both waves price, with the launch dwarf ratio (0.234) and
-the specialists' (0.291) sorted the same way. On the authored axis the
+The Responders niche (launch spread) yields 1.169 boosted minutes per
+minted minute; the Specialists niche (#416's S band) yields 1.455 on the
+same arc — a 1.24× separation on the observable both waves price, with
+the launch dwarf ratio (0.234) and the specialists' (0.291) sorted the
+same way. The load-bearing distinction is the authored axis itself: the
 launch roster tops out at ×1.25 (A band) against the S band's ×1.4–×1.8,
-and the grades carry the distinction wherever the profile renders. The
+and the grades carry that distinction wherever the profile renders. The
 Afterglow's ×1.5625 in-breather compound is its peak-warmth clock reading
 — the same ×1.25 factor any long flow session rides — not a breather
 figure, and it stays under the deepened Standby's authored ×1.8.
