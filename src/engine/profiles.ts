@@ -170,9 +170,11 @@ export const OSCILLATOR_PROFILES: Record<OscillatorType, OscillatorProfile> = {
   },
 };
 
-// The launch wave's modest responses (docs/breather-spec.md §3) stand
-// untouched: ×1.1–×1.25 with the Sine's absent mark as the contrast. The
-// specialists above widen the spread; the rebalance ticket owns figures.
+// The launch wave's modest responses (docs/breather-spec.md §3) stand as
+// launched: ×1.1–×1.25 with the Sine's absent mark as the contrast,
+// validated against the sample-niche arc battery and defended figure by
+// figure in the rebalance record (docs/breather-tuning.md, issue #417) —
+// worth taking, never dwarfing, and clearly under the specialists' S band.
 
 // The one profile read. Non-oscillators have no profile — callers guard by
 // category; this accessor returns null rather than a neutral shape so a
