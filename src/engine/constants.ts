@@ -572,7 +572,8 @@ export const CHIME = {
 // after a flow session closes. The allowance a session's end mints is its
 // credited practice seconds divided off, gated at a credited-practice
 // minimum, capped, and floored to the whole minute. All figures provisional
-// tuning.
+// tuning, validated and defended on the sample-niche arcs in the rebalance
+// record (docs/breather-tuning.md, issue #417).
 export const BREATHER = {
   // Breather seconds per credited practice second (the 1:5 example: a
   // 25-minute session mints a 5-minute breather).
