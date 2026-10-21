@@ -2237,8 +2237,10 @@ describe("the legacy build's retirement (issue #444)", () => {
     (habit as Habit & { build?: string[] }).build = ["weights"];
     app.openApp("habit");
     document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
+    // Class development remains available behind the summary's Develop
+    // action (issue #446).
+    document.querySelector<HTMLButtonElement>("[data-habit-develop]")!.click();
     const read = document.querySelector("#app-popover .habit-detail-read")!;
-    // Class development remains available.
     expect(document.querySelector("#app-popover .habit-class")).not.toBeNull();
     expect(read.querySelector('[data-class-allocate="governor"]')).not.toBeNull();
     // The build section, its actions, and its milestone messaging are gone

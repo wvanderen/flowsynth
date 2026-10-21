@@ -4,7 +4,7 @@ import type { App } from "./app";
 import { createHabit, selectHabit, addPracticeLog } from "../engine/habits";
 import { createGoal, accrueGoalProgress, editGoal, retainGoalChoice } from "../engine/goals";
 import type { Goal } from "../engine/types";
-import { endSession, startSession } from "../engine/actions";
+import { endSession, pauseSession, startSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { deserialize, serialize } from "../engine/save";
 import { goalMeterOf, GOAL_METER_SEGMENTS } from "./focus";
@@ -761,8 +761,8 @@ describe("the sheet's live reads", () => {
   });
 });
 
-describe("the habit-class face (issue #423)", () => {
-  it("the detail wears the class section: chips, the level/point read, the meter, and the tree", () => {
+describe("the compact class summary (issue #446)", () => {
+  it("the detail wears the one advancement read: class, level, free points, the XP countdown, and Next module roll", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     const pair = habit.classes.engineer!;
     pair.level = 3;
@@ -770,7 +770,6 @@ describe("the habit-class face (issue #423)", () => {
     pair.spent = { reed: 1 };
     pair.rollMeter = { progress: 420, earned: 1 };
     const frame = openHabitDetail(habit.id);
-    expect(frame.querySelector("[data-class-pick]")).toBeNull();
     // The one-place read: level and the point balance live here alone.
     // (The term disclosures sit inline, so the read asserts in pieces.)
     const read = frame.querySelector(".habit-class .stat-row .mono")!.textContent!;
@@ -778,28 +777,127 @@ describe("the habit-class face (issue #423)", () => {
     expect(read).toContain("Level 3");
     expect(read).toContain("1 tree point");
     expect(read).toContain("free");
-    // The practice-roll meter renders with its live slots and figures.
+    // The XP countdown reads in practice-time units, under its own label.
+    const xpRow = frame.querySelectorAll(".habit-class .stat-row")[1]!;
+    expect(xpRow.textContent).toContain("Next level");
+    expect(xpRow.textContent).toContain("of practice to level 4");
+    // The reward meter renders under the player-facing name, with its live
+    // slots and figures — distinct from the XP row above.
+    const key = frame.querySelector(".class-meter-row .folio-key")!;
+    expect(key.textContent).toContain("Next module roll");
     const track = frame.querySelector<HTMLElement>('[data-live="class-meter-track"]')!;
+    expect(track.getAttribute("aria-label")).toBe("Next module roll");
     expect(track.getAttribute("aria-valuenow")).toBe("420");
     expect(track.querySelector('[data-live="class-meter-pip"]')!.getAttribute("style")).toContain("23.3");
     expect(frame.querySelector('[data-live="class-meter-line"]')!.textContent).toContain("next roll in");
-    // The tree: the half-ranked node offers its next rank; the locked rung
-    // names its level and renders no button.
-    expect(frame.querySelector('[data-class-allocate="reed"]')).not.toBeNull();
-    expect(frame.querySelector('[data-class-allocate="punch-card"]')).toBeNull();
-    expect(frame.textContent).toContain("unlocks at class level 5");
-    // Respec and presets stand in the tree's actions row.
-    expect(frame.querySelector('[data-class-respec]')).not.toBeNull();
-    expect(frame.querySelectorAll("[data-class-preset]").length).toBeGreaterThanOrEqual(2);
+    // The one deliberate entry to the tree.
+    expect(frame.querySelector('[data-habit-develop]')).not.toBeNull();
+    // No tree stands on the summary: allocation waits behind Develop.
+    expect(frame.querySelector("[data-class-allocate]")).toBeNull();
+    expect(frame.querySelector('[data-class-respec]')).toBeNull();
+    expect(frame.querySelectorAll("[data-class-preset]")).toHaveLength(0);
   });
 
-  it("allocating, respecing, and preset moves land through the engine and re-render the sheet", () => {
+  it("edge states read correctly: fresh pair, zero points, and maximum level", () => {
+    const fresh = createHabit(app.state, "Fresh").habit!;
+    const frame = openHabitDetail(fresh.id);
+    expect(frame.querySelector(".habit-class")!.textContent).toContain("Level 0");
+    expect(frame.querySelector(".habit-class")!.textContent).toContain("0 tree points");
+    expect(frame.querySelector('[data-live="class-xp-line"]')!.textContent).toContain("of practice to level 1");
+    // The opening fill is the meter's first threshold.
+    expect(frame.querySelector('[data-live="class-meter-track"]')!.getAttribute("aria-valuemax")).toBe("180");
+
+    const capped = createHabit(app.state, "Capped").habit!;
+    const pair = capped.classes.engineer!;
+    pair.level = 6; // every authored threshold crossed
+    pair.points = 0;
+    pair.spent = { governor: 2, reed: 2, "punch-card": 1 };
+    const cappedFrame = openHabitDetail(capped.id);
+    expect(cappedFrame.querySelector(".habit-class")!.textContent).toContain("Level 6");
+    expect(cappedFrame.querySelector(".habit-class")!.textContent).toContain("0 tree points");
+    expect(cappedFrame.querySelector('[data-live="class-xp-line"]')!.textContent).toBe("max level");
+    // The roll meter keeps running at the cap: the meter line still speaks.
+    expect(cappedFrame.querySelector('[data-live="class-meter-line"]')!.textContent).toContain("next roll in");
+  });
+
+  it("the XP countdown and the roll meter update live while the view stays open", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    startSession(app.state, null);
+    const frame = openFace("habit");
+    const xp = frame.querySelector('[data-live="class-xp-line"]')!;
+    const line = frame.querySelector('[data-live="class-meter-line"]')!;
+    expect(xp.textContent).toContain("of practice to level 1");
+    advance(app.state, 60);
+    app.render();
+    // The patch, not a rebuild: the same nodes carry the moved figures.
+    expect(frame.querySelector('[data-live="class-xp-line"]')!.isSameNode(xp)).toBe(true);
+    expect(xp.textContent).toContain("1h 59m of practice to level 1");
+    expect(line.textContent).toContain("1:00 / 3:00");
+  });
+
+  it("a threshold crossing rebuilds the summary's figures; a meter crossing re-bases the track", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    startSession(app.state, null);
+    const frame = openFace("habit");
+    const track = frame.querySelector('[data-live="class-meter-track"]')!;
+    expect(track.getAttribute("aria-valuemax")).toBe("180");
+    // Two hours of credited practice: level 1 lands, a point frees, and
+    // the meter crosses into its flat cadence. The crossing changes the
+    // sheet's rebuild signature, so the summary stands rebuilt.
+    advance(app.state, 2 * 3600);
+    app.render();
+    const rebuilt = sheet();
+    expect(habit.classes.engineer!.level).toBe(1);
+    expect(habit.classes.engineer!.points).toBe(1);
+    expect(habit.classes.engineer!.rollMeter.earned).toBeGreaterThanOrEqual(1);
+    expect(rebuilt.querySelector(".habit-class")!.textContent).toContain("Level 1");
+    expect(rebuilt.querySelector(".habit-class")!.textContent).toContain("1 tree point");
+    expect(rebuilt.querySelector('[data-live="class-xp-line"]')!.textContent).toContain("of practice to level 2");
+    expect(rebuilt.querySelector('[data-live="class-meter-track"]')!.getAttribute("aria-valuemax")).toBe("1800");
+  });
+
+  it("the flow-mode active read carries the live summary; no Develop and no controls stand", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    startSession(app.state, null);
+    advance(app.state, 60);
+    const frame = openFace("habit");
+    // The summary's figures ride the active read, live.
+    expect(frame.querySelector(".habit-class")!.textContent).toContain("Engineer");
+    expect(frame.querySelector('[data-live="class-meter-line"]')!.textContent).toContain("1:00 / 3:00");
+    // No class mutations stand in flow — Develop included.
+    expect(frame.querySelector("[data-habit-develop]")).toBeNull();
+    expect(frame.querySelector("[data-class-pick]")).toBeNull();
+    expect(frame.querySelector("[data-class-allocate]")).toBeNull();
+    expect(frame.querySelector("[data-class-respec]")).toBeNull();
+    // The same holds while the session is paused.
+    pauseSession(app.state);
+    app.render();
+    expect(app.state.mode).toBe("paused");
+    expect(sheet().querySelector("[data-habit-develop]")).toBeNull();
+    expect(sheet().querySelector("[data-class-allocate]")).toBeNull();
+    expect(sheet().querySelector('[data-live="class-meter-line"]')).not.toBeNull();
+  });
+});
+
+describe("the Develop journey (issue #446)", () => {
+  it("Develop opens the tree; allocation, respec, and preset moves land through the engine", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     const pair = habit.classes.engineer!;
     pair.level = 1;
     pair.points = 1;
     const frame = openHabitDetail(habit.id);
-    frame.querySelector<HTMLButtonElement>('[data-class-allocate="governor"]')!.click();
+    frame.querySelector<HTMLButtonElement>('[data-habit-develop]')!.click();
+    // The tree stands with its bounded-rank rows: the available node offers
+    // its next rank; the locked rung names its level and renders no button.
+    expect(sheet().querySelector('[data-class-allocate="governor"]')).not.toBeNull();
+    expect(sheet().querySelector('[data-class-allocate="reed"]')).toBeNull();
+    expect(sheet().textContent).toContain("unlocks at class level 3");
+    expect(sheet().querySelector('[data-class-respec]')).not.toBeNull();
+    expect(sheet().querySelectorAll("[data-class-preset]").length).toBeGreaterThanOrEqual(2);
+    sheet().querySelector<HTMLButtonElement>('[data-class-allocate="governor"]')!.click();
     expect(pair.spent).toEqual({ governor: 1 });
     expect(pair.points).toBe(0);
     sheet().querySelector<HTMLButtonElement>('[data-class-respec]')!.click();
@@ -809,20 +907,30 @@ describe("the habit-class face (issue #423)", () => {
     // allocation stands.
     sheet().querySelector<HTMLButtonElement>('[data-class-preset="engineer-default"]')!.click();
     expect(pair.spent).toEqual({});
+    // Back returns to the summary, which still owns the advancement read.
+    sheet().querySelector<HTMLButtonElement>('#habit-develop-back')!.click();
+    expect(sheet().querySelector('[data-live="class-xp-line"]')).not.toBeNull();
+    expect(sheet().querySelector("[data-class-allocate]")).toBeNull();
   });
 
-  it("the flow-mode active read carries the live meter; the drill-down never draws controls", () => {
+  it("the tree repeats no advancement figures — the summary owns them", () => {
     const habit = createHabit(app.state, "Piano").habit!;
-    selectHabit(app.state, habit.id);
-    startSession(app.state, null);
-    advance(app.state, 60);
-    const frame = openFace("habit");
-    // The active read shows the meter line live.
-    expect(frame.querySelector('[data-live="class-meter-line"]')!.textContent).toContain("1:00 / 3:00");
-    // No class controls stand in flow.
-    expect(frame.querySelector("[data-class-pick]")).toBeNull();
-    expect(frame.querySelector("[data-class-allocate]")).toBeNull();
-    expect(frame.querySelector("[data-class-respec]")).toBeNull();
+    const pair = habit.classes.engineer!;
+    pair.level = 3;
+    pair.points = 1;
+    pair.spent = { reed: 1 };
+    pair.rollMeter = { progress: 420, earned: 1 };
+    openHabitDetail(habit.id);
+    sheet().querySelector<HTMLButtonElement>('[data-habit-develop]')!.click();
+    const tree = sheet().querySelector(".habit-class")!;
+    expect(tree.textContent).not.toContain("Level 3");
+    expect(tree.textContent).not.toContain("tree point");
+    expect(tree.textContent).not.toContain("Next level");
+    expect(tree.textContent).not.toContain("of practice to level");
+    expect(tree.textContent).not.toContain("Next module roll");
+    expect(tree.textContent).not.toContain("next roll in");
+    expect(tree.querySelector('[data-live="class-meter-track"]')).toBeNull();
+    expect(tree.querySelector('[data-live="class-xp-line"]')).toBeNull();
   });
 
   it("node disclosures remain independent of rank actions and expose allocation state", () => {
@@ -831,19 +939,21 @@ describe("the habit-class face (issue #423)", () => {
     pair.level = 3;
     pair.points = 1;
     pair.spent = { governor: 2, reed: 1 };
-    const frame = openHabitDetail(habit.id);
+    openHabitDetail(habit.id);
+    sheet().querySelector<HTMLButtonElement>('[data-habit-develop]')!.click();
+    const tree = sheet().querySelector(".habit-class")!;
     for (const name of ["Governor", "Reed", "Punch card"]) {
-      const trigger = frame.querySelector<HTMLButtonElement>(`[aria-label="${name} — what it means"]`)!;
+      const trigger = tree.querySelector<HTMLButtonElement>(`[aria-label="${name} — what it means"]`)!;
       expect(trigger).not.toBeNull();
       expect(trigger.closest("button")).toBe(trigger);
       trigger.dispatchEvent(new FocusEvent("focusin", { bubbles: true }));
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
       expect(pair.spent).toEqual({ governor: 2, reed: 1 });
     }
-    const fullRank = frame.querySelector(".tree-node.equipped .tree-node-mark")!;
+    const fullRank = tree.querySelector(".tree-node.equipped .tree-node-mark")!;
     expect(fullRank.textContent).toBe("2/2");
     expect(fullRank.hasAttribute("aria-hidden")).toBe(false);
-    expect(frame.querySelector('[data-class-allocate="reed"]')!.getAttribute("aria-label")).toContain("rank 1 of 2");
-    expect(frame.querySelector(".habit-class")!.textContent!.match(/Engineer/g)).toHaveLength(1);
+    expect(tree.querySelector('[data-class-allocate="reed"]')!.getAttribute("aria-label")).toContain("rank 1 of 2");
+    expect(tree.textContent!.match(/Engineer/g)).toBeNull();
   });
 });
