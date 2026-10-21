@@ -1,6 +1,7 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules, normalizeWorld } from "./state";
 import { classDefOf, freshClassPair, normalizeHabitClasses } from "./classes";
 import { normalizeGoals } from "./goals";
+import { DEFAULT_HABIT_COLOR, normalizeHabitColor } from "./habits";
 import { longGoalCost, mutatorSlotCost } from "./economy";
 import { generateOffer, type Rng } from "./rolls";
 import { BALANCE, SAVE_VERSION } from "./constants";
@@ -27,15 +28,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-// ADR-0017's pattern at the v11 boundary (issue #423): the habit-class
-// cut is the iteration's schema step. Every version older than v10
-// rejects with the start-fresh message — no chain, no archive, no import
-// path for rejected versions. The one explicit step this build carries is
-// `migrateV10ToV11` below (the retired purchases' refunds, the Engineer
-// conversion, the flow meter's final payout, the goal retirement — issue
-// #427); it runs for a v10 save alone and the retired fields die in the
-// same pass, so a re-run cannot exist. The retired v9 step is gone with
-// its version: nothing below v10 loads, so nothing can still need it.
+// ADR-0017's pattern at the version boundary: every version older than
+// v10 rejects with the start-fresh message — no chain, no archive, no
+// import path for rejected versions. The explicit steps this build
+// carries run for their own versions alone: `migrateV10ToV11` (the
+// retired purchases' refunds, the Engineer conversion, the flow meter's
+// final payout, the goal retirement — issue #427) and `migrateV11ToV12`
+// (the one-goal narrowing's habit colors and pending choices — issue
+// #445), each writing the next schema once so a re-run cannot exist.
 export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   let parsed: unknown;
   try {
@@ -46,7 +46,7 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   if (!isRecord(parsed) || parsed.app !== "flowsynth" || typeof parsed.version !== "number") {
     return { error: "This file is not a FlowSynth save." };
   }
-  if (parsed.version < SAVE_VERSION - 1) {
+  if (parsed.version < 10) {
     return {
       error: `Incompatible older version (save v${parsed.version}, this build is v${SAVE_VERSION}) — starting fresh.`,
     };
@@ -272,11 +272,6 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   for (const habit of merged.habits) {
     delete (habit as unknown as Record<string, unknown>).build;
   }
-  // The goals' live-share surface (ADR-0047, wave 5) lenient-defaults the
-  // same way: a goal saved before the generators wave carries no live
-  // slice, which reads — honestly — as a manual-only history that banks
-  // nothing at its next completion.
-  normalizeGoals(merged.goals);
   // The goal-generator fuel pool (issue #423) lenient-defaults the same
   // way: a save written before the budget carries no fuel — exactly what
   // a fresh shape owes. A negative figure is corrupt, never a debt.
@@ -288,13 +283,28 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   // habit reads as an Engineer from zero — exactly what a fresh shape
   // writes. Unknown pair keys drop; corrupt figures re-default.
   normalizeHabitClasses(merged.habits);
-  // The one-step migration (issue #427): a v10 save — the gate above
-  // rejected everything older — passes through the explicit conversion
-  // before the retired fields drop. The conversion reads the raw save's
-  // retired fields (the oracle the merged copy's deletes must not
-  // precede) and writes the v11 schema once; a v11 save skips it
-  // entirely, so no refund, conversion, or payout can ever run twice.
-  if (parsed.version < SAVE_VERSION) migrateV10ToV11(raw, merged, rng);
+  // The habit's palette key (issue #445) lenient-defaults the same way:
+  // a habit saved before the palette wave carries no color, and the
+  // default is what it wore. The migration below replaces the default
+  // where a transferred single goal's color speaks.
+  for (const habit of merged.habits) {
+    habit.color = normalizeHabitColor(habit.color);
+  }
+  // The one-step migrations (ADR-0017's pattern): each runs for its own
+  // version alone — a v10 save passes through the v11 conversion before
+  // the one-goal narrowing, a v11 save skips straight to it — and the
+  // schema each writes is what the next load reads, so no conversion can
+  // ever run twice. The v12 normalization (the goals' live slices and the
+  // per-goal palette key's drop) follows both, since the narrowing's
+  // transfer reads the raw save's goal colors first.
+  if (parsed.version < 11) migrateV10ToV11(raw, merged, rng);
+  if (parsed.version < SAVE_VERSION) migrateV11ToV12(merged);
+  // The goals' live-share surface (ADR-0047, wave 5) lenient-defaults the
+  // same way: a goal saved before the generators wave carries no live
+  // slice, which reads — honestly — as a manual-only history that banks
+  // nothing at its next completion. The per-goal palette key drops here,
+  // after the migration above has read it.
+  normalizeGoals(merged.goals);
   // The retired player-wide flow meter (ADR-0041 as retired by issue
   // #423): its schema slot is gone — the per-pair practice-roll meters
   // replaced it. The field drops here per the retired-field precedent;
@@ -432,6 +442,11 @@ function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merg
   // Retire in place: session history resolves goal IDs against this list.
   // Keep the full condition, schedule, and progress even for goals that
   // have never appeared in a session. Active readers exclude retired rows.
+  // The capacity the retirement clamps to is v10's own historical per-
+  // habit figure — the v11 knob it retired never sold and the one-goal
+  // narrowing (issue #445) supersedes it — so the number lives beside the
+  // step that reads it, never in BALANCE.
+  const V10_HABIT_GOAL_SLOTS = 3;
   const perHabit = new Map<string, Goal[]>();
   for (const goal of merged.goals) {
     if (goal.condition.habitId === null) goal.retired = true;
@@ -441,12 +456,46 @@ function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merg
     perHabit.set(goal.condition.habitId, own);
   }
   for (const own of perHabit.values()) {
-    const overflow = own.length - BALANCE.habitGoalSlots;
+    const overflow = own.length - V10_HABIT_GOAL_SLOTS;
     if (overflow <= 0) continue;
     const oldestFirst = own
       .map((goal, index) => ({ goal, index }))
       .sort((a, b) => a.goal.createdAt - b.goal.createdAt || a.index - b.index);
     for (const { goal } of oldestFirst.slice(0, overflow)) goal.retired = true;
+  }
+}
+
+// ── The v11 → v12 migration (issue #445, ADR-0017's one step) ───────────
+//
+// The one-goal narrowing. A v11 save's habits wear no color of their own
+// and may carry several active goals. The conversion, once, per habit:
+// zero active goals — the palette default; exactly one — the habit adopts
+// that goal's color and the row runs on unchanged (condition, schedule,
+// progress, completions); several — every row holds pending a retain-one
+// choice at the next habit edit, and the habit wears the default until
+// the editor's swatches speak. No row is deleted, combined, or silently
+// chosen; no completion fires, so no generator fuel can move. Idempotence
+// is structural: the version gate routes a v11 save here alone, and the
+// schema this pass writes is what v12 saves carry.
+
+function migrateV11ToV12(merged: GameState): void {
+  const perHabit = new Map<string, Goal[]>();
+  for (const goal of merged.goals) {
+    if (goal.retired || goal.condition.habitId === null) continue;
+    const own = perHabit.get(goal.condition.habitId) ?? [];
+    own.push(goal);
+    perHabit.set(goal.condition.habitId, own);
+  }
+  for (const habit of merged.habits) {
+    const own = perHabit.get(habit.id) ?? [];
+    if (own.length === 1) {
+      // The raw save's palette key is the oracle: read it off the goal
+      // before normalizeGoals drops the retired field.
+      habit.color = normalizeHabitColor((own[0] as unknown as { color?: unknown }).color);
+      continue;
+    }
+    habit.color = DEFAULT_HABIT_COLOR;
+    for (const goal of own) goal.pendingChoice = true;
   }
 }
 

@@ -1,21 +1,23 @@
 // The Focus control sheet (ADR-0050, issues #249/#255): one frame behind the
-// console's doors — the clock, the Habit and Goals tiles — carrying the
-// PLAN / HABIT / GOALS / HISTORY faces in the ruled folio presentation.
-// Clipped plate, hairline-rule rows, names lead, figures right-aligned mono,
-// deeper mechanics in the tooltip layer, no expandable detail sections.
+// console's doors — the clock, the Habit tile — carrying the PLAN / HABIT /
+// HISTORY faces in the ruled folio presentation. Clipped plate, hairline-rule
+// rows, names lead, figures right-aligned mono, deeper mechanics in the
+// tooltip layer, no expandable detail sections.
 //
 // The flow-mode rule: reads live, capture freely, mutate nothing. During a
 // session the PLAN face becomes the running read (live elapsed, End flow
 // mirroring the main switch, targets visibly disabled); habit add/log and
-// goal create/delete lock — the engine's own upgrade-mode gates answer any
+// goal create/edit lock — the engine's own upgrade-mode gates answer any
 // stray landing, and the sheet stops drawing the controls at all.
 //
-// FocusApp ids keep their meaning (habit / time / notes / goals): the sheet
+// FocusApp ids keep their meaning (habit / time / notes): the sheet
 // is presentational, and `ui.app` still names which app's face stands —
-// time → PLAN, habit → HABIT, goals → GOALS, and the time app's history
-// surfaces are the HISTORY face. Notes left the frame for its own centered
-// modal composition (issue #332, amending ADR-0050's shared anchored
-// frame); its helpers live at the bottom of this file.
+// time → PLAN, habit → HABIT, and the time app's history
+// surfaces are the HISTORY face. The GOALS face retired with the separate
+// goal destination (issue #445, ADR-0075): the goal edits inside its
+// habit. Notes left the frame for its own centered modal composition
+// (issue #332, amending ADR-0050's shared anchored frame); its helpers
+// live at the bottom of this file.
 
 import type { App } from "./app";
 import { formatClock, formatDuration } from "../engine/clock";
@@ -27,21 +29,20 @@ import {
   recordTargetHit,
   sessionRecordsNewestFirst,
 } from "../engine/records";
-import { activeHabit } from "../engine/habits";
+import { activeHabit, HABIT_COLORS } from "../engine/habits";
 import { CLASSES, nodeAvailable, pairDef, pairOf, practiceRollThreshold, rankOf } from "../engine/classes";
 import type { ClassId } from "../engine/types";
 import { isInFlowNote } from "../engine/notes";
 import { achievementName } from "../engine/achievements";
-import { activeGoals, goalCapacity, goalRequiredSeconds, goalSummary, goalTrackerState, GOAL_COLORS, type GoalTrackerState } from "../engine/goals";
-import type { ClassPairState, GameState, Goal, GoalColor, Habit, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
+import {
+  activeGoalOf,
+  activeGoals,
+  goalRequiredSeconds,
+  goalSummary,
+  pendingGoalsOf,
+} from "../engine/goals";
+import type { ClassPairState, GameState, Goal, Habit, HabitColor, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
 
-// The tracker word set (issue #149): the Goals-state read's one vocabulary —
-// the sheet head wears it, and nothing phone-side does (ADR-0033 amended).
-const GOAL_TRACKER_WORDS: Record<GoalTrackerState, string> = {
-  none: "none tracked",
-  open: "in progress",
-  complete: "all complete",
-};
 import {
   PLAN_MIN_MINUTES,
   PLAN_MAX_MINUTES,
@@ -61,14 +62,15 @@ import { wireTooltips } from "./instrument";
 
 // The sheet's faces. HISTORY is the time app's history surfaces lifted to a
 // face of their own — the facetab is its affordance, the drill rides inside.
-export type FocusFace = "plan" | "habit" | "goals" | "history";
+// The GOALS face retired with the separate destination (issue #445): goals
+// edit inside their habit.
+export type FocusFace = "plan" | "habit" | "history";
 
 // The face the sheet shows right now, derived from the open app — no second
 // source of truth to drift.
 export function focusFaceOf(app: App): FocusFace {
   const { ui } = app;
   if (ui.app === "habit") return "habit";
-  if (ui.app === "goals") return "goals";
   if (ui.app === "time" && ui.historyOpen) return "history";
   return "plan";
 }
@@ -114,20 +116,18 @@ export function sessionCaption(elapsed: number, target: number | null, paused: b
 /* ── The goal meter's derivation (the display panel; header-status brief) ── */
 
 // The display well's one goal read, derived entirely from existing state:
-// the goals qualifying the selected habit — its own plus the habit-agnostic
-// ones — with the nearest-to-completion open goal lighting the column and a
-// count mark answering for the rest still in play. All done reads done; no
-// habit or no qualifying goal reads nothing, and the well closes over the
-// meter's slot. Each column wears its goal's chosen palette color; the lit
-// segments carry progress and the done column's engraved mark carries
-// completion — never color alone. Nothing here reads or writes a new
-// persisted key — the derivation is the whole edge state.
+// the selected habit's own active goal — the one goal a habit owns since
+// issue #445 — lighting the column. All done reads done; no habit, an
+// unresolved migration choice, or no goal reads nothing, and the well
+// closes over the meter's slot. The column wears the habit's palette
+// color — the goal inherits it (ADR-0075); the lit segments carry
+// progress and the done column's engraved mark carries completion — never
+// color alone. Nothing here reads or writes a new persisted key — the
+// derivation is the whole edge state.
 export interface GoalMeterRead {
   fraction: number;
   done: boolean;
-  color: GoalColor;
-  // Open qualifying goals still in play past the shown one.
-  extra: number;
+  color: HabitColor;
   // The tooltip gloss: which goal, what remains — the one fact the surface
   // cannot show. The habit name stays off it; the display already reads it.
   label: string;
@@ -143,31 +143,22 @@ const GOAL_SCHEDULE_WORD = { once: "", daily: "Daily", weekly: "Weekly" } as con
 export function goalMeterOf(state: GameState): GoalMeterRead | null {
   const habit = activeHabit(state);
   if (!habit) return null;
-  // Goals are habit-owned (issue #423): only the selected habit's own
-  // goals qualify the display well.
-  const qualifying = activeGoals(state).filter(
-    (goal) => goal.condition.kind === "habit-minutes" && goal.condition.habitId === habit.id,
-  );
-  if (qualifying.length === 0) return null;
-  const reads = qualifying.map((goal) => {
-    const required = goalRequiredSeconds(goal);
-    return { goal, fraction: required > 0 ? Math.min(1, goal.progressSeconds / required) : 1, done: goal.completed };
-  });
-  // The nearest-to-completion open goal leads; a fully completed candidate
-  // set closes the meter on its done mark rather than vanishing.
-  const open = reads.filter((read) => !read.done).sort((a, b) => b.fraction - a.fraction);
-  const chosen = open[0] ?? reads[0]!;
-  const done = chosen.done;
-  const extra = done ? 0 : open.length - 1;
-  const minutes = Math.round(goalRequiredSeconds(chosen.goal) / 60);
-  const scheduleWord = GOAL_SCHEDULE_WORD[chosen.goal.schedule.kind];
+  // One active goal per habit (issue #445): the habit's own row alone
+  // qualifies the display well; an unresolved migration choice reads as
+  // none until a goal is retained.
+  const goal = activeGoalOf(state, habit.id);
+  if (!goal) return null;
+  const required = goalRequiredSeconds(goal);
+  const fraction = required > 0 ? Math.min(1, goal.progressSeconds / required) : 1;
+  const done = goal.completed;
+  const minutes = Math.round(required / 60);
+  const scheduleWord = GOAL_SCHEDULE_WORD[goal.schedule.kind];
   const target = `${scheduleWord ? scheduleWord + " " : ""}${minutes} min`;
-  const remaining = Math.max(0, Math.ceil((goalRequiredSeconds(chosen.goal) - chosen.goal.progressSeconds) / 60));
+  const remaining = Math.max(0, Math.ceil((required - goal.progressSeconds) / 60));
   const tail = done ? "complete" : `${remaining} min to go`;
   const label = `${target} · ${tail}`;
-  const more = extra > 0 ? `, ${extra} more goal${extra === 1 ? "" : "s"} in play` : "";
-  const aria = `Goal progress: ${target.toLowerCase()}, ${done ? "complete" : `${remaining} minute${remaining === 1 ? "" : "s"} to go`}${more}`;
-  return { fraction: chosen.fraction, done, color: chosen.goal.color, extra, label, aria };
+  const aria = `Goal progress: ${target.toLowerCase()}, ${done ? "complete" : `${remaining} minute${remaining === 1 ? "" : "s"} to go`}`;
+  return { fraction, done, color: habit.color, label, aria };
 }
 
 /* ── The sheet's rebuild signature ─────────────────── */
@@ -189,18 +180,19 @@ export function focusSheetKey(app: App): string {
     ui.detailHabitId,
     ui.editingHabitId,
     state.activeHabitId,
-    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
+    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}:${h.color}`).join("|"),
     // The class layer (issue #423): the wear and each pair's level, free
     // points, and allocation hash into the key, so tree moves rebuild the
     // sheet. The meters ride the live patchers, never the key.
     state.habits
       .map((h) => `${h.classId}:` + Object.values(h.classes ?? {}).map((p) => `${p.level}.${p.points}.${Object.entries(p.spent ?? {}).map(([id, r]) => `${id}${r}`).join(",")}`).join(";"))
       .join("|"),
+    // The goal's palette rides its habit's key above (issue #445); the
+    // pending flag is the migration choice's own rebuild trigger.
     state.goals
-      .map((g) => `${g.completed ? 1 : 0}${g.condition.minutes}${g.condition.habitId ?? ""}${g.schedule.kind}${g.completedCount}${g.color}`)
+      .map((g) => `${g.completed ? 1 : 0}${g.condition.minutes}${g.condition.habitId ?? ""}${g.schedule.kind}${g.completedCount}${g.pendingChoice ? "p" : ""}`)
       .join("|"),
     state.sessionRecords.length,
-    ui.goalRecolorId,
   ]);
 }
 
@@ -306,15 +298,6 @@ function planRowsHtml(app: App): string {
       <button id="plan-open" class="plan-open${open ? " active" : ""}" aria-pressed="${open}">Open-ended</button>
     </div>
   </div>`;
-}
-
-// The habits' shared option run — the plan's session-habit select and the
-// goal create form pick from the same roster, so one spelling serves both.
-function habitChoices(state: GameState): string {
-  return state.habits
-    .filter((h) => !h.archived)
-    .map((h) => `<option value="${h.id}">${escapeHtml(h.name)}</option>`)
-    .join("");
 }
 
 // The PLAN face (#311). The console header is authoritative for starting
@@ -471,9 +454,10 @@ function habitClassHtml(app: App, habit: Habit): string {
 
 // The development detail (§9): lifetime practice (the development total),
 // sessions practiced and last practiced — aggregates off the practice log,
-// live sessions and manual logs together — the habit's class (issue #423),
-// and the habit's tagged notes beneath, newest first, each with its date
-// and in-session stamp.
+// live sessions and manual logs together — the habit's color and its one
+// optional goal (issue #445), the habit's class (issue #423), and the
+// habit's tagged notes beneath, newest first, each with its date and
+// in-session stamp.
 function habitDetailBodyHtml(app: App, habit: Habit): string {
   const { state } = app;
   const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
@@ -484,6 +468,8 @@ function habitDetailBodyHtml(app: App, habit: Habit): string {
   return `${stat("Lifetime practice", formatDuration(habit.seconds))}
     ${stat("Sessions practiced", String(sessions))}
     ${stat("Last practiced", lastPracticed !== null && lastPracticed > 0 ? formatDate(lastPracticed, true) : "—")}
+    ${habitColorHtml(habit)}
+    ${habitGoalHtml(app, habit)}
     ${habitClassHtml(app, habit)}
     ${noteRows ? `<div class="note-list">${noteRows}</div>` : `<p class="small muted">No tagged notes yet.</p>`}`;
 }
@@ -552,25 +538,24 @@ function habitFaceHtml(app: App): string {
     ${archived.length > 0 ? `<div class="folio-rows habit-ledger habit-archived"><span class="eyebrow">ARCHIVED</span>${archived.map((habit) => habitLedgerRowHtml(app, habit)).join("")}</div>` : ""}`;
 }
 
-/* ── The GOALS face ────────────────────────────────── */
+/* ── The habit editor's color and goal (issue #445) ── */
 
-// Slot order (issue #150): incomplete goals first, completed occurrences
-// next; stable within each band, so creation order holds.
-function openGoalsFirst(a: Goal, b: Goal): number {
-  return Number(a.completed) - Number(b.completed);
+// The six-swatch picker's one spelling (issue #312, re-owned by the habit
+// with issue #445): exactly the palette's six, the habit's standing color
+// wearing the selected state — one picker shape, one place, so no second
+// picker can drift. A pick lands through the engine at once; the goal
+// reads inherit the habit color everywhere after.
+function habitSwatchesHtml(habit: Habit): string {
+  return `<span class="habit-swatches" role="group" aria-label="Habit color">${HABIT_COLORS.map(
+    (key) =>
+      `<button class="habit-swatch${key === habit.color ? " selected" : ""}" type="button" data-habit-set-color="${key}" data-habit="${habit.id}" aria-pressed="${key === habit.color}" aria-label="${key}"><span aria-hidden="true" style="background:var(--habit-${key})"></span></button>`,
+  ).join("")}</span>`;
 }
 
-// The six-swatch picker's one spelling (issue #312): exactly the palette's
-// six, the standing pick wearing the selected state — the same row serves
-// the create form and a goal row's re-pick, so there is no second picker
-// shape to drift. `attr` names the binding (`data-goal-draft-color` on the
-// create form, `data-goal-set-color` on a row), the background rides the
-// palette token, and the key names the swatch for every access path.
-function goalSwatchesHtml(attr: string, selected: GoalColor): string {
-  return `<span class="goal-swatches" role="group" aria-label="Goal color">${GOAL_COLORS.map(
-    (key) =>
-      `<button class="goal-swatch${key === selected ? " selected" : ""}" type="button" ${attr}="${key}" aria-pressed="${key === selected}" aria-label="${key}"><span aria-hidden="true" style="background:var(--goal-${key})"></span></button>`,
-  ).join("")}</span>`;
+// The color row in the habit detail: identity settings live with the name
+// they belong to.
+function habitColorHtml(habit: Habit): string {
+  return `<div class="folio-row"><span class="folio-key">Color</span><span class="folio-main">${habitSwatchesHtml(habit)}</span></div>`;
 }
 
 // The goal bar's fill height, one build for the row's markup and its live
@@ -581,62 +566,94 @@ function goalBarHeight(goal: Goal): string {
   return `${Math.min(100, (goal.progressSeconds / goalRequiredSeconds(goal)) * 100)}%`;
 }
 
-// The GOALS face: the selected habit's own slots read over the ruled goal
-// rows (issue #423 — goals are habit-owned; only the selected habit's
-// goals display, and no habit selected reads none), live progress at
-// every width, each track wearing its goal's chosen color — with create
-// and delete as upgrade-mode controls, the palette picked at creation and
-// re-pickable on the row. Capacity is the habit's own fixed count, never
-// purchasable. Flow reads live and mutates nothing.
-function goalsFaceHtml(app: App): string {
+// The goal row's figures line, one builder for the markup and its live
+// patcher.
+function goalFiguresLine(goal: Goal): string {
+  return `${formatDuration(goal.progressSeconds)} / ${formatDuration(goalRequiredSeconds(goal))}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`;
+}
+
+// The carried-over row of a multi-goal migration (issue #445): its record,
+// shown plain, with the one explicit choice — keep. No bar and no live
+// slots: a pending row neither runs nor lights a read until retained.
+function pendingGoalRowHtml(state: GameState, goal: Goal): string {
+  return `<div class="folio-row goal-row" data-goal="${goal.id}">
+    <div class="goal-ledger">
+      <div class="goal-ledger-head">
+        <span class="goal-ledger-name">${escapeHtml(goalSummary(state, goal))}</span>
+        <span class="goal-status">carried over</span>
+        <button class="primary small" data-goal-keep="${goal.id}" aria-label="Keep ${escapeHtml(goalSummary(state, goal))}">Keep</button>
+      </div>
+      <small class="mono">${goalFiguresLine(goal)}</small>
+    </div>
+  </div>`;
+}
+
+// The active goal row: its inherited color on the track, live figures, and
+// the edit and remove controls — create, edit, replace, and remove all
+// land here, in the habit that owns the goal.
+function activeGoalRowHtml(app: App, habit: Habit, goal: Goal, upgrade: boolean): string {
+  const { state } = app;
+  const required = goalRequiredSeconds(goal);
+  const status = goal.completed
+    ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
+    : `<span class="goal-status">${formatClock(Math.max(0, required - goal.progressSeconds))} to go</span>`;
+  return `<div class="folio-row goal-row ${goal.completed ? "done" : ""}" data-goal="${goal.id}">
+    <div class="goal-ledger">
+      <div class="goal-ledger-head">
+        <span class="goal-ledger-name">${escapeHtml(goalSummary(state, goal))}</span>
+        ${status}
+        ${
+          upgrade
+            ? `<button class="quiet small" data-goal-edit-open="${goal.id}" title="Edit goal" aria-label="Edit goal">✎</button>
+        <button class="quiet small icon-btn" data-goal-remove="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>`
+            : ""
+        }
+      </div>
+      <span class="gbar${goal.completed ? " done" : ""}" aria-hidden="true"><i data-goal-progress="${goal.id}" style="height:${goalBarHeight(goal)};background:var(--habit-${habit.color})"></i></span>
+      <small class="mono" data-goal-minutes="${goal.id}">${goalFiguresLine(goal)}</small>
+    </div>
+  </div>`;
+}
+
+// The goal form's one spelling (minutes and cadence — the goal inherits
+// the habit color, so the palette has no goal half), serving the create
+// and the edit through their own landing buttons.
+function goalFormHtml(goal: Goal | undefined): string {
+  return `<span class="focus-form-row goal-form">
+    <input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" aria-label="Minutes" value="${goal ? Math.round(goalRequiredSeconds(goal) / 60) : ""}" />
+    <select id="goal-schedule" aria-label="Schedule">${["daily", "weekly", "once"]
+      .map((kind) => `<option value="${kind}"${goal?.schedule.kind === kind ? " selected" : ""}>${kind}</option>`)
+      .join("")}</select>
+    <button class="primary small" id="${goal ? "goal-edit-apply" : "goal-add"}">${goal ? "Apply" : "Add"}</button>
+  </span>`;
+}
+
+// The habit's goal section (issue #445): the one optional goal, edited in
+// its own habit — carried-over rows asking which to keep, the active
+// goal's row with its edit and remove, or the create action when none
+// stands. The engine's upgrade-mode gates answer the session lock; the
+// editor only draws in upgrade mode.
+function habitGoalHtml(app: App, habit: Habit): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
-  const habit = activeHabit(state);
-  const capacity = goalCapacity();
-  const ownGoals = habit ? activeGoals(state).filter((g) => g.condition.habitId === habit.id) : [];
-  const goalRow = (goal: Goal) => {
-    const required = goalRequiredSeconds(goal);
-    const status = goal.completed
-      ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
-      : `<span class="goal-status">${formatClock(Math.max(0, required - goal.progressSeconds))} to go</span>`;
-    const recoloring = upgrade && ui.goalRecolorId === goal.id;
-    return `<div class="folio-row goal-row ${goal.completed ? "done" : ""}" data-goal="${goal.id}">
-      <div class="goal-ledger">
-        <div class="goal-ledger-head">
-          <span class="goal-ledger-name">${escapeHtml(goalSummary(state, goal))}</span>
-          ${status}
-          ${
-            upgrade
-              ? `<button class="quiet small goal-recolor" data-goal-recolor="${goal.id}" aria-pressed="${recoloring}" title="Change color" aria-label="Change color"><span class="goal-recolor-dot" style="background:var(--goal-${goal.color})"></span></button>
-          <button class="quiet small icon-btn" data-goal-delete="${goal.id}" title="Remove goal"><svg viewBox="-10 -10 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M-6-6 6 6M6-6-6 6"/></svg></button>`
-              : ""
-          }
-        </div>
-        <span class="gbar${goal.completed ? " done" : ""}" aria-hidden="true"><i data-goal-progress="${goal.id}" style="height:${goalBarHeight(goal)};background:var(--goal-${goal.color})"></i></span>
-        <small class="mono" data-goal-minutes="${goal.id}">${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}</small>
-        ${recoloring ? goalSwatchesHtml("data-goal-set-color", goal.color) : ""}
-      </div>
-    </div>`;
-  };
-  const orderedGoals = [...ownGoals].sort(openGoalsFirst);
-  const createForm = ui.focusForm === "goal-create";
-  const habitOptions = habitChoices(state);
-  return `<div class="folio-rows">
-    <div class="folio-row">
-      <span class="folio-main"><span class="folio-fig mono" id="focus-slots-read">${habit ? `${ownGoals.length}/${capacity} slots` : "no habit selected"}</span>${upgrade ? "" : `<span class="folio-sub">locked for this session</span>`}</span>
-    </div>
-    ${habit && orderedGoals.length === 0 ? `<div class="folio-row"><span class="folio-line muted">${escapeHtml(habit.name)} tracks no goals yet.</span></div>` : ""}
-    ${orderedGoals.map(goalRow).join("")}
-  </div>
-  ${
-    upgrade && (!habit || ownGoals.length < capacity)
-      ? `<div class="folio-rows focus-actions"><div class="folio-row">${
-          createForm
-            ? `<span class="focus-form-row goal-create"><select id="goal-habit" aria-label="Habit">${habitOptions}</select><input type="number" id="goal-minutes" min="1" max="1440" placeholder="min" aria-label="Minutes" /><select id="goal-schedule" aria-label="Schedule"><option value="daily">daily</option><option value="weekly">weekly</option><option value="once">once</option></select><button class="primary small" id="goal-add">Add</button></span>${goalSwatchesHtml("data-goal-draft-color", ui.goalColor)}`
-            : `<button class="focus-action" id="goal-create-open">+ New goal</button>`
-        }</div></div>`
-      : ""
-  }`;
+  const pending = pendingGoalsOf(state, habit.id);
+  const goal = activeGoalOf(state, habit.id);
+  const editing = upgrade && ui.focusForm === "goal-edit" && goal;
+  const creating = upgrade && ui.focusForm === "goal-create" && !goal && pending.length === 0;
+  return `<div class="habit-goal">
+    <span class="eyebrow">GOAL</span>
+    ${
+      pending.length > 0
+        ? `<p class="small muted mono">Several goals carried over — keep one</p><div class="folio-rows">${pending.map((row) => pendingGoalRowHtml(state, row)).join("")}</div>`
+        : goal
+          ? `${activeGoalRowHtml(app, habit, goal, upgrade)}${editing ? goalFormHtml(goal) : ""}`
+          : upgrade
+            ? creating
+              ? goalFormHtml(undefined)
+              : `<div class="folio-rows focus-actions"><div class="folio-row"><button class="focus-action" id="goal-create-open">+ New goal</button></div></div>`
+            : `<div class="folio-row"><span class="folio-line muted">No goal.</span></div>`
+    }
+  </div>`;
 }
 
 /* ── The HISTORY face ──────────────────────────────── */
@@ -862,16 +879,14 @@ export function bindNotesModal(app: App, scope: HTMLElement): void {
 const FACE_TABS: readonly [FocusFace, string][] = [
   ["plan", "PLAN"],
   ["habit", "HABIT"],
-  ["goals", "GOALS"],
   ["history", "HISTORY"],
 ];
 
 // The head's state word: what this face holds, at a glance — a fact the
 // rows below don't already restate. PLAN names the readiness; HABIT names
-// the practice a session would start; GOALS wears the tracker's rolled-up
-// state (the one Goals-state read, desktop-only per ADR-0033 amended);
-// HISTORY counts the records. During a session the head names the mode —
-// running, or paused — the panel's own read beside its name.
+// the practice a session would start; HISTORY counts the records. During a
+// session the head names the mode — running, or paused — the panel's own
+// read beside its name.
 function sheetStateWord(app: App): string {
   const { state } = app;
   const face = focusFaceOf(app);
@@ -885,8 +900,6 @@ function sheetStateWord(app: App): string {
       return "ready";
     case "habit":
       return activeHabit(state)?.name ?? "none selected";
-    case "goals":
-      return GOAL_TRACKER_WORDS[goalTrackerState(state)];
     case "history":
       return `${state.sessionRecords.length} sessions`;
   }
@@ -913,7 +926,6 @@ export function focusSheetHtml(app: App): string {
   let body: string;
   if (face === "plan") body = planFaceHtml(app);
   else if (face === "habit") body = habitFaceHtml(app);
-  else if (face === "goals") body = goalsFaceHtml(app);
   else body = app.ui.drillSession !== null ? historyDrillHtml(app) : historyListHtml(app);
   const tabs = FACE_TABS.map(
     ([key, label]) =>
@@ -964,15 +976,10 @@ function refreshPlanControls(app: App): void {
 // Values that move during flow without rebuilding the sheet: the HABIT
 // face's live session read, the active pair's practice-roll meter, the
 // practice tallies, and goal progress. The PLAN face carries no live
-// figures — the console clock owns time.
+// figures — the console clock owns time. A habit color change is not a
+// live figure — it rebuilds through the sheet key.
 export function updateFocusSheetLive(app: App, scope: ParentNode): void {
   const { state } = app;
-  // Palette changes patch the standing pick, keeping form values and focus.
-  for (const swatch of scope.querySelectorAll<HTMLElement>("[data-goal-draft-color]")) {
-    const selected = swatch.getAttribute("data-goal-draft-color") === app.ui.goalColor;
-    swatch.classList.toggle("selected", selected);
-    swatch.setAttribute("aria-pressed", String(selected));
-  }
   if (state.mode !== "upgrade") {
     const elapsed = state.session?.elapsed ?? 0;
     setText(scope.querySelector('[data-live="focus-habit-session"]'), `${formatClock(elapsed)} of practice`);
@@ -1002,14 +1009,10 @@ export function updateFocusSheetLive(app: App, scope: ParentNode): void {
     if (node && node.textContent !== display) node.textContent = display;
   }
   for (const goal of activeGoals(state)) {
-    const required = goalRequiredSeconds(goal);
     const bar = scope.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
     const barHeight = goalBarHeight(goal);
     if (bar && bar.style.height !== barHeight) bar.style.height = barHeight;
-    setText(
-      scope.querySelector(`[data-goal-minutes="${goal.id}"]`),
-      `${formatDuration(goal.progressSeconds)} / ${formatDuration(required)}${goal.completedCount > 0 ? ` · ×${goal.completedCount} completed` : ""}`,
-    );
+    setText(scope.querySelector(`[data-goal-minutes="${goal.id}"]`), goalFiguresLine(goal));
   }
 }
 
@@ -1174,49 +1177,58 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
       if (presetId && habitId) app.applyClassPresetAction(habitId, presetId);
     });
   });
-  // Goals: delete rides the rows, create is an on-demand form with the
-  // palette picked on it. Goals are habit-owned (issue #423): the form's
-  // select carries the roster with no any-habit escape, and the engine
-  // answers for the habit's own slot capacity.
-  scope.querySelectorAll<HTMLElement>("[data-goal-delete]").forEach((button) => {
+  // The habit editor's goal (issue #445): create, edit, and remove land
+  // inside the drilled habit; a carried-over row's Keep is the migration
+  // choice's one landing. The engine answers for the mode lock, the one
+  // active goal, and the valid figures.
+  scope.querySelectorAll<HTMLElement>("[data-habit-set-color]").forEach((button) => {
     app.listen(button, "click", () => {
-      const id = button.getAttribute("data-goal-delete");
-      if (id) app.deleteGoalAction(id);
+      const habitId = button.getAttribute("data-habit");
+      const key = button.getAttribute("data-habit-set-color") as HabitColor | null;
+      if (!habitId || !key) return;
+      app.setHabitColorAction(habitId, key);
+      // The pick lands at once and rebuilds the sheet through the key; the
+      // keyboard stays on the picked swatch, whatever re-render answered.
+      document.querySelector<HTMLElement>(`[data-habit-set-color="${key}"][data-habit="${habitId}"]`)?.focus();
     });
   });
   app.listen(scope.querySelector("#goal-create-open"), "click", () => app.setFocusForm("goal-create"));
+  // The goal form's Escape puts it away without landing, like every
+  // on-demand form's input.
+  app.listen(scope.querySelector("#goal-minutes"), "keydown", (event) => {
+    if ((event as KeyboardEvent).key === "Escape") {
+      event.stopPropagation();
+      app.setFocusForm(null);
+    }
+  });
   app.listen(scope.querySelector("#goal-add"), "click", () => {
-    const habitSelect = scope.querySelector("#goal-habit") as HTMLSelectElement | null;
     const minutesInput = scope.querySelector("#goal-minutes") as HTMLInputElement | null;
     const scheduleSelect = scope.querySelector("#goal-schedule") as HTMLSelectElement | null;
-    if (!habitSelect || !minutesInput || !scheduleSelect || !minutesInput.value) return;
-    app.createGoalAction(
-      habitSelect.value === "" ? null : habitSelect.value,
-      Number(minutesInput.value),
-      scheduleSelect.value as "once" | "daily" | "weekly",
-      app.ui.goalColor,
-    );
+    const habitId = app.ui.detailHabitId;
+    if (!habitId || !minutesInput || !scheduleSelect || !minutesInput.value) return;
+    app.createGoalAction(habitId, Number(minutesInput.value), scheduleSelect.value as "once" | "daily" | "weekly");
   });
-  // The palette (issue #312): the create form's draft pick stands until a
-  // goal lands; a row's re-pick opens the same six and lands through the
-  // engine's gate.
-  scope.querySelectorAll<HTMLElement>("[data-goal-draft-color]").forEach((button) => {
+  app.listen(scope.querySelector("#goal-edit-apply"), "click", () => {
+    const minutesInput = scope.querySelector("#goal-minutes") as HTMLInputElement | null;
+    const scheduleSelect = scope.querySelector("#goal-schedule") as HTMLSelectElement | null;
+    const habitId = app.ui.detailHabitId;
+    const goal = habitId ? activeGoalOf(app.state, habitId) : undefined;
+    if (!goal || !minutesInput || !scheduleSelect || !minutesInput.value) return;
+    app.editGoalAction(goal.id, Number(minutesInput.value), scheduleSelect.value as "once" | "daily" | "weekly");
+  });
+  scope.querySelectorAll<HTMLElement>("[data-goal-edit-open]").forEach((button) => {
+    app.listen(button, "click", () => app.setFocusForm("goal-edit"));
+  });
+  scope.querySelectorAll<HTMLElement>("[data-goal-remove]").forEach((button) => {
     app.listen(button, "click", () => {
-      const key = button.getAttribute("data-goal-draft-color") as GoalColor | null;
-      if (key) app.pickGoalColor(key);
+      const id = button.getAttribute("data-goal-remove");
+      if (id) app.deleteGoalAction(id);
     });
   });
-  scope.querySelectorAll<HTMLElement>("[data-goal-recolor]").forEach((button) => {
+  scope.querySelectorAll<HTMLElement>("[data-goal-keep]").forEach((button) => {
     app.listen(button, "click", () => {
-      const id = button.getAttribute("data-goal-recolor");
-      if (id) app.toggleGoalRecolor(id);
-    });
-  });
-  scope.querySelectorAll<HTMLElement>("[data-goal-set-color]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const id = button.closest("[data-goal]")?.getAttribute("data-goal") ?? null;
-      const key = button.getAttribute("data-goal-set-color") as GoalColor | null;
-      if (id && key) app.setGoalColorAction(id, key);
+      const id = button.getAttribute("data-goal-keep");
+      if (id) app.retainGoalChoiceAction(id);
     });
   });
   // The history surfaces (§9): rows drill in; the tail pages; back unwinds

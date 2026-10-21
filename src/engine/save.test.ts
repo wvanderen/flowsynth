@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, startSession } from "./actions";
 import { fresh, give, giveHabit, stubRng } from "./fixtures";
+import { createHabit, selectHabit } from "./habits";
 import { BALANCE, SAVE_VERSION } from "./constants";
 import { longGoalCost, mutatorSlotCost } from "./economy";
-import { activeGoals, accrueGoalProgress, createGoal, deleteGoal, rollGoalOccurrences, setGoalColor } from "./goals";
+import { activeGoals, accrueGoalProgress, createGoal, deleteGoal, editGoal, retainGoalChoice, rollGoalOccurrences } from "./goals";
 import { deserialize, serialize, GOAL_CAPACITY_REFUND_CAP } from "./save";
 import { freshWorld } from "./state";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
@@ -14,10 +15,10 @@ import { hex } from "./hex";
 import type { GameState, Habit } from "./types";
 import v10MigrationFixture from "./fixtures/saves/v10-migration.json";
 
-// The v11 boundary (issue #423): the habit-class cut. The explicit
-// `migrateV10ToV11` (issue #427) is the one step at this boundary; every
-// version older than v10 rejects with the start-fresh message, and there
-// is no chain past one step.
+// The version boundaries (issues #423, #445): the habit-class cut and the
+// one-goal cut. Each explicit migration is the one step at its boundary;
+// every version older than v10 rejects with the start-fresh message, and
+// there is no chain past the steps this build carries.
 
 // Fabricate a v8 save from a live state: force the version. Rejected —
 // the v10 step is the current chain's floor, and the chain does not grow.
@@ -34,6 +35,17 @@ function asV7(state: GameState, savedAt = 1_000): string {
 function asV10(state: GameState, savedAt = 1_000): string {
   const file = JSON.parse(serialize(state, savedAt));
   file.version = 10;
+  return JSON.stringify(file);
+}
+
+// Fabricate a v11 save from a live v12 state: rewind the one-goal
+// schema — habits wore no palette key, goals carried one — and force the
+// version, so `migrateV11ToV12` runs over a real shape.
+function asV11(state: GameState, savedAt = 1_000, goalColor = "amber"): string {
+  const file = JSON.parse(serialize(state, savedAt));
+  for (const habit of file.state.habits) delete habit.color;
+  for (const goal of file.state.goals) goal.color = goalColor;
+  file.version = 11;
   return JSON.stringify(file);
 }
 
@@ -57,7 +69,7 @@ describe("persistence", () => {
   it("saves carry the current version", () => {
     const parsed = JSON.parse(serialize(fresh()));
     expect(parsed.version).toBe(SAVE_VERSION);
-    expect(parsed.version).toBe(11);
+    expect(parsed.version).toBe(12);
   });
 
   it("saves lenient-default the gate ledger", () => {
@@ -302,7 +314,7 @@ describe("the version gate (ADR-0017's pattern)", () => {
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9,"state":{"mode":"weird"}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":12,"state":{}}').error).toMatch(/newer than this build/i);
+    expect(deserialize('{"app":"flowsynth","version":13,"state":{}}').error).toMatch(/newer than this build/i);
   });
 
   it("exported saves load unchanged", () => {
@@ -479,8 +491,13 @@ describe("the v10 → v11 migration (issue #427)", () => {
     const state = loadFixture();
     const byId = new Map(state.goals.map((goal) => [goal.id, goal]));
     // h1 carried four goals past the fixed capacity of three; the oldest
-    // retires. h2 carried two — nothing retires.
-    expect(byId.get("g1")).toEqual({ ...v10MigrationFixture.state.goals.find((g) => g.id === "g1"), liveSeconds: 0, retired: true });
+    // retires. h2 carried two — nothing retires. The retired per-goal
+    // palette key dropped with the one-goal cut (issue #445).
+    const fixtureGoal = (id: string) => {
+      const { color: _color, ...rest } = v10MigrationFixture.state.goals.find((g) => g.id === id)!;
+      return rest;
+    };
+    expect(byId.get("g1")).toEqual({ ...fixtureGoal("g1"), liveSeconds: 0, retired: true });
     expect(activeGoals(state).some((g) => g.id === "g1")).toBe(false);
     expect(byId.get("g2")).toMatchObject({ progressSeconds: 900, condition: { minutes: 45 } });
     expect(byId.get("g3")).toMatchObject({ progressSeconds: 300, schedule: { kind: "weekly" } });
@@ -501,8 +518,9 @@ describe("the v10 → v11 migration (issue #427)", () => {
     const before = cross!.progressSeconds;
     accrueGoalProgress(state, "h1", 3_600, "live");
     expect(cross!.progressSeconds).toBe(before);
-    // And it never occupies a slot: capacity counts single-habit rows.
-    expect(activeGoals(state).filter((goal) => goal.condition.habitId === "h1")).toHaveLength(BALANCE.habitGoalSlots);
+    // And it never occupies the one active goal: the narrowing's pending
+    // rows hold the habit's carried records instead (issue #445).
+    expect(activeGoals(state).filter((goal) => goal.condition.habitId === "h1")).toHaveLength(0);
   });
 
   it("preserves fractional recorded seconds and pays even subsecond flow progress", () => {
@@ -526,20 +544,22 @@ describe("the v10 → v11 migration (issue #427)", () => {
     accrueGoalProgress(state, "h1", 3_600);
     state.mode = "upgrade";
     expect(deleteGoal(state, "g1").ok).toBe(false);
-    expect(setGoalColor(state, "g1", "cyan").ok).toBe(false);
+    expect(retainGoalChoice(state, "g1").ok).toBe(false);
     expect(retired).toEqual(before);
     expect(deserialize(serialize(state)).state!.goals.filter((g) => g.retired)).toEqual(before);
-    // Retirement leaves exactly three active slots, and a replacement can
-    // use an opened slot even though the retired record remains present.
+    // The carried rows resolve through the one-goal editor: retaining one
+    // retires its pending siblings, and the retained row can then be
+    // replaced by a fresh goal even though the records remain present.
+    expect(retainGoalChoice(state, "g2").ok).toBe(true);
+    expect(state.goals.filter((g) => g.retired).map((g) => g.id)).toEqual(["g1", "g3", "g4", "g5"]);
     expect(deleteGoal(state, "g2").ok).toBe(true);
     expect(createGoal(state, { habitId: "h1", minutes: 10, schedule: "daily", now: 1 }).ok).toBe(true);
   });
 
   it("preserves overflow goals even when no session ever referenced them", () => {
     const state = loadFixture(withEdits((s) => { s.sessionRecords = []; }));
-    expect(state.goals.find((g) => g.id === "g1")).toEqual({
-      ...v10MigrationFixture.state.goals.find((g) => g.id === "g1"), liveSeconds: 0, retired: true,
-    });
+    const { color: _color, ...expected } = v10MigrationFixture.state.goals.find((g) => g.id === "g1")!;
+    expect(state.goals.find((g) => g.id === "g1")).toEqual({ ...expected, liveSeconds: 0, retired: true });
   });
 
   it("keeps the Mutator layer resting intact: slots, tray, placed mutators, banked rolls, and meter survive inert", () => {
@@ -594,5 +614,87 @@ describe("the v10 → v11 migration (issue #427)", () => {
     expect(reloaded.nous).toBe(migrated.nous);
     expect(reloaded.bankedRolls).toHaveLength(2);
     expect(reloaded.habits.map((h) => h.classes.engineer!.experience)).toEqual([36_000, 8_000]);
+  });
+});
+
+// The one-goal narrowing's own boundary (issue #445): the v11 save built
+// from a live state — habits without palette keys, goals carrying them —
+// passes through `migrateV11ToV12` alone. The color transfer and the
+// pending multi-goal choice are the conversion's whole subject.
+describe("the v11 → v12 migration (issue #445)", () => {
+  function singleGoalSave(): string {
+    const s = fresh();
+    const habit = createHabit(s, "Piano").habit!;
+    selectHabit(s, habit.id);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: 5_000 }).goal!;
+    goal.progressSeconds = 600;
+    goal.completedCount = 2;
+    return asV11(s);
+  }
+
+  it("a single-goal habit adopts its goal's color and the row transfers unchanged", () => {
+    const loaded = deserialize(singleGoalSave()).state!;
+    const [habit] = loaded.habits as Habit[];
+    expect(habit!.color).toBe("amber");
+    const goal = loaded.goals[0]!;
+    expect(goal.pendingChoice).toBeUndefined();
+    expect(goal.retired).toBeUndefined();
+    expect(goal.progressSeconds).toBe(600);
+    expect(goal.completedCount).toBe(2);
+    expect("color" in goal).toBe(false);
+  });
+
+  it("a zero-goal habit wears the palette default and stays usable", () => {
+    const s = fresh();
+    createHabit(s, "Piano");
+    const loaded = deserialize(asV11(s)).state!;
+    expect(loaded.habits[0]!.color).toBe("vermillion");
+    expect(loaded.goals).toHaveLength(0);
+  });
+
+  it("a multi-goal habit holds every row pending and wears the default until the choice lands", () => {
+    const s = fresh();
+    const habit = createHabit(s, "Piano").habit!;
+    selectHabit(s, habit.id);
+    const first = createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: 5_000 }).goal!;
+    // The v11 save's second row — the create path refuses it today, so
+    // the test writes the shape the old schema carried.
+    s.goals.push({ ...structuredClone(first), id: `${first.id}b`, condition: { kind: "habit-minutes", habitId: habit.id, minutes: 45 }, schedule: { kind: "once" }, progressSeconds: 0, createdAt: 6_000 });
+    const loaded = deserialize(asV11(s, 1_000, "cyan")).state!;
+    expect(loaded.habits[0]!.color).toBe("vermillion");
+    expect(loaded.goals.map((g) => g.pendingChoice)).toEqual([true, true]);
+    // Unresolved: the active reads refuse the rows, and practice cannot
+    // complete or pay either one.
+    expect(activeGoals(loaded)).toHaveLength(0);
+    accrueGoalProgress(loaded, habit.id, 3_600, "live");
+    expect(loaded.goals.every((g) => !g.completed)).toBe(true);
+    expect(loaded.goalFuel).toBe(0);
+  });
+
+  it("the chain runs once: a v10 fixture save lands on the same narrowing (both steps, in order)", () => {
+    const state = deserialize(JSON.stringify(v10MigrationFixture), stubRng(new Array(32).fill(0.4))).state!;
+    // h1's three surviving rows and h2's two all pend; the colors stay the
+    // default — nothing was silently chosen.
+    expect(state.habits.map((h) => h.color)).toEqual(["vermillion", "vermillion"]);
+    expect(state.goals.filter((g) => g.pendingChoice).map((g) => g.id)).toEqual(["g2", "g3", "g5", "g6", "g7"]);
+  });
+
+  it("retaining a carried row after the migration keeps its record and pays one completion, once", () => {
+    const loaded = deserialize(singleGoalSave()).state!;
+    const goal = loaded.goals[0]!;
+    // The transferred row is already active: credited practice rides
+    // toward the raised target, and the completion draws the bounded pool.
+    editGoal(loaded, goal.id, { minutes: 30, schedule: "daily" }, 9_000);
+    expect(goal.completed).toBe(false);
+    expect(goal.progressSeconds).toBe(600);
+  });
+
+  it("a v12 save reloads untouched: no re-defaulting, no re-flagging", () => {
+    const once = deserialize(singleGoalSave()).state!;
+    const text = serialize(once, 1_000);
+    const twice = deserialize(text).state!;
+    expect(serialize(twice, 1_000)).toBe(text);
+    expect(twice.habits[0]!.color).toBe("amber");
+    expect(twice.goals[0]!.pendingChoice).toBeUndefined();
   });
 });

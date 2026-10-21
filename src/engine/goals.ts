@@ -1,51 +1,43 @@
 import { BALANCE, EPS } from "./constants";
 import { creditGoalEarning } from "./reserves";
-import type { Goal, GoalColor, GoalCondition, GoalSchedule, GameState } from "./types";
-export type { Goal, GoalColor, GoalCondition, GoalSchedule };
+import type { Goal, GoalCondition, GoalSchedule, GameState } from "./types";
+export type { Goal, GoalCondition, GoalSchedule };
 
-// The six-token palette (issue #312), vermillion default. The choice is
-// made once — at creation or the row's re-pick on the GOALS face — and
-// read from goal state everywhere after; there is no legend and no second
-// place to set it.
-export const GOAL_COLORS: readonly GoalColor[] = ["vermillion", "amber", "green", "cyan", "indigo", "violet"];
-export const DEFAULT_GOAL_COLOR: GoalColor = "vermillion";
-
-// The one lenient spelling: an absent or unknown key reads as the default,
-// never a made-up token — the same answer at creation, at a re-pick, and
-// at load.
-export function normalizeGoalColor(color: unknown): GoalColor {
-  return typeof color === "string" && (GOAL_COLORS as readonly string[]).includes(color) ? (color as GoalColor) : DEFAULT_GOAL_COLOR;
-}
-
-// Goals (issue #6, as re-owned by issue #423). A goal tracks a practice
-// condition ("Piano, 20 minutes a day") and belongs to ONE habit: only the
-// selected habit's goals display, and only credited practice for that
-// habit advances them — unstructured practice advances no goals. The
-// shared slot economy and its Channel Strips purchase retire with the
-// World experiment (ADR-0074): each habit owns a small fixed capacity
-// (BALANCE.habitGoalSlots), never purchasable. Progress accrues only
-// while the goal is active — earlier practice never counts retroactively.
-// Completions grant nothing themselves — goal templates are conditions
-// only (ADR-0012) — but the completion tick is the fact every owned
-// generator reads, banking its profile's goal credit on the focus
+// Goals (issue #6, as re-owned by issue #423 and narrowed to one per habit
+// by issue #445, ADR-0075). A goal tracks a practice condition ("Piano,
+// 20 minutes a day") and belongs to ONE habit: only credited practice for
+// that habit advances it — unstructured practice advances nothing. Each
+// habit owns zero or one active goal, never purchasable; progress accrues
+// only while the goal is active — earlier practice never counts
+// retroactively. Completions grant nothing themselves — goal templates are
+// conditions only (ADR-0012) — but the completion tick is the fact every
+// owned generator reads, banking its profile's goal credit on the focus
 // equivalent (issue #371) under the bounded fuel budget (below). Daily and
 // weekly goals reset at the local calendar boundary; one-time goals keep
-// their slot until replaced in upgrade mode.
+// running until edited, replaced, or removed in the habit editor.
 //
 // The goal-generator fuel budget (issue #423): completions credit
 // generators only out of a pool that accrues at
 // BALANCE.goalFuelPerCreditedSecond per credited practice second — more
-// goals, shorter targets, and repeated replacement cannot raise the
-// generator credit the same practice time yields. The pool lives on
-// state.goalFuel and draws down inside the one credit seam
-// (reserves.creditGoalEarning); it is a rule, never a displayed resource.
+// goals, shorter targets, repeated replacement, cadence changes, and
+// migration cannot raise the generator credit the same practice time
+// yields. The pool lives on state.goalFuel and draws down inside the one
+// credit seam (reserves.creditGoalEarning); it is a rule, never a
+// displayed resource.
 
-export function activeGoals(state: GameState): Goal[] {
-  return state.goals.filter((goal) => !goal.retired && goal.condition.habitId !== null);
+// A habit's active goal: the one running row — a multi-goal migration's
+// unresolved rows are pending (they neither run nor light a read until the
+// player retains one) and retired rows are history.
+export function activeGoalOf(state: GameState, habitId: string): Goal | undefined {
+  return state.goals.find((goal) => !goal.retired && !goal.pendingChoice && goal.condition.habitId === habitId);
 }
 
-export function goalCapacity(): number {
-  return BALANCE.habitGoalSlots;
+export function activeGoals(state: GameState): Goal[] {
+  return state.goals.filter((goal) => !goal.retired && !goal.pendingChoice && goal.condition.habitId !== null);
+}
+
+export function pendingGoalsOf(state: GameState, habitId: string): Goal[] {
+  return state.goals.filter((goal) => !goal.retired && goal.pendingChoice === true && goal.condition.habitId === habitId);
 }
 
 // The goal-generator fuel's one accrual leg: credited practice seconds
@@ -62,19 +54,18 @@ export function goalRequiredSeconds(goal: Goal): number {
 }
 
 // The tracker's rolled-up state (issue #149, scoped by issue #423): the
-// selected habit's goals — none tracked, work in progress (at least one
-// incomplete current occurrence), or every current occurrence complete.
-// With no habit selected nothing is tracked; a recurring reset rolls
-// completed goals back to open. Cross-habit goals retired by the
-// experiment never qualify.
+// selected habit's goal — none tracked, work in progress, or the current
+// occurrence complete. With no habit selected nothing is tracked; a
+// recurring reset rolls the goal back to open; an unresolved migration
+// choice reads as none until a goal is retained.
 export type GoalTrackerState = "none" | "open" | "complete";
 
 export function goalTrackerState(state: GameState): GoalTrackerState {
   const habitId = state.activeHabitId;
   if (habitId === null) return "none";
-  const own = activeGoals(state).filter((g) => g.condition.habitId === habitId);
-  if (own.length === 0) return "none";
-  return own.some((g) => !g.completed) ? "open" : "complete";
+  const goal = activeGoalOf(state, habitId);
+  if (!goal) return "none";
+  return goal.completed ? "complete" : "open";
 }
 
 function localDateKey(now: number): string {
@@ -93,6 +84,19 @@ export function occurrenceKeyFor(schedule: GoalSchedule, now: number): string {
   if (schedule.kind === "daily") return localDateKey(now);
   if (schedule.kind === "weekly") return localWeekKey(now);
   return "once";
+}
+
+// The current occurrence's start (issue #445): local midnight for daily,
+// the local Monday for weekly, and the goal's own creation for once — the
+// period a cadence change recalculates qualifying practice over. The key
+// helpers above are the one calendar source; this derives from the same
+// local reads.
+export function occurrenceStartFor(schedule: GoalSchedule, now: number, createdAt: number): number {
+  if (schedule.kind === "once") return createdAt;
+  const d = new Date(now);
+  const day = (d.getDay() + 6) % 7; // Monday = 0
+  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (schedule.kind === "weekly" ? day : 0));
+  return start.getTime();
 }
 
 // Rolls recurring goals to the current occurrence at the local calendar
@@ -115,7 +119,6 @@ export interface GoalCreateInput {
   minutes: number;
   schedule: GoalSchedule["kind"];
   now: number;
-  color?: GoalColor;
 }
 
 export function createGoal(state: GameState, input: GoalCreateInput): { ok: boolean; reason?: string; goal?: Goal } {
@@ -123,8 +126,10 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
   // Goals are owned by a habit (issue #423): the cross-habit template
   // retired with the shared slot economy.
   if (input.habitId === null) return { ok: false, reason: "Pick the habit this goal tracks." };
-  if (activeGoals(state).filter((g) => g.condition.habitId === input.habitId).length >= goalCapacity()) {
-    return { ok: false, reason: "No free goal slots — remove a goal first." };
+  // One active goal per habit (issue #445): an unresolved migration choice
+  // counts — the carried rows stand until the player retains one.
+  if (activeGoalOf(state, input.habitId) || pendingGoalsOf(state, input.habitId).length > 0) {
+    return { ok: false, reason: "That habit already tracks a goal — edit or remove it first." };
   }
   if (!(input.minutes > 0) || input.minutes > 24 * 60) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
   if (!state.habits.some((h) => h.id === input.habitId && !h.archived)) {
@@ -137,7 +142,6 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
     condition: { kind: "habit-minutes", habitId: input.habitId, minutes: Math.round(input.minutes) },
     schedule,
     occurrenceKey: occurrenceKeyFor(schedule, input.now),
-    color: normalizeGoalColor(input.color),
     progressSeconds: 0,
     liveSeconds: 0,
     completed: false,
@@ -150,21 +154,75 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
 
 export function deleteGoal(state: GameState, id: string): { ok: boolean; reason?: string } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
-  const index = state.goals.findIndex((g) => !g.retired && g.id === id);
+  const index = state.goals.findIndex((g) => !g.retired && !g.pendingChoice && g.id === id);
   if (index === -1) return { ok: false, reason: "Goal not found." };
   state.goals.splice(index, 1);
   return { ok: true };
 }
 
-// The palette's edit half (issue #312): the row's re-pick on the GOALS
-// face. Same upgrade-mode gate as every other goal mutation; the color key
-// must be one of the six.
-export function setGoalColor(state: GameState, id: string, color: GoalColor): { ok: boolean; reason?: string } {
+// The goal's edit (issue #445), the one path the habit editor's form
+// lands through — a target change and a cadence change in one move.
+// Upgrade mode only, like every goal mutation. A target change retains
+// qualifying practice: progressSeconds stands, and the goal only
+// un-completes when the raised target is no longer met (a target lowered
+// to or below met progress stays completed — the completion already
+// happened, and no credit can replay). A cadence change recalculates
+// qualifying practice for the new period: credited practice — live
+// sessions alone, the manual boundary stands — since the new schedule's
+// current occurrence began, with the occurrence rolled to its key.
+// Nothing here awards or replays generator fuel: credit fires only on
+// completion ticks on the accrual paths, against the one bounded pool.
+export function editGoal(
+  state: GameState,
+  id: string,
+  edit: { minutes: number; schedule: GoalSchedule["kind"] },
+  now: number,
+): { ok: boolean; reason?: string } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
   const goal = activeGoals(state).find((g) => g.id === id);
   if (!goal) return { ok: false, reason: "Goal not found." };
-  if (normalizeGoalColor(color) !== color) return { ok: false, reason: "Pick one of the six colors." };
-  goal.color = color;
+  if (!(edit.minutes > 0) || edit.minutes > 24 * 60) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
+  const schedule: GoalSchedule =
+    edit.schedule === "daily" ? { kind: "daily" } : edit.schedule === "weekly" ? { kind: "weekly" } : { kind: "once" };
+  goal.condition.minutes = Math.round(edit.minutes);
+  if (schedule.kind === goal.schedule.kind) {
+    goal.schedule = schedule;
+    goal.completed = goal.progressSeconds >= goalRequiredSeconds(goal);
+    return { ok: true };
+  }
+  // Cadence change: recalculate from qualifying practice in the new
+  // period. Credited eligibility only — the practice log's live entries
+  // are the sessions the goal could have ridden; manual logs never join.
+  goal.schedule = schedule;
+  goal.occurrenceKey = occurrenceKeyFor(schedule, now);
+  const start = occurrenceStartFor(schedule, now, goal.createdAt);
+  const qualifying = state.practiceLog
+    .filter((entry) => entry.habitId === goal.condition.habitId && entry.source === "live" && entry.at >= start)
+    .reduce((sum, entry) => sum + entry.seconds, 0);
+  goal.progressSeconds = qualifying;
+  // The reconstructed progress is credited practice through and through,
+  // so the live slice is the whole of it.
+  goal.liveSeconds = qualifying;
+  goal.completed = qualifying >= goalRequiredSeconds(goal);
+  return { ok: true };
+}
+
+// The migration choice's landing (issue #445): the player retains one
+// carried-over row and its pending siblings retire to history, records
+// intact. The retained row keeps its condition, progress, and completion
+// facts exactly as carried — nothing is reinterpreted, and no completion
+// fires here, so no generator fuel can move at choice time.
+export function retainGoalChoice(state: GameState, id: string): { ok: boolean; reason?: string } {
+  if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
+  const goal = state.goals.find((g) => g.pendingChoice === true && g.id === id);
+  if (!goal || goal.condition.habitId === null) return { ok: false, reason: "Goal not found." };
+  for (const pending of pendingGoalsOf(state, goal.condition.habitId)) {
+    if (pending.id === id) delete pending.pendingChoice;
+    else {
+      pending.retired = true;
+      delete pending.pendingChoice;
+    }
+  }
   return { ok: true };
 }
 
@@ -179,15 +237,17 @@ export function goalSummary(state: GameState, goal: Goal): string {
 // goal saved before the generators wave carries no live slice —
 // lenient-defaulted to 0, the honest reading (the completion's live share
 // would read 0, banking nothing) and exactly what a fresh shape writes.
-// The palette key (issue #312) lenient-defaults the same way: a goal saved
-// before the palette wave carries no color, and vermillion is what it
-// wore. Mutates in place over the merged state's goal list.
+// The per-goal palette key (issue #312) retired with the GOALS face
+// (issue #445): the color rides the habit now, and a save's key drops
+// after the migration has read it. Mutates in place over the merged
+// state's goal list.
 export function normalizeGoals(goals: Goal[]): void {
   for (const goal of goals) {
     if (!goal || typeof goal !== "object") continue;
     if (goal.retired !== true) delete goal.retired;
+    if (goal.pendingChoice !== true) delete goal.pendingChoice;
     if (typeof goal.liveSeconds !== "number" || !Number.isFinite(goal.liveSeconds)) goal.liveSeconds = 0;
-    goal.color = normalizeGoalColor(goal.color);
+    delete (goal as unknown as Record<string, unknown>).color;
   }
 }
 
@@ -230,14 +290,15 @@ export function secondsUntilGoalCompletion(state: GameState, habitId: string | n
 }
 
 // Accrues qualifying practice and completes goals. Practice advances only
-// its own habit's goals (issue #423) — unstructured practice (habitId
-// null) advances nothing. The `source` splits the honesty boundary
-// (ADR-0047): "live" is credited present, trusted, and honesty-credited
-// time (the advance and reconciliation paths); "manual" is a player
-// practice log, which advances the condition but never joins the live
-// slice. Returns the number of occurrences completed. While a session is
-// live, every credited second is also ledged onto the session's own
-// advancement map (§9), snapshotting into the record at close — manual
+// its own habit's goal (issue #423; one per habit since issue #445) —
+// unstructured practice (habitId null) advances nothing, and an unresolved
+// migration choice leaves nothing to advance. The `source` splits the
+// honesty boundary (ADR-0047): "live" is credited present, trusted, and
+// honesty-credited time (the advance and reconciliation paths); "manual"
+// is a player practice log, which advances the condition but never joins
+// the live slice. Returns the number of occurrences completed. While a
+// session is live, every credited second is also ledged onto the session's
+// own advancement map (§9), snapshotting into the record at close — manual
 // logs never pass through here with a session live, so they never join
 // the snapshot.
 export function accrueGoalProgress(state: GameState, habitId: string | null, seconds: number, source: "live" | "manual" = "live"): number {

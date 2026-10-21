@@ -2,7 +2,7 @@ import { EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { createHabitClasses } from "./classes";
 import { accrueGoalProgress, rollGoalOccurrences } from "./goals";
-import type { GameState, Habit, PracticeEntry } from "./types";
+import type { GameState, Habit, HabitColor, PracticeEntry } from "./types";
 
 export type { Habit, PracticeEntry };
 
@@ -15,6 +15,21 @@ export type { Habit, PracticeEntry };
 // always advances one-for-one until the console long goals arrive. Every
 // habit wears the launch class (Engineer) from creation; its pair's
 // progression lives under the habit and never transfers.
+
+// The six-token palette (issue #312, re-owned by the habit with issue
+// #445, ADR-0075), vermillion default. The choice is made in the habit
+// editor and read from habit state everywhere after — the goal inherits
+// it, so there is no legend and no second place to set it.
+export const HABIT_COLORS: readonly HabitColor[] = ["vermillion", "amber", "green", "cyan", "indigo", "violet"];
+export const DEFAULT_HABIT_COLOR: HabitColor = "vermillion";
+
+// The one lenient spelling: an absent or unknown key reads as the default,
+// never a made-up token — the same answer at creation, at a re-pick, and
+// at load.
+export function normalizeHabitColor(color: unknown): HabitColor {
+  return typeof color === "string" && (HABIT_COLORS as readonly string[]).includes(color) ? (color as HabitColor) : DEFAULT_HABIT_COLOR;
+}
+
 export function activeHabit(state: GameState): Habit | undefined {
   return state.habits.find((h) => h.id === state.activeHabitId && !h.archived);
 }
@@ -32,6 +47,8 @@ export function createHabit(state: GameState, name: string): { ok: boolean; reas
     name: trimmed,
     seconds: 0,
     archived: false,
+    // The palette default (issue #445): the editor's swatches change it.
+    color: DEFAULT_HABIT_COLOR,
     // Every habit wears the launch class from creation (issue #423); its
     // Engineer pair starts at zero and accrues only from credited flow.
     classId: "engineer",
@@ -48,6 +65,19 @@ export function renameHabit(state: GameState, id: string, name: string): { ok: b
   const trimmed = cleanName(name);
   if (!trimmed) return { ok: false, reason: "Give the habit a name." };
   habit.name = trimmed;
+  return { ok: true };
+}
+
+// The palette's landing (issue #445): the editor's swatch row re-colors
+// the habit — identity alone, never its class — and every goal read
+// inherits the pick. Upgrade mode only, like every habit mutation; the
+// key must be one of the six.
+export function setHabitColor(state: GameState, id: string, color: HabitColor): { ok: boolean; reason?: string } {
+  if (state.mode !== "upgrade") return { ok: false, reason: "Habits are managed between sessions." };
+  const habit = state.habits.find((h) => h.id === id);
+  if (!habit) return { ok: false, reason: "Habit not found." };
+  if (normalizeHabitColor(color) !== color) return { ok: false, reason: "Pick one of the six colors." };
+  habit.color = color;
   return { ok: true };
 }
 

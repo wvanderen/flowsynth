@@ -2,6 +2,8 @@
 
 Status: confirmed 2026-10-19 through the grilling design session with the owner; implemented in this checkout. Follow-up pinning in [instrument standards](instrument-standards.md) remains a separate decision.
 
+**2026-10-21 amendment (issue #445, ADR-0075):** the interim pick rule collapsed to identity as planned — the meter reads the selected habit's one active goal, in the habit's own palette token, and the `·N` count mark is retired. An unresolved goal migration choice reads as nothing qualifying. The GOALS face retired with the goal's editing home moving into its habit; the meter reads, it never manages.
+
 ## Intent and priorities
 
 The console header is one of the two things a player watches during flow (the board is the other). Recompose the Focus door deliberately: a device status display in the synth-faceplate register — simple, clear, elegant — with the goal progress of the selected habit as its one status indicator.

@@ -7,8 +7,12 @@ import {
   addPracticeLog,
   archiveHabit,
   createHabit,
+  DEFAULT_HABIT_COLOR,
+  HABIT_COLORS,
+  normalizeHabitColor,
   renameHabit,
   selectHabit,
+  setHabitColor,
 } from "./habits";
 import { serialize, deserialize } from "./save";
 
@@ -44,6 +48,40 @@ describe("habit management", () => {
     const s = fresh();
     expect(selectHabit(s, null).ok).toBe(true);
     expect(selectHabit(s, "nope").ok).toBe(false);
+  });
+});
+
+describe("the habit's palette (issue #445, ADR-0075)", () => {
+  it("creates with the default color and re-colors between sessions only, on real habits with real keys", () => {
+    const s = fresh();
+    const habit = createHabit(s, "Piano")!.habit!;
+    expect(habit.color).toBe(DEFAULT_HABIT_COLOR);
+    expect(HABIT_COLORS).toEqual(["vermillion", "amber", "green", "cyan", "indigo", "violet"]);
+    expect(setHabitColor(s, habit.id, "cyan").ok).toBe(true);
+    expect(habit.color).toBe("cyan");
+    expect(setHabitColor(s, "nope", "amber").ok).toBe(false);
+    expect(setHabitColor(s, habit.id, "chartreuse" as never).ok).toBe(false);
+    expect(habit.color).toBe("cyan");
+    startSession(s, 600);
+    expect(setHabitColor(s, habit.id, "amber").ok).toBe(false);
+    endSession(s);
+    expect(habit.color).toBe("cyan");
+  });
+
+  it("lenient-defaults a pre-palette save's color and drops corrupt keys", () => {
+    expect(normalizeHabitColor(undefined)).toBe(DEFAULT_HABIT_COLOR);
+    expect(normalizeHabitColor(7)).toBe(DEFAULT_HABIT_COLOR);
+    expect(normalizeHabitColor("violet")).toBe("violet");
+  });
+
+  it("persists the color across saves, independent of the class wear", () => {
+    const s = fresh();
+    const habit = createHabit(s, "Piano")!.habit!;
+    setHabitColor(s, habit.id, "indigo");
+    habit.classId = "engineer";
+    const loaded = deserialize(serialize(s)).state!;
+    expect(loaded.habits[0]!.color).toBe("indigo");
+    expect(loaded.habits[0]!.classId).toBe("engineer");
   });
 });
 

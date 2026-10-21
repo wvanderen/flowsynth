@@ -114,17 +114,18 @@ const chords = {
   "chord-major-seventh": "#e8b06a",
 } as const;
 
-// The goal palette (issue #312): the six swatches the GOALS face offers at
-// goal creation and re-pick, vermillion the default. The six keys ride goal
-// state (`GoalColor`) and read these tokens wherever a goal renders — the
-// banner bars and the face tracks alike. The hexes are the issue's pin.
+// The habit palette (issue #312, re-owned by the habit with issue #445):
+// the six swatches the habit editor offers, vermillion the default. The
+// six keys ride habit state (`HabitColor`) and read these tokens wherever
+// the habit — and the goal that inherits its color — renders. The hexes
+// are the issue's pin.
 const goalPalette = {
-  "goal-vermillion": "#cc603d",
-  "goal-amber": "#bc9239",
-  "goal-green": "#9affa8",
-  "goal-cyan": "#1f95b5",
-  "goal-indigo": "#6360d4",
-  "goal-violet": "#b994f5",
+  "habit-vermillion": "#cc603d",
+  "habit-amber": "#bc9239",
+  "habit-green": "#9affa8",
+  "habit-cyan": "#1f95b5",
+  "habit-indigo": "#6360d4",
+  "habit-violet": "#b994f5",
 } as const;
 
 // Semantic surfaces and states, derived from the primitives above so a theme

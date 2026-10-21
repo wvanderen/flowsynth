@@ -757,10 +757,11 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(consoleBlock!.slice(consoleBlock!.indexOf(".console"))).toMatch(/\.console\s*\{[^}]*height:\s*56px/);
   });
 
-  it("the doors carry no Goals- or Habit-state read — the tracker state lives in the sheet's head (ADR-0033 amended)", () => {
+  it("the doors carry no Goals- or Habit-state read — the goal read is the display well's meter (ADR-0033 amended, #445)", () => {
     app.render();
     // No Goals or Habit door stands at any width (#313): the Focus sheet's
-    // faces carry them, so the console row wears no tracker aggregate.
+    // faces carry them, so the console row wears no tracker aggregate. The
+    // separate GOALS face retired with #445 — its head read went with it.
     expect(document.getElementById("app-tile-goals")).toBeNull();
     expect(document.getElementById("app-tile-habit")).toBeNull();
     expect(document.querySelector(".launcher-goal-state, .launcher-habit-state")).toBeNull();
@@ -773,17 +774,16 @@ describe("the phone banner (ADR-0050's amended phone line)", () => {
     expect(document.getElementById("app-tile-goals")).toBeNull();
     expect(document.getElementById("app-tile-habit")).toBeNull();
     expect(document.querySelector(".launcher-goal-state, .launcher-habit-state")).toBeNull();
-    // The read's one home is the sheet's head: the GOALS face names the
-    // tracker state, and the console row never reads an aggregate.
-    app.showFocusFace("goals");
-    expect(document.querySelector("#app-popover .focus-state")!.textContent).toBe("all complete");
+    // The console row never reads an aggregate; the display well's meter
+    // carries the goal read, its engraved mark answering for completion.
     const consoleText = document.querySelector(".console")!.textContent ?? "";
     expect(consoleText).not.toMatch(/\d+\s*%/);
-    // A recurring reset returns the read to in progress — on the tick, not
-    // the door.
+    expect(document.querySelector("#console-session .goal-meter")).not.toBeNull();
+    expect(document.querySelector("#console-session .session-habit .habit-done")).not.toBeNull();
+    // A recurring reset clears the done mark — on the tick, not the door.
     rollGoalOccurrences(app.state, Date.now() + 24 * 3600_000);
     app.render();
-    expect(document.querySelector("#app-popover .focus-state")!.textContent).toBe("in progress");
+    expect(document.querySelector("#console-session .session-habit .habit-done")).toBeNull();
   });
 
   it("the session surface opens Focus and marks every standing face without a separate icon", () => {

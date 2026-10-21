@@ -2,7 +2,8 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
 import { createHabit, selectHabit, addPracticeLog } from "../engine/habits";
-import { createGoal, accrueGoalProgress, goalCapacity } from "../engine/goals";
+import { createGoal, accrueGoalProgress, editGoal, retainGoalChoice } from "../engine/goals";
+import type { Goal } from "../engine/types";
 import { endSession, startSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { deserialize, serialize } from "../engine/save";
@@ -11,9 +12,10 @@ import { createInitialState } from "../engine/state";
 import v10MigrationFixture from "../engine/fixtures/saves/v10-migration.json";
 import { createAppFixture, setVisibility } from "./testing/app-fixture";
 
-// The Focus control sheet (ADR-0050, issue #275): four faces in the ruled
+// The Focus control sheet (ADR-0050, issue #275): the faces in the ruled
 // folio, the flow-mode rule, and the edge states derived from existing
-// state.
+// state. The GOALS face retired with the separate destination (issue
+// #445): goals and colors edit inside their habit.
 const fixture = createAppFixture();
 const boot = fixture.boot;
 let app: App;
@@ -26,14 +28,19 @@ beforeEach(() => {
 afterEach(() => fixture.release());
 
 const sheet = () => document.getElementById("app-popover")!;
-function openFace(face: "plan" | "habit" | "goals" | "history"): HTMLElement {
+function openFace(face: "plan" | "habit" | "history"): HTMLElement {
   app.showFocusFace(face);
   return sheet();
 }
+function openHabitDetail(habitId: string): HTMLElement {
+  openFace("habit");
+  document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habitId}"]`)!.click();
+  return sheet();
+}
 
-describe("the four faces in the Focus frame", () => {
+describe("the faces in the Focus frame", () => {
   it("each facetab selects its face; the frame is one clipped plate under the clock", () => {
-    for (const face of ["plan", "habit", "goals", "history"] as const) {
+    for (const face of ["plan", "habit", "history"] as const) {
       const frame = openFace(face);
       expect(frame.classList.contains("focus-sheet")).toBe(true);
       expect(frame.querySelector(".inst-panel")).not.toBeNull();
@@ -41,10 +48,16 @@ describe("the four faces in the Focus frame", () => {
     }
   });
 
+  it("the GOALS face is gone: three tabs stand, and no face answers the old one", () => {
+    openFace("habit");
+    expect(sheet().querySelectorAll(".ftab")).toHaveLength(3);
+    expect(sheet().querySelector('[data-face="goals"]')).toBeNull();
+  });
+
   it("the tabs are radio-like: switching faces never closes the frame", () => {
     openFace("habit");
-    openFace("goals");
-    expect(app.ui.app).toBe("goals");
+    openFace("plan");
+    expect(app.ui.app).toBe("time");
     expect(sheet()).toBe(document.getElementById("app-popover"));
   });
 
@@ -104,11 +117,10 @@ describe("the four faces in the Focus frame", () => {
     expect(app.state.habits[0]!.name).toBe("Fortepiano");
   });
 
-  it("the GOALS face leads with the slots read; the PLAN face names the goals tracked", () => {
+  it("the PLAN face names the goals tracked", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1000 });
-    expect(openFace("goals").querySelector("#focus-slots-read")!.textContent).toContain(`1/${goalCapacity()} slots`);
     expect(openFace("plan").querySelector("#focus-plan-read")!.textContent).toContain("1 goal tracked");
   });
 
@@ -118,8 +130,6 @@ describe("the four faces in the Focus frame", () => {
     const goal = createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1000 }).goal!;
     goal.retired = true;
     expect(goalMeterOf(app.state)).toBeNull();
-    expect(openFace("goals").querySelector("#focus-slots-read")!.textContent).toContain(`0/${goalCapacity()} slots`);
-    expect(sheet().querySelector("[data-goal-delete]")).toBeNull();
     expect(openFace("plan").querySelector("#focus-plan-read")!.textContent).toContain("0 goals tracked");
     expect(app.state.goals.find((g) => g.id === goal.id)).toBe(goal);
   });
@@ -147,35 +157,174 @@ describe("the four faces in the Focus frame", () => {
   });
 });
 
+describe("the habit editor's color and goal (issue #445)", () => {
+  it("the detail wears the palette row: six swatches, the standing color marked", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    const frame = openHabitDetail(habit.id);
+    const swatches = [...frame.querySelectorAll<HTMLButtonElement>(".habit-swatch")];
+    expect(swatches.map((s) => s.getAttribute("data-habit-set-color"))).toEqual([
+      "vermillion", "amber", "green", "cyan", "indigo", "violet",
+    ]);
+    expect(swatches.find((s) => s.getAttribute("aria-pressed") === "true")!.getAttribute("data-habit-set-color")).toBe("vermillion");
+    // A pick lands through the engine at once; the picker re-renders with
+    // the pick standing.
+    frame.querySelector<HTMLButtonElement>('[data-habit-set-color="cyan"]')!.click();
+    expect(habit.color).toBe("cyan");
+    const repicked = [...sheet().querySelectorAll<HTMLButtonElement>(".habit-swatch")];
+    expect(repicked.find((s) => s.getAttribute("data-habit-set-color") === "cyan")!.getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("the goal section creates the habit's one goal; the form carries no habit select and no palette", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    const frame = openHabitDetail(habit.id);
+    expect(frame.querySelector("#goal-create-open")).not.toBeNull();
+    expect(frame.querySelector(".goal-row")).toBeNull();
+    frame.querySelector<HTMLButtonElement>("#goal-create-open")!.click();
+    expect(document.activeElement).toBe(document.getElementById("goal-minutes"));
+    expect(document.getElementById("goal-habit")).toBeNull();
+    expect(document.querySelector(".habit-swatch[data-goal-draft-color]")).toBeNull();
+    (document.getElementById("goal-minutes") as HTMLInputElement).value = "20";
+    (document.getElementById("goal-schedule") as HTMLSelectElement).value = "weekly";
+    document.querySelector<HTMLButtonElement>("#goal-add")!.click();
+    expect(app.state.goals).toHaveLength(1);
+    expect(app.state.goals[0]).toMatchObject({ condition: { habitId: habit.id, minutes: 20 }, schedule: { kind: "weekly" } });
+    // The landing collapsed the form; the goal row stands in its place.
+    expect(document.getElementById("goal-minutes")).toBeNull();
+    expect(sheet().querySelector(".goal-row .goal-ledger-name")!.textContent).toContain("20 min");
+  });
+
+  it("the goal row reads its progress and inherits the habit color on its track", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: 1000 }).goal!;
+    accrueGoalProgress(app.state, habit.id, 10 * 60);
+    const frame = openHabitDetail(habit.id);
+    const row = frame.querySelector(`[data-goal="${goal.id}"]`)!;
+    expect(row.querySelector<HTMLElement>("[data-goal-progress]")!.style.background).toBe(`var(--habit-${habit.color})`);
+    expect(row.querySelector("[data-goal-minutes]")!.textContent).toContain("10 min / 20 min");
+    // A habit re-color moves the inherited track with it.
+    app.setHabitColorAction(habit.id, "amber");
+    const recolored = sheet().querySelector<HTMLElement>(`[data-goal="${goal.id}"] [data-goal-progress]`)!;
+    expect(recolored.style.background).toBe("var(--habit-amber)");
+    // The header meter wears the same pick.
+    expect(document.querySelector("#console-session .goal-meter")!.getAttribute("style")).toContain("var(--habit-amber)");
+  });
+
+  it("the goal's edit form replaces target and cadence; remove takes it away", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: 1000 }).goal!;
+    accrueGoalProgress(app.state, habit.id, 20 * 60);
+    const frame = openHabitDetail(habit.id);
+    frame.querySelector<HTMLButtonElement>('[data-goal-edit-open="' + goal.id + '"]')!.click();
+    const minutes = document.getElementById("goal-minutes") as HTMLInputElement;
+    expect(minutes.value).toBe("30");
+    // The form prefills the goal's own cadence (the option carries the
+    // selected state in markup).
+    expect(document.querySelector('#goal-schedule option[value="once"]')!.hasAttribute("selected")).toBe(true);
+    minutes.value = "60";
+    const schedule = document.getElementById("goal-schedule") as HTMLSelectElement;
+    schedule.value = "once";
+    document.querySelector<HTMLButtonElement>("#goal-edit-apply")!.click();
+    // The edit landed through the engine: qualifying practice retained.
+    expect(goal.condition.minutes).toBe(60);
+    expect(goal.schedule.kind).toBe("once");
+    expect(goal.progressSeconds).toBeCloseTo(20 * 60, 6);
+    expect(app.ui.focusForm).toBeNull();
+    expect(sheet().querySelector("[data-goal-minutes]")!.textContent).toContain("20 min / 1 h 0 min");
+    // Remove takes the goal away; the create action stands again.
+    sheet().querySelector<HTMLButtonElement>('[data-goal-remove="' + goal.id + '"]')!.click();
+    expect(app.state.goals).toHaveLength(0);
+    expect(sheet().querySelector("#goal-create-open")).not.toBeNull();
+  });
+
+  it("a completed once-only goal reads complete until edited or replaced", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 }).goal!;
+    accrueGoalProgress(app.state, habit.id, 10 * 60);
+    const frame = openHabitDetail(habit.id);
+    expect(frame.querySelector(`[data-goal="${goal.id}"] .goal-status.done`)!.textContent).toBe("complete");
+    // Raising the target un-completes it in the same view.
+    frame.querySelector<HTMLButtonElement>('[data-goal-edit-open="' + goal.id + '"]')!.click();
+    (document.getElementById("goal-minutes") as HTMLInputElement).value = "20";
+    (document.getElementById("goal-schedule") as HTMLSelectElement).value = "once";
+    document.querySelector<HTMLButtonElement>("#goal-edit-apply")!.click();
+    const row = sheet().querySelector(`[data-goal="${goal.id}"]`)!;
+    expect(row.querySelector(".goal-status.done")).toBeNull();
+    expect(row.querySelector(".goal-status")!.textContent).toContain("to go");
+  });
+
+  it("a multi-goal save presents the retain-one choice; keeping one retires the rest", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "daily", now: 1000 }).goal!;
+    const carried: Goal = { ...structuredClone(goal), id: `${goal.id}b`, condition: { kind: "habit-minutes", habitId: habit.id, minutes: 45 }, schedule: { kind: "once" }, progressSeconds: 900, createdAt: 1001 };
+    app.state.goals.push(carried);
+    goal.pendingChoice = true;
+    carried.pendingChoice = true;
+    app.render();
+    const frame = openHabitDetail(habit.id);
+    const rows = [...frame.querySelectorAll(".goal-row")];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.textContent).toContain("carried over");
+    expect(rows[0]!.querySelector("[data-goal-progress]")).toBeNull(); // no live track on a pending row
+    expect(rows[0]!.querySelector("[data-goal-keep]")).not.toBeNull();
+    // Keeping the 45-minute row lands the choice: it activates with its
+    // record, the sibling retires, and the read lights again.
+    frame.querySelector<HTMLButtonElement>('[data-goal-keep="' + carried.id + '"]')!.click();
+    expect(carried.pendingChoice).toBeUndefined();
+    expect(goal.retired).toBe(true);
+    const kept = sheet().querySelector(`[data-goal="${carried.id}"]`)!;
+    expect(kept.querySelector("[data-goal-minutes]")!.textContent).toContain("15 min / 45 min");
+    expect(sheet().querySelector("[data-goal-keep]")).toBeNull();
+    // The retained goal is the one the habit tracks.
+    expect(app.state.goals.filter((g) => !g.retired && !g.pendingChoice)).toHaveLength(1);
+  });
+});
+
 describe("the flow-mode rule", () => {
-  it("habit add/log and goal create/delete lock in flow; the reads stay live", () => {
+  it("habit add/log and goal editing lock in flow; the reads stay live", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: 1000 });
     startSession(app.state, null);
     advance(app.state, 60);
-    // The HABIT face reads live and draws no forms.
+    // The HABIT face reads live and draws no forms — and no drill into the
+    // editor: the goal rows stand only between sessions.
     const habitFrame = openFace("habit");
     expect(habitFrame.querySelector('[data-live="focus-habit-session"]')!.textContent).toContain("01:00");
     expect(habitFrame.querySelector("#habit-add-open")).toBeNull();
     expect(habitFrame.querySelector("#habit-log-open")).toBeNull();
     expect(habitFrame.querySelector("#habit-name-input")).toBeNull();
-    // The GOALS face reads live; create, delete, and the palette's edit
-    // half are gone. The retired purchase row left no trace.
-    const goalsFrame = openFace("goals");
-    expect(goalsFrame.querySelector(".long-goal-row")).toBeNull();
-    expect(goalsFrame.querySelector("#goal-create-open")).toBeNull();
-    expect(goalsFrame.querySelector("[data-goal-delete]")).toBeNull();
-    expect(goalsFrame.querySelector("[data-goal-recolor]")).toBeNull();
-    expect(goalsFrame.querySelector("#long-goal-buy")).toBeNull();
+    expect(habitFrame.querySelector("#goal-create-open")).toBeNull();
+    expect(habitFrame.querySelector("[data-goal-remove]")).toBeNull();
+    expect(habitFrame.querySelector(".habit-swatch")).toBeNull();
     // The engine owns the lock too: nothing these actions accept in flow.
     const nousBefore = app.state.nous;
     app.createHabitAction("Sneaky");
     app.logPracticeAction(30);
-    app.createGoalAction(habit.id, 5, "once", "vermillion");
+    app.createGoalAction(habit.id, 5, "once");
+    app.setHabitColorAction(habit.id, "cyan");
     expect(app.state.habits.map((h) => h.name)).toEqual(["Piano"]);
     expect(app.state.goals).toHaveLength(1);
     expect(app.state.nous).toBe(nousBefore);
+    expect(habit.color).toBe("vermillion");
+  });
+
+  it("the engine gates the goal's edit and the migration choice behind the lock too", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: 1000 }).goal!;
+    goal.pendingChoice = true;
+    startSession(app.state, 1200);
+    advance(app.state, 60);
+    app.pause();
+    expect(editGoal(app.state, goal.id, { minutes: 45, schedule: "once" }, 9000).ok).toBe(false);
+    expect(retainGoalChoice(app.state, goal.id).ok).toBe(false);
+    expect(goal.condition.minutes).toBe(20);
+    expect(goal.pendingChoice).toBe(true);
+    endSession(app.state);
   });
 
   it("the PLAN face in flow: the plan read only — no selection, no time UI, no end control", () => {
@@ -202,17 +351,15 @@ describe("the flow-mode rule", () => {
     expect(document.querySelector("#app-popover #focus-plan-read")).toBe(readNode);
   });
 
-  it("the HABIT and GOALS faces read live during flow and mutate nothing", () => {
+  it("the HABIT face reads live during flow and mutates nothing", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     createGoal(app.state, { habitId: habit.id, minutes: 1, schedule: "once", now: 1000 });
     startSession(app.state, null);
     advance(app.state, 30);
-    const goalsNode = openFace("goals").querySelector("[data-goal-minutes]")!;
-    expect(goalsNode.textContent).toContain("30s / 1 min");
+    openFace("habit");
     advance(app.state, 30);
     app.render();
-    expect(document.querySelector("[data-goal-minutes]")!.textContent).toContain("1 min / 1 min");
     // Reading the sheet banked nothing: the save's shape is untouched.
     const saved = JSON.parse(serialize(app.state, Date.now())).state;
     expect(Object.keys(saved)).toEqual(Object.keys(createInitialState()));
@@ -375,41 +522,35 @@ describe("the PLAN face rework (#311)", () => {
 });
 
 describe("the goal meter's derivation (the display well's edge states)", () => {
-  it("the meter qualifies the selected habit's own goals, nearest complete leading (issue #423)", () => {
+  it("the meter qualifies the selected habit's own goal (issue #445: one per habit)", () => {
     const state = createInitialState();
     const piano = createHabit(state, "Piano").habit!;
     const cooking = createHabit(state, "Cooking").habit!;
     selectHabit(state, piano.id);
     createGoal(state, { habitId: piano.id, minutes: 10, schedule: "once", now: 1000 });
-    createGoal(state, { habitId: piano.id, minutes: 30, schedule: "once", now: 1001 });
     createGoal(state, { habitId: cooking.id, minutes: 5, schedule: "once", now: 1002 }); // another habit's — never qualifies
     accrueGoalProgress(state, piano.id, 9 * 60); // the 10-min goal sits at 9/10
     const read = goalMeterOf(state)!;
     expect(read.fraction).toBeCloseTo(0.9);
     expect(read.done).toBe(false);
-    // One more open goal of the same habit stays in play.
-    expect(read.extra).toBe(1);
   });
 
-  it("completion never displaces the nearest open goal; an all-done set closes on its mark", () => {
+  it("completion closes the meter on its done mark; the goal stays the habit's read", () => {
     const state = createInitialState();
     const habit = createHabit(state, "Piano").habit!;
     selectHabit(state, habit.id);
     createGoal(state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 });
-    createGoal(state, { habitId: habit.id, minutes: 5, schedule: "once", now: 1001 });
-    accrueGoalProgress(state, habit.id, 5 * 60); // completes the 5-min goal
+    accrueGoalProgress(state, habit.id, 5 * 60);
     const read = goalMeterOf(state)!;
     expect(read.done).toBe(false);
-    expect(read.fraction).toBeCloseTo(0.5); // the 10-min goal leads, credited the same five minutes
-    expect(read.extra).toBe(0); // the done goal is not "in play"
-    accrueGoalProgress(state, habit.id, 10 * 60); // completes the 10-min too
+    expect(read.fraction).toBeCloseTo(0.5);
+    accrueGoalProgress(state, habit.id, 5 * 60);
     const complete = goalMeterOf(state)!;
     expect(complete.done).toBe(true);
     expect(complete.fraction).toBe(1);
-    expect(complete.extra).toBe(0);
   });
 
-  it("no habit, no qualifying goal, no meter", () => {
+  it("no habit, no goal, or an unresolved choice leaves the well bare", () => {
     expect(goalMeterOf(createInitialState())).toBeNull();
     const state = createInitialState();
     const habit = createHabit(state, "Piano").habit!;
@@ -418,6 +559,10 @@ describe("the goal meter's derivation (the display well's edge states)", () => {
     const cooking = createHabit(state, "Cooking").habit!;
     createGoal(state, { habitId: cooking.id, minutes: 10, schedule: "daily", now: 1000 });
     expect(goalMeterOf(state)).toBeNull(); // another habit's goal never qualifies
+    // The carried rows of a multi-goal save read as none until retained.
+    selectHabit(state, cooking.id);
+    state.goals[0]!.pendingChoice = true;
+    expect(goalMeterOf(state)).toBeNull();
   });
 
   it("the gloss names the goal and what remains — the habit name stays off it", () => {
@@ -467,25 +612,23 @@ describe("the display well's goal meter (the header-status brief)", () => {
     expect(app.ui.app).toBe("time");
   });
 
-  it("the meter stands at the well's right edge: seven segments, the goal's palette, the count mark", () => {
+  it("the meter stands at the well's right edge: seven segments in the habit's palette", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    // The habit's full slot set tracks (issue #423: the fixed per-habit
-    // capacity), each goal a step further from done.
-    const capacity = goalCapacity();
-    for (let i = 0; i < capacity; i++) createGoal(app.state, { habitId: habit.id, minutes: 10 + i, schedule: "once", now: 1000 + i });
-    accrueGoalProgress(app.state, habit.id, 9 * 60); // the 10-min goal leads at 9/10
+    createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 });
+    accrueGoalProgress(app.state, habit.id, 9 * 60); // the goal leads at 9/10
     app.render();
     const meter = document.querySelector("#console-session .goal-meter")!;
-    expect(meter.getAttribute("style")).toContain("var(--goal-vermillion)");
+    // The column wears the habit's color — the goal inherits it (issue #445).
+    expect(meter.getAttribute("style")).toContain("var(--habit-vermillion)");
     // Seven steps, six lit at 9/10 — the lit spelling the patch shares.
     expect(meter.querySelectorAll(".gm-seg")).toHaveLength(GOAL_METER_SEGMENTS);
     expect(meter.querySelectorAll(".gm-seg.lit")).toHaveLength(6);
-    // The count mark answers for the further goals in play.
-    expect(meter.querySelector(".gm-count")!.textContent).toBe(`·${capacity - 1}`);
-    // The gloss rides the tooltip layer, the aria read carries the count.
+    // One goal per habit: no count mark stands beside the column.
+    expect(meter.querySelector(".gm-count")).toBeNull();
+    // The gloss rides the tooltip layer, the aria read carries the read.
     expect(meter.querySelector(".inst-tip-body")!.textContent).toBe("10 min · 1 min to go");
-    expect(meter.getAttribute("aria-label")).toBe(`Goal progress: 10 min, 1 minute to go, ${capacity - 1} more goals in play`);
+    expect(meter.getAttribute("aria-label")).toBe("Goal progress: 10 min, 1 minute to go");
     // No nested controls: activating the meter opens PLAN with the door that
     // stays the one action.
     expect(meter.querySelectorAll("button, input, select, a")).toHaveLength(0);
@@ -494,7 +637,7 @@ describe("the display well's goal meter (the header-status brief)", () => {
   it("in-progress vs complete reads without color: the aria read and the engraved mark carry it", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000, color: "cyan" });
+    createGoal(app.state, { habitId: habit.id, minutes: 10, schedule: "once", now: 1000 });
     accrueGoalProgress(app.state, habit.id, 10 * 60);
     app.render();
     const meter = document.querySelector("#console-session .goal-meter")!;
@@ -506,16 +649,18 @@ describe("the display well's goal meter (the header-status brief)", () => {
     expect(meter.querySelector(".gm-done")).toBeNull();
   });
 
-  it("the selected habit's own goal lights the meter (issue #423)", () => {
+  it("the habit's palette pick re-tints the meter without touching its meaning", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "weekly", now: 1000, color: "amber" });
+    createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "weekly", now: 1000 });
     accrueGoalProgress(app.state, habit.id, 15 * 60);
     app.render();
     const meter = document.querySelector("#console-session .goal-meter")!;
-    expect(meter.getAttribute("style")).toContain("var(--goal-amber)");
+    expect(meter.getAttribute("style")).toContain("var(--habit-vermillion)");
     expect(meter.querySelectorAll(".gm-seg.lit")).toHaveLength(Math.floor(0.5 * GOAL_METER_SEGMENTS));
     expect(meter.querySelector(".inst-tip-body")!.textContent).toBe("Weekly 30 min · 15 min to go");
+    app.setHabitColorAction(habit.id, "amber");
+    expect(document.querySelector("#console-session .goal-meter")!.getAttribute("style")).toContain("var(--habit-amber)");
   });
 
   it("an empty tracker and no habit leave the well bare; the session group names the unstructured choice", () => {
@@ -579,8 +724,6 @@ describe("the restructure stays presentational", () => {
     createHabit(app.state, "Piano");
     openFace("habit");
     expect(app.ui.app).toBe("habit");
-    openFace("goals");
-    expect(app.ui.app).toBe("goals");
     openFace("plan");
     expect(app.ui.app).toBe("time");
     openFace("history");
@@ -601,31 +744,23 @@ describe("the restructure stays presentational", () => {
 });
 
 describe("the sheet's live reads", () => {
-  it("tick updates keep the sheet's figures current without a rebuild", () => {
-    setVisibility("visible");
+  it("a manual log's completion lands in the standing goal row", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
     createGoal(app.state, { habitId: habit.id, minutes: 1, schedule: "once", now: 1000 });
-    startSession(app.state, null);
-    advance(app.state, 30);
-    const frame = openFace("goals");
-    const bar = frame.querySelector("[data-goal-progress]") as HTMLElement;
+    accrueGoalProgress(app.state, habit.id, 30);
+    openHabitDetail(habit.id);
+    const bar = document.querySelector("[data-goal-progress]") as HTMLElement;
     const before = bar.style.height;
-    advance(app.state, 15);
-    app.tick();
-    expect(document.querySelector("[data-goal-progress]")).toBe(bar);
-    expect(bar.style.height).not.toBe(before);
-    expect(bar.style.height).toBe("75%");
+    app.logPracticeAction(1); // 60 s: completes the goal
+    app.render();
+    const after = document.querySelector("[data-goal-progress]") as HTMLElement;
+    expect(after.style.height).toBe("100%");
+    expect(after.style.height).not.toBe(before);
   });
 });
 
 describe("the habit-class face (issue #423)", () => {
-  function drill(habitId: string): HTMLElement {
-    openFace("habit");
-    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habitId}"]`)!.click();
-    return sheet();
-  }
-
   it("the detail wears the class section: chips, the level/point read, the meter, and the tree", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     const pair = habit.classes.engineer!;
@@ -633,7 +768,7 @@ describe("the habit-class face (issue #423)", () => {
     pair.points = 1;
     pair.spent = { reed: 1 };
     pair.rollMeter = { progress: 420, earned: 1 };
-    const frame = drill(habit.id);
+    const frame = openHabitDetail(habit.id);
     expect(frame.querySelector("[data-class-pick]")).toBeNull();
     // The one-place read: level and the point balance live here alone.
     // (The term disclosures sit inline, so the read asserts in pieces.)
@@ -662,7 +797,7 @@ describe("the habit-class face (issue #423)", () => {
     const pair = habit.classes.engineer!;
     pair.level = 1;
     pair.points = 1;
-    const frame = drill(habit.id);
+    const frame = openHabitDetail(habit.id);
     frame.querySelector<HTMLButtonElement>('[data-class-allocate="governor"]')!.click();
     expect(pair.spent).toEqual({ governor: 1 });
     expect(pair.points).toBe(0);
@@ -695,7 +830,7 @@ describe("the habit-class face (issue #423)", () => {
     pair.level = 3;
     pair.points = 1;
     pair.spent = { governor: 2, reed: 1 };
-    const frame = drill(habit.id);
+    const frame = openHabitDetail(habit.id);
     for (const name of ["Governor", "Reed", "Punch card"]) {
       const trigger = frame.querySelector<HTMLButtonElement>(`[aria-label="${name} — what it means"]`)!;
       expect(trigger).not.toBeNull();

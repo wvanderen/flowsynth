@@ -321,9 +321,9 @@ describe("the controls sheet's stylesheet contract", () => {
   });
 
   it("the swatch is the sheet's square-cut control under the firm inset marker", () => {
-    expect(css).toMatch(/\.goal-swatch > span \{[^}]*width: 24px/);
-    expect(css).not.toMatch(/\.goal-swatch > span \{[^}]*border-radius/);
-    expect(css).toContain(".goal-swatch.selected { border-color: var(--ink); box-shadow: inset 0 -3px var(--ink); }");
+    expect(css).toMatch(/\.habit-swatch > span \{[^}]*width: 24px/);
+    expect(css).not.toMatch(/\.habit-swatch > span \{[^}]*border-radius/);
+    expect(css).toContain(".habit-swatch.selected { border-color: var(--ink); box-shadow: inset 0 -3px var(--ink); }");
   });
 
   it("the term trigger wears the sheet's engraved hairline, never a dotted underline", () => {

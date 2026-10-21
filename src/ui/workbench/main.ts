@@ -40,7 +40,6 @@ function bootPreview(surface: string): void {
   }
   if (surface === "plan") app.openApp("time");
   if (surface === "habits") app.openApp("habit");
-  if (surface === "goals") app.openApp("goals");
   if (surface === "notes") app.openModal("notes");
   if (surface === "detail") {
     app.ui.detail = { pos: { q: 0, r: 0 }, face: "modules" };
@@ -67,7 +66,7 @@ function bootWorkbench(): void {
       <div class="wb-controls">
         <label>Surface <select id="wb-surface">
           <optgroup label="Board"><option value="opening">Opening</option><option value="populated" selected>Populated</option><option value="flow">Live flow</option><option value="paused">Paused</option><option value="detail">Hex detail</option></optgroup>
-          <optgroup label="Panels"><option value="catalog">Catalog</option><option value="forge">Forge</option><option value="plan">Focus · Plan</option><option value="habits">Focus · Habit</option><option value="goals">Focus · Goals</option><option value="notes">Notes</option></optgroup>
+          <optgroup label="Panels"><option value="catalog">Catalog</option><option value="forge">Forge</option><option value="plan">Focus · Plan</option><option value="habits">Focus · Habit</option><option value="notes">Notes</option></optgroup>
         </select></label>
         <label>Viewport <select id="wb-size"><option value="desktop">Desktop</option><option value="phone">Phone · 390 px</option></select></label>
         <label class="wb-toggle"><input type="checkbox" id="wb-compare"> Compare desktop + phone</label>

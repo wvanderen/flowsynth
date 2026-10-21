@@ -105,16 +105,16 @@ export function tierWord(tier: number): string {
 }
 
 // Focus-app display names, shared by the console tiles and purchase surfaces.
-export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Time", notes: "Notes", goals: "Goals" };
+export const APP_LABELS: Record<FocusApp, string> = { habit: "Habit", time: "Time", notes: "Notes" };
 
 // The one-line pitch a ladder row carries in the catalog (spec §2.2's
 // launch function column). The ladder rests empty at launch (ADR-0019), so
-// no row renders; the pitches stay for the ladder's first tenant.
+// no row renders; the pitches stay for the ladder's first tenant. The
+// Goals pitch retired with the Goals app (issue #445).
 export const APP_ROLES: Record<FocusApp, string> = {
   habit: "Select the active habit.",
   time: "Planned targets and timing tools.",
   notes: "Capture what you notice.",
-  goals: "Track practice conditions.",
 };
 
 // The planned target's free-entry range (§6): whole minutes, 1–90.

@@ -107,7 +107,7 @@ describe("the carrierless opening board", () => {
     expect(restored.modules).toHaveLength(1);
     expect(restored.modules[0]!.pos).toEqual(hex(0, 0));
     expect(restored.nous).toBe(BALANCE.openingGrant);
-    expect(SAVE_VERSION).toBe(11);
+    expect(SAVE_VERSION).toBe(12);
   });
 });
 
