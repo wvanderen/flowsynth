@@ -1,0 +1,7 @@
+# Unify habit development and own one goal per habit
+
+The 2026-10-21 Focus interview found that the interface stacked the legacy habit build and Engineer tree, obscuring both session preparation and class advancement. Retire legacy builds and their bonuses, preserve practice history and existing class development without a second XP conversion, and make class development the sole progression system per habit/class. This supersedes ADR-0046's build contract; existing production behavior remains until implementation.
+
+Each habit owns its color and one optional daily, weekly, or once-only goal, independent of class. This narrows ADR-0074's multiple-goal capacity and replaces ADR-0050's separate Goals face with habit-owned editing. Players choose which goal to retain from existing multi-goal habits; prior goals remain in history rather than being silently combined. Target edits retain qualifying practice, cadence edits recalculate it, and neither may award generator fuel twice.
+
+Focus opens for session preparation. The selected habit exposes compact class and goal progress; Edit habit owns identity and goal settings, Develop owns tree allocation, and History remains separate. Engineer's practice-roll meter reads **Next module roll** and remains practice-earned, distinct from board charge. See the [confirmed brief](../focus-habit-redesign-brief.md) for hierarchy, migration, and verification requirements.
