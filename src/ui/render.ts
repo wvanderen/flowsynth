@@ -196,7 +196,7 @@ const UNSTRUCTURED_WORD = "none selected";
 // The device mark (the header-status brief, provisional): the inventory
 // hypercube with its filled core — the collapsed inventory's symbol adopted
 // as the app badge until a round names a permanent one.
-const BRAND_MARK = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Z"/><path d="m12 7 4.5 2.5v5L12 17l-4.5-2.5v-5ZM3 7l4.5 2.5M21 7l-4.5 2.5M3 17l4.5-2.5M21 17l-4.5-2.5M12 2v5m0 10v5"/><path d="m12 9.8 1.9 1.1v2.2L12 14.2l-1.9-1.1v-2.2Z" fill="currentColor" stroke="none"/></svg>`;
+const BRAND_MARK = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Z"/><path d="m12 7 4.5 2.5v5L12 17l-4.5-2.5v-5ZM3 7l4.5 2.5M21 7l-4.5 2.5M3 17l4.5-2.5M21 17l-4.5-2.5M12 2v5m0 10v5"/><path class="brand-core" d="m12 9.8 1.9 1.1v2.2L12 14.2l-1.9-1.1v-2.2Z" fill="currentColor" stroke="none"/></svg>`;
 
 // Completion's engraved check rides the practice name (the header-status
 // brief, amended): the meter column stays flush at the well's right edge,
@@ -227,16 +227,24 @@ function renderConsoleSession(app: App): void {
 
   const logo = byId("console-logo");
   if (logo && !logo.firstChild) logo.innerHTML = BRAND_MARK;
+  // The console's mode attribute (the header-status iteration): the brand
+  // mark's core is the mode lamp and the session strip wears the state
+  // color — both keyed off this one attribute, so the lamp, the strip,
+  // and the switch's own state can never disagree.
+  const consoleEl = host.closest<HTMLElement>(".console");
+  if (consoleEl) consoleEl.dataset.mode = state.mode;
   const preserveNotes = () => {
     const apps = byId("console-apps");
     if (apps && host.contains(apps)) host.parentElement?.append(apps);
   };
   const switchSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
   // The switch's one name per state (#347): the aria-label and the visible
-  // span share it, so the announced name can never drift from the read one.
+  // readout share it, so the announced name can never drift from the read
+  // one. The word lives on the console readout plate beside the key — the
+  // key itself carries the one power glyph in every state (the hardware
+  // truth: one key, the program names what it does).
   const enterFlowWord = "Enter flow";
-  const endFlowWord = "Finish";
-  const finishSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H4v18h16V9M8 3v6h6V3M8 21v-7h5M15 14l2 2 5-5"/></svg>`;
+  const endFlowWord = "Exit flow";
   const pauseSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>`;
   const resumeSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></svg>`;
   const discloseSvg = `<svg class="clock-disclose" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>`;
@@ -303,8 +311,9 @@ function renderConsoleSession(app: App): void {
           </div>
           <div class="session-actions">
 
+            <span class="switch-readout mono" aria-hidden="true">${enterFlowWord}</span>
             <button class="main-switch idle" id="flow-switch" aria-label="${enterFlowWord}" title="The board locks and runs itself">
-              ${switchSvg}<span>${enterFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
+              <span class="key" aria-hidden="true">${switchSvg}</span>
             </button>
           </div>
         </div>
@@ -349,8 +358,9 @@ function renderConsoleSession(app: App): void {
           </div>
           <div class="session-actions">
 
-            <button class="main-switch live" id="flow-switch" aria-label="End breather">
-              ${switchSvg}<span>End breather</span><i class="switch-state" aria-hidden="true"></i>
+            <span class="switch-readout mono" aria-hidden="true">End breather</span>
+            <button class="main-switch live" id="flow-switch" aria-label="End breather" title="Ends the breather and returns to upgrade mode">
+              <span class="key" aria-hidden="true">${switchSvg}</span>
             </button>
           </div>
         </div>
@@ -387,8 +397,9 @@ function renderConsoleSession(app: App): void {
         </div>
         <div class="session-actions">
 
+          <span class="switch-readout mono" aria-hidden="true">${endFlowWord}</span>
           <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" aria-label="${endFlowWord}" title="Ends the session and banks its production">
-            ${finishSvg}<span>${endFlowWord}</span><i class="switch-state" aria-hidden="true"></i>
+            <span class="key" aria-hidden="true">${switchSvg}</span>
           </button>
           </div>
         </div>

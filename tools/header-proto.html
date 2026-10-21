@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>Header states · FlowSynth</title>
+    <link rel="stylesheet" href="/src/ui/style.css" />
+    <style>
+      body { background: var(--bg); margin: 0; padding: 0; font-family: sans-serif; }
+      .stage { margin: 24px 0 40px; }
+      .stage-label { font: 600 13px/1 var(--font-condensed); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px 20px; }
+      /* Each frame is its own app container, so the stylesheet's real
+         container-query ladder applies at the frame's width. */
+      .app-frame { container: app / inline-size; width: 1280px; }
+      .app-frame.phone { width: 390px; }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      // Static harness: the real stylesheet, the real header markup per
+      // mode — no engine, no ticking. Built from render.ts's templates.
+      const powerSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
+      const pauseSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>`;
+      const resumeSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></svg>`;
+      const discloseSvg = `<svg class="clock-disclose" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>`;
+      const logo = `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round" aria-hidden="true"><path d="m12 2 9 5v10l-9 5-9-5V7Z"/><path d="m12 7 4.5 2.5v5L12 17l-4.5-2.5v-5ZM3 7l4.5 2.5M21 7l-4.5 2.5M3 17l4.5-2.5M21 17l-4.5-2.5M12 2v5m0 10v5"/><path class="brand-core" d="m12 9.8 1.9 1.1v2.2L12 14.2l-1.9-1.1v-2.2Z" fill="currentColor" stroke="none"/></svg>`;
+      const settingsSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`;
+      const notesSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
+
+      const well = (clock, caption, meterSegs) => `
+        <span class="display-well">
+          <span class="clock-row">
+            <span class="session-clock mono">${clock}</span>
+            ${discloseSvg}
+          </span>
+          <span class="program-block">
+            <span class="session-habit" id="session-habit"><span class="bread" data-session="habit">Piano</span></span>
+            <span class="clock-caption">${caption}</span>
+          </span>
+          ${meterSegs === null ? "" : `<span class="goal-meter inst-tip" role="img" aria-label="Goal progress" style="--gm-color:var(--goal-vermillion)"><span class="gm-row" aria-hidden="true"><span class="gm-track">${Array.from({length: 7}, (_, i) => `<i class="gm-seg${i < meterSegs ? " lit" : ""}"></i>`).join("")}</span></span></span>`}
+        </span>`;
+
+      const header = (mode, { clock, caption, segs, pauseSvgHtml = pauseSvg, pauseEnabled, keyState, word }) => `
+        <header class="console" data-mode="${mode}">
+          <span id="console-logo" aria-label="FlowSynth" role="img">${logo}</span>
+          <div class="console-session" id="console-session">
+            <div class="session-group" role="group" aria-label="Session">
+              <button id="pause-flow" aria-label="Pause" ${pauseEnabled ? "" : 'disabled'}>${pauseSvgHtml}</button>
+              <div class="clock-anchor">
+                <button class="session-focus" id="clock-plan" aria-label="Focus controls">
+                  ${well(clock, caption, segs)}
+                </button>
+                <button class="app-tile" id="app-tile-notes" aria-label="Notes">${notesSvg}</button>
+              </div>
+              <div class="session-actions">
+                <span class="switch-readout mono" aria-hidden="true">${word}</span>
+                <button class="main-switch ${keyState}" id="flow-switch" aria-label="${word}">
+                  <span class="key" aria-hidden="true">${powerSvg}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+          <button class="console-button" id="console-settings" aria-label="Settings">${settingsSvg}</button>
+          <div class="session-strip" aria-hidden="true"><span></span></div>
+        </header>`;
+
+      const stages = [
+        ["Standby — upgrade", "upgrade", { clock: "--:--", caption: "open-ended", segs: 7, keyState: "idle", word: "Enter flow" }],
+        ["Flow — live", "flow", { clock: "12:34", caption: "25:00", segs: 3, keyState: "live", word: "Exit flow", pauseIcon: "bars", pauseEnabled: true }],
+        ["Paused — held", "paused", { clock: "12:34", caption: "paused", segs: 3, keyState: "held", word: "Exit flow", pauseIcon: "play", pauseEnabled: true }],
+        ["Breather", "breather", { clock: "08:12", caption: "Breather", segs: 7, keyState: "live", word: "End breather" }],
+      ];
+      const pauseMarkup = (s) => s.pauseIcon === "play" ? resumeSvg : pauseSvg;
+      const frame = (markup, phone) => `<div class="app-frame${phone ? " phone" : ""}">${markup}</div>`;
+      const stageHtml = ([label, mode, s]) =>
+        `<div class="stage"><p class="stage-label">${label}</p>${frame(header(mode, { ...s, pauseSvgHtml: pauseMarkup(s) }))}</div>`;
+      document.body.innerHTML = stages.map(stageHtml).join("")
+        + `<div class="stage"><p class="stage-label">Phone — flow</p>${frame(header("flow", { clock: "12:34", caption: "25:00", segs: 3, keyState: "live", word: "Exit flow", pauseSvgHtml: pauseSvg, pauseEnabled: true }), true)}</div>`
+        + `<div class="stage"><p class="stage-label">Phone — standby</p>${frame(header("upgrade", { clock: "--:--", caption: "open-ended", segs: 7, keyState: "idle", word: "Enter flow", pauseSvgHtml: pauseSvg }), true)}</div>`;
+      // Paint the strip fills per mode (the real app drives widths from render).
+      document.querySelectorAll(".console").forEach((el) => {
+        const fill = el.querySelector(".session-strip > span");
+        const mode = el.dataset.mode;
+        if (mode === "flow") fill.style.cssText = "width:40%";
+        if (mode === "paused") fill.style.cssText = "width:40%;background:var(--goal-amber)";
+        if (mode === "breather") fill.style.cssText = "width:55%;background:var(--charge)";
+      });
+    </script>
+  </body>
+</html>

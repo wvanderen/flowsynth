@@ -374,41 +374,122 @@ h1, h2, h3, p { margin: 0; }
 }
 .session-strip > span { display: block; height: 100%; width: 0; background: var(--switch); opacity: 0.7; }
 
-/* The Enter/Exit main switch: vermillion, and the header's dominant element
-   (issue #148) — the largest control in the row, centered in the session
-   cluster. Bright = flow live; dim = idle; paused holds bright
-   but still. Text holds AA in every state (#347): live/held fill on the
-   deep stop, idle text on the bright stop; borders, glow, and state dot
-   ride the session vermillion unchanged. */
+/* The Enter/Exit main switch: the console's dominant control (issue #148),
+   rebuilt as a hardware key — a square-cut key with all four corners
+   chamfered (the rack's answer to the round key: angle cuts, no curves),
+   carrying the one power glyph in every state. Its word rides the console
+   readout plate beside it. Bright = flow live; dim = idle; paused holds
+   bright but still. The key's glyph rides the AA pairing (#347); the
+   readout wears the vermillion family on the deep well. */
 .main-switch {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 52px;
+  height: 52px;
+  padding: 0;
+}
+/* The key stands bare — no chassis chrome of its own; the plate below
+   carries the whole key. The generic button hover and border stay off it. */
+.main-switch,
+.main-switch:hover:not(:disabled),
+.main-switch:disabled {
+  border: 0;
+  background: transparent;
+}
+.main-switch.idle { color: var(--switch-bright); }
+/* The key plate: the chamfered square. The rim rides the plate's own
+   background; the face is the inset layer above it — one element each,
+   so the hairline follows the cut. The face mixes over the panel (never
+   over transparency — the rim must not read through the wash). */
+.main-switch {
+  --key-face: color-mix(in srgb, var(--switch) 7%, var(--panel-soft));
+  --key-face-hover: color-mix(in srgb, var(--switch) 14%, var(--panel-soft));
+}
+.main-switch .key {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
+  background: var(--switch-dim);
+  transition: background 0.15s;
+}
+.main-switch .key::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+  background: var(--key-face);
+  transition: background 0.15s;
+}
+.main-switch .key svg { position: relative; width: 20px; height: 20px; }
+/* The key's one word, on its own console display: a small deep-well plate
+   in tabular mono caps — the hardware panel's label plate, set on the
+   ramp's micro band (engraved micro-label). Square-cut, hairline border;
+   the display well's material in miniature. */
+.switch-readout {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-deep);
+  border-radius: 0;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   white-space: nowrap;
-}
-.main-switch svg { width: 16px; height: 16px; }
-/* The switch's own state light: the mode indicator lives here now. */
-.switch-state { width: 8px; height: 8px; border-radius: 0; border: 1px solid currentColor; opacity: 0.65; }
-.main-switch.live .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; box-shadow: 0 0 8px var(--switch-glow); }
-.main-switch.held .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; }
-.main-switch.idle {
   color: var(--switch-bright);
-  border-color: var(--switch-dim);
-  background: var(--switch-faint);
+  transition: color 0.15s;
+  /* The readout belongs to the key: a touch tighter than the row's gap. */
+  margin-right: -2px;
 }
-.main-switch.idle:hover { background: var(--switch-faint-strong); border-color: var(--switch); }
+.console[data-mode="flow"] .switch-readout,
+.console[data-mode="paused"] .switch-readout { color: var(--switch); }
+.main-switch.idle:hover .key { background: var(--switch); }
+.main-switch.idle:hover .key::before { background: var(--key-face-hover); }
 .main-switch.live,
-.main-switch.held {
-  color: var(--switch-ink);
-  background: var(--switch-deep);
-  border-color: var(--switch);
-  text-shadow: 0 1px 2px var(--shadow);
+.main-switch.held { color: var(--switch-ink); }
+.main-switch.live .key,
+.main-switch.held .key { background: var(--switch); }
+.main-switch.live .key::before,
+.main-switch.held .key::before { background: var(--switch-deep); }
+/* Live's steady bottom light: the fill's inner edge, clear of the chamfer. */
+.main-switch.live .key::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 2px;
+  background: var(--switch);
 }
-.main-switch.live { box-shadow: inset 0 -2px var(--switch); }
+.main-switch:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* The mode lamp (the header-status iteration): the brand mark's filled
+   core is the console's indicator light — the one place the machine says
+   what it is doing from across the room. Vermillion flow — the one glow,
+   earned by live activity: a tight halo on the core and a soft backlight
+   behind the mark, so the lamp reads at a glance; amber hold and
+   charge-green breather light the core steadily; standby leaves it
+   engraved. The session strip wears the same state color. */
+#console-logo .brand-core { fill: var(--line); transition: fill 0.15s; }
+.console[data-mode="flow"] #console-logo .brand-core {
+  fill: var(--switch);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--switch) 85%, transparent));
+}
+.console[data-mode="flow"] #console-logo svg {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--switch) 55%, transparent));
+}
+.console[data-mode="paused"] #console-logo .brand-core { fill: var(--goal-amber); }
+.console[data-mode="breather"] #console-logo .brand-core { fill: var(--charge); }
+.console[data-mode="paused"] .session-strip > span { background: var(--goal-amber); }
+.console[data-mode="breather"] .session-strip > span { background: var(--charge); }
 
 .session-actions { display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; }
 .session-actions button { white-space: nowrap; }
@@ -3500,8 +3581,6 @@ body.hex-detail-open .upgrade-all {
   .session-clock { font-size: 28px; }
   .display-well { min-height: 46px; gap: 10px; padding: 4px 10px 4px 12px; }
   .clock-disclose { width: 10px; height: 10px; }
-  .main-switch { padding: 10px 13px; font-size: 14px; }
-  .main-switch svg { width: 14px; height: 14px; }
   /* Pause keeps its icon; the word yields to the row's width budget. */
   #pause-flow span { display: none; }
   .bread { max-width: 12ch; }
@@ -3564,8 +3643,6 @@ body.hex-detail-open .upgrade-all {
      44px touch floor. */
   .bread { max-width: 10ch; }
   .clock-provisional { display: none; }
-  .main-switch { padding: 9px 6px; }
-  .main-switch span { display: none; }
   #pause-flow { padding: 9px 6px; }
   /* The doors ride with Settings at the row's right end: the session
      cluster ends at the switch, and the auto margin moves to the doors. */
@@ -3659,7 +3736,6 @@ body.hex-detail-open .upgrade-all {
   .session-focus { gap: 4px; padding: 2px; }
   .display-well { gap: 5px; padding: 4px 6px; }
   .session-actions { gap: 4px; }
-  .main-switch { padding: 9px 5px; }
   #pause-flow { padding: 9px 5px; }
   .app-tile { width: 34px; height: 34px; }
   #console-settings { width: 36px; height: 40px; padding: 9px 8px; }
@@ -4379,7 +4455,8 @@ body.hex-detail-open .tray-column { z-index: 24; }
 .clock-anchor .session-focus { min-height: 52px; padding: 0 4px; }
 .clock-anchor .console-apps { flex: none; margin: 0; padding: 0 4px; border-left: 1px solid var(--line); }
 .clock-anchor .app-tile { width: 44px; height: 44px; min-height: 44px; }
-.session-actions #pause-flow, .session-actions #flow-switch { box-sizing: border-box; height: 44px; min-width: 76px; justify-content: center; padding: 8px; }
+.session-actions #pause-flow { box-sizing: border-box; height: 44px; min-width: 76px; justify-content: center; padding: 8px; }
+.session-actions #flow-switch { box-sizing: border-box; width: 52px; height: 52px; flex: 0 0 52px; justify-content: center; padding: 0; }
 .session-actions #pause-flow:disabled { opacity: .45; }
 .ledger-face > button, .ledger-face .capacity-trigger { border: 0; background: transparent; padding: 4px 0; min-height: 36px; }
 .ledger-face b[data-live="nous"], .ledger-face b[data-live="rate"] { display: inline-block; width: 11ch; text-align: right; }
@@ -4425,8 +4502,12 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
   .clock-anchor .console-apps { padding: 0; }
   .clock-anchor .app-tile { width: 44px; }
   .session-actions { gap: 4px; }
-  .session-actions #pause-flow, .session-actions #flow-switch { width: 44px; min-width: 44px; padding: 6px; }
-  .session-actions #pause-flow span, .session-actions #flow-switch span { display: none; }
+  .session-actions #pause-flow { width: 44px; min-width: 44px; padding: 6px; }
+  .session-actions #flow-switch { width: 44px; height: 44px; flex-basis: 44px; }
+  .session-actions #flow-switch .key { clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px), 0 7px); }
+  .session-actions #flow-switch .key::before { clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); }
+  .session-actions #flow-switch .key svg { width: 18px; height: 18px; }
+  .switch-readout { display: none; }
   .game-info-face { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; padding: 2px 8px; }
   .game-info-face .info-rate { grid-row: 1; grid-column: 2; }
   .game-info-face .info-capacity { display: none; }
@@ -4459,10 +4540,9 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
 .modal-face { padding: var(--modal-pad); background: var(--panel); clip-path: var(--inst-clip); max-height: calc(min(82vh, 720px) - 2px); overflow-y: auto; }
 .modal-backdrop.sheet .modal-face { max-height: calc(78vh - 2px); }
 @media (max-width: 600px) { .modal-face { padding: 16px; max-height: calc(78dvh - 2px); } }
-.session-actions #flow-switch { width: 118px; flex: 0 0 118px; }
 .session-actions #pause-flow { width: 76px; flex: 0 0 76px; }
 @container app (width < 600px) {
-  .session-actions #flow-switch, .session-actions #pause-flow { width: 44px; flex: 0 0 44px; }
+  .session-actions #pause-flow { width: 44px; flex: 0 0 44px; }
   .game-info-face .info-read { min-height: 44px; }
 }
 @container app (width < 600px) {

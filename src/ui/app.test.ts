@@ -95,7 +95,9 @@ describe("the console", () => {
     expect(document.getElementById("console-session")!.querySelector(".main-switch")).not.toBeNull();
     expect(document.getElementById("console-apps")).not.toBeNull();
     expect(document.getElementById("console-settings")).not.toBeNull();
-    expect(document.querySelector("#flow-switch .switch-state")).not.toBeNull();
+    // The key carries the glyph; the word rides the readout plate.
+    expect(document.querySelector("#flow-switch .key svg")).not.toBeNull();
+    expect(document.querySelector("#console-session .switch-readout")).not.toBeNull();
   });
 
   it("the upgrade-mode clock is the plan affordance: clicking it opens the Time app", () => {
@@ -174,8 +176,9 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(document.getElementById("clock-plan")!.contains(document.getElementById("app-tile-notes"))).toBe(false);
     expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-settings")!));
     // The session cluster is the switch's home — the header's dominant
-    // control, wearing its state light.
-    expect(document.querySelector("#console-session #flow-switch .switch-state")).not.toBeNull();
+    // control: the chamfered key and its console readout.
+    expect(document.querySelector("#console-session #flow-switch .key")).not.toBeNull();
+    expect(document.querySelector("#console-session .switch-readout")).not.toBeNull();
   });
 
   it("the clock wears a small disclosure affordance that tracks the Time popover", () => {
@@ -239,25 +242,47 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
   it("the main switch's accessible name tracks its state and never falls back to the title (#347)", () => {
     app.render();
     const sw = () => document.getElementById("flow-switch")!;
+    const readout = () => document.querySelector("#console-session .switch-readout")!;
     // Idle: Enter flow — the name is the switch's own words, not the hover
-    // title, and it matches the visible label's vocabulary (the phone row
-    // hides the span, so the aria-label is the only name there).
+    // title, and the console readout beside the key reads the same words
+    // (the phone row hides the readout, so the aria-label is the only
+    // name there).
     expect(sw().getAttribute("aria-label")).toBe("Enter flow");
     expect(sw().getAttribute("title")).not.toBe(sw().getAttribute("aria-label"));
-    expect(sw().querySelector("span")!.textContent).toBe(sw().getAttribute("aria-label"));
-    // Live: End flow.
+    expect(readout().textContent).toBe(sw().getAttribute("aria-label"));
+    // Live: Exit flow.
     startSession(app.state, 600);
     app.render();
     expect(app.state.mode).toBe("flow");
     expect(sw().classList.contains("live")).toBe(true);
-    expect(sw().getAttribute("aria-label")).toBe("Finish");
-    expect(sw().querySelector("span")!.textContent).toBe("Finish");
+    expect(sw().getAttribute("aria-label")).toBe("Exit flow");
+    expect(readout().textContent).toBe("Exit flow");
     // Held: the switch still ends the session; the sibling names the hold.
     app.pause();
     app.render();
     expect(sw().classList.contains("held")).toBe(true);
-    expect(sw().getAttribute("aria-label")).toBe("Finish");
+    expect(sw().getAttribute("aria-label")).toBe("Exit flow");
     expect(document.getElementById("pause-flow")!.getAttribute("aria-label")).toBe("Resume");
+  });
+
+  it("the console's mode attribute drives the lamp and the strip from one state voice", () => {
+    app.render();
+    const consoleEl = document.querySelector(".console")!;
+    // Standby: the attribute reads the mode the header is in — the brand
+    // mark's core and the session strip take their state from it alone.
+    expect(consoleEl.getAttribute("data-mode")).toBe("upgrade");
+    startSession(app.state, 600);
+    app.render();
+    expect(consoleEl.getAttribute("data-mode")).toBe("flow");
+    app.pause();
+    app.render();
+    expect(consoleEl.getAttribute("data-mode")).toBe("paused");
+    app.resume();
+    app.render();
+    expect(consoleEl.getAttribute("data-mode")).toBe("flow");
+    app.endFlow();
+    app.render();
+    expect(consoleEl.getAttribute("data-mode")).toBe("upgrade");
   });
 
   it("pause stays reachable during flow and toggles from the header", () => {
