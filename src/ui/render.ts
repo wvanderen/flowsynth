@@ -311,10 +311,10 @@ function renderConsoleSession(app: App): void {
           </div>
           <div class="session-actions">
 
-            <span class="switch-readout mono" aria-hidden="true">${enterFlowWord}</span>
             <button class="main-switch idle" id="flow-switch" aria-label="${enterFlowWord}" title="The board locks and runs itself">
               <span class="key" aria-hidden="true">${switchSvg}</span>
             </button>
+            <span class="switch-readout mono" aria-hidden="true">${enterFlowWord}</span>
           </div>
         </div>
       `;
@@ -358,10 +358,10 @@ function renderConsoleSession(app: App): void {
           </div>
           <div class="session-actions">
 
-            <span class="switch-readout mono" aria-hidden="true">End breather</span>
             <button class="main-switch live" id="flow-switch" aria-label="End breather" title="Ends the breather and returns to upgrade mode">
               <span class="key" aria-hidden="true">${switchSvg}</span>
             </button>
+            <span class="switch-readout mono" aria-hidden="true">End breather</span>
           </div>
         </div>
       `;
@@ -397,10 +397,10 @@ function renderConsoleSession(app: App): void {
         </div>
         <div class="session-actions">
 
-          <span class="switch-readout mono" aria-hidden="true">${endFlowWord}</span>
           <button class="main-switch ${paused ? "held" : "live"}" id="flow-switch" aria-label="${endFlowWord}" title="Ends the session and banks its production">
             <span class="key" aria-hidden="true">${switchSvg}</span>
           </button>
+          <span class="switch-readout mono" aria-hidden="true">${endFlowWord}</span>
           </div>
         </div>
       `;

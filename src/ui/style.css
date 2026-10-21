@@ -446,8 +446,10 @@ h1, h2, h3, p { margin: 0; }
   white-space: nowrap;
   color: var(--switch-bright);
   transition: color 0.15s;
-  /* The readout belongs to the key: a touch tighter than the row's gap. */
-  margin-right: -2px;
+  /* The readout belongs to the key: a touch tighter than the row's gap.
+     It hangs on the key's outer side, so the key itself borders the
+     console's display panel. */
+  margin-left: -2px;
 }
 .console[data-mode="flow"] .switch-readout,
 .console[data-mode="paused"] .switch-readout { color: var(--switch); }
