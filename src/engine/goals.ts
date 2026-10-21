@@ -9,12 +9,15 @@ export type { Goal, GoalCondition, GoalSchedule };
 // that habit advances it — unstructured practice advances nothing. Each
 // habit owns zero or one active goal, never purchasable; progress accrues
 // only while the goal is active — earlier practice never counts
-// retroactively. Completions grant nothing themselves — goal templates are
-// conditions only (ADR-0012) — but the completion tick is the fact every
-// owned generator reads, banking its profile's goal credit on the focus
-// equivalent (issue #371) under the bounded fuel budget (below). Daily and
-// weekly goals reset at the local calendar boundary; one-time goals keep
-// running until edited, replaced, or removed in the habit editor.
+// retroactively, the one exception being a cadence edit, whose
+// recalculation reads the new period's credited practice from the record
+// (editGoal below). Completions grant nothing themselves — goal templates
+// are conditions only (ADR-0012) — but the completion tick is the fact
+// every owned generator reads, banking its profile's goal credit on the
+// focus equivalent (issue #371) under the bounded fuel budget (below).
+// Daily and weekly goals reset at the local calendar boundary; one-time
+// goals keep running until edited, replaced, or removed in the habit
+// editor.
 //
 // The goal-generator fuel budget (issue #423): completions credit
 // generators only out of a pool that accrues at
@@ -53,31 +56,29 @@ export function goalRequiredSeconds(goal: Goal): number {
   return goal.condition.minutes * 60;
 }
 
-// The tracker's rolled-up state (issue #149, scoped by issue #423): the
-// selected habit's goal — none tracked, work in progress, or the current
-// occurrence complete. With no habit selected nothing is tracked; a
-// recurring reset rolls the goal back to open; an unresolved migration
-// choice reads as none until a goal is retained.
-export type GoalTrackerState = "none" | "open" | "complete";
+// The calendar's two primitives (issue #445): the local day start and the
+// local Monday start. The occurrence keys and the cadence recalculation's
+// period start both read them, so the boundary can never disagree with
+// itself.
+function localDayStart(now: number): Date {
+  const d = new Date(now);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 
-export function goalTrackerState(state: GameState): GoalTrackerState {
-  const habitId = state.activeHabitId;
-  if (habitId === null) return "none";
-  const goal = activeGoalOf(state, habitId);
-  if (!goal) return "none";
-  return goal.completed ? "complete" : "open";
+function localWeekStart(now: number): Date {
+  const d = new Date(now);
+  const day = (d.getDay() + 6) % 7; // Monday = 0
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
 }
 
 function localDateKey(now: number): string {
-  const d = new Date(now);
+  const d = localDayStart(now);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 function localWeekKey(now: number): string {
-  const d = new Date(now);
-  const day = (d.getDay() + 6) % 7; // Monday = 0
-  const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
-  return `${monday.getFullYear()}-W${String(monday.getMonth() + 1).padStart(2, "0")}${String(monday.getDate()).padStart(2, "0")}`;
+  const d = localWeekStart(now);
+  return `${d.getFullYear()}-W${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
 }
 
 export function occurrenceKeyFor(schedule: GoalSchedule, now: number): string {
@@ -88,15 +89,11 @@ export function occurrenceKeyFor(schedule: GoalSchedule, now: number): string {
 
 // The current occurrence's start (issue #445): local midnight for daily,
 // the local Monday for weekly, and the goal's own creation for once — the
-// period a cadence change recalculates qualifying practice over. The key
-// helpers above are the one calendar source; this derives from the same
-// local reads.
+// period a cadence change recalculates qualifying practice over. The
+// primitives above are the one calendar source.
 export function occurrenceStartFor(schedule: GoalSchedule, now: number, createdAt: number): number {
   if (schedule.kind === "once") return createdAt;
-  const d = new Date(now);
-  const day = (d.getDay() + 6) % 7; // Monday = 0
-  const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (schedule.kind === "weekly" ? day : 0));
-  return start.getTime();
+  return (schedule.kind === "weekly" ? localWeekStart : localDayStart)(now).getTime();
 }
 
 // Rolls recurring goals to the current occurrence at the local calendar
@@ -193,6 +190,9 @@ export function editGoal(
   // Cadence change: recalculate from qualifying practice in the new
   // period. Credited eligibility only — the practice log's live entries
   // are the sessions the goal could have ridden; manual logs never join.
+  // The record's own granularity governs: one entry per session, stamped
+  // at its end, so a session spanning a boundary rides the period its end
+  // falls in — the finest split the existing calendar rule has data for.
   goal.schedule = schedule;
   goal.occurrenceKey = occurrenceKeyFor(schedule, now);
   const start = occurrenceStartFor(schedule, now, goal.createdAt);
@@ -201,7 +201,10 @@ export function editGoal(
     .reduce((sum, entry) => sum + entry.seconds, 0);
   goal.progressSeconds = qualifying;
   // The reconstructed progress is credited practice through and through,
-  // so the live slice is the whole of it.
+  // so the live slice is the whole of it. A recalculation that already
+  // meets the target reads complete without a completion tick: no credit
+  // fires at the edit desk, so the bounded pool pays only what the
+  // accrual paths' own completion ticks earned.
   goal.liveSeconds = qualifying;
   goal.completed = qualifying >= goalRequiredSeconds(goal);
   return { ok: true };

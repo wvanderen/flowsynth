@@ -1315,14 +1315,16 @@ button.tree-node:hover { background: var(--hover-bg); border-color: var(--line);
 .history-line { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .history-line.muted { color: var(--muted); }
 
-/* Goals: tracked practice conditions in limited slots. */
+/* The habit editor's goal form (issue #445): minutes and cadence — the
+   color is the habit's, so the form carries no palette. */
 .goal-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
 .goal-form select, .goal-form input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 7px 8px; font-size: 12px; }
 .goal-form input { width: 64px; }
 .goal-form select:focus-visible, .goal-form input:focus-visible { border-color: var(--charge); }
-/* The GOALS face's rows: the shared bar column leads the ledger — fill by
-   height, palette token from the markup, the done row's bar holding full
-   height under the engraved check. */
+/* The habit editor's goal row (issue #445 — the GOALS face retired): the
+   shared bar column leads the ledger — fill by height, the habit's
+   palette token from the markup, the done row's bar holding full height
+   under the engraved check. */
 .goal-ledger {
   flex: 1;
   min-width: 0;

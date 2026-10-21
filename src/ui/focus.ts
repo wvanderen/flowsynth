@@ -1193,28 +1193,34 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
     });
   });
   app.listen(scope.querySelector("#goal-create-open"), "click", () => app.setFocusForm("goal-create"));
-  // The goal form's Escape puts it away without landing, like every
-  // on-demand form's input.
+  // The goal form's one read (issue #445): minutes and cadence off the
+  // standing row — the create and the edit land through their own
+  // buttons, the engine answering for the one-active-goal rule. Escape
+  // puts the form away without landing, like every on-demand form's input.
+  const goalFormRead = (): { minutes: number; schedule: "once" | "daily" | "weekly" } | null => {
+    const minutesInput = scope.querySelector("#goal-minutes") as HTMLInputElement | null;
+    const scheduleSelect = scope.querySelector("#goal-schedule") as HTMLSelectElement | null;
+    if (!minutesInput || !scheduleSelect || !minutesInput.value) return null;
+    return { minutes: Number(minutesInput.value), schedule: scheduleSelect.value as "once" | "daily" | "weekly" };
+  };
+  app.listen(scope.querySelector("#goal-add"), "click", () => {
+    const habitId = app.ui.detailHabitId;
+    const edit = goalFormRead();
+    if (!habitId || !edit) return;
+    app.createGoalAction(habitId, edit.minutes, edit.schedule);
+  });
+  app.listen(scope.querySelector("#goal-edit-apply"), "click", () => {
+    const habitId = app.ui.detailHabitId;
+    const goal = habitId ? activeGoalOf(app.state, habitId) : undefined;
+    const edit = goalFormRead();
+    if (!goal || !edit) return;
+    app.editGoalAction(goal.id, edit.minutes, edit.schedule);
+  });
   app.listen(scope.querySelector("#goal-minutes"), "keydown", (event) => {
     if ((event as KeyboardEvent).key === "Escape") {
       event.stopPropagation();
       app.setFocusForm(null);
     }
-  });
-  app.listen(scope.querySelector("#goal-add"), "click", () => {
-    const minutesInput = scope.querySelector("#goal-minutes") as HTMLInputElement | null;
-    const scheduleSelect = scope.querySelector("#goal-schedule") as HTMLSelectElement | null;
-    const habitId = app.ui.detailHabitId;
-    if (!habitId || !minutesInput || !scheduleSelect || !minutesInput.value) return;
-    app.createGoalAction(habitId, Number(minutesInput.value), scheduleSelect.value as "once" | "daily" | "weekly");
-  });
-  app.listen(scope.querySelector("#goal-edit-apply"), "click", () => {
-    const minutesInput = scope.querySelector("#goal-minutes") as HTMLInputElement | null;
-    const scheduleSelect = scope.querySelector("#goal-schedule") as HTMLSelectElement | null;
-    const habitId = app.ui.detailHabitId;
-    const goal = habitId ? activeGoalOf(app.state, habitId) : undefined;
-    if (!goal || !minutesInput || !scheduleSelect || !minutesInput.value) return;
-    app.editGoalAction(goal.id, Number(minutesInput.value), scheduleSelect.value as "once" | "daily" | "weekly");
   });
   scope.querySelectorAll<HTMLElement>("[data-goal-edit-open]").forEach((button) => {
     app.listen(button, "click", () => app.setFocusForm("goal-edit"));

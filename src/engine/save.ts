@@ -1,6 +1,6 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules, normalizeWorld } from "./state";
 import { classDefOf, freshClassPair, normalizeHabitClasses } from "./classes";
-import { normalizeGoals } from "./goals";
+import { activeGoals, normalizeGoals } from "./goals";
 import { DEFAULT_HABIT_COLOR, normalizeHabitColor } from "./habits";
 import { longGoalCost, mutatorSlotCost } from "./economy";
 import { generateOffer, type Rng } from "./rolls";
@@ -479,12 +479,13 @@ function migrateV10ToV11(raw: Partial<GameState> & Record<string, unknown>, merg
 // schema this pass writes is what v12 saves carry.
 
 function migrateV11ToV12(merged: GameState): void {
+  // The active-goal read's own filter (goals.activeGoals) excludes the
+  // retired and cross-habit rows this conversion must not touch.
   const perHabit = new Map<string, Goal[]>();
-  for (const goal of merged.goals) {
-    if (goal.retired || goal.condition.habitId === null) continue;
-    const own = perHabit.get(goal.condition.habitId) ?? [];
+  for (const goal of activeGoals(merged)) {
+    const own = perHabit.get(goal.condition.habitId!) ?? [];
     own.push(goal);
-    perHabit.set(goal.condition.habitId, own);
+    perHabit.set(goal.condition.habitId!, own);
   }
   for (const habit of merged.habits) {
     const own = perHabit.get(habit.id) ?? [];

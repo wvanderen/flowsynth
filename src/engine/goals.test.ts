@@ -9,7 +9,6 @@ import {
   createGoal,
   deleteGoal,
   editGoal,
-  goalTrackerState,
   normalizeGoals,
   occurrenceKeyFor,
   pendingGoalsOf,
@@ -306,7 +305,6 @@ describe("the migration's retain-one choice (issue #445)", () => {
     fullFuel(s);
     const [a, b] = pendingPair(s);
     expect(activeGoalOf(s, s.habits[0]!.id)).toBeUndefined();
-    expect(goalTrackerState(s)).toBe("none");
     // An unresolved choice never blocks a session.
     startSession(s, null);
     advance(s, 3_600);
@@ -402,26 +400,6 @@ describe("recurrence", () => {
     rollGoalOccurrences(s, 999_999_999);
     expect(s.goals[0]!.completed).toBe(true);
     expect(s.goals).toHaveLength(1);
-  });
-});
-
-describe("the tracker's rolled-up state (#149)", () => {
-  it("distinguishes no tracked goal, work in progress, and the current occurrence complete", () => {
-    const s = fresh();
-    expect(goalTrackerState(s)).toBe("none"); // no habit selected
-    const habit = withHabit(s);
-    expect(goalTrackerState(s)).toBe("none"); // the habit tracks nothing yet
-    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1 });
-    expect(goalTrackerState(s)).toBe("open");
-    accrueGoalProgress(s, habit.id, 600);
-    expect(goalTrackerState(s)).toBe("complete");
-    // The next occurrence re-opens it.
-    rollGoalOccurrences(s, DAY + 3600_000);
-    expect(goalTrackerState(s)).toBe("open");
-    // Another habit's goal never qualifies the tracker.
-    const other = createHabit(s, "Cooking")!.habit!;
-    selectHabit(s, other.id);
-    expect(goalTrackerState(s)).toBe("none");
   });
 });
 
