@@ -29,10 +29,37 @@ function syncChildren(current: Element, next: Element): void {
       for (const attribute of Array.from(desired.attributes)) {
         if (child.getAttribute(attribute.name) !== attribute.value) child.setAttribute(attribute.name, attribute.value);
       }
-      syncChildren(child, desired);
+      // A node mixing bare text with elements (the face nameplate: the
+      // name's text before the tier tspan) carries meaning in its bare
+      // text nodes — the keyed element walk below never touches them, so
+      // a reused node kept its first occupant's name (#442). Pair the
+      // bare texts positionally; a different count is a different shape,
+      // so take the whole desired node rather than risk a mispair.
+      if (desired.children.length > 0 && !syncBareText(child, desired)) {
+        const fresh = desired.cloneNode(true) as Element;
+        child.replaceWith(fresh);
+        child = fresh;
+      } else {
+        syncChildren(child, desired);
+      }
     }
     const atIndex = current.children[index] ?? null;
     if (child !== atIndex) current.insertBefore(child, atIndex);
   });
   for (const child of existing.values()) child.remove();
+}
+
+function syncBareText(current: Element, next: Element): boolean {
+  const currentTexts = bareTextNodes(current);
+  const nextTexts = bareTextNodes(next);
+  if (currentTexts.length !== nextTexts.length) return false;
+  for (let i = 0; i < nextTexts.length; i++) {
+    const value = nextTexts[i]!.nodeValue ?? "";
+    if (currentTexts[i]!.nodeValue !== value) currentTexts[i]!.nodeValue = value;
+  }
+  return true;
+}
+
+function bareTextNodes(element: Element): Text[] {
+  return Array.from(element.childNodes).filter((node): node is Text => node.nodeType === Node.TEXT_NODE);
 }
