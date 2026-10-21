@@ -5,8 +5,6 @@ import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysi
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
 import { capacityOf } from "./capacity";
 import { achievementBoostOf, syncAchievements } from "./achievements";
-import { activeHabit } from "./habits";
-import { baseBuildFactors, amplifyFactors } from "./builds";
 import { discoveryBoostOf, discoveryCount, syncChordDiscoveries } from "./library";
 import { summaryTermsOf } from "./allocation";
 import { worldFactorOf } from "./world";
@@ -262,14 +260,11 @@ export function flowLive(state: GameState): boolean {
 
 // Raw generator output into one cell: the sum of adjacent deployed
 // generators' output — generators never divide output among neighbors.
-// The steady-conduit build node (ADR-0046) adds its flat +1 per emitting
-// generator; the bonus threads through the relay net so every consumer of
-// charge reads the same strengths.
-function generatorStrengthAt(state: GameState, pos: Hex, flow: boolean, steadyBonus: number): number {
+function generatorStrengthAt(state: GameState, pos: Hex, flow: boolean): number {
   let strength = 0;
   for (const generator of deployedGenerators(state)) {
     if (generator.pos !== null && adjacent(pos, generator.pos)) {
-      strength += emittedStrength(state, generator, flow, steadyBonus);
+      strength += emittedStrength(state, generator, flow);
     }
   }
   return strength;
@@ -288,7 +283,7 @@ interface RelayNet {
   relay: Map<string, number>;
 }
 
-function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNet {
+function relayNet(state: GameState, flow: boolean): RelayNet {
   const amplifiers = deployed(state).filter((m) => m.type === "amplifier");
   const received = new Map<string, number>();
   const relay = new Map<string, number>();
@@ -296,14 +291,14 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
   // Empty generators cannot anchor a relay depth: they must not cut off
   // charge arriving through an emitting generator's longer path.
   let frontier = amplifiers.filter((amp) =>
-    deployedGenerators(state).some((g) => emittedStrength(state, g, flow, steadyBonus) > 0 && adjacent(amp.pos!, g.pos!)),
+    deployedGenerators(state).some((g) => emittedStrength(state, g, flow) > 0 && adjacent(amp.pos!, g.pos!)),
   );
   let level = 1;
   while (frontier.length > 0 && level <= BALANCE.amplifierHopCap) {
     const next: ModuleInstance[] = [];
     for (const amp of frontier) {
       depth.set(amp.id, level);
-      let strength = generatorStrengthAt(state, amp.pos!, flow, steadyBonus);
+      let strength = generatorStrengthAt(state, amp.pos!, flow);
       for (const other of amplifiers) {
         if (depth.get(other.id) === level - 1 && adjacent(amp.pos!, other.pos!)) {
           strength += relay.get(other.id) ?? 0;
@@ -323,39 +318,8 @@ function relayNet(state: GameState, flow: boolean, steadyBonus: number): RelayNe
   return { received, relay };
 }
 
-// One deployed RITUAL's own amplification contribution (ADR-0046): its
-// level-scaled base through the charged-empowerment curve of the strength
-// it receives — the face readout and the bloom's contribution line share
-// this one read with the rate pass. Zero while uncharged.
-export function ritualAmpOf(level: number, strength: number, tier = 0): number {
-  return BALANCE.ritualAmpPerLevel * level * tierPowerOf(tier) * chargedFactor(strength);
-}
-
-// Read RITUAL against the base charge network once, then amplify delivery.
-// This prevents Steady conduit feeding its own amplification recursively.
-function ritualAmplificationFor(state: GameState, flow: boolean): number {
-  const build = baseBuildFactors(activeHabit(state));
-  const placed = deployed(state);
-  const net = relayNet(state, flow, build.generatorStrength);
-  let amplification = 0;
-  for (const module of placed) {
-    if (module.type === "ritual") {
-      const strength = receivedOn(state, module, flow, placed, net, build.generatorStrength);
-      if (strength > 0) amplification += ritualAmpOf(module.level, strength, module.tier);
-    }
-  }
-  return amplification * (1 + build.ritualAttunement);
-}
-
-export function activeBuildGeneratorStrength(state: GameState, flow = flowLive(state)): number {
-  const base = baseBuildFactors(activeHabit(state)).generatorStrength;
-  return base === 0 ? 0 : base * (1 + ritualAmplificationFor(state, flow));
-}
-
 // A generator's charge output: strength scales with its amplitude (level
-// and rarity), plus the steady-conduit build node's flat +1 when the
-// active habit equips it (ADR-0046 — output strength is the node's whole
-// effect). Only generators produce charge (§2.3 boundary rule), and the
+// and rarity). Only generators produce charge (§2.3 boundary rule), and the
 // family is the four named designs (issues #371/#372): the Flywheel,
 // Scribe, and Milestone spend their banked reserve steadily, and the
 // Pulsewell rides the same reserve on its authored burst cycle — the
@@ -369,33 +333,22 @@ export function activeBuildGeneratorStrength(state: GameState, flow = flowLive(s
 // profiles scale by the same power, so the delivery rhythm never moves;
 // the clock factor rides outside power, so progression cannot move the
 // timing either.
-// The `steadyBonus` default is the ambient active-build read — by
-// construction the same amplified figure the rate pass threads through
-// the relay net, so a UI caller
-// omitting it can never disagree with the pass.
-export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean, steadyBonus: number = activeBuildGeneratorStrength(state, flow)): number {
+export function emittedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
   if (!flow || CATEGORY_OF[module.type] !== "generator" || module.pos === null) return 0;
   if (module.reserve <= EPS) return 0;
-  return (hostPower(state, module) + steadyBonus) * productionClockFactorOf(module.type, sessionClockOf(state));
+  return hostPower(state, module) * productionClockFactorOf(module.type, sessionClockOf(state));
 }
 
 // The charge a module receives, read off a relay net — the one shared read
 // for the rate pass and the public seam below.
-function receivedOn(
-  state: GameState,
-  module: ModuleInstance,
-  flow: boolean,
-  placed: ModuleInstance[],
-  net: RelayNet,
-  steadyBonus: number,
-): number {
+function receivedOn(state: GameState, module: ModuleInstance, flow: boolean, placed: ModuleInstance[], net: RelayNet): number {
   if (module.pos === null || !CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type])) return 0;
   if (module.type === "amplifier") {
     // Its own received: what the relay pass credited it — generators plus
     // strictly-lower-depth relays — before its re-broadcast gain.
     return net.received.get(module.id) ?? 0;
   }
-  let strength = generatorStrengthAt(state, module.pos, flow, steadyBonus);
+  let strength = generatorStrengthAt(state, module.pos, flow);
   for (const amplifier of placed) {
     if (amplifier.type !== "amplifier") continue;
     const out = net.relay.get(amplifier.id);
@@ -406,15 +359,14 @@ function receivedOn(
 
 // Received charge: adjacent generators' output plus every relaying
 // amplifier's re-broadcast — relayed charge counts fully as receiving
-// charge everywhere (empowerment, Forge thresholds, RITUAL, build
-// effects). A charge mutator on the host's cell multiplies the strength it
-// receives (× (1 + m)) before any curve — inert while uncharged, since
-// zero strength stays zero. Generators never charge themselves or each
-// other, amplifiers never feed generators, and only the receiving
-// categories receive. The spacer receives nothing — it is silent wire.
+// charge everywhere (empowerment, Forge thresholds). A charge mutator on
+// the host's cell multiplies the strength it receives (× (1 + m)) before
+// any curve — inert while uncharged, since zero strength stays zero.
+// Generators never charge themselves or each other, amplifiers never feed
+// generators, and only the receiving categories receive. The spacer
+// receives nothing — it is silent wire.
 export function receivedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
-  const bonus = activeBuildGeneratorStrength(state, flow);
-  return receivedOn(state, module, flow, deployed(state), relayNet(state, flow, bonus), bonus);
+  return receivedOn(state, module, flow, deployed(state), relayNet(state, flow));
 }
 
 function infusorBonusAt(
@@ -423,7 +375,6 @@ function infusorBonusAt(
   flow: boolean,
   placed: ModuleInstance[],
   net: RelayNet,
-  steadyBonus: number,
 ): number {
   if (module.pos === null) return 0;
   let total = 0;
@@ -435,7 +386,7 @@ function infusorBonusAt(
     if (CATEGORY_OF[other.type] !== "booster" || other.pos === null) continue;
     if (boosterTermOf(other.type) !== "amplitude") continue;
     if (!adjacent(module.pos, other.pos)) continue;
-    total += boosterGrantAt(state, other, module, flow, placed, net, steadyBonus);
+    total += boosterGrantAt(state, other, module, flow, placed, net);
   }
   return total;
 }
@@ -553,21 +504,21 @@ function boosterGrantAt(
   flow: boolean,
   placed: ModuleInstance[],
   net: RelayNet,
-  steadyBonus: number,
 ): number {
   if (!isOscillatorType(module.type)) return 0;
   if (booster.type === "spotlight" && spotlightRecipientOf(state, booster)?.id !== module.id) return 0;
-  return boosterBonusOf(booster.type) * hostPower(state, booster) * chargedFactor(receivedOn(state, booster, flow, placed, net, steadyBonus));
+  return boosterBonusOf(booster.type) * hostPower(state, booster) * chargedFactor(receivedOn(state, booster, flow, placed, net));
 }
 
 // The chord pass the rate snapshot runs over its deployed voices — the
 // authoritative allocation seam (issue #257): the default is today's
 // uncapped recognition (ADR-0049); the development board passes the
 // capacity allocator's drop-in analysis so allocation quality and
-// performance ride the one real rate path instead of a parallel read. The
-// bonusScale is the active build's named-chord factor, threaded exactly as
-// the default pass threads it. `responses` (issue #375) carries the
-// effective chord response per voice — the Sideband's charged conversion
+// performance ride the one real rate path instead of a parallel read.
+// `bonusScale` scales every named instance's bonus — the economy's pass
+// threads ×1 (the habit-build scale retired with the builds); the
+// displayed bonus still rides the term.
+// `responses` (issue #375) carries the effective chord response per voice — the Sideband's charged conversion
 // and the Chorus's grants — computed by the same pass that reads the
 // charge strengths.
 export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScale: number, responses?: ReadonlyMap<string, number>) => ChordAnalysis;
@@ -610,14 +561,11 @@ export function computeRates(
 ): RateSnapshot {
   const contributions = new Map<string, Contribution>();
   const chargeStrength = new Map<string, number>();
-  const build = baseBuildFactors(activeHabit(state));
-  const rawAmplification = ritualAmplificationFor(state, flow);
-  const factors = amplifyFactors(build, rawAmplification);
-  const net = relayNet(state, flow, factors.generatorStrength);
+  const net = relayNet(state, flow);
   const placed = deployed(state) as DeployedModule[];
-  const strengthOf = (module: ModuleInstance): number => receivedOn(state, module, flow, placed, net, factors.generatorStrength);
+  const strengthOf = (module: ModuleInstance): number => receivedOn(state, module, flow, placed, net);
 
-  const achievementBoost = achievementBoostOf(state) * (1 + factors.achievementBoost);
+  const achievementBoost = achievementBoostOf(state);
   const discoveryBoost = discoveryBoostOf(state);
   // The World layer's remaining-production factor (issue #425): the
   // discovered enemies' penalties and the defeated enemies' era bonuses,
@@ -661,13 +609,10 @@ export function computeRates(
     const power = hostPower(state, deployedModule);
     const category = CATEGORY_OF[deployedModule.type];
     if (isVoiceType(deployedModule.type)) {
-      // The steady-hand node (ADR-0046) scales the booster uplift the
-      // oscillator reads — the active build's touch on the booster leg.
       // The type's authored booster response (issue #369) scales how much
       // of the granted bonus the term receives — a Sine converts half.
       const localBonus =
-        (category === "silentVoice" ? 0 : infusorBonusAt(state, deployedModule, flow, placed, net, factors.generatorStrength)) *
-        (1 + factors.boosterUplift) *
+        (category === "silentVoice" ? 0 : infusorBonusAt(state, deployedModule, flow, placed, net)) *
         boosterResponseOf(deployedModule.type);
       // The charge term each producer applies: filled in pass one and a
       // half below — it reads the Exciter's grants (issue #376), which
@@ -688,10 +633,8 @@ export function computeRates(
       // The Forge family's two branches (ADR-0043): the Module Forge feeds
       // its shared meter, the Mutator Forge its own — same strength × power
       // shape, so a power mutator boosting a Mutator Forge boosts its own
-      // branch, and a charge mutator rides the strength it receives. The
-      // Forge-hand nodes (ADR-0046) scale the progress efficiency of both
-      // branches — Forge progress is the family-wide meter's diet.
-      value = strength * power * (1 + factors.forgeEfficiency);
+      // branch, and a charge mutator rides the strength it receives.
+      value = strength * power;
       if (deployedModule.type === "mutatorForge") mutatorForgeRate += value;
       else forgeRate += value;
     }
@@ -737,11 +680,10 @@ export function computeRates(
 
   // Pass two: pitch-set chords over the connected formations — the spacer
   // conducts adjacency, never joins a pitch set; the silent voices sing
-  // their derived pitches and count in the quality's read. The pitch-ear
-  // and deep-practice nodes (ADR-0046) scale every named instance's bonus;
-  // the formation quality and the silent-voice uplift are untouched — the
-  // chord-touching levers stayed with the harmony contracts.
-  const analysis = chordPass(singers, spacers, 1 + factors.namedChordBonus, responses);
+  // their derived pitches and count in the quality's read. The formation
+  // quality and the silent-voice uplift are untouched — the chord-touching
+  // levers stayed with the harmony contracts.
+  const analysis = chordPass(singers, spacers, 1, responses);
 
   // Pass three: the unified synths leg. Chords are local (ADR-0036): each
   // oscillator carries its own chordFactor — the formation's named product
@@ -770,8 +712,7 @@ export function computeRates(
     // (ADR-0043 as carried by ADR-0049) — scaling with chord investment,
     // inert on a chordless host: no named formation, nothing to amplify.
     const chordFactor = named ? rawChordFactor * (1 + resonanceMagnitudeAt(state, module.pos)) : rawChordFactor;
-    // The Weights nodes (ADR-0046) scale the synth term — the unified leg
-    // every oscillator contributes, the type's authored base multiplier
+    // The unified synths leg's base: the type's authored base multiplier
     // (issue #369) over the category's unified rate, Blaster's conversion
     // included. The temporal profiles (issue #372) ride the same term:
     // the session clock's authored factor multiplies the voice's base, so
@@ -788,8 +729,7 @@ export function computeRates(
       productionClockFactorOf(module.type, clock) *
       restWarmthFactorOf(module.type, lifetimeBreatherSecondsOf(state)) *
       power *
-      (silent ? 0 : chordFactor) *
-      (1 + factors.synthTerm);
+      (silent ? 0 : chordFactor);
     // The silent voice sings nothing of its own: its factor is display
     // only — the muted participant's read. The producers' value carries
     // the whole chain. The breather response (docs/breather-spec.md §3)
@@ -841,7 +781,6 @@ export function computeRates(
     achievementBoost,
     discoveryBoost,
     worldFactor,
-    ritualAmplification: rawAmplification,
     rate,
     forgeRate,
     mutatorForgeRate,
@@ -873,8 +812,8 @@ export function voiceCapacityOf(state: GameState, type?: ModuleType): number {
 
 // The chordless pass — the weights' source for the authoritative
 // allocation. Every non-chord leg of the real rate pass shows up in a
-// voice's chordless final ν/s: local charge, adjacent boosters, the
-// active build's factors, achievements, discoveries. Resonance rides
+// voice's chordless final ν/s: local charge, adjacent boosters,
+// achievements, discoveries. Resonance rides
 // beside the weight (it multiplies only participants), exactly as the
 // development board's pass reads it.
 const emptyChordPass: ChordPass = (): ChordAnalysis => ({
@@ -952,8 +891,6 @@ function allocationFingerprint(state: GameState): string {
     if (mutator.pos === null) continue;
     parts.push(`${mutator.id}:${mutator.family}:${mutator.rarity}:${mutator.pos.q},${mutator.pos.r}`);
   }
-  const habit = activeHabit(state);
-  parts.push(`b:${state.activeHabitId}:${habit ? habit.build.join(",") : ""}`);
   parts.push(`f:${Object.keys(state.achievements).length}`);
   parts.push(`d:${discoveryCount(state)}`);
   parts.push(`c:${state.capacityBought}:${state.capacityCeilings}`);

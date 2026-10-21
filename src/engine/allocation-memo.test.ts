@@ -142,21 +142,16 @@ describe("the allocation solve memo (#349)", () => {
     }, (state) => {
       state.mutators.push({ id: "m1", family: "power", rarity: "common", pos: hex(1, 0) });
     })).toBe(1);
-    // The active build's equipped nodes re-factor every leg, and the
-    // selection itself moves the basis to the other habit's build.
-    expect(solvesAfter((state) => {
-      const habit = state.habits.find((h) => h.id === state.activeHabitId)!;
-      habit.build = [...habit.build, "weights"];
-    }, (state) => {
-      selectHabit(state, createHabit(state, "practice").habit!.id);
-    })).toBe(1);
+    // A habit selection alone no longer re-solves: the active habit's
+    // legacy build left the pass with the build retirement (issue #444) —
+    // the selection is not a rate input anymore.
     expect(solvesAfter((state) => {
       state.activeHabitId = state.habits.find((h) => h.id !== state.activeHabitId)!.id;
     }, (state) => {
       createHabit(state, "practice");
       createHabit(state, "other");
       selectHabit(state, state.habits[0]!.id);
-    })).toBe(1);
+    })).toBe(0);
     // Feats and chord discoveries ride their global boosts.
     expect(solvesAfter((state) => {
       state.achievements["spark"] = 1;

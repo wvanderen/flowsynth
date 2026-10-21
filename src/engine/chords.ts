@@ -226,9 +226,10 @@ export interface ChordAnalysis {
 // Q; every member's factor is its instance product × Q. Overlapping
 // instances (shared voices) and disjoint same-chord formations (separate
 // terms) stack multiplicatively on their members. `bonusScale` scales
-// every named instance's bonus — the active build's pitch-ear nodes
-// (ADR-0046) pass their factor, the displayed bonus riding the term so the
-// chips and the rate never disagree; the formation quality is untouched.
+// every named instance's bonus — the rate pass threads ×1 (the habit-build
+// scale retired with the builds, ADR-0076), the displayed bonus riding the
+// term so the chips and the rate never disagree; the formation quality is
+// untouched.
 // `responses` (issue #375) carries the effective chord response per voice
 // id when the rate pass has authored live additions to it — the Sideband's
 // charge conversion scaling its authored coefficient, the Chorus's grants

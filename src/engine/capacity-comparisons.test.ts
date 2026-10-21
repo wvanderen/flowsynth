@@ -346,25 +346,6 @@ describe("the complete-board comparisons (#262)", () => {
     }
   });
 
-  it("weights the habit build into the same arrangement choices", () => {
-    const level = levelForBoardBudget((l) => doubledTriad(l), BUDGET);
-    const built = named({ ...doubledTriad(level), buildNodes: ["weights", "pitch-ear"] }, "with build");
-    const plain = named(doubledTriad(level), "without build");
-    const rows = rowsFor("build", BUDGET, [built, plain]);
-    console.log("\nbuild (budget %d):", BUDGET);
-    for (const row of rows) {
-      console.log(`  ${row.board.padEnd(16)} cap=${row.capacity} rate=${row.rate.toFixed(2)} maxFactor=${row.maxChordFactor.toFixed(3)}`);
-    }
-    // The time-earned build lifts every row (synth term) and deepens the
-    // chord factor (pitch-ear) — the build favors the organized boards the
-    // same arrangements already prefer, it never flips the ordering. The
-    // build's own nodes are time-earned and held identical between the
-    // two rows.
-    for (const capacity of CAPACITIES) {
-      expect(rate(rows, "with build", capacity)).toBeGreaterThan(rate(rows, "without build", capacity));
-    }
-  });
-
   it("reads mutators on the same board — power and resonance both land", () => {
     const level = levelForBoardBudget((l) => doubledTriad(l), BUDGET);
     const boards = [

@@ -13,7 +13,7 @@ import type { AllocationSummary, DeployedModule, NamedChordTerm, RecognizedInsta
 // no partial chord earns anything and no budget is ever exceeded. Selection is automatic: the
 // allocator maximizes the summed final ν/s of the board's oscillators, the
 // per-voice weights standing in for every non-chord leg of the real rate
-// pass (power, local boosters, charge, active build factors, achievements,
+// pass (power, local boosters, charge, achievements,
 // discoveries), with resonance, silent-voice uplift, and each voice's
 // authored chord response (issue #369) folded inside. The empty
 // allocation stays available — activating chords can reduce
@@ -96,7 +96,7 @@ export function allocationQualityOf(classes: readonly number[]): number {
 
 // One complete voice-set the board recognizes — the atom of allocation.
 // `bonus` is the bonus the instance actually carries (the named bonus
-// scaled by any active build factor, plus every singing silent voice's
+// scaled by the pass's bonus scale, plus every singing silent voice's
 // uplift); `key` is the stable identity (pattern, root, sorted members)
 // allocations retain across recomputation.
 export interface AllocatedInstance extends RecognizedInstance {}
@@ -132,8 +132,9 @@ export interface AllocateOptions {
   // supplies per-voice budgets instead (issue #373).
   capacity?: number;
   params: Map<string, AllocationVoiceParams>;
-  // The active build's named-chord bonus scale (ADR-0046), as the rate
-  // pass threads it — the displayed bonus rides the term.
+  // The bonus scale the rate pass threads — the economy's pass sends ×1
+  // (the habit-build scale retired with the builds); the displayed bonus
+  // still rides the term.
   bonusScale?: number;
   // Instance keys from the previous allocation: on equal output the solver
   // retains these before falling back to the stable order.

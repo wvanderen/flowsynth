@@ -144,10 +144,7 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   // generalized by issue #371): ending any session banks every owned
   // generator's focus earning — its authored focus coefficient per credited
   // practice second — into its reserve, board or tray alike, at the
-  // module's power exactly as delivery scales. The charge-tap build nodes
-  // (ADR-0046) scale the bank — the active habit's magnitudes at their
-  // base (no RITUAL amplification: the amplification rides received
-  // charge, and no charge is received at session end). Manual practice
+  // module's power exactly as delivery scales. Manual practice
   // logs never pass through here and never bank one.
   creditFocusEarning(state, credited);
   logSessionPractice(state, credited, now);
@@ -1142,7 +1139,8 @@ export function prestige(state: GameState): ActionResult {
   }
   state.nous = openingGrant();
   // Reserves are charge state (ADR-0047): they reset with everything else
-  // charge-shaped. Builds, unlocks, and the discovery ledger persist.
+  // charge-shaped. Class development, practice history, and the discovery
+  // ledger persist.
   for (const module of state.modules) {
     module.reserve = 0;
   }

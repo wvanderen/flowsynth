@@ -66,12 +66,6 @@ export interface Balance {
   // level-scaled gain; a hop-depth cap guards relay cycles.
   amplifierGainPerLevel: number;
   amplifierHopCap: number;
-  // RITUAL's amplification (ADR-0046, wave 4): each deployed RITUAL
-  // receiving charge adds this much per level into the raw amplification
-  // that scales the active habit's equipped build magnitudes — continuous
-  // with received strength (the charged-empowerment curve), zero when
-  // uncharged. Provisional tuning.
-  ritualAmpPerLevel: number;
   // The Bend's selectable shift set grows with rarity only (±1 at launch;
   // ±2 joins at rare — each further step at the next rarity, tuning).
   bendShifts: Record<Rarity, readonly number[]>;
@@ -387,7 +381,6 @@ export const BALANCE: Balance = {
   silentVoiceUpliftPerLevel: 0.05,
   amplifierGainPerLevel: 0.2,
   amplifierHopCap: 4,
-  ritualAmpPerLevel: 0.1,
   bendShifts: { common: [-1, 1], uncommon: [-1, 1], rare: [-2, -1, 1, 2] },
   bendDefaultShift: 1,
   achievementBoostPerFeat: 0.02,
@@ -736,9 +729,9 @@ export function isVoiceType(type: ModuleType): boolean {
 // never per type. The spacer receives nothing: it is silent wire; the
 // silent voices sing unamplified — their uplift keys off level alone; the
 // conduit routes what it receives rather than spending it on itself; and
-// RITUAL (ADR-0046) is the habit-keyed continuous member — its received
-// charge never fills a threshold, it scales the active build's
-// amplification.
+// RITUAL is the habit-keyed continuous member — its received charge never
+// fills a threshold. (Its build amplification retired with the legacy
+// habit builds, ADR-0076.)
 export const CHARGEABLE_CATEGORIES: readonly Category[] = ["forge"];
 
 export const CONTINUOUS_CHARGE_CATEGORIES: readonly Category[] = ["oscillator", "booster", "ritual"];

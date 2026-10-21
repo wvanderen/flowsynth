@@ -3,7 +3,7 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createHabit } from "../engine/habits";
-import { equipBuildNode } from "../engine/builds";
+import type { Habit } from "../engine/types";
 import { BALANCE } from "../engine/constants";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { displayedRates, allocateRates, cellCost, cellPurchasePrice, affordableLevels, levelCost, levelsCost } from "../engine/economy";
@@ -2226,47 +2226,30 @@ describe("the bulk upgrade controls (#195)", () => {
   });
 });
 
-describe("the habit build (ADR-0046, wave 4)", () => {
-  it("reads the shared catalog in the drilled detail: slots, equipped, unlocked, locked", () => {
+describe("the legacy build's retirement (issue #444)", () => {
+  it("the drilled detail carries the class tree and no build section or equip controls", () => {
     const created = createHabit(app.state, "Piano");
     const habit = created.habit!;
-    habit.seconds = 5 * 3600; // one slot; charge-tap and weights unlocked
-    equipBuildNode(app.state, habit.id, "weights");
+    habit.seconds = 5 * 3600;
+    habit.classes.engineer!.level = 3;
+    habit.classes.engineer!.points = 1;
+    // The retired loadout shape a current save could still carry.
+    (habit as Habit & { build?: string[] }).build = ["weights"];
     app.openApp("habit");
     document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
-    const build = document.querySelector("#app-popover .habit-build")!;
-    expect(build.textContent).toContain("1/1 slots");
-    expect(build.textContent).toContain("effects only while this habit is active");
-    const equipped = build.querySelector(".build-node.equipped")!;
-    expect(equipped.textContent).toContain("Weights");
-    expect(equipped.getAttribute("data-unequip")).toBe("weights");
-    expect(build.querySelector('[data-equip="charge-tap"]')).not.toBeNull();
-    // Locked rungs name the milestone they owe and render no button.
-    const locked = build.querySelector(".build-node.locked")!;
-    expect(locked.textContent).toContain("unlocks at 15 h");
-    expect(build.querySelector('[data-equip="forge-hand"]')).toBeNull();
-  });
-
-  it("equips and unequips through the detail — free respec, upgrade mode only", () => {
-    const created = createHabit(app.state, "Piano");
-    const habit = created.habit!;
-    habit.seconds = 3600;
-    const nousBefore = app.state.nous;
-    app.openApp("habit");
-    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
-    document.querySelector<HTMLButtonElement>('[data-equip="charge-tap"]')!.click();
-    expect(habit.build).toEqual(["charge-tap"]);
-    document.querySelector<HTMLButtonElement>('[data-unequip="charge-tap"]')!.click();
-    expect(habit.build).toEqual([]);
-    expect(app.state.nous).toBe(nousBefore);
-  });
-
-  it("a fresh habit's detail points at the practice that unlocks the first nodes", () => {
-    createHabit(app.state, "Piano");
-    const habit = app.state.habits[0]!;
-    app.openApp("habit");
-    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habit.id}"]`)!.click();
+    const read = document.querySelector("#app-popover .habit-detail-read")!;
+    // Class development remains available.
+    expect(document.querySelector("#app-popover .habit-class")).not.toBeNull();
+    expect(read.querySelector('[data-class-allocate="governor"]')).not.toBeNull();
+    // The build section, its actions, and its milestone messaging are gone
+    // (the class tree's own "unlocks at class level" rows stay).
     expect(document.querySelector("#app-popover .habit-build")).toBeNull();
-    expect(document.querySelector("#app-popover .habit-detail-read")!.textContent).toContain("Build nodes unlock with practice time");
+    expect(read.querySelector("[data-equip]")).toBeNull();
+    expect(read.querySelector("[data-unequip]")).toBeNull();
+    expect(read.textContent).not.toContain("BUILD");
+    for (const node of ["Charge tap", "Steady conduit", "Forge hand", "RITUAL attunement", "Weights", "Pitch ear", "Steady hand", "Deep practice", "Feat resonance"]) {
+      expect(read.textContent).not.toContain(node);
+    }
+    expect(read.textContent).not.toContain("slots · effects only while this habit is active");
   });
 });

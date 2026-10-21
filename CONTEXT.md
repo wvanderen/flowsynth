@@ -337,7 +337,7 @@ The chargeable module whose thresholds mint mutator rolls into the Mutator tray.
 A branch's player-wide meter to which that branch's deployed Forges contribute according to received charge and progress efficiency — the Module Forge's and the Mutator Forge's meters are separate. Crossing a branch's globally scaling threshold banks a roll on that branch and carries excess progress forward, independently of any individual Forge's identity.
 
 **RITUAL**:
-A chargeable board module that amplifies the active habit's build effects while receiving charge; charge never crosses to the console, and the habit keys the module's behavior. Named and designed by issue #219 — the habit-cycle ring glyph in the switch vermillion; it arrives through the module-roll pool only.
+A habit-keyed chargeable board module — the continuous-charge category's own member: its received charge never fills a threshold. Its build amplification retired with the legacy habit builds (issue #444, ADR-0076); the module itself remains in the module-roll pool, reading the charge it receives. Charge never crosses to the console. Named and designed by issue #219 — the habit-cycle ring glyph in the switch vermillion.
 
 **Module roll**:
 A charge- or flow-earned choice of one module from three generated candidates; unchosen candidates disappear without consolation resources. The Forge branches and the flow meter bank into one shared queue of interchangeable rolls. Forge presents one draft branch at a time, with Mutators before Modules and banked-roll counts on the switch. Opening follows the board layer, falling back to the other branch when only it has pending rolls. Switching never consumes a roll. Every choice — module or mutator — mints unplaced, to inventory or the tray; no choice arms placement, and the Forge stays open while any queue holds rolls: a pick or skip presents the next banked offer, switching faces when the current branch empties, and a pick or skip that empties both queues closes the Forge. Horizontal progress tracks sit beneath the active draft; the compact docked panel remains nonblocking. A module roll may also be skipped: the offer is consumed once for the greatest scrap value among its candidates (ADR-0066) — the same amount taking the best candidate and immediately scrapping it would pay. Mutator rolls keep the no-consolation contract. Candidates draw under the authored draft composition (issue #378), the Draft Loom's tier bonus may lift a candidate's mint one merge tier, and a rolled special draft's offer joins this same queue under its guarantee, wearing the product's name (issue #379).
@@ -407,13 +407,14 @@ The Goals app's capacity product — the console long goal's first tenant: each 
 _Avoid_: One more goal slot, goal slot purchase, extra slot, slot expander
 
 **Habit**:
-A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development unlocks build nodes as practice time crosses milestones and is separate from nous.
+A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development is its habit class's (issue #423, ADR-0074) — the legacy habit build retired with its bonuses (issue #444, ADR-0076) — and is separate from nous.
 
 **Habit build**:
-The per-habit loadout of equipped build nodes, chosen from a shared catalog and re-pickable freely in upgrade mode; its effects apply only while that habit is the session's active habit. Builds persist through prestige.
+_Retired_ (issue #444, ADR-0076; superseded ADR-0046): the per-habit loadout of equipped build nodes, whose effects applied only while that habit was the session's active habit. Class development is the single progression system per habit/class; old saves' equipped ids strip at load with no compensatory XP, while class ledgers, practice history, and the one-time recorded-practice conversion stand.
+_Avoid_: habit upgrade, perk, loadout
 
 **Build node**:
-One effect option in the shared habit-build catalog, drawn from the charge/Forge branch or the nous branch; unlocked as its habit's practice time crosses milestones and equipped into the habit build's limited slots.
+_Retired_ (issue #444, ADR-0076): one effect option of the former shared habit-build catalog, unlocked as its habit's practice time crossed milestones and equipped into limited slots. The tree node (the habit class's rank-capped allocation row) is the surviving sense of "node".
 _Avoid_: habit upgrade, perk
 
 **Habit app**:
@@ -646,7 +647,7 @@ _Avoid_: blade upgrade, sharpening, power up
 The World layer's unplaced-occupant browser, sharing the tray column's switch like the Mutator tray: click inspects, Place arms, drag places, drag out retrieves; collapsed, it keeps the symbol and stored count.
 _Avoid_: weapon rack, armory, second inventory
 
-The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; the engine and economy of the class layer (#423) and the two-layer World (#425) are shipped. Every World figure — the claim curve, prices, HP and thresholds, cadence, storage — is a hypothesis knob citing `research/world-frontier/findings.md` (commit `4eaac5f`), pending the no-refund recoverability re-derivation; the pinned fixtures in `world.test.ts` mark each as such, and no shipped default claims recoverability. Existing progression and habit-build entries below describe shipped behavior.
+The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; the engine and economy of the class layer (#423) and the two-layer World (#425) are shipped. Every World figure — the claim curve, prices, HP and thresholds, cadence, storage — is a hypothesis knob citing `research/world-frontier/findings.md` (commit `4eaac5f`), pending the no-refund recoverability re-derivation; the pinned fixtures in `world.test.ts` mark each as such, and no shipped default claims recoverability. Existing progression entries below describe shipped behavior; the habit-build entries record the retirement (issue #444, ADR-0076).
 
 ### Progression
 

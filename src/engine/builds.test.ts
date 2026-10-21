@@ -1,403 +1,228 @@
 import { describe, expect, it } from "vitest";
-import { advance } from "./advance";
-import { endSession, startSession, prestige } from "./actions";
-import {
-  BUILD_MILESTONE_SECONDS,
-  BUILD_NODES,
-  baseBuildFactors,
-  buildNodeEffect,
-  buildFactorsFor,
-  buildUnlocksFor,
-  equipBuildNode,
-  equipSlotsFor,
-  equippedNodes,
-  normalizeHabitBuilds,
-  unequipBuildNode,
-  unlockedNodes,
-} from "./builds";
-import { BALANCE, ROLL_POOL } from "./constants";
-import { boosterResponseOf } from "./profiles";
-import { computeRates, emittedStrength, receivedStrength, ritualAmpOf } from "./economy";
-import { addPracticeLog, createHabit, selectHabit } from "./habits";
-import { createHabitClasses } from "./classes";
-import { fresh, give } from "./fixtures";
+import { endSession, prestige, startSession } from "./actions";
+import { ARETE_HORIZON } from "./accumulator";
+import { computeRates, emittedStrength } from "./economy";
+import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { hex } from "./hex";
+import { addPracticeLog } from "./habits";
+import { writeNote } from "./notes";
+import { creditFocusEarning } from "./reserves";
 import { deserialize, serialize } from "./save";
+import v10MigrationFixture from "./fixtures/saves/v10-migration.json";
 import type { GameState, Habit } from "./types";
 
-// The habit builds and RITUAL (ADR-0046, wave 4): one shared catalog in two
-// branches, unlocked by the habit's credited practice time, equipped freely
-// into the slot ladder, active only while the habit is the session's active
-// habit. RITUAL amplifies the equipped magnitudes while receiving charge —
-// board-side only; nothing crosses to the console (ADR-0012).
+// The legacy habit builds' retirement (issue #444, ADR-0076): class
+// development is the single progression system per habit/class. The old
+// loadouts retire as a behavior change — production, charge, and the
+// related RITUAL amplification no longer read them — while earned class
+// development, practice history, and the one-time recorded-practice
+// conversion survive untouched. These regressions exercise both shapes a
+// returning save can carry: a previously equipped loadout and an empty
+// one.
 
-function habitOf(s: GameState, seconds: number, name = "Piano"): Habit {
-  const result = createHabit(s, name);
-  expect(result.ok).toBe(true);
-  const habit = result.habit!;
-  habit.seconds = seconds;
-  return habit;
+// A habit shape as an old save wrote it: the retired build field on the
+// v11 schema. The load's retired-field strip is what must digest it.
+function habitWithRetiredBuild(habit: Habit, build: string[]): void {
+  (habit as Habit & { build?: string[] }).build = build;
 }
 
-it("derives effect text from tuned magnitudes", () => {
-  const node = BUILD_NODES.find((entry) => entry.id === "weights")!;
-  expect(buildNodeEffect({ ...node, magnitude: 0.125 })).toBe("+12.5% synth term");
-  const conduit = BUILD_NODES.find((entry) => entry.id === "steady-conduit")!;
-  expect(buildNodeEffect({ ...conduit, magnitude: 2 })).toBe("+2 output strength, owned generators");
-});
+// The same board twice: once with the legacy loadout carried, once with
+// the retired field stripped — every economy read must agree.
+function pairedStates(build: string[]): { carried: GameState; stripped: GameState } {
+  const carried = fresh();
+  const { habit } = giveHabit(carried);
+  habitWithRetiredBuild(habit, build);
+  const stripped = deserialize(serialize(carried)).state!;
+  expect(stripped.habits[0]!.classes.engineer).toBeDefined();
+  return { carried, stripped };
+}
 
-describe("the milestone and slot ladders", () => {
-  it("a habit past 1h has its first nodes unlocked in both branches and one slot", () => {
-    expect(buildUnlocksFor(3599)).toBe(0);
-    expect(buildUnlocksFor(3600)).toBe(1);
-    const unlocked = unlockedNodes(3600);
-    expect(unlocked.map((node) => node.id)).toEqual(["charge-tap", "weights"]);
-    expect(equipSlotsFor(3600)).toBe(1);
+describe("the legacy build retirement (issue #444)", () => {
+  it("a previously equipped loadout no longer modifies production", () => {
+    // Weights scaled the synth term, pitch-ear the named-chord factor —
+    // the authoritative pass must read both shapes identically.
+    const { carried, stripped } = pairedStates(["weights", "weights-ii", "pitch-ear", "deep-practice"]);
+    give(carried, "additive", hex(1, 0));
+    give(stripped, "additive", hex(1, 0));
+    const withLoadout = computeRates(carried, true);
+    const without = computeRates(stripped, true);
+    expect(withLoadout.rate).toBeCloseTo(without.rate, 9);
+    expect(withLoadout.synths).toBeCloseTo(without.synths, 9);
+    expect(withLoadout.namedChords).toEqual(without.namedChords);
   });
 
-  it("slot growth follows the table: +1 at 15h, 80h, 150h — four at most", () => {
-    expect(equipSlotsFor(5 * 3600)).toBe(1);
-    expect(equipSlotsFor(15 * 3600)).toBe(2);
-    expect(equipSlotsFor(40 * 3600)).toBe(2);
-    expect(equipSlotsFor(80 * 3600)).toBe(3);
-    expect(equipSlotsFor(149 * 3600)).toBe(3);
-    expect(equipSlotsFor(150 * 3600)).toBe(4);
-    expect(equipSlotsFor(1000 * 3600)).toBe(4);
-  });
-
-  it("every milestone rung carries one node per branch", () => {
-    for (let rung = 0; rung < BUILD_MILESTONE_SECONDS.length; rung++) {
-      const atRung = BUILD_NODES.filter((node) => node.milestone === rung);
-      expect(atRung.map((node) => node.branch).sort()).toEqual(["charge", "nous"]);
+  it("a previously equipped loadout no longer modifies charge", () => {
+    // Steady conduit added flat output strength; charge-tap scaled the
+    // session-end focus bank — neither may move now.
+    const { carried, stripped } = pairedStates(["steady-conduit", "charge-tap", "charge-tap-ii"]);
+    for (const s of [carried, stripped]) {
+      give(s, "focusKeyed", hex(1, 0)).reserve = 600;
     }
-  });
-});
-
-describe("equipping (free respec, upgrade mode only)", () => {
-  it("equips within the slots and refuses past them", () => {
-    const s = fresh();
-    const habit = habitOf(s, 15 * 3600); // 2 slots, 4 unlocked nodes
-    expect(equipBuildNode(s, habit.id, "charge-tap").ok).toBe(true);
-    expect(equipBuildNode(s, habit.id, "weights").ok).toBe(true);
-    const third = equipBuildNode(s, habit.id, "pitch-ear");
-    expect(third.ok).toBe(false);
-    expect(third.reason).toContain("No slot free");
-  });
-
-  it("respec is free and immediate: unequip then equip spends nothing", () => {
-    const s = fresh();
-    const habit = habitOf(s, 3600);
-    const nousBefore = s.nous;
-    expect(equipBuildNode(s, habit.id, "charge-tap").ok).toBe(true);
-    expect(unequipBuildNode(s, habit.id, "charge-tap").ok).toBe(true);
-    expect(equipBuildNode(s, habit.id, "weights").ok).toBe(true);
-    expect(s.nous).toBe(nousBefore);
-    expect(habit.build).toEqual(["weights"]);
-  });
-
-  it("refuses locked nodes, unknown nodes, and duplicates", () => {
-    const s = fresh();
-    const habit = habitOf(s, 3600);
-    const locked = equipBuildNode(s, habit.id, "forge-hand"); // 15h node
-    expect(locked.ok).toBe(false);
-    expect(locked.reason).toContain("15h");
-    expect(equipBuildNode(s, habit.id, "no-such-node").ok).toBe(false);
-    expect(equipBuildNode(s, habit.id, "charge-tap").ok).toBe(true);
-    expect(equipBuildNode(s, habit.id, "charge-tap").ok).toBe(false);
-  });
-
-  it("is locked during flow — the build is read-only while a session runs", () => {
-    const s = fresh();
-    const habit = habitOf(s, 3600);
-    selectHabit(s, habit.id);
-    startSession(s, null);
-    expect(equipBuildNode(s, habit.id, "charge-tap").ok).toBe(false);
-    expect(unequipBuildNode(s, habit.id, "charge-tap").ok).toBe(false);
-  });
-});
-
-describe("build effects are active-only", () => {
-  it("Forge-hand scales Forge progress only while its habit is the active one", () => {
-    const s = fresh();
-    give(s, "forge", hex(1, 0));
-    const generator = give(s, "focusKeyed", hex(2, 0));
-    generator.reserve = 600;
-    const power = BALANCE.rarityPower.common ** 0;
-    const practiced = habitOf(s, 15 * 3600);
-    equipBuildNode(s, practiced.id, "forge-hand");
-    // computeRates reads the current selection, so a habit switch drops the
-    // effects the same tick — no session boundary needed.
-    selectHabit(s, practiced.id);
-    expect(computeRates(s, true).forgeRate).toBeCloseTo(power * 1.1, 6);
-    const other = habitOf(s, 15 * 3600, "Cooking");
-    selectHabit(s, other.id);
-    expect(computeRates(s, true).forgeRate).toBeCloseTo(power, 6);
-    selectHabit(s, null);
-    expect(computeRates(s, true).forgeRate).toBeCloseTo(power, 6);
-  });
-
-  it("Weights scale the synth term; the effects drop the same tick the habit switches", () => {
-    const s = fresh();
-    const practiced = habitOf(s, 40 * 3600);
-    equipBuildNode(s, practiced.id, "weights"); // +5%
-    equipBuildNode(s, practiced.id, "weights-ii"); // +10%, stacks
-    selectHabit(s, practiced.id);
-    const withBuild = computeRates(s, true).synths;
-    selectHabit(s, null);
-    const without = computeRates(s, true).synths;
-    expect(withBuild).toBeCloseTo(without * 1.15, 6);
-    expect(without).toBeCloseTo(BALANCE.synthRate, 6);
-  });
-
-  it("the unamplified read: baseBuildFactors quotes magnitudes, amplifyFactors scales them", () => {
-    const s = fresh();
-    const habit = habitOf(s, 150 * 3600);
-    equipBuildNode(s, habit.id, "forge-hand");
-    equipBuildNode(s, habit.id, "forge-hand-ii");
-    const base = baseBuildFactors(habit);
-    expect(base.forgeEfficiency).toBeCloseTo(0.25, 6);
-    const amplified = buildFactorsFor(habit, 0.5);
-    expect(amplified.forgeEfficiency).toBeCloseTo(0.375, 6);
-    // A zero build stays exactly zero whatever the amplification reads.
-    expect(buildFactorsFor(undefined, 10).synthTerm).toBe(0);
-  });
-});
-
-describe("the charge branch", () => {
-  it("Charge tap scales the session-end window bank", () => {
-    const s = fresh();
-    give(s, "forge", hex(1, 0));
-    give(s, "focusKeyed", hex(2, 0));
-    const generator = s.modules.find((m) => m.type === "focusKeyed")!;
-    const habit = habitOf(s, 40 * 3600);
-    equipBuildNode(s, habit.id, "charge-tap"); // +10%
-    equipBuildNode(s, habit.id, "charge-tap-ii"); // +15%, stacks
-    selectHabit(s, habit.id);
-    startSession(s, 600);
-    advance(s, 600);
-    endSession(s);
-    expect(generator.reserve).toBeCloseTo(60 * 1.25, 6);
-  });
-
-  it("manual logs feed the time-side milestones only — never a window, tapped or not", () => {
-    const s = fresh();
-    give(s, "forge", hex(1, 0));
-    give(s, "focusKeyed", hex(2, 0));
-    const generator = s.modules.find((m) => m.type === "focusKeyed")!;
-    const habit = habitOf(s, 0);
-    equipBuildNode(s, habit.id, "charge-tap");
-    selectHabit(s, habit.id);
-    expect(addPracticeLog(s, habit.id, 60).ok).toBe(true);
-    expect(generator.reserve).toBe(0);
-    expect(buildUnlocksFor(habit.seconds)).toBe(1);
-  });
-
-  it("Steady conduit adds a flat +1 to each emitting generator's strength", () => {
-    const s = fresh();
-    const forge = give(s, "forge", hex(1, 0));
-    const generator = give(s, "focusKeyed", hex(2, 0));
-    generator.reserve = 600;
-    const habit = habitOf(s, 5 * 3600);
-    equipBuildNode(s, habit.id, "steady-conduit");
-    selectHabit(s, habit.id);
-    const power = BALANCE.rarityPower.common ** 0;
-    expect(receivedStrength(s, forge, true)).toBeCloseTo(power + 1, 6);
-    unequipBuildNode(s, habit.id, "steady-conduit");
-    expect(receivedStrength(s, forge, true)).toBeCloseTo(power, 6);
-  });
-});
-
-describe("the nous branch", () => {
-  it("Pitch ear scales every named instance's bonus, term displayed included", () => {
-    const s = fresh();
-    give(s, "additive", hex(1, 0)); // G4 beside the opening C4 — a Fifth
-    const plain = computeRates(s, true);
-    const term = plain.namedChords.find((chord) => chord.name === "Fifth")!;
-    const habit = habitOf(s, 5 * 3600);
-    equipBuildNode(s, habit.id, "pitch-ear");
-    selectHabit(s, habit.id);
-    const scaled = computeRates(s, true);
-    const scaledTerm = scaled.namedChords.find((chord) => chord.name === "Fifth")!;
-    expect(scaledTerm.bonus).toBeCloseTo(term.bonus * 1.1, 6);
-    // The named-instance product scales; the formation quality does not.
-    const voiceId = term.moduleIds[0]!;
-    const plainC = plain.contributions.get(voiceId)!;
-    const scaledC = scaled.contributions.get(voiceId)!;
-    expect(scaledC.chordFactor! / scaledC.formationQ).toBeCloseTo(
-      ((1 + term.bonus * 1.1) / (1 + term.bonus)) * (plainC.chordFactor! / plainC.formationQ),
-      6,
+    const generator = carried.modules.find((m) => m.type === "focusKeyed")!;
+    expect(emittedStrength(carried, generator, true)).toBeCloseTo(emittedStrength(stripped, generator, true), 9);
+    // The focus bank: same credited seconds, same banked charge.
+    const beforeCarried = carried.modules.find((m) => m.type === "focusKeyed")!.reserve;
+    const beforeStripped = stripped.modules.find((m) => m.type === "focusKeyed")!.reserve;
+    creditFocusEarning(carried, 600);
+    creditFocusEarning(stripped, 600);
+    expect(
+      carried.modules.find((m) => m.type === "focusKeyed")!.reserve - beforeCarried,
+    ).toBeCloseTo(
+      stripped.modules.find((m) => m.type === "focusKeyed")!.reserve - beforeStripped,
+      9,
     );
   });
 
-  it("Steady hand scales the booster uplift the oscillators read", () => {
-    const s = fresh();
-    give(s, "additive", hex(0, 0));
-    give(s, "infusor", hex(1, 0));
-    const habit = habitOf(s, 15 * 3600);
-    equipBuildNode(s, habit.id, "steady-hand");
-    selectHabit(s, habit.id);
-    const withBuild = computeRates(s, true);
-    const contribution = withBuild.contributions.get(s.modules[0]!.id)!;
-    // The Sine's authored booster response (issue #369) scales the read
-    // bonus the same as the build's uplift — one leg, both multipliers.
-    expect(contribution.infusorBonus).toBeCloseTo(BALANCE.infusorBonus * 1.1 * boosterResponseOf("additive"), 6);
+  it("a previously equipped loadout no longer modifies Forge progress or booster uplift", () => {
+    const { carried, stripped } = pairedStates(["forge-hand", "forge-hand-ii", "steady-hand"]);
+    for (const s of [carried, stripped]) {
+      give(s, "focusKeyed", hex(1, 0)).reserve = 600;
+      give(s, "forge", hex(2, 0));
+      give(s, "infusor", hex(3, 1));
+      give(s, "additive", hex(4, 0));
+    }
+    const withLoadout = computeRates(carried, true);
+    const without = computeRates(stripped, true);
+    expect(withLoadout.forgeRate).toBeCloseTo(without.forgeRate, 9);
+    const voice = (s: GameState) => s.modules.find((m) => m.type === "additive")!.id;
+    expect(withLoadout.contributions.get(voice(carried))!.infusorBonus).toBeCloseTo(
+      without.contributions.get(voice(stripped))!.infusorBonus,
+      9,
+    );
   });
 
-  it("Feat resonance scales the achievement boost", () => {
+  it("RITUAL amplification retired with the builds: a charged RITUAL moves no production", () => {
     const s = fresh();
-    s.achievements["first-light"] = 1000; // boost 1.02
-    const habit = habitOf(s, 80 * 3600);
-    equipBuildNode(s, habit.id, "feat-resonance");
-    selectHabit(s, habit.id);
-    expect(computeRates(s, true).achievementBoost).toBeCloseTo(1.02 * 1.1, 6);
-  });
-});
-
-describe("RITUAL", () => {
-  it("reaches players through the module-roll pool only", () => {
-    expect(ROLL_POOL).toContain("ritual");
-    expect(ROLL_POOL).toHaveLength(26);
-  });
-
-  it("produces nothing and receives charge as a continuous member", () => {
-    const s = fresh();
+    giveHabit(s);
     const ritual = give(s, "ritual", hex(1, 0));
-    give(s, "focusKeyed", hex(2, 0));
-    const generator = s.modules.find((m) => m.type === "focusKeyed")!;
-    generator.reserve = 600;
+    ritual.level = 3;
+    give(s, "focusKeyed", hex(2, 0)).reserve = 600;
+    give(s, "additive", hex(3, 0));
+    const charged = computeRates(s, true);
+    // The ritual still receives charge continuously — and delivers nothing.
+    expect(charged.chargeStrength.get(ritual.id)!).toBeGreaterThan(0);
+    const plain = fresh();
+    giveHabit(plain);
+    give(plain, "focusKeyed", hex(2, 0)).reserve = 600;
+    give(plain, "additive", hex(3, 0));
+    expect(charged.rate).toBeCloseTo(computeRates(plain, true).rate, 9);
+  });
+
+  it("loading a save that carries the retired build field strips it and preserves class development", () => {
+    const s = fresh();
+    const { habit, pair } = giveHabit(s);
+    habitWithRetiredBuild(habit, ["weights"]);
+    pair.experience = 1234;
+    pair.level = 4;
+    pair.points = 1;
+    pair.spent = { governor: 2, reed: 1 };
+    pair.rollMeter.progress = 77;
+    pair.rollMeter.earned = 2;
+    habit.seconds = 9_000;
+    const loaded = deserialize(serialize(s, 1_000));
+    expect(loaded.error).toBeUndefined();
+    const loadedHabit = loaded.state!.habits[0]!;
+    expect((loadedHabit as Habit & { build?: string[] }).build).toBeUndefined();
+    expect(loadedHabit.seconds).toBe(9_000);
+    const loadedPair = loadedHabit.classes.engineer!;
+    expect(loadedPair.experience).toBe(1234);
+    expect(loadedPair.level).toBe(4);
+    expect(loadedPair.points).toBe(1);
+    expect(loadedPair.spent).toEqual({ governor: 2, reed: 1 });
+    expect(loadedPair.rollMeter).toEqual({ progress: 77, earned: 2 });
+    // The stripped shape is the stable one: the next round-trip is
+    // byte-identical, so the retired field can never come back.
+    const text = serialize(loaded.state!, 1_000);
+    expect(text).not.toContain('"build"');
+    expect(serialize(deserialize(text).state!, 1_000)).toBe(text);
+  });
+
+  it("an empty legacy build loads exactly like an equipped one — no error, no leftovers", () => {
+    const s = fresh();
+    const { habit } = giveHabit(s);
+    habitWithRetiredBuild(habit, []);
+    const loaded = deserialize(serialize(s, 1_000));
+    expect(loaded.error).toBeUndefined();
+    expect((loaded.state!.habits[0]! as Habit & { build?: string[] }).build).toBeUndefined();
+  });
+
+  it("the recorded-practice conversion still happens exactly once — a converted save never converts again", () => {
+    const fixtureText = JSON.stringify(v10MigrationFixture);
+    const first = deserialize(fixtureText, stubRng(new Array(32).fill(0.4)));
+    expect(first.error).toBeUndefined();
+    const converted = first.state!;
+    // The conversion's rule: one Engineer XP per recorded second, once.
+    const totals = converted.habits.map((habit) => ({
+      seconds: habit.seconds,
+      experience: habit.classes.engineer!.experience,
+    }));
+    for (const total of totals) {
+      expect(total.experience).toBe(total.seconds);
+    }
+    // Loading the converted (current) save grants no second award: every
+    // pair reads exactly as the first load wrote it.
+    const second = deserialize(serialize(converted, 2_000));
+    expect(second.error).toBeUndefined();
+    for (const habit of second.state!.habits) {
+      const match = totals.find((total) => total.seconds === habit.seconds)!;
+      expect(habit.classes.engineer!.experience).toBe(match.experience);
+    }
+  });
+
+  it("prestige keeps class ledgers, allocation, and roll progress; no build state returns", () => {
+    const s = fresh();
+    const { habit, pair } = giveHabit(s);
+    habit.seconds = 5_400;
+    pair.experience = 2_000;
+    pair.level = 4;
+    pair.points = 2;
+    pair.spent = { governor: 1 };
+    pair.rollMeter.progress = 90;
+    pair.rollMeter.earned = 5;
+    s.eraEarned = ARETE_HORIZON;
+    s.mode = "upgrade";
+    expect(prestige(s).ok).toBe(true);
+    expect(habit.seconds).toBe(5_400);
+    expect(pair.experience).toBe(2_000);
+    expect(pair.level).toBe(4);
+    expect(pair.points).toBe(2);
+    expect(pair.spent).toEqual({ governor: 1 });
+    expect(pair.rollMeter).toEqual({ progress: 90, earned: 5 });
+    expect((habit as Habit & { build?: string[] }).build).toBeUndefined();
+    expect(serialize(s)).not.toContain('"build"');
+  });
+
+  it("practice history, archived habits, tagged notes, and collection records survive the strip", () => {
+    const s = fresh();
+    const kept = giveHabit(s, "Piano");
+    kept.habit.archived = true;
+    const active = giveHabit(s, "Reading");
+    habitWithRetiredBuild(active.habit, ["weights"]);
+    // Real records through their own seams: a manual log, a session, a
+    // tagged note, a feat, a banked roll.
+    addPracticeLog(s, active.habit.id, 10, 1_000);
     startSession(s, null);
-    const snapshot = computeRates(s, true);
-    expect(snapshot.contributions.get(ritual.id)!.value).toBe(0);
-    expect(snapshot.contributions.get(ritual.id)!.amplitude).toBe(0);
-    expect(snapshot.chargeStrength.get(ritual.id)!).toBeCloseTo(BALANCE.rarityPower.common ** 0, 6);
-  });
-
-  it("amplifies the equipped build proportionally to received charge, and only then", () => {
-    const s = fresh();
-    const ritual = give(s, "ritual", hex(1, 0));
-    const generator = give(s, "focusKeyed", hex(2, 0));
-    const habit = habitOf(s, 3600);
-    equipBuildNode(s, habit.id, "weights");
-    selectHabit(s, habit.id);
-
-    // Uncharged (no reserve): no amplification, the plain +5%.
-    const uncharged = computeRates(s, true);
-    expect(uncharged.ritualAmplification).toBe(0);
-    expect(uncharged.synths).toBeCloseTo(BALANCE.synthRate * 1.05, 6);
-
-    // Charged: the amp rides the charged-empowerment curve — the family's
-    // continuous-empowerment read — of the strength the ritual receives,
-    // level-scaled.
-    ritual.level = 2;
-    generator.reserve = 600;
-    const charged = computeRates(s, true);
-    const strength = charged.chargeStrength.get(ritual.id)!;
-    const curve = 1 + strength / (1 + strength);
-    const amp = BALANCE.ritualAmpPerLevel * 2 * curve;
-    expect(charged.ritualAmplification).toBeCloseTo(amp, 6);
-    // The amplification scales the node's magnitude: +5% → +5% × (1 + amp).
-    expect(charged.synths).toBeCloseTo(BALANCE.synthRate * (1 + 0.05 * (1 + amp)), 6);
-  });
-
-  it("amplifies Steady conduit across direct and relayed charge delivery", () => {
-    const s = fresh();
-    const generator = give(s, "focusKeyed", hex(2, 0));
-    generator.reserve = 600;
-    const ritual = give(s, "ritual", hex(1, 0));
-    const amplifier = give(s, "amplifier", hex(3, 0));
-    const forge = give(s, "forge", hex(4, 0));
-    const habit = habitOf(s, 5 * 3600);
-    equipBuildNode(s, habit.id, "steady-conduit");
-    selectHabit(s, habit.id);
-    const plain = computeRates(s, true);
-    ritual.level = 2;
-    const charged = computeRates(s, true);
-    const baseOutput = emittedStrength(s, generator, true, 1);
-    const amp = ritualAmpOf(ritual.level, baseOutput);
-    const output = baseOutput + amp;
-    expect(charged.ritualAmplification).toBeCloseTo(amp, 6);
-    expect(emittedStrength(s, generator, true)).toBeCloseTo(output, 6);
-    expect(charged.chargeStrength.get(ritual.id)).toBeCloseTo(output, 6);
-    expect(charged.chargeStrength.get(amplifier.id)).toBeCloseTo(output, 6);
-    expect(charged.chargeStrength.get(forge.id)).toBeGreaterThan(plain.chargeStrength.get(forge.id)!);
-    expect(receivedStrength(s, forge, true)).toBeCloseTo(charged.chargeStrength.get(forge.id)!, 6);
-    generator.reserve = 0;
-    expect(computeRates(s, true).ritualAmplification).toBe(0);
-    expect(receivedStrength(s, forge, true)).toBe(0);
-  });
-
-  it("RITUAL attunement scales the amplification itself, never its own magnitude", () => {
-    const s = fresh();
-    const ritual = give(s, "ritual", hex(1, 0));
-    give(s, "focusKeyed", hex(2, 0));
-    const generator = s.modules.find((m) => m.type === "focusKeyed")!;
-    generator.reserve = 600;
-    ritual.level = 1;
-    const habit = habitOf(s, 80 * 3600);
-    equipBuildNode(s, habit.id, "ritual-attunement");
-    selectHabit(s, habit.id);
-    const snapshot = computeRates(s, true);
-    const strength = snapshot.chargeStrength.get(ritual.id)!;
-    const curve = 1 + strength / (1 + strength);
-    expect(snapshot.ritualAmplification).toBeCloseTo(BALANCE.ritualAmpPerLevel * 1.25 * curve, 6);
-    // The attunement node has no other magnitude to scale.
-    expect(baseBuildFactors(habit).ritualAttunement).toBeCloseTo(0.25, 6);
-    expect(buildFactorsFor(habit, snapshot.ritualAmplification).ritualAttunement).toBeCloseTo(0.25, 6);
-  });
-
-  it("nothing crosses to the console: amplification touches board factors only", () => {
-    const s = fresh();
-    give(s, "ritual", hex(1, 0));
-    give(s, "focusKeyed", hex(2, 0));
-    const generator = s.modules.find((m) => m.type === "focusKeyed")!;
-    generator.reserve = 600;
-    const habit = habitOf(s, 15 * 3600); // two slots: weights and charge-tap
-    equipBuildNode(s, habit.id, "weights");
-    equipBuildNode(s, habit.id, "charge-tap");
-    selectHabit(s, habit.id);
-    startSession(s, 600);
-    advance(s, 600);
+    writeNote(s, "slow bars first", 1_500);
     endSession(s);
-    // The habit's credited practice and the banked window are untouched by
-    // the ritual's presence — charge stayed board-side. (The habit seeded
-    // with 15h to hold both nodes; the session adds its 600 live.)
-    expect(habit.seconds).toBeCloseTo(54600, 6);
-    expect(generator.reserve).toBeCloseTo(60 * 1.1, 6); // charge tap, un-amplified at session end
-  });
-});
-
-describe("persistence", () => {
-  it("prestige keeps builds, unlocks, and slots exactly as they were", () => {
-    const s = fresh();
-    s.eraEarned = 1e23;
-    const habit = habitOf(s, 15 * 3600);
-    equipBuildNode(s, habit.id, "charge-tap");
-    equipBuildNode(s, habit.id, "weights");
-    prestige(s);
-    expect(habit.build).toEqual(["charge-tap", "weights"]);
-    expect(habit.seconds).toBe(15 * 3600);
-    expect(equippedNodes(habit)).toHaveLength(2);
-    expect(equipSlotsFor(habit.seconds)).toBe(2);
-    expect(buildUnlocksFor(habit.seconds)).toBe(3);
-  });
-
-  it("the save round-trips the equipped build; a pre-builds habit lenient-defaults", () => {
-    const s = fresh();
-    const habit = habitOf(s, 3600);
-    equipBuildNode(s, habit.id, "weights");
-    const loaded = deserialize(serialize(s)).state!;
-    expect(loaded.habits[0]!.build).toEqual(["weights"]);
-
-    // A v8 save written before wave 4 carries no build arrays at all.
-    const raw = JSON.parse(serialize(s));
-    delete raw.state.habits[0].build;
-    const migrated = deserialize(JSON.stringify(raw)).state!;
-    expect(migrated.habits[0]!.build).toEqual([]);
-  });
-
-  it("normalizeHabitBuilds drops unknown ids and duplicates, never crashes", () => {
-    const habit: Habit = { id: "h1", name: "Piano", seconds: 10, archived: false, build: ["weights", "ghost", "weights"], classId: "engineer", classes: createHabitClasses() };
-    normalizeHabitBuilds([habit]);
-    expect(habit.build).toEqual(["weights"]);
+    s.achievements["first-light"] = 1_000;
+    s.bankedRolls.push({
+      id: "offer",
+      candidates: [
+        { id: "c1", type: "additive", tier: 0 },
+        { id: "c2", type: "spacer", tier: 0 },
+        { id: "c3", type: "infusor", tier: 0 },
+      ],
+    });
+    const loaded = deserialize(serialize(s, 2_000));
+    expect(loaded.error).toBeUndefined();
+    const state = loaded.state!;
+    expect(state.habits.map((habit) => habit.archived)).toEqual([true, false]);
+    expect(state.habits.map((habit) => habit.seconds)).toEqual(s.habits.map((habit) => habit.seconds));
+    expect((state.habits[1]! as Habit & { build?: string[] }).build).toBeUndefined();
+    expect(state.notes).toEqual(s.notes);
+    expect(state.practiceLog).toEqual(s.practiceLog);
+    expect(state.sessionRecords).toEqual(s.sessionRecords);
+    expect(state.achievements).toEqual(s.achievements);
+    expect(state.bankedRolls).toEqual(s.bankedRolls);
   });
 });

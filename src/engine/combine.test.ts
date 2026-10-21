@@ -105,18 +105,21 @@ describe("combination", () => {
     expect(computeRates(s, true).chargeStrength.get("m1")).toBe(0);
   });
 
-  it("a merged RITUAL increases amplification only while charged", () => {
+  it("a merged RITUAL keeps the module mechanics; its retired amplification moves nothing", () => {
     const s = fresh();
     const generator = give(s, "focusKeyed", hex(2, 0));
     generator.reserve = 60;
     const ritual = give(s, "ritual", hex(1, 0), 2);
     const twin = give(s, "ritual", null, 2);
-    const before = computeRates(s, true).ritualAmplification;
-    expect(before).toBeGreaterThan(0);
+    // The merge itself is module mechanics, unchanged by the retirement:
+    // the level tie melts the dropped copy, the kept one takes its cell.
     expect(combine(s, twin.id, ritual.id).ok).toBe(true);
-    expect(computeRates(s, true).ritualAmplification).toBeGreaterThan(before);
+    // The legacy build amplification the merge used to deepen is retired
+    // (issue #444): the charged ritual receives charge and moves nothing.
+    const charged = computeRates(s, true);
+    expect(charged.chargeStrength.get(twin.id)!).toBeGreaterThan(0);
     generator.reserve = 0;
-    expect(computeRates(s, true).ritualAmplification).toBe(0);
+    expect(computeRates(s, true).chargeStrength.get(twin.id)).toBe(0);
   });
 
   it("does not treat a previous refund as new expenditure", () => {

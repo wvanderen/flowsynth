@@ -17,7 +17,6 @@ import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice
 import { formatClock, formatDuration } from "../engine/clock";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { TILE_APPS, type FocusApp } from "../engine/apps";
-import { activeBuildFactors } from "../engine/builds";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
@@ -2222,7 +2221,7 @@ function ghostMarksHtml(app: App, projected?: RateSnapshot): string {
   // runs.
   const basis = projected ?? displayedRates(app.state, true);
   const current = basis.allocation ? summaryTermsOf(basis.allocation) : basis.namedChords;
-  const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos, 1 + activeBuildFactors(app.state).namedChordBonus);
+  const preview = wouldFormPreview(app.state, hover.moduleId, hover.pos);
   const newcomers = newChordTerms(current, preview.chords);
   if (newcomers.length === 0) return "";
   const allocation = dropProjection(app)?.projected.allocation;
@@ -3570,7 +3569,7 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
     case "echo": return `Adjacent pitch, octave down · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "bend": return `Shifted cell pitch · +${formatNumber(100 * BALANCE.silentVoiceUpliftPerLevel * power)}%/level to its chords`;
     case "amplifier": return `Relay charge ×${formatNumber(power)} · +${formatNumber(100 * BALANCE.amplifierGainPerLevel * power)}%/level · ${BALANCE.amplifierHopCap} hops`;
-    case "ritual": return `Charged → habit build +${formatNumber(BALANCE.ritualAmpPerLevel * 100 * power)}%/level`;
+    case "ritual": return `Receives charge continuously · habit-keyed`;
     case "spacer": return "Silent wire · connects chord adjacency";
     // The generator profiles (issue #371): the effect line names the niche
     // in words with its leading exact figure — the profile table is the
@@ -3603,7 +3602,7 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
 // Match the visible copy once so generated tooltip markup is never reprocessed.
 function forgeEffectHtml(effect: string): string {
   let breatherDisclosed = false;
-  return effect.replace(/\b(module rolls|mutator rolls|habit build|chords|pitch|charge|goals|breathers?)\b/gi, label => {
+  return effect.replace(/\b(module rolls|mutator rolls|chords|pitch|charge|goals|breathers?)\b/gi, label => {
     if (/^breathers?$/i.test(label)) {
       if (breatherDisclosed) return label;
       breatherDisclosed = true;

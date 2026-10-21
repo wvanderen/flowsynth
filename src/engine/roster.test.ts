@@ -5,7 +5,6 @@ import { formationQuality } from "./chords";
 import { deserialize, serialize } from "./save";
 import { fresh, give } from "./fixtures";
 import { setBendShift } from "./actions";
-import { BUILD_MILESTONE_SECONDS, buildUnlocksFor, equipSlotsFor } from "./builds";
 import { hex } from "./hex";
 import { createMutator } from "./state";
 import { pitchOf } from "./lattice";
@@ -402,18 +401,6 @@ describe("the v8 save surface", () => {
     expect(bend.reserve).toBe(0);
     const additive = give(s, "additive", null);
     expect(additive.shift).toBeNull();
-  });
-
-  it("the build-unlock derivation reads habit.seconds idempotently (the wave-4 surface)", () => {
-    expect(buildUnlocksFor(0)).toBe(0);
-    expect(buildUnlocksFor(3599)).toBe(0);
-    expect(buildUnlocksFor(3600)).toBe(1);
-    expect(buildUnlocksFor(150 * 3600)).toBe(BUILD_MILESTONE_SECONDS.length);
-    expect(buildUnlocksFor(150 * 3600 + 1)).toBe(BUILD_MILESTONE_SECONDS.length);
-    expect(equipSlotsFor(0)).toBe(0);
-    expect(equipSlotsFor(3600)).toBe(1);
-    expect(equipSlotsFor(15 * 3600)).toBe(2);
-    expect(equipSlotsFor(150 * 3600)).toBe(4);
   });
 
   it("the discovery ledger persists like the feats; reserves are charge state", () => {

@@ -23,7 +23,7 @@ Last updated: 2026-10-16 (the Arete merge cap — issue #380)
 | `echo` | Echo | ECHO | silent voice | common | — | 1 | — | `hue-voice` | doubled waves | Roll pool only | the pitch it sings, note `P«cell»` |
 | `bend` | Bend | BEND | silent voice | common | — | 1 | — | `hue-voice` | kinked line | Roll pool only | the pitch it sings, note `P«cell»` |
 | `amplifier` | Amplifier | AMP | conduit | common | — | — | — | `hue-conduit` | through-flowing chevrons | Roll pool only | `⌁relayed` |
-| `ritual` | RITUAL | RITUAL | ritual | common | — | — | — | `hue-ritual` | habit-cycle ring | Roll pool only | `×amp` while charged |
+| `ritual` | RITUAL | RITUAL | ritual | common | — | — | — | `hue-ritual` | habit-cycle ring | Roll pool only | `⌁received` (charge receiver; its build amplification retired, issue #444) |
 | `spacer` | Spacer | Spacer | spacer | common | — | — | — | `hue-spacer` | ring window (board) / wire | Roll pool only | `⌇` |
 | `focusKeyed` | Flywheel | FLYW | generator | common | — | — | — | `hue-generator` | bolt, bare | Starter shelf ("generator", 40) and roll pool | `⌁power` |
 | `noteKeyed` | Scribe | SCRB | generator | common | — | — | — | `hue-generator` | bolt, double-line corner mark | Roll pool only | `⌁power` |

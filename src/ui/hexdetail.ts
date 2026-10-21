@@ -108,7 +108,10 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
   echo: silentBenefit,
   bend: silentBenefit,
   amplifier: ({ levels, tierPower }) => `+${formatNumber(100 * BALANCE.amplifierGainPerLevel * levels * tierPower)}% relay gain`,
-  ritual: ({ levels, tierPower }) => `+${formatNumber(100 * BALANCE.ritualAmpPerLevel * levels * tierPower)}% build amplification`,
+  // The legacy build amplification retired with the builds (ADR-0076): a
+  // level buys the RITUAL nothing, so like the silent wire it wears no
+  // upgrade button.
+  ritual: () => null,
   // The silent wire buys nothing with a level, so it wears no button at all.
   spacer: () => null,
   focusKeyed: generatorBenefit,
@@ -185,7 +188,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   // power and the contribution's own figures, the charge register, the
   // World occupant's identity and stores, the tray's stock, the chord
   // row's marks — never a formatted string. Derivation notes: the face
-  // readout's relay, booster, and ritual figures derive from hostPower,
+  // readout's relay and booster figures derive from hostPower,
   // chargeStrength, and the level below; the World chassis' figures derive
   // from the occupant's store and the lift read.
   const contribution = module ? snapshot.contributions.get(module.id) ?? null : null;
@@ -236,8 +239,6 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     chordRow.key,
     snapshot.achievementBoost,
     snapshot.discoveryBoost,
-    snapshot.ritualAmplification,
-    state.habits.find((habit) => habit.id === state.activeHabitId && !habit.archived)?.build,
     state.activeHabitId,
   ]);
   if (host.dataset.renderKey === key) {

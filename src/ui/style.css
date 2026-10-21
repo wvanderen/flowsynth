@@ -778,7 +778,6 @@ h1, h2, h3, p { margin: 0; }
 .focus-detail-head .st-acquired { flex-shrink: 0; }
 .focus-detail-head .habit-rename-input { flex: 1; min-width: 0; }
 .habit-detail-read .stat-row { border-bottom: 1px solid var(--line-soft); }
-.habit-detail-read .habit-build { margin-top: 12px; }
 .habit-detail-read .note-list { margin-top: 10px; }
 
 /* The GOALS face's rows: the folio's hairline replaces the card, the
@@ -1248,20 +1247,15 @@ button.class-chip:hover:not(:disabled) { color: var(--ink); border-color: var(--
 .note-entry p { font-size: 12px; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; margin: 3px 0 0; }
 
 /* Habit management: the figure-led list drills; rename/archive live in the
-   detail head. The shared dot, rename input, and build styles serve the
-   sheet's faces. */
+   detail head. The shared dot, rename input, and class-tree styles serve
+   the sheet's faces. */
 .habit-dot { width: 8px; height: 8px; border-radius: 0; border: 1.5px solid var(--muted); flex-shrink: 0; }
 .habit-ledger-row .habit-dot.on { background: var(--accent); border-color: var(--accent); }
 .habit-rename-input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--charge); border-radius: 0; padding: 6px 10px; font-size: 13px; }
 
-/* The habit build (ADR-0046): the shared catalog read against the habit's
-   own practice time — equipped nodes numbered by slot, unlocked nodes one
-   click away, locked rungs naming the milestone they still owe. Equipped
-   wear the switch vermillion's faint wash: the build runs with the session
-   color, and RITUAL amplifies it board-side. */
-.habit-build { margin-top: 8px; display: grid; gap: 6px; }
-.habit-build .eyebrow { margin-bottom: 0; }
-.habit-build > p { margin: 0; font-size: 10px; }
+/* The class tree (issue #423): the bounded-rank nodes — spent ranks
+   numbered, locked rungs naming the class level they still owe. Fully
+   ranked nodes wear the state grammar's firm inset mark. */
 .build-nodes { display: grid; gap: 4px; }
 .build-node {
   display: flex; align-items: center; gap: 9px;

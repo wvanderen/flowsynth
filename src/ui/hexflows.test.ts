@@ -361,7 +361,7 @@ describe("PR #304 review regressions", () => {
       expect(body.textContent).toContain("Relay gain×1.4");
       expect(body.textContent).toContain(`Relay strength⌁${formatNumber(strength * 1.4)}`);
     } else {
-      expect(body.textContent).toContain("Build forge efficiency");
+      expect(body.textContent).toContain("Incoming charge");
       expect(body.textContent).toContain(`+${formatNumber(snap.contributions.get(module.id)!.value)} progress/s`);
     }
   });
@@ -369,7 +369,7 @@ describe("PR #304 review regressions", () => {
   it("all oscillator breakdowns include external production terms and update when bonuses change", () => {
     seedEra();
     give(app.state, "infusor", hex(0, 1));
-    app.state.habits.push({ id: "review-habit", name: "Practice", seconds: 1000000, archived: false, build: ["weights", "steady-hand"], classId: "engineer", classes: { engineer: { experience: 0, level: 0, points: 0, spent: {}, rollMeter: { progress: 0, earned: 0 } } } });
+    app.state.habits.push({ id: "review-habit", name: "Practice", seconds: 1000000, archived: false, classId: "engineer", classes: { engineer: { experience: 0, level: 0, points: 0, spent: {}, rollMeter: { progress: 0, earned: 0 } } } });
     app.state.activeHabitId = "review-habit";
     app.state.achievements["first-light"] = 1000;
     app.render();
@@ -377,7 +377,6 @@ describe("PR #304 review regressions", () => {
     const snap = displayedRates(app.state, true);
     for (const kind of ["charge", "chord"] as const) {
       const body = breakdownOf(trigger(kind));
-      expect(body.textContent).toContain("Build synth term×1.05");
       expect(body.textContent).toContain(`Booster uplift×${formatNumber(1 + snap.contributions.get("m1")!.infusorBonus)}`);
       expect(body.textContent).toContain(`Achievement bonus×${formatNumber(snap.achievementBoost)}`);
       expect(body.textContent).toContain(`Discovery bonus×${formatNumber(snap.discoveryBoost)}`);

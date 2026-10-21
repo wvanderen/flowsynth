@@ -10,7 +10,7 @@ import { amplifierGainOf } from "../engine/module-strength";
 // engraving is noise.
 import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
 import { CATEGORY_OF, typeRarityOf } from "../engine/constants";
-import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, ritualAmpOf, spotlightRecipientOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, spotlightRecipientOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { cellNoteOf, noteNameOf } from "../engine/lattice";
 import { moduleIcon } from "./icons";
@@ -318,14 +318,13 @@ export function faceReadoutFor(state: GameState, module: ModuleInstance, pos: He
       : { readout: `⌁${formatNumber(relayStrengthOf(module, snapshot))}` };
   }
   if (category === "ritual") {
-    // RITUAL amplifies: the face shows the factor the module itself is
-    // delivering onto the active habit's build right now — ×1 while
-    // uncharged, rising with received strength (ADR-0046).
+    // The legacy build amplification retired with the builds (ADR-0076):
+    // the face shows the charge the module receives — continuous, the
+    // family's own mode — nothing amplified beside it.
     const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-    const amp = 1 + ritualAmpOf(module.level, strength, module.tier);
     return pos
-      ? { readout: `×${formatNumber(amp)}`, note: cellNoteOf(pos) }
-      : { readout: `×${formatNumber(amp)}` };
+      ? { readout: `⌁${formatNumber(strength)}`, note: cellNoteOf(pos) }
+      : { readout: `⌁${formatNumber(strength)}` };
   }
   // Oscillators wear their contribution with the cell's note beneath it:
   // pitch lives in the cell (ADR-0021).

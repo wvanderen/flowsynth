@@ -28,7 +28,7 @@ export const META: Record<ModuleType, { name: string; short: string; role: strin
   echo: { name: "Echo", short: "ECHO", role: "Silent voice — neighbor, one octave down" },
   bend: { name: "Bend", short: "BEND", role: "Silent voice — its pitch, shifted" },
   amplifier: { name: "Amplifier", short: "AMP", role: "Relays charge onward" },
-  ritual: { name: "RITUAL", short: "RITUAL", role: "Amplifies the active habit's build while charged" },
+  ritual: { name: "RITUAL", short: "RITUAL", role: "Habit-keyed continuous charge receiver" },
   spacer: { name: "Spacer", short: "Spacer", role: "Silent wire" },
   // The generator profile wave (issue #371): three named designs over the
   // one reserve surface — the keys predate the profiles and stay the
