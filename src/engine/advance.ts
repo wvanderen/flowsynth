@@ -1,7 +1,7 @@
 import { CATEGORY_OF, EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
-import { activeBuildGeneratorStrength, chargeDelivered, emittedStrength, maxChordFactorOf, deployed, sessionClockOf, syncRates } from "./economy";
+import { chargeDelivered, emittedStrength, maxChordFactorOf, deployed, sessionClockOf, syncRates } from "./economy";
 import { lifetimeBreatherSecondsOf, nextRestBoundaryOf, nextTemporalBoundaryOf } from "./profiles";
 import { summaryTermsOf } from "./allocation";
 import { addForgeProgress, addMutatorForgeProgress, type Rng } from "./rolls";
@@ -41,13 +41,12 @@ export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
 
 // Shared board boundaries; only flow adds practice-driven goal boundaries.
 function boardBoundaries(state: GameState) {
-  const steadyBonus = activeBuildGeneratorStrength(state, true);
   const liveGenerators: { module: ModuleInstance; strength: number }[] = [];
   let earliest = Infinity;
   for (const module of deployed(state)) {
     if (CATEGORY_OF[module.type] !== "generator") continue;
     if (module.reserve > EPS) {
-      const strength = emittedStrength(state, module, true, steadyBonus);
+      const strength = emittedStrength(state, module, true);
       liveGenerators.push({ module, strength });
       earliest = Math.min(earliest, module.reserve / strength);
     }

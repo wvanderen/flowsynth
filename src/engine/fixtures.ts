@@ -22,7 +22,7 @@ export function giveHabit(state: GameState, name = "Piano"): { habit: Habit; pai
 // A complete hand-built habit shape for tests that push habits directly —
 // the save's shape, launch class wear included (issue #423).
 export function plainHabit(id = "h1", name = "Piano"): Habit {
-  return { id, name, seconds: 0, archived: false, build: [], classId: "engineer", classes: createHabitClasses() };
+  return { id, name, seconds: 0, archived: false, classId: "engineer", classes: createHabitClasses() };
 }
 
 export function give(state: GameState, type: ModuleType, pos: Hex | null, level = 0): ModuleInstance {

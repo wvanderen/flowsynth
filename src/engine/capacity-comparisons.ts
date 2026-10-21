@@ -10,8 +10,6 @@ import {
 import { allocationQualityOf } from "./allocation";
 import { BALANCE, CATEGORY_OF } from "./constants";
 import { octaveRowOf } from "./lattice";
-import { createHabit, selectHabit } from "./habits";
-import { equipBuildNode } from "./builds";
 import { createInitialState, createModule, createMutator, OPENING_GATED_ROWS } from "./state";
 import { hex } from "./hex";
 import type { GameState, ModuleType, MutatorFamily, Rarity } from "./types";
@@ -61,9 +59,6 @@ export interface ComparisonBoard {
   cells: { q: number; r: number }[];
   modules: FixtureModule[];
   mutators?: FixtureMutator[];
-  // The habit build's equipped node ids (the habit's practice time is
-  // fixture state, outside the nous budget — builds are time-earned).
-  buildNodes?: string[];
 }
 
 // The one occupancy-safe board builder: a cell registers when a module
@@ -197,14 +192,6 @@ export function stateOf(board: ComparisonBoard, capacity: number): GameState {
     const mutator = createMutator(state, spec.family, spec.rarity);
     mutator.pos = hex(spec.q, spec.r);
     state.mutators.push(mutator);
-  }
-  if (board.buildNodes && board.buildNodes.length > 0) {
-    const created = createHabit(state, "comparison");
-    if (created.habit) {
-      created.habit.seconds = 150 * 3600;
-      for (const node of board.buildNodes) equipBuildNode(state, created.habit.id, node);
-      selectHabit(state, created.habit.id);
-    }
   }
   return state;
 }

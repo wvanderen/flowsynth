@@ -64,14 +64,6 @@ export function deployedRosterKey(state: GameState): string {
   return `${modules}#${mutators}`;
 }
 
-// The active build's signature (ADR-0046): which habit is selected and
-// what it has equipped — the build's effects fold into the roster's legs
-// and the RITUAL row, so an equip or a habit switch must rebuild the strip.
-export function activeBuildKey(state: GameState): string {
-  const habit = state.habits.find((h) => h.id === state.activeHabitId);
-  return `${state.activeHabitId ?? "-"}:${habit ? habit.build.join(",") : ""}`;
-}
-
 // Tooltip ids must never repeat across rebuilds: a replaced roster's
 // portaled tooltip body outlives it at document body level (instrument.ts),
 // and a reused id would alias the old body to the new trigger. One
@@ -257,13 +249,12 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
   // the moment the figure moves.
   const banked = catalogOpen(state);
   // Structural key: the deployed roster (deployedRosterKey — a move changes
-  // a note name, an upgrade a base figure), the active build (an equip or
-  // habit switch folds into the legs), plus the counts the chips and the
-  // rate details' static boost legs read, and the allocation gate's flip
-  // (issue #258) rebuilds the strip; every tick-moving value updates in
-  // place through the live slots, so an open popover or an expanded row
+  // a note name, an upgrade a base figure), plus the counts the chips and
+  // the rate details' static boost legs read, and the allocation gate's
+  // flip (issue #258) rebuilds the strip; every tick-moving value updates
+  // in place through the live slots, so an open popover or an expanded row
   // survives the clock.
-  const key = `${banked ? state.arete : "pre"}:${feats}:${discoveries}:${!!snapshot.allocation}:${activeBuildKey(state)}:${deployedRosterKey(state)}`;
+  const key = `${banked ? state.arete : "pre"}:${feats}:${discoveries}:${!!snapshot.allocation}:${deployedRosterKey(state)}`;
   if (host.dataset.renderKey !== key) {
     host.dataset.renderKey = key;
     host.innerHTML = `<div class="inst-panel ledger-panel"><div class="inst-panel-face ledger-face">

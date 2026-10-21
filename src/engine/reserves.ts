@@ -1,4 +1,3 @@
-import { activeBuildFactors } from "./builds";
 import { BALANCE, EPS } from "./constants";
 import { hostPower } from "./economy";
 import { GENERATOR_PROFILES, generatorProfileOf, type GeneratorProfile } from "./profiles";
@@ -35,12 +34,10 @@ function creditEachGenerator(state: GameState, credit: (profile: GeneratorProfil
 // The banked-earning seam (the session end, actions.endSession): every
 // generator banks its profile's focus coefficient per credited practice
 // second — the whole window at once, honesty-credited reconciliation
-// seconds included. The charge-tap build nodes (ADR-0046) scale the bank.
-// Manual practice logs never pass through here.
+// seconds included. Manual practice logs never pass through here.
 export function creditFocusEarning(state: GameState, creditedSeconds: number): void {
   if (!(creditedSeconds > EPS)) return;
-  const windowBank = 1 + activeBuildFactors(state).windowBank;
-  creditEachGenerator(state, (profile, power) => profile.focus * creditedSeconds * windowBank * power);
+  creditEachGenerator(state, (profile, power) => profile.focus * creditedSeconds * power);
 }
 
 // The immediate-earning seam at the written-note fact (notes.writeNote):

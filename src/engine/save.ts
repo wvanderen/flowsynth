@@ -1,5 +1,4 @@
 import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules, normalizeWorld } from "./state";
-import { normalizeHabitBuilds } from "./builds";
 import { classDefOf, freshClassPair, normalizeHabitClasses } from "./classes";
 import { normalizeGoals } from "./goals";
 import { longGoalCost, mutatorSlotCost } from "./economy";
@@ -264,12 +263,15 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   if (!Array.isArray(raw.activeChords)) {
     merged.activeChords = [];
   }
-  // The habit builds (ADR-0046, wave 4) lenient-default the same way: a
-  // habit saved before the builds wave carries no build, and unknown node
-  // ids drop — the catalog is code, the save only ids. The unlocks
-  // themselves are never stored: they derive idempotently from
-  // habit.seconds at read time (the v8 promise — no second bump).
-  normalizeHabitBuilds(merged.habits);
+  // The habit builds (ADR-0046) retired with the legacy build system
+  // (ADR-0076): the equipped node ids carried no state worth converting —
+  // no compensatory XP, no second practice conversion — so the field drops
+  // per the retired-field precedent and current saves stop writing it.
+  // Class ledgers, levels, allocation, and partial roll progress are the
+  // pair state below and are untouched here.
+  for (const habit of merged.habits) {
+    delete (habit as unknown as Record<string, unknown>).build;
+  }
   // The goals' live-share surface (ADR-0047, wave 5) lenient-defaults the
   // same way: a goal saved before the generators wave carries no live
   // slice, which reads — honestly — as a manual-only history that banks

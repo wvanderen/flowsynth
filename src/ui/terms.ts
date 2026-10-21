@@ -3,7 +3,7 @@
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "habit build" | "goals" | "Habit class" | "Engineer" | "practice-roll meter" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card" | "World layer" | "Charge Blade" | "Charge Column" | "Enemy" | "Penalty" | "Era bonus" | "Reserved cell" | "Cleared" | "Unfed" | "Target priority" | "Hone" | "World tray" | "Claimed frontier" | "Pending claim";
+export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "goals" | "Habit class" | "Engineer" | "practice-roll meter" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card" | "World layer" | "Charge Blade" | "Charge Column" | "Enemy" | "Penalty" | "Era bonus" | "Reserved cell" | "Cleared" | "Unfed" | "Target priority" | "Hone" | "World tray" | "Claimed frontier" | "Pending claim";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Breather: "Timed post-flow break with profile-scaled production",
   Oscillator: "Pitched module contributing production",
@@ -13,7 +13,7 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Spacer: "Silent wire conducting chord adjacency",
   Forge: "Received charge accumulates toward draft thresholds",
   "Charge conduit": "Routes received charge onward without producing it",
-  RITUAL: "Received charge amplifies the active habit’s build effects",
+  RITUAL: "The habit-keyed continuous charge receiver",
   "merge tier": "Matching copies combine to raise authored strengths",
   "Harmonic capacity": "Whole-chord budget per voice",
   memorized: "Persists through arete reset",
@@ -28,7 +28,6 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   chords: "Connected pitch sets multiply their member oscillators",
   "module rolls": "Choose one module from three candidates",
   "mutator rolls": "Choose one mutator from two candidates",
-  "habit build": "Equipped build nodes apply during that habit’s sessions",
   goals: "Practice targets credited by flow sessions",
   "Habit class": "A habit’s specialization, keeping its own progress",
   Engineer: "Earns module rolls through credited practice",

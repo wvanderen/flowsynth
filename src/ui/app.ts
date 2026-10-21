@@ -77,7 +77,6 @@ import {
   renameHabit,
   selectHabit,
 } from "../engine/habits";
-import { equipBuildNode, unequipBuildNode } from "../engine/builds";
 import { allocateClassNode, applyClassPreset, classDefOf, respecClassTree, selectHabitClass } from "../engine/classes";
 import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
@@ -2269,14 +2268,6 @@ export class App {
       this.say(result.reason ?? "Could not log practice.");
     }
     this.render();
-  }
-
-  equipBuildNodeAction(habitId: string, nodeId: string): void {
-    this.habitAction(() => equipBuildNode(this.state, habitId, nodeId), "Node equipped — respec is free.");
-  }
-
-  unequipBuildNodeAction(habitId: string, nodeId: string): void {
-    this.habitAction(() => unequipBuildNode(this.state, habitId, nodeId), "Node unequipped.");
   }
 
   // ── The habit-class layer (issue #423) ─────────────────────────────

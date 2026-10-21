@@ -81,7 +81,8 @@ function moduleRow(app: App, m: ModuleInstance, partner = false): string {
     ${select ? `<span class="inventory-row-payout mono">+${formatInt(moduleScrapValue(m))}</span>` : partner ? "" : mergeButton(m.id, META[m.type].name, eligible)}</div>`;
 }
 function back(): string { return `<button data-inventory-back>Back to inventory</button>`; }
-// Owned-copy strengths exclude neighbors, mutators, and habit build effects.
+// Owned-copy strengths exclude neighbors and mutators — the live legs the
+// deployment reads add beside these authored figures.
 function intrinsicEffectsHtml(m: ModuleInstance): string {
   const power = modulePower(m);
   const profile = generatorProfileOf(m.type);

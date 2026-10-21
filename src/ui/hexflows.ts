@@ -1,4 +1,4 @@
-import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
+import { amplifierGainOf } from "../engine/module-strength";
 // The Hex detail's wave connections (issue #297): the cross-section's
 // relationships drawn as directional waves with accessible authoritative
 // breakdowns. Three relationships exist at one cell, each with its own
@@ -27,12 +27,10 @@ import { amplifierGainOf, tierPowerOf } from "../engine/module-strength";
 // solid — the state survives greyscale. The shapes are static; motion
 // rides flow only (the scene's flow-live class), and reduced motion keeps
 // the static wave.
-import { BALANCE, CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
+import { CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
 import { baseTermOf, productionClockFactorOf, temporalTimingOf, usesChordConversion } from "../engine/profiles";
-import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, mutatorAt, mutatorMagnitude, ritualAmpOf, sessionClockOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, mutatorAt, mutatorMagnitude, sessionClockOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
-import { buildFactorsFor } from "../engine/builds";
-import { activeHabit } from "../engine/habits";
 import { CHORD_HUES } from "./chordlayer";
 import { formatNumber } from "./format";
 import { boosterUpliftOf, relayStrengthOf, spotlightInactiveVerdict } from "./face";
@@ -67,10 +65,9 @@ function row(label: string, figure: string, cls = ""): string {
 
 // The module's actual outcome, stated once per breakdown — the same figure
 // the face's readout carries, in the production terms the engine publishes
-// (final output, charge strength, relay strength, build amplification,
-// booster uplift, the meters' progress rates, the chord factor). The label
-// names the term; the figure carries its unit. A spacer is silent wire: no
-// outcome.
+// (final output, charge strength, relay strength, booster uplift, the
+// meters' progress rates, the chord factor). The label names the term; the
+// figure carries its unit. A spacer is silent wire: no outcome.
 function outcomeRow(state: GameState, module: ModuleInstance, snapshot: RateSnapshot, flow: boolean): string {
   const contribution = snapshot.contributions.get(module.id);
   const strength = snapshot.chargeStrength.get(module.id) ?? 0;
@@ -79,7 +76,7 @@ function outcomeRow(state: GameState, module: ModuleInstance, snapshot: RateSnap
   if (category === "silentVoice") return row("Chord voice", `×${formatNumber(contribution?.chordFactor ?? 1)}`, "result");
   if (category === "generator") return row("Charge strength", `⌁${formatNumber(emittedStrength(state, module, flow))}`, "result");
   if (module.type === "amplifier") return row("Relay strength", `⌁${formatNumber(relayStrengthOf(module, snapshot))}`, "result");
-  if (module.type === "ritual") return row("Build amplification", `×${formatNumber(1 + ritualAmpOf(module.level, strength, module.tier))}`, "result");
+  if (module.type === "ritual") return row("Received charge", `⌁${formatNumber(strength)}`, "result");
   if (category === "booster") {
     // The boosters read their live uplift; an inactive Spotlight has no
     // outcome figure to state (issue #374) — its verdict row in the
@@ -105,14 +102,13 @@ function temporalRow(state: GameState, module: ModuleInstance, figure: (factor: 
   return row(temporalTimingOf(module.type)?.label ?? "Session clock", figure(clockFactor));
 }
 
-// Use the same build derivation and published contribution terms as the
-// production pass. Each relationship ends with the host's calculation,
-// including external bonuses, followed by exactly one outcome.
+// Use the same published contribution terms as the production pass. Each
+// relationship ends with the host's calculation, including external
+// bonuses, followed by exactly one outcome.
 function productionRows(state: GameState, module: ModuleInstance, snapshot: RateSnapshot, relationship: "mutator" | "charge" | "chord"): string[] {
   const category = CATEGORY_OF[module.type];
   const contribution = snapshot.contributions.get(module.id);
   const strength = snapshot.chargeStrength.get(module.id) ?? 0;
-  const factors = buildFactorsFor(activeHabit(state), snapshot.ritualAmplification);
   const rows: string[] = [];
   const multiplier = (label: string, value: number) => rows.push(row(label, `×${formatNumber(value)}`));
   const pushTemporal = () => {
@@ -126,7 +122,6 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
     pushTemporal();
     multiplier("Host power", hostPower(state, module));
     if (relationship !== "chord") multiplier("Chord factor", contribution?.chordFactor ?? 1);
-    multiplier("Build synth term", 1 + factors.synthTerm);
     multiplier("Booster uplift", 1 + (contribution?.infusorBonus ?? 0));
     // The charge leg names its behavior per design: the Blaster's
     // conversion rides here (ADR-0048); the Sideband's row reads exactly
@@ -141,7 +136,6 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
   } else if (category === "forge") {
     if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
     multiplier("Host power", hostPower(state, module));
-    multiplier("Build forge efficiency", 1 + factors.forgeEfficiency);
   } else if (module.type === "amplifier") {
     if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
     multiplier("Relay gain", amplifierGainOf(module));
@@ -159,14 +153,13 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
       multiplier("Charged empowerment", chargedFactor(strength));
     }
   } else if (module.type === "ritual") {
-    rows.push(row("Base amplification", `+${formatNumber(BALANCE.ritualAmpPerLevel * module.level)}`));
-    multiplier("Merge tier", tierPowerOf(module.tier));
-    multiplier("Charged empowerment", chargedFactor(strength));
+    // The legacy build amplification retired with the builds (ADR-0076):
+    // the RITUAL reads what it receives, and its level buys nothing.
+    if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
   } else if (category === "generator") {
     // The temporal generator's current cycle factor (issue #372), named
     // while it moves — the reserve spends at this same factor.
     pushTemporal();
-    if (factors.generatorStrength !== 0) rows.push(row("Build generator strength", `+${formatNumber(factors.generatorStrength)}`));
   }
   return rows;
 }

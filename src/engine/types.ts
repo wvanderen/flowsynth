@@ -96,11 +96,10 @@ export type MutatorForgeType = "mutatorForge";
 // member is the Amplifier.
 export type ConduitType = "amplifier";
 
-// RITUAL (ADR-0046): the chargeable-family board module that amplifies the
-// active habit's equipped build effects while receiving charge — continuous
-// empowerment, the family's continuous-charge mode, not threshold fill.
-// Habit-keyed: it wears the switch vermillion and arrives through the
-// module-roll pool only.
+// RITUAL (ADR-0046, retired by ADR-0076): the chargeable-family board
+// module rolled through the module-roll pool. Its build amplification
+// retired with the legacy habit builds — it remains a continuous-charge
+// receiver, habit-keyed, wearing the switch vermillion.
 export type RitualType = "ritual";
 
 export type ModuleType =
@@ -502,12 +501,6 @@ export interface Habit {
   name: string;
   seconds: number;
   archived: boolean;
-  // The habit build (ADR-0046, wave 4): the equipped build-node ids, in
-  // equip order. Unlocks derive from `seconds` at read time and are never
-  // stored; the equipped picks are the only build state the save carries.
-  // They persist through prestige — real-life time is never un-earned.
-  // Lenient-defaulted to [] at load.
-  build: string[];
   // The habit's selected class (ADR-0074): the specialization its next
   // session practices under. Locked for the whole session like the habit
   // itself; changes happen between sessions. Lenient-defaulted to
@@ -935,11 +928,6 @@ export interface RateSnapshot {
   // exactly and the rate details can show the one factor where the math
   // actually carries it — never an aggregate penalty meter elsewhere.
   worldFactor: number;
-  // The active build's RITUAL amplification (ADR-0046, wave 4): the raw
-  // amp the deployed RITUALs deliver while receiving charge — zero when
-  // none receives. Every equipped magnitude scales by (1 + this) in the
-  // pass above; the roster's RITUAL row reads it.
-  ritualAmplification: number;
   rate: number;
   forgeRate: number;
   // The Mutator Forge branch's progress rate (ADR-0043, issue #198): the

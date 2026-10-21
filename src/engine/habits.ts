@@ -32,7 +32,6 @@ export function createHabit(state: GameState, name: string): { ok: boolean; reas
     name: trimmed,
     seconds: 0,
     archived: false,
-    build: [],
     // Every habit wears the launch class from creation (issue #423); its
     // Engineer pair starts at zero and accrues only from credited flow.
     classId: "engineer",

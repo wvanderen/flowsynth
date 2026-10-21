@@ -27,14 +27,6 @@ import {
   recordTargetHit,
   sessionRecordsNewestFirst,
 } from "../engine/records";
-import {
-  buildNodeEffect,
-  buildUnlocksFor,
-  BUILD_NODES,
-  BUILD_MILESTONE_SECONDS,
-  equipSlotsFor,
-  equippedNodes,
-} from "../engine/builds";
 import { activeHabit } from "../engine/habits";
 import { CLASSES, nodeAvailable, pairDef, pairOf, practiceRollThreshold, rankOf } from "../engine/classes";
 import type { ClassId } from "../engine/types";
@@ -197,7 +189,7 @@ export function focusSheetKey(app: App): string {
     ui.detailHabitId,
     ui.editingHabitId,
     state.activeHabitId,
-    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}:${buildUnlocksFor(h.seconds)}:${h.build.join(",")}`).join("|"),
+    state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}`).join("|"),
     // The class layer (issue #423): the wear and each pair's level, free
     // points, and allocation hash into the key, so tree moves rebuild the
     // sheet. The meters ride the live patchers, never the key.
@@ -364,47 +356,6 @@ function habitLedgerRowHtml(app: App, habit: Habit): string {
   </button>`;
 }
 
-// The habit build (ADR-0046): the shared catalog read against the habit's
-// own practice time — equipped nodes first (a click unequips; the respec is
-// free), then the unlocked-unequipped, then the locked rungs with the
-// milestone each still owes. Equipping is upgrade-mode only and counts
-// against the slot ladder; the effects apply only while this habit is the
-// session's active habit.
-function habitBuildHtml(app: App, habit: Habit): string {
-  const { state } = app;
-  const upgrade = state.mode === "upgrade";
-  const slots = equipSlotsFor(habit.seconds);
-  const equipped = equippedNodes(habit);
-  const rows = BUILD_NODES.map((node) => {
-    const milestoneSeconds = BUILD_MILESTONE_SECONDS[node.milestone]!;
-    const equippedIndex = habit.build.indexOf(node.id);
-    const stackNote = node.stacking ? " · stacks" : "";
-    if (habit.seconds >= milestoneSeconds) {
-      const isEquipped = equippedIndex >= 0;
-      const title = isEquipped
-        ? "Build changes are free"
-        : upgrade
-          ? equipped.length < slots
-            ? "Build changes are free"
-            : "Unequip one to free a slot"
-          : "The build is read-only during flow";
-      return `<button class="build-node${isEquipped ? " equipped" : ""}" data-${isEquipped ? "unequip" : "equip"}="${node.id}" data-habit="${habit.id}" title="${title}">
-          <span class="build-node-mark mono" aria-hidden="true">${isEquipped ? equippedIndex + 1 : "+"}</span>
-          <span class="build-node-name">${escapeHtml(node.name)}<small>${escapeHtml(buildNodeEffect(node))}${stackNote}</small></span>
-        </button>`;
-    }
-    return `<div class="build-node locked">
-        <span class="build-node-mark mono" aria-hidden="true">·</span>
-        <span class="build-node-name">${escapeHtml(node.name)}<small>unlocks at ${formatDuration(milestoneSeconds)} · ${escapeHtml(buildNodeEffect(node))}</small></span>
-      </div>`;
-  }).join("");
-  return `<div class="habit-build">
-    <span class="eyebrow">BUILD</span>
-    <p class="small muted mono">${equipped.length}/${slots} slots · effects only while this habit is active</p>
-    <div class="build-nodes">${rows}</div>
-  </div>`;
-}
-
 // The practice-roll meter's one-line read (issue #423): progress and
 // threshold as durations, and the practice remaining to the next roll —
 // the same figures the retired flow meter spoke, now the pair's own.
@@ -467,9 +418,9 @@ function habitClassHtml(app: App, habit: Habit): string {
     const rank = rankOf(pair, node);
     const available = nodeAvailable(pair, node);
     if (!available) {
-      return `<div class="build-node locked">
-        <span class="build-node-mark mono" aria-hidden="true">·</span>
-        <span class="build-node-name">${name}<small>unlocks at class level ${node.requiredLevel} · ${escapeHtml(node.effect)}</small></span>
+      return `<div class="tree-node locked">
+        <span class="tree-node-mark mono" aria-hidden="true">·</span>
+        <span class="tree-node-name">${name}<small>unlocks at class level ${node.requiredLevel} · ${escapeHtml(node.effect)}</small></span>
       </div>`;
     }
     const full = rank >= node.maxRank;
@@ -482,13 +433,13 @@ function habitClassHtml(app: App, habit: Habit): string {
           : "Allocate a point"
       : "The tree is read-only during flow";
     return full
-      ? `<div class="build-node equipped">
-          <span class="build-node-mark mono">${mark}</span>
-          <span class="build-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
+      ? `<div class="tree-node equipped">
+          <span class="tree-node-mark mono">${mark}</span>
+          <span class="tree-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
         </div>`
-      : `<div class="build-node">
+      : `<div class="tree-node">
           <button class="class-rank-action mono" data-class-allocate="${node.id}" data-habit="${habit.id}" ${!upgrade || pair.points < 1 ? "disabled" : ""} aria-label="Allocate ${escapeHtml(node.name)}, rank ${rank} of ${node.maxRank}" title="${title}">+${mark}</button>
-          <span class="build-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
+          <span class="tree-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
         </div>`;
   }).join("");
   const spentTotal = def.nodes.reduce((sum, node) => sum + rankOf(pair, node), 0);
@@ -509,7 +460,7 @@ function habitClassHtml(app: App, habit: Habit): string {
     <div class="class-tree">
       <span class="eyebrow">TREE</span>
       <p class="small muted mono">${spentTotal} spent · ${termTipHtml("Respec", "respec")} is free</p>
-      <div class="build-nodes">${rows}</div>
+      <div class="tree-nodes">${rows}</div>
       <div class="class-tree-actions">
         ${upgrade ? `<button class="quiet small" data-class-respec="${habit.id}" ${spentTotal > 0 ? "" : "disabled"} title="Returns every spent point — experience and level stay">Respec</button>` : ""}
         ${upgrade ? `<span class="class-presets" role="group" aria-label="Presets">${presets}</span>` : ""}
@@ -521,8 +472,8 @@ function habitClassHtml(app: App, habit: Habit): string {
 // The development detail (§9): lifetime practice (the development total),
 // sessions practiced and last practiced — aggregates off the practice log,
 // live sessions and manual logs together — the habit's class (issue #423),
-// the habit's build (ADR-0046), and the habit's tagged notes beneath,
-// newest first, each with its date and in-session stamp.
+// and the habit's tagged notes beneath, newest first, each with its date
+// and in-session stamp.
 function habitDetailBodyHtml(app: App, habit: Habit): string {
   const { state } = app;
   const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
@@ -534,7 +485,6 @@ function habitDetailBodyHtml(app: App, habit: Habit): string {
     ${stat("Sessions practiced", String(sessions))}
     ${stat("Last practiced", lastPracticed !== null && lastPracticed > 0 ? formatDate(lastPracticed, true) : "—")}
     ${habitClassHtml(app, habit)}
-    ${habit.seconds > 0 ? habitBuildHtml(app, habit) : `<p class="small muted">Build nodes unlock with practice time — 1h for the first.</p>`}
     ${noteRows ? `<div class="note-list">${noteRows}</div>` : `<p class="small muted">No tagged notes yet.</p>`}`;
 }
 
@@ -1193,22 +1143,6 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
       event.stopPropagation();
       app.setFocusForm(null);
     }
-  });
-  // The habit build (ADR-0046): equip and unequip are free respecs in
-  // upgrade mode — the engine answers for the slot and unlock rules.
-  scope.querySelectorAll<HTMLElement>("[data-equip]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const nodeId = button.getAttribute("data-equip");
-      const habitId = button.getAttribute("data-habit");
-      if (nodeId && habitId) app.equipBuildNodeAction(habitId, nodeId);
-    });
-  });
-  scope.querySelectorAll<HTMLElement>("[data-unequip]").forEach((button) => {
-    app.listen(button, "click", () => {
-      const nodeId = button.getAttribute("data-unequip");
-      const habitId = button.getAttribute("data-habit");
-      if (nodeId && habitId) app.unequipBuildNodeAction(habitId, nodeId);
-    });
   });
   // The class layer (issue #423): the wear chips select between classes,
   // the tree nodes take points, respec returns them, presets apply as
