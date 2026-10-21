@@ -4550,7 +4550,7 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
 .ledger-face .ledger-overview { display: flex; flex: 1; align-items: stretch; gap: 32px; padding: 10px 16px; text-align: left; border: 0; background: transparent; min-width: 0; }
 .ledger-overview:hover { background: var(--panel); }
 .ledger-overview:focus-visible { outline: 1px solid var(--ink); outline-offset: -3px; }
-.ledger-resource { display: grid; grid-template-rows: 14px 24px 16px; align-content: center; gap: 2px; }
+.ledger-resource { display: grid; grid-template-rows: 14px minmax(24px, auto) 16px; align-content: center; gap: 2px; min-width: 0; }
 .ledger-resource-name { display: block; color: var(--muted); font: 600 11px var(--font-condensed); text-transform: uppercase; letter-spacing: .05em; }
 .ledger-resource-value { display: flex; align-items: center; gap: 6px; font: 15px var(--mono); white-space: nowrap; }
 .ledger-resource-value b { font-weight: 500; }
@@ -4590,6 +4590,16 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
 .ledger-face .ledger-overview { display: grid; grid-template-columns: 160px 100px 100px minmax(130px, 1fr); gap: 24px; }
 .ledger-face .ledger-resource b[data-live] { width: auto; min-width: 0; }
 .ledger-resource-value small { flex: none; }
+/* Exact integer balances can outgrow a lane. Keep its width and let only
+   the figure wrap, leaving the resource mark and adjacent reads intact. */
+.ledger-face .ledger-resource-value b[data-live],
+.game-info-face > span > span:not(.ledger-resource-name) b[data-live] {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.game-info-face > span > span:not(.ledger-resource-name) { max-width: 100%; }
+.game-info-face small { flex: none; }
 @container app (width < 1100px) {
   .ledger-face .ledger-overview { grid-template-columns: 130px 80px 80px minmax(120px, 1fr); gap: 16px; }
 }
