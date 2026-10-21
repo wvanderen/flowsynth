@@ -445,8 +445,10 @@ export type SessionMode = "planned" | "open-ended";
 
 // The goals-advanced snapshot (§9): one row per goal the session credited
 // time toward, captured at close so deleting or replacing a goal never
-// rewrites history — the id resolves at render.
+// rewrites history. Older records resolve by id until the next edit/removal
+// captures their description.
 export interface GoalAdvanceSnapshot {
+  goal?: Goal;
   goalId: string;
   seconds: number;
 }

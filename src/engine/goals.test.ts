@@ -89,7 +89,8 @@ describe("one goal per habit", () => {
     expect(s.goals).toHaveLength(1);
     retainGoalChoice(s, goal.id);
     expect(deleteGoal(s, goal.id).ok).toBe(true);
-    expect(s.goals).toHaveLength(0);
+    expect(activeGoalOf(s, habit.id)).toBeUndefined();
+    expect(goal.retired).toBe(true);
   });
 });
 
@@ -218,6 +219,39 @@ describe("goal edits (issue #445)", () => {
     expect(goal.completedCount).toBe(2);
   });
 
+  it("a cadence edit splits live practice at midnight and never replays fuel", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const midnight = new Date(2026, 9, 21).getTime();
+    const goal = createGoal(s, { habitId: habit.id, minutes: 60, schedule: "weekly", now: midnight - DAY }).goal!;
+    startSession(s, null, midnight - 600_000);
+    advance(s, 1200);
+    endSession(s, midnight + 600_000);
+    const fuel = s.goalFuel;
+    editGoal(s, goal.id, { minutes: 60, schedule: "daily" }, midnight + 600_000);
+    expect(goal.progressSeconds).toBeCloseTo(600);
+    expect(goal.liveSeconds).toBeCloseTo(600);
+    expect(s.goalFuel).toBe(fuel);
+    const loaded = deserialize(serialize(s)).state!;
+    expect(activeGoalOf(loaded, habit.id)!.progressSeconds).toBeCloseTo(600);
+  });
+
+  it("removal, replacement, edits and reload preserve previous goal descriptions", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 30, schedule: "daily", now: 1 }).goal!;
+    startSession(s, null, 1000);
+    advance(s, 600);
+    endSession(s, 601000);
+    editGoal(s, goal.id, { minutes: 60, schedule: "weekly" }, 602000);
+    deleteGoal(s, goal.id);
+    expect(createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 603000 }).ok).toBe(true);
+    const loaded = deserialize(serialize(s)).state!;
+    expect(loaded.sessionRecords[0]!.goalsAdvanced[0]!.goal!.condition.minutes).toBe(30);
+    expect(loaded.sessionRecords[0]!.goalsAdvanced[0]!.goal!.schedule.kind).toBe("daily");
+    expect(loaded.goals.find(row => row.id === goal.id)!.retired).toBe(true);
+  });
+
   it("edits refuse bad figures and lock in flow", () => {
     const s = fresh();
     const habit = withHabit(s);
@@ -242,8 +276,7 @@ describe("goal edits (issue #445)", () => {
     startSession(s, null);
     advance(s, 720);
     endSession(s, wednesday - 8 * DAY);
-    // Today's credited session (5 min) and a manual log (10 min — the
-    // eligibility boundary keeps it out of the recalculation).
+    // Today's live practice and manual condition progress both survive.
     startSession(s, null);
     advance(s, 300);
     endSession(s, wednesday);
@@ -251,11 +284,9 @@ describe("goal edits (issue #445)", () => {
     editGoal(s, goal.id, { minutes: 30, schedule: "weekly" }, wednesday + 2_000);
     expect(goal.schedule.kind).toBe("weekly");
     expect(goal.occurrenceKey).toBe(occurrenceKeyFor(goal.schedule, wednesday + 2_000));
-    // This week's credited sessions only: the 10 today and the 12 from
-    // eight days ago (last week) sits outside the Monday start; the manual
-    // log never qualifies.
-    expect(goal.progressSeconds).toBeCloseTo(300 + 600, 6);
-    expect(goal.liveSeconds).toBeCloseTo(goal.progressSeconds, 6);
+    // Last week stays outside the period; manual time never joins live credit.
+    expect(goal.progressSeconds).toBeCloseTo(300 + 600 + 600, 6);
+    expect(goal.liveSeconds).toBeCloseTo(300 + 600, 6);
     expect(goal.completed).toBe(false);
   });
 
@@ -266,14 +297,14 @@ describe("goal edits (issue #445)", () => {
     const goal = createGoal(s, { habitId: habit.id, minutes: 60, schedule: "once", now: created }).goal!;
     startSession(s, null);
     advance(s, 1_200);
-    endSession(s, created + DAY + 3_600_000); // the 21st, 00:00 local
-    editGoal(s, goal.id, { minutes: 60, schedule: "daily" }, created + DAY + 3_600_000);
+    endSession(s, created + DAY + 3_600_000 + 1_200_000); // the 21st, 00:00 local
+    editGoal(s, goal.id, { minutes: 60, schedule: "daily" }, created + DAY + 3_600_000 + 1_200_000);
     // Daily's period is today: the whole session landed after midnight.
     expect(goal.progressSeconds).toBeCloseTo(1_200, 6);
     // Back to once reads from creation: the whole record.
-    editGoal(s, goal.id, { minutes: 60, schedule: "once" }, created + DAY + 3_600_000);
+    editGoal(s, goal.id, { minutes: 60, schedule: "once" }, created + DAY + 3_600_000 + 1_200_000);
     expect(goal.progressSeconds).toBeCloseTo(1_200, 6);
-    editGoal(s, goal.id, { minutes: 10, schedule: "daily" }, created + DAY + 3_600_000);
+    editGoal(s, goal.id, { minutes: 10, schedule: "daily" }, created + DAY + 3_600_000 + 1_200_000);
     expect(goal.completed).toBe(true);
     expect(goal.completedCount).toBe(0); // the recalculation never mints a completion
   });

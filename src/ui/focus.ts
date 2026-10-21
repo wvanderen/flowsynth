@@ -39,6 +39,7 @@ import {
   activeGoals,
   goalRequiredSeconds,
   goalSummary,
+  goalTargetSummary,
   pendingGoalsOf,
 } from "../engine/goals";
 import type { ClassPairState, GameState, Goal, Habit, HabitColor, HonestyEvent, HonestyOutcome, NoteEntry } from "../engine/types";
@@ -579,7 +580,7 @@ function pendingGoalRowHtml(state: GameState, goal: Goal): string {
   return `<div class="folio-row goal-row" data-goal="${goal.id}">
     <div class="goal-ledger">
       <div class="goal-ledger-head">
-        <span class="goal-ledger-name">${escapeHtml(goalSummary(state, goal))}</span>
+        <span class="goal-ledger-name">${escapeHtml(goalTargetSummary(goal))}</span>
         <span class="goal-status">carried over</span>
         <button class="primary small" data-goal-keep="${goal.id}" aria-label="Keep ${escapeHtml(goalSummary(state, goal))}">Keep</button>
       </div>
@@ -591,8 +592,7 @@ function pendingGoalRowHtml(state: GameState, goal: Goal): string {
 // The active goal row: its inherited color on the track, live figures, and
 // the edit and remove controls — create, edit, replace, and remove all
 // land here, in the habit that owns the goal.
-function activeGoalRowHtml(app: App, habit: Habit, goal: Goal, upgrade: boolean): string {
-  const { state } = app;
+function activeGoalRowHtml(habit: Habit, goal: Goal, upgrade: boolean): string {
   const required = goalRequiredSeconds(goal);
   const status = goal.completed
     ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
@@ -600,7 +600,7 @@ function activeGoalRowHtml(app: App, habit: Habit, goal: Goal, upgrade: boolean)
   return `<div class="folio-row goal-row ${goal.completed ? "done" : ""}" data-goal="${goal.id}">
     <div class="goal-ledger">
       <div class="goal-ledger-head">
-        <span class="goal-ledger-name">${escapeHtml(goalSummary(state, goal))}</span>
+        <span class="goal-ledger-name">${escapeHtml(goalTargetSummary(goal))}</span>
         ${status}
         ${
           upgrade
@@ -646,7 +646,7 @@ function habitGoalHtml(app: App, habit: Habit): string {
       pending.length > 0
         ? `<p class="small muted mono">Several goals carried over — keep one</p><div class="folio-rows">${pending.map((row) => pendingGoalRowHtml(state, row)).join("")}</div>`
         : goal
-          ? `${activeGoalRowHtml(app, habit, goal, upgrade)}${editing ? goalFormHtml(goal) : ""}`
+          ? `${activeGoalRowHtml(habit, goal, upgrade)}${editing ? goalFormHtml(goal) : ""}`
           : upgrade
             ? creating
               ? goalFormHtml(undefined)
@@ -718,8 +718,8 @@ function historyDrillHtml(app: App): string {
       : `<p class="history-line">"${escapeHtml(reflection.text)}"${reflectionValence(reflection.slider)}</p>`;
   const goals =
     record.goalsAdvanced
-      .map(({ goalId, seconds }) => {
-        const goal = state.goals.find((g) => g.id === goalId);
+      .map(({ goalId, seconds, goal: snapshot }) => {
+        const goal = snapshot ?? state.goals.find((g) => g.id === goalId);
         return `<p class="history-line">${secondsToMinutes(seconds)} min · ${goal ? escapeHtml(goalSummary(state, goal)) : "a since-removed goal"}</p>`;
       })
       .join("") || `<p class="history-line muted">No goals advanced.</p>`;

@@ -741,7 +741,8 @@ describe("the sheet's HISTORY face (§9)", () => {
     // Back returns to the list; the deleted goal still renders its snapshot.
     deleteGoal(s, goal.id);
     app.openDrill(1);
-    expect(document.getElementById("app-popover")!.textContent).toContain("a since-removed goal");
+    expect(document.getElementById("app-popover")!.textContent).toContain(`2 min · ${goalSummary(s, goal)}`);
+    expect(document.getElementById("app-popover")!.textContent).not.toContain("a since-removed goal");
     document.getElementById("history-back")!.click();
     expect(document.getElementById("app-popover")!.querySelector(".history-row")).not.toBeNull();
   });

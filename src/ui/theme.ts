@@ -119,7 +119,7 @@ const chords = {
 // six keys ride habit state (`HabitColor`) and read these tokens wherever
 // the habit — and the goal that inherits its color — renders. The hexes
 // are the issue's pin.
-const goalPalette = {
+const habitPalette = {
   "habit-vermillion": "#cc603d",
   "habit-amber": "#bc9239",
   "habit-green": "#9affa8",
@@ -175,7 +175,7 @@ export const defaultTheme: Theme = {
     ...interactive,
     ...finishes,
     ...chords,
-    ...goalPalette,
+    ...habitPalette,
     ...semantics,
   },
 };

@@ -234,7 +234,8 @@ describe("the habit editor's color and goal (issue #445)", () => {
     expect(sheet().querySelector("[data-goal-minutes]")!.textContent).toContain("20 min / 1 h 0 min");
     // Remove takes the goal away; the create action stands again.
     sheet().querySelector<HTMLButtonElement>('[data-goal-remove="' + goal.id + '"]')!.click();
-    expect(app.state.goals).toHaveLength(0);
+    expect(sheet().querySelector(`[data-goal="${goal.id}"]`)).toBeNull();
+    expect(app.state.goals.find(row => row.id === goal.id)!.retired).toBe(true);
     expect(sheet().querySelector("#goal-create-open")).not.toBeNull();
   });
 

@@ -118,6 +118,20 @@ export interface GoalCreateInput {
   now: number;
 }
 
+function validGoalMinutes(minutes: number): boolean {
+  return Number.isFinite(minutes) && Math.round(minutes) >= 1 && minutes <= 24 * 60;
+}
+
+// Preserve the description older session records resolved through this row
+// before an edit changes it. New records already carry their own snapshot.
+function preserveGoalHistory(state: GameState, goal: Goal): void {
+  for (const record of state.sessionRecords) {
+    for (const advanced of record.goalsAdvanced) {
+      if (advanced.goalId === goal.id && !advanced.goal) advanced.goal = structuredClone(goal);
+    }
+  }
+}
+
 export function createGoal(state: GameState, input: GoalCreateInput): { ok: boolean; reason?: string; goal?: Goal } {
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
   // Goals are owned by a habit (issue #423): the cross-habit template
@@ -128,12 +142,11 @@ export function createGoal(state: GameState, input: GoalCreateInput): { ok: bool
   if (activeGoalOf(state, input.habitId) || pendingGoalsOf(state, input.habitId).length > 0) {
     return { ok: false, reason: "That habit already tracks a goal — edit or remove it first." };
   }
-  if (!(input.minutes > 0) || input.minutes > 24 * 60) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
+  if (!validGoalMinutes(input.minutes)) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
   if (!state.habits.some((h) => h.id === input.habitId && !h.archived)) {
     return { ok: false, reason: "That habit does not exist." };
   }
-  const schedule: GoalSchedule =
-    input.schedule === "daily" ? { kind: "daily" } : input.schedule === "weekly" ? { kind: "weekly" } : { kind: "once" };
+  const schedule: GoalSchedule = { kind: input.schedule };
   const goal: Goal = {
     id: `g${state.nextId++}`,
     condition: { kind: "habit-minutes", habitId: input.habitId, minutes: Math.round(input.minutes) },
@@ -153,7 +166,8 @@ export function deleteGoal(state: GameState, id: string): { ok: boolean; reason?
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
   const index = state.goals.findIndex((g) => !g.retired && !g.pendingChoice && g.id === id);
   if (index === -1) return { ok: false, reason: "Goal not found." };
-  state.goals.splice(index, 1);
+  preserveGoalHistory(state, state.goals[index]!);
+  state.goals[index]!.retired = true;
   return { ok: true };
 }
 
@@ -164,8 +178,8 @@ export function deleteGoal(state: GameState, id: string): { ok: boolean; reason?
 // un-completes when the raised target is no longer met (a target lowered
 // to or below met progress stays completed — the completion already
 // happened, and no credit can replay). A cadence change recalculates
-// qualifying practice for the new period: credited practice — live
-// sessions alone, the manual boundary stands — since the new schedule's
+// qualifying practice for the new period: live and manual condition
+// progress with separate live reward eligibility, since the new schedule's
 // current occurrence began, with the occurrence rolled to its key.
 // Nothing here awards or replays generator fuel: credit fires only on
 // completion ticks on the accrual paths, against the one bounded pool.
@@ -178,34 +192,32 @@ export function editGoal(
   if (state.mode !== "upgrade") return { ok: false, reason: "Goals are managed between sessions." };
   const goal = activeGoals(state).find((g) => g.id === id);
   if (!goal) return { ok: false, reason: "Goal not found." };
-  if (!(edit.minutes > 0) || edit.minutes > 24 * 60) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
-  const schedule: GoalSchedule =
-    edit.schedule === "daily" ? { kind: "daily" } : edit.schedule === "weekly" ? { kind: "weekly" } : { kind: "once" };
+  if (!validGoalMinutes(edit.minutes)) return { ok: false, reason: "Choose between 1 and 1440 minutes." };
+  const schedule: GoalSchedule = { kind: edit.schedule };
+  preserveGoalHistory(state, goal);
   goal.condition.minutes = Math.round(edit.minutes);
   if (schedule.kind === goal.schedule.kind) {
     goal.schedule = schedule;
     goal.completed = goal.progressSeconds >= goalRequiredSeconds(goal);
     return { ok: true };
   }
-  // Cadence change: recalculate from qualifying practice in the new
-  // period. Credited eligibility only — the practice log's live entries
-  // are the sessions the goal could have ridden; manual logs never join.
-  // The record's own granularity governs: one entry per session, stamped
-  // at its end, so a session spanning a boundary rides the period its end
-  // falls in — the finest split the existing calendar rule has data for.
+  // Manual practice advances the condition, but only credited live practice
+  // joins its reward-eligible slice. A live entry is bounded by the time
+  // available after the period start, never attributed wholly by its end.
   goal.schedule = schedule;
   goal.occurrenceKey = occurrenceKeyFor(schedule, now);
   const start = occurrenceStartFor(schedule, now, goal.createdAt);
-  const qualifying = state.practiceLog
-    .filter((entry) => entry.habitId === goal.condition.habitId && entry.source === "live" && entry.at >= start)
-    .reduce((sum, entry) => sum + entry.seconds, 0);
+  let qualifying = 0;
+  let live = 0;
+  for (const entry of state.practiceLog) {
+    if (entry.habitId !== goal.condition.habitId || entry.at < start || entry.at > now) continue;
+    const seconds = entry.source === "manual" ? entry.seconds : Math.min(entry.seconds, (entry.at - start) / 1000);
+    qualifying += seconds;
+    if (entry.source === "live") live += seconds;
+  }
   goal.progressSeconds = qualifying;
-  // The reconstructed progress is credited practice through and through,
-  // so the live slice is the whole of it. A recalculation that already
-  // meets the target reads complete without a completion tick: no credit
-  // fires at the edit desk, so the bounded pool pays only what the
-  // accrual paths' own completion ticks earned.
-  goal.liveSeconds = qualifying;
+  goal.liveSeconds = live;
+  // Recalculation never fires completion credit.
   goal.completed = qualifying >= goalRequiredSeconds(goal);
   return { ok: true };
 }
@@ -231,9 +243,13 @@ export function retainGoalChoice(state: GameState, id: string): { ok: boolean; r
 
 const SCHEDULE_LABEL: Record<GoalSchedule["kind"], string> = { once: "once", daily: "a day", weekly: "a week" };
 
+export function goalTargetSummary(goal: Goal): string {
+  return `${goal.condition.minutes} min ${SCHEDULE_LABEL[goal.schedule.kind]}`;
+}
+
 export function goalSummary(state: GameState, goal: Goal): string {
   const name = goal.condition.habitId === null ? "Any habit" : state.habits.find((h) => h.id === goal.condition.habitId)?.name ?? "a habit";
-  return `${name} · ${goal.condition.minutes} min ${SCHEDULE_LABEL[goal.schedule.kind]}`;
+  return `${name} · ${goalTargetSummary(goal)}`;
 }
 
 // Load-time normalization for the goal's live-share surface (ADR-0047): a
