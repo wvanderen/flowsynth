@@ -2098,11 +2098,15 @@ export class App {
     this.render();
   }
 
-  // The HABIT face's drill (§9, #255): a list row opens the habit's
-  // development detail — one at a time; the back control returns to the
-  // list. A revealed form collapses with the drill — the detail is its own
+  // The HABIT face's drill (§9, #255): a list row — or preparation's Edit
+  // habit move (issue #447) — opens the habit's development detail, one at
+  // a time; the back control returns to the list. Landing on the HABIT
+  // face is the drill's own act, so the move works from the PLAN face too.
+  // A revealed form collapses with the drill — the detail is its own
   // surface, not a form holder.
   openHabitDetail(id: string): void {
+    this.ui.app = "habit";
+    this.resetHistoryUi();
     this.ui.detailHabitId = id;
     this.ui.developHabitId = null;
     this.ui.focusForm = null;
@@ -2115,10 +2119,14 @@ export class App {
     this.render();
   }
 
-  // The summary's Develop action (issue #446): the drilled habit's class
-  // tree stands in for its development read — one deliberate move out of
-  // session preparation. A revealed form collapses with it.
+  // The summary's Develop action (issue #446, composed into preparation by
+  // #447): the habit's class tree stands in for its development read — one
+  // deliberate move out of session preparation, landing on the HABIT face
+  // the tree lives in. A revealed form collapses with it.
   openHabitDevelop(id: string): void {
+    this.ui.app = "habit";
+    this.resetHistoryUi();
+    this.ui.detailHabitId = id;
     this.ui.developHabitId = id;
     this.ui.focusForm = null;
     this.render();

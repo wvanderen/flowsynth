@@ -4,6 +4,13 @@
 // rows, names lead, figures right-aligned mono, deeper mechanics in the
 // tooltip layer, no expandable detail sections.
 //
+// Session preparation owns the PLAN face (issue #447, ADR-0075): selecting
+// a habit makes it the session's at once — no editor opens — and the
+// selected habit's one goal and compact class summary stand read-only
+// beneath the duration row, with Edit habit and Develop as the deliberate
+// moves into the editor and the class tree. Goal controls live only in
+// Edit habit, allocation only in Develop, History keeps its own face.
+//
 // The flow-mode rule: reads live, capture freely, mutate nothing. During a
 // session the PLAN face becomes the running read (live elapsed, End flow
 // mirroring the main switch, targets visibly disabled); habit add/log and
@@ -305,12 +312,39 @@ function planRowsHtml(app: App): string {
   </div>`;
 }
 
-// The PLAN face (#311). The console header is authoritative for starting
-// and ending flow and for time — the sheet adds neither a start/end control
-// nor a clock of its own. Both modes show the plan read: the session's
-// habit and the goals tracked. Upgrade mode alone carries the controls —
-// the habit chip row and the time selection; a running session shows none,
-// narrating its habit in the row above.
+// The selected habit's preparation context (issue #447): its one optional
+// goal and the compact class summary, read-only and live, beneath the
+// selection and duration rows — with Edit habit and Develop as the two
+// deliberate moves out of preparation, into the destinations the preceding
+// slices completed. No control is re-housed here: goal editing stays in
+// Edit habit, allocation in Develop, and the summary stands once.
+function planPreparationHtml(app: App, habit: Habit | undefined): string {
+  if (!habit) return "";
+  const pending = pendingGoalsOf(app.state, habit.id);
+  const goal = activeGoalOf(app.state, habit.id);
+  const goalRead = goal
+    ? activeGoalRowHtml(habit, goal, false)
+    : pending.length > 0
+      ? `<div class="folio-row"><span class="folio-line muted">Several goals carried over — keep one in Edit habit</span></div>`
+      : `<div class="folio-row"><span class="folio-line muted">No goal.</span></div>`;
+  return `<div class="focus-prepare">
+    <div class="habit-goal"><span class="eyebrow">GOAL</span>${goalRead}</div>
+    ${classSummaryHtml(app, habit, { develop: false })}
+    <div class="folio-rows focus-actions"><div class="folio-row">
+      <button class="focus-action" data-habit-edit="${habit.id}">Edit habit</button>
+      <button class="focus-action" data-habit-develop="${habit.id}">Develop</button>
+    </div></div>
+  </div>`;
+}
+
+// The PLAN face (#311, recomposed by #447). The console header is
+// authoritative for starting and ending flow and for time — the sheet adds
+// neither a start/end control nor a clock of its own. Both modes show the
+// plan read: the session's habit and the goals tracked. Upgrade mode alone
+// carries the controls — the habit chip row, the time selection, and the
+// selected habit's preparation context (goal read, class summary, Edit
+// habit / Develop); a running session shows none, narrating its habit in
+// the row above while the reads stay live on the HABIT face and header.
 function planFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -322,7 +356,8 @@ function planFaceHtml(app: App): string {
       </span>
     </div>
     ${upgrade ? `${habitChipsHtml(app)}
-    ${planRowsHtml(app)}` : ""}`;
+    ${planRowsHtml(app)}
+    ${planPreparationHtml(app, habit)}` : ""}`;
 }
 
 /* ── The HABIT face ────────────────────────────────── */
@@ -397,9 +432,11 @@ function classMeterRowHtml(habit: Habit): string {
 // distinct labels ("Next level" vs "Next module roll"), both in
 // practice-time units, and neither is board or World charge. The live
 // slots ride updateFocusSheetLive, so the countdowns move while the view
-// stands — no ending the session, no structural rerender. Upgrade mode
-// adds the one deliberate Develop action; flow renders the read alone.
-function classSummaryHtml(app: App, habit: Habit): string {
+// stands — no ending the session, no structural rerender. The one
+// deliberate Develop action rides the summary by default (the drilled
+// detail); preparation composes its own action row instead (issue #447),
+// and flow renders the read alone.
+function classSummaryHtml(app: App, habit: Habit, options: { develop?: boolean } = {}): string {
   const upgrade = app.state.mode === "upgrade";
   const def = pairDef(habit);
   const pair = pairOf(habit);
@@ -407,7 +444,7 @@ function classSummaryHtml(app: App, habit: Habit): string {
     <div class="stat-row"><span class="mono">${termTipHtml(def.id === "engineer" ? "Engineer" : "Habit class", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
     <div class="stat-row"><span>Next level</span><span class="mono" data-live="class-xp-line" data-habit="${habit.id}">${escapeHtml(classXpRead(habit))}</span></div>
     ${classMeterRowHtml(habit)}
-    ${upgrade ? `<div class="folio-row"><button class="focus-action" data-habit-develop="${habit.id}">Develop</button></div>` : ""}
+    ${upgrade && options.develop !== false ? `<div class="folio-row"><button class="focus-action" data-habit-develop="${habit.id}">Develop</button></div>` : ""}
   </div>`;
 }
 
@@ -1111,6 +1148,15 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
     });
   });
   app.listen(scope.querySelector("#habit-add-chip"), "click", () => app.showFocusFace("habit"));
+  // The preparation context's Edit habit move (issue #447): the drilled
+  // editor opens for the selected habit — the same landing a list row
+  // takes, one deliberate move out of session preparation.
+  scope.querySelectorAll<HTMLElement>("[data-habit-edit]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const id = button.getAttribute("data-habit-edit");
+      if (id) app.openHabitDetail(id);
+    });
+  });
   // Habits: the list rows drill; the detail head selects, renames, archives;
   // add and log are on-demand forms.
   scope.querySelectorAll<HTMLElement>("[data-drill-habit]").forEach((row) => {
