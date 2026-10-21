@@ -2105,12 +2105,7 @@ export class App {
   // A revealed form collapses with the drill — the detail is its own
   // surface, not a form holder.
   openHabitDetail(id: string): void {
-    this.ui.app = "habit";
-    this.resetHistoryUi();
-    this.ui.detailHabitId = id;
-    this.ui.developHabitId = null;
-    this.ui.focusForm = null;
-    this.render();
+    this.drillHabit(id, false);
   }
 
   closeHabitDetail(): void {
@@ -2124,10 +2119,16 @@ export class App {
   // deliberate move out of session preparation, landing on the HABIT face
   // the tree lives in. A revealed form collapses with it.
   openHabitDevelop(id: string): void {
+    this.drillHabit(id, true);
+  }
+
+  // The two drills' one landing: the HABIT face stands with the habit
+  // drilled, the tree open only when asked for.
+  private drillHabit(id: string, develop: boolean): void {
     this.ui.app = "habit";
     this.resetHistoryUi();
     this.ui.detailHabitId = id;
-    this.ui.developHabitId = id;
+    this.ui.developHabitId = develop ? id : null;
     this.ui.focusForm = null;
     this.render();
   }

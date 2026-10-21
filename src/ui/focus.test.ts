@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
-import { createHabit, selectHabit, addPracticeLog } from "../engine/habits";
+import { createHabit, selectHabit, addPracticeLog, archiveHabit } from "../engine/habits";
 import { createGoal, accrueGoalProgress, editGoal, retainGoalChoice } from "../engine/goals";
 import type { Goal } from "../engine/types";
 import { endSession, pauseSession, startSession } from "../engine/actions";
@@ -1099,6 +1099,47 @@ describe("session preparation composition (issue #447)", () => {
     const freshFrame = openPlan();
     expect(freshFrame.querySelector(".habit-class")!.textContent).toContain("Level 0");
     expect(freshFrame.querySelector('[data-live="class-xp-line"]')!.textContent).toContain("of practice to level 1");
+  });
+
+  it("archived habits leave the chips and preparation; a long name reads whole", () => {
+    const fading = createHabit(app.state, "Fading").habit!;
+    selectHabit(app.state, fading.id);
+    archiveHabit(app.state, fading.id);
+    // Archiving the active habit clears the selection: preparation carries
+    // no context, and the archived habit stands in no chip.
+    const frame = openPlan();
+    expect(frame.querySelector(".focus-prepare")).toBeNull();
+    expect(frame.querySelector(`[data-habit-pick="${fading.id}"]`)).toBeNull();
+    // A long name reads whole in the chip, the ready read, and the goal row
+    // — the engine's 40-character cap is the one truncation.
+    const long = "Timer exercises with the long name attac";
+    const named = createHabit(app.state, long).habit!;
+    selectHabit(app.state, named.id);
+    createGoal(app.state, { habitId: named.id, minutes: 15, schedule: "weekly", now: 1000 });
+    const longFrame = openPlan();
+    expect(longFrame.querySelector(".focus-ready")!.textContent).toBe(long);
+    expect(longFrame.querySelector(`[data-habit-pick="${named.id}"]`)!.textContent).toBe(long);
+    expect(longFrame.querySelector(".goal-ledger-name")!.textContent).toContain("15 min");
+  });
+
+  it("the paused session keeps the running read and the live reads locked in place", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    selectHabit(app.state, habit.id);
+    createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: 1000 });
+    startSession(app.state, 1200);
+    advance(app.state, 60);
+    app.pause();
+    // PLAN: the running read only — no context, no controls.
+    const frame = openFace("plan");
+    expect(frame.querySelector(".focus-state")!.textContent).toBe("paused");
+    expect(frame.querySelector(".habit-goal")).toBeNull();
+    expect(frame.querySelector("[data-habit-edit]")).toBeNull();
+    // The HABIT face keeps the advancement read live under the same lock.
+    const habitFrame = openFace("habit");
+    expect(habitFrame.querySelector('[data-live="class-xp-line"]')).not.toBeNull();
+    expect(habitFrame.querySelector("[data-habit-develop]")).toBeNull();
+    expect(habitFrame.querySelector("[data-class-allocate]")).toBeNull();
+    endSession(app.state);
   });
 
   it("the PLAN face in flow stays the running read: no habit context, no controls", () => {

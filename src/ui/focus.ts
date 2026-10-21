@@ -320,16 +320,18 @@ function planRowsHtml(app: App): string {
 // Edit habit, allocation in Develop, and the summary stands once.
 function planPreparationHtml(app: App, habit: Habit | undefined): string {
   if (!habit) return "";
+  // The read's precedence mirrors the editor's own goal section: a
+  // carried-over choice stands first, then the active goal, then none.
   const pending = pendingGoalsOf(app.state, habit.id);
   const goal = activeGoalOf(app.state, habit.id);
-  const goalRead = goal
-    ? activeGoalRowHtml(habit, goal, false)
-    : pending.length > 0
-      ? `<div class="folio-row"><span class="folio-line muted">Several goals carried over — keep one in Edit habit</span></div>`
+  const goalRead = pending.length > 0
+    ? `<div class="folio-row"><span class="folio-line muted">Several goals carried over — keep one in Edit habit</span></div>`
+    : goal
+      ? activeGoalRowHtml(habit, goal, false)
       : `<div class="folio-row"><span class="folio-line muted">No goal.</span></div>`;
   return `<div class="focus-prepare">
     <div class="habit-goal"><span class="eyebrow">GOAL</span>${goalRead}</div>
-    ${classSummaryHtml(app, habit, { develop: false })}
+    ${classSummaryHtml(app, habit, { developAction: false })}
     <div class="folio-rows focus-actions"><div class="folio-row">
       <button class="focus-action" data-habit-edit="${habit.id}">Edit habit</button>
       <button class="focus-action" data-habit-develop="${habit.id}">Develop</button>
@@ -436,7 +438,7 @@ function classMeterRowHtml(habit: Habit): string {
 // deliberate Develop action rides the summary by default (the drilled
 // detail); preparation composes its own action row instead (issue #447),
 // and flow renders the read alone.
-function classSummaryHtml(app: App, habit: Habit, options: { develop?: boolean } = {}): string {
+function classSummaryHtml(app: App, habit: Habit, options: { developAction?: boolean } = {}): string {
   const upgrade = app.state.mode === "upgrade";
   const def = pairDef(habit);
   const pair = pairOf(habit);
@@ -444,7 +446,7 @@ function classSummaryHtml(app: App, habit: Habit, options: { develop?: boolean }
     <div class="stat-row"><span class="mono">${termTipHtml(def.id === "engineer" ? "Engineer" : "Habit class", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
     <div class="stat-row"><span>Next level</span><span class="mono" data-live="class-xp-line" data-habit="${habit.id}">${escapeHtml(classXpRead(habit))}</span></div>
     ${classMeterRowHtml(habit)}
-    ${upgrade && options.develop !== false ? `<div class="folio-row"><button class="focus-action" data-habit-develop="${habit.id}">Develop</button></div>` : ""}
+    ${upgrade && options.developAction !== false ? `<div class="folio-row"><button class="focus-action" data-habit-develop="${habit.id}">Develop</button></div>` : ""}
   </div>`;
 }
 
