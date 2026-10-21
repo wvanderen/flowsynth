@@ -25,7 +25,7 @@ A specific module design within a category, such as the Sine or the Flywheel, ca
 A supertype family above the category level whose members accumulate received charge toward thresholds that produce effects; the threshold fill is the family's shared rendering trait. The Module Forge is the launch instance. Continuous-charge categories (oscillator, booster) use received charge as continuous empowerment instead.
 
 **Pitch**:
-The absolute note a cell sounds — a property of the cell's position on the octave-stack lattice, derived from its coordinates and never persisted. No module ever rewrites a cell's pitch; pitch modifiers sound derived pitches on their own voice only. Columns read as one note name; the horizontal axis walks the circle of fifths.
+The absolute note a cell sounds — a property of the cell's position on the octave-stack lattice, derived from its coordinates and never persisted. No module ever rewrites a cell's pitch; pitch modifiers sound derived pitches on their own voice only. Same-note lines walk the registers; octave bands read approximately horizontally in the clockwise-rotated board view. The circle-of-fifths and octave relationships are unchanged.
 _Avoid_: harmonic number, distance-from-origin
 
 **Chord**:
@@ -98,7 +98,7 @@ _Avoid_: relay
 A charge conduit that re-broadcasts received charge to its other neighbors at received strength × a level-scaled gain; relayed charge counts fully as receiving charge everywhere, and a hop-depth cap guards cycles. It is not a generator and produces nothing.
 
 **Octave row**:
-One register of the board: the band of cells whose pitches sit in the same octave, stacked as a vertical shape.
+One register of the board: the band of cells whose pitches sit in the same octave, presented approximately horizontally across the board.
 
 **Start register**:
 The octave row the opening board begins on; rows are finite, generous, and symmetric around it.
@@ -123,7 +123,7 @@ The ruled column beside the hex detail's stack holding the opened voice's standi
 _Avoid_: sidebar, info panel, chord column (the #388 predecessor)
 
 **Context map**:
-The miniature of the whole in-range board heading the details column — the opened hex in the selected marker, its active chords drawn in their chord hues as links between their voices. It answers where the voice sits in the formation, and its owned cells navigate, opening that coordinate's Hex detail. Phone widths and coarse-pointer devices also offer a native Open hex picker with a 44px minimum height; both navigation paths retain the focused layer.
+The miniature of the whole in-range board heading the details column — the opened hex in the selected marker, its active chords drawn in their chord hues as links between their voices. It answers where the voice sits in the formation, and its owned cells navigate, opening that coordinate's Hex detail. Activating the miniature opens an expanded overview with pan and pinch zoom. Owned cells navigate by click or keyboard; a list of owned-cell buttons provides reliable touch-sized destinations without the former Open hex dropdown. Choosing a cell closes the overview and retains the focused layer; Close and Escape dismiss it.
 _Avoid_: minigrid, minimap
 
 **Action rail**:
@@ -363,7 +363,7 @@ The catalog's one-time guaranteed offers — the Flywheel, one Booster, and a Mo
 ### The console and focus apps
 
 **Console**:
-The pure control surface organized around the Enter/Exit main switch — the dominant, centered session gate, with the session group around it and Settings at the far right. The session group (issue #331) reads the chosen session where it starts, one contiguous group at every width, portrait phone included (ADR-0050's phone line as amended). The logo, habit, timer, and goal meter form one native Focus button at every width, sharing a single hover, keyboard focus, and sheet-open marker; activating anywhere opens PLAN, with HABIT editing inside the sheet. During flow those reads open the controls without changing the running habit. Start/Exit and Pause/Resume remain separate actions. With the habit chosen and a plan armed, Start begins the session in one activation without the confirmation sheet, the confirmation preference notwithstanding; without both locks the session-start preference decides (#280). The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance: a small disclosure chevron on it opens the Focus sheet, the sheet's entry at every width, its PLAN / HABIT / GOALS / HISTORY faces switching inside (Notes keeps the console's one door tile — capture is a distinct action; the separate phone Focus icon is retired in favor of the session surface). While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
+The pure control surface organized around the Enter/Exit main switch — the dominant, centered session gate, with the session group around it and Settings at the far right. The session group (issue #331) reads the chosen session where it starts, one contiguous group at every width, portrait phone included (ADR-0050's phone line as amended). The logo, habit, timer, and goal meter form one native Focus button at every width, sharing a single hover, keyboard focus, and sheet-open marker; activating anywhere opens PLAN, with HABIT editing inside the sheet. During flow those reads open the controls without changing the running habit. Start/Exit and Pause/Resume remain separate actions. With the habit chosen and a plan armed, Start begins the session in one activation without the confirmation sheet, the confirmation preference notwithstanding; without both locks the session-start preference decides (#280). The main switch is the mode indicator — off, glowing live, held paused — and the clock is itself the plan affordance: a small disclosure chevron on it opens the Focus sheet, the sheet's entry at every width, its PLAN / HABIT / GOALS / HISTORY faces switching inside (Notes keeps its own icon touch surface inside the dark console well — capture is a distinct action; the separate phone Focus icon is retired in favor of the session surface). While a session runs, a thin progress strip along the console's bottom edge shows its progress in the switch's vermillion — filling on planned sessions, pulsing on open-ended ones, held while paused. The board never moves or dims while the console is in use.
 
 **The display panel** (the [header-status brief](docs/header-status-brief.md), 2026-10-19): the door's interior is a recessed display well in the synth-faceplate register. The full-height display clock leads — the time is the device's face — and the program block follows: the selected habit's name (wearing completion's engraved check when the displayed goal is done), the caption (a planned session reads the bare target; running states name themselves), and the provisional line while the honesty pool holds. The goal meter closes the well flush at its right edge: the selected habit's goal progress as a seven-segment vertical LED column in the shown goal's palette token, nearest-to-completion open goal leading, habit-agnostic goals qualifying, a count mark for the rest in play, and no meter at all when nothing qualifies. Its tooltip gloss names the goal and what remains; activation of the meter, including touch, opens PLAN with the rest of the door (owner-confirmed review amendment, 2026-10-19). The header's only other goal display is retired: other habits' progress lives in the Goals app. The provisional logo is the inventory hypercube with its filled core, adopted from the collapsed inventory's symbol; a later round may name a permanent mark.
 
@@ -670,17 +670,17 @@ The board-side Arete purchase that opens one octave row beyond the launch band �
 _Avoid_: Row unlock, Octave tree (retired), row expansion, vertical unlock
 
 **Arete accumulator**:
-The log-scale fill on the current era's nous earned toward the horizon line, drawn as the ambient horizon bar across the board's lower edge (ADR-0038); it rebases at each prestige while lifetime total nous earned stays the truth beneath. Its one figure is the bar's own log-scale percentage; no decade marks or countdown.
+The former log-scale presentation of current-era nous earned toward prestige eligibility. Its ambient horizon bar is retired: the eligibility threshold remains, while the frontier claim determines Arete banked by prestige.
 
 **Horizon bar**:
-The Arete accumulator's surface: the ambient curved-scale fill riding the board's lower edge at every width, spanning most of the board's breadth (ADR-0038), pointer-transparent except for the prestige door its completed state hosts. Before the crossing it says its name and its one log-scale percentage and nothing else; complete, the percentage readout gives way to the "Prestige and Claim X Arete" button, locked outside upgrade mode. An open sheet may cover it, nothing dismisses it (ADR-0029).
+Retired presentation of prestige eligibility. The shared ledger's Arete section now owns the prestige action and its live claim; no ambient bar replaces it.
 _Avoid_: Arete pill
 
 **Horizon line**:
-The Arete accumulator's cap — the fixed prestige threshold and the horizon bar's far end, the same every era. Reaching it opens the prestige door; it mints nothing by itself.
+The fixed current-era nous threshold for prestige eligibility, the same every era. Reaching it enables the ledger's prestige action; it mints nothing by itself.
 
 **Prestige**:
-The arete reset: once the current era's fill reaches the horizon line, prestige banks the era's pending frontier claim (issue #425) and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the horizon bar's door, behind a confirm; the confirm names the zero-claim case outright.
+The arete reset: once the current era's fill reaches the horizon line, prestige banks the era's pending frontier claim (issue #425) and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the shared ledger's Arete section, behind a confirm; the confirm names the zero-claim case outright.
 _Avoid_: reset (bare — the reset's player-facing name is arete reset; Prestige stays the verb)
 
 **Headroom**:
@@ -706,3 +706,7 @@ A player-wide allowance earned through live flow-session time and consumed by ta
 
 **Pending task reward**:
 A reward for an already completed task that waits for full funding from task reward allowance in completion order. Task completion is recorded immediately regardless of available allowance.
+
+### Header/ledger refinement — 2026-10-20 follow-up
+
+Logo alone at the header's left edge; Pause/Resume is icon-only before the centered dark clock/Notes well, Finish after it with a save-and-check mark. Nous balance and production are paired in the banner and ledger. The entire banner resource region is one ledger button; resource spans have no independent actions. Feats/Chords retain destinations and repeat their icons/totals in the ledger. Harmonic capacity reads allowance / ceiling. See [brief](docs/interface-refinement-brief.md#header-and-ledger-follow-up).

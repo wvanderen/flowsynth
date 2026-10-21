@@ -5,13 +5,13 @@ import type { App } from "./app";
 import { createHabit } from "../engine/habits";
 import { equipBuildNode } from "../engine/builds";
 import { BALANCE } from "../engine/constants";
-import { ARETE_HORIZON, ARETE_LOG_FLOOR, accumulatorSpan } from "../engine/accumulator";
+import { ARETE_HORIZON } from "../engine/accumulator";
 import { displayedRates, allocateRates, cellCost, cellPurchasePrice, affordableLevels, levelCost, levelsCost } from "../engine/economy";
 import { startSession, endSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import { give } from "../engine/fixtures";
 import { hex, sameHex } from "../engine/hex";
-import { formatInt, formatNumber } from "./format";
+import { formatFixed, formatInt, formatNumber } from "./format";
 import { createAppFixture, clickCell, setAppWidth } from "./testing/app-fixture";
 import { syncGlowLens } from "./zoom";
 import { makeRecorder } from "./testing/signal-recorder";
@@ -54,7 +54,8 @@ describe("the board ledger (§7, issue #270)", () => {
     expect(arete.querySelector("b")!.textContent).toBe("—");
     expect(arete.querySelector(".arete-mark svg")).not.toBeNull();
     // The hairline, then the paired chips: icon + count.
-    expect(ledger.querySelector(".ledger-rule")).not.toBeNull();
+    expect(ledger.querySelectorAll(".ledger-overview button")).toHaveLength(0);
+    expect(ledger.querySelectorAll("button.ledger-overview")).toHaveLength(1);
     expect(document.getElementById("feats-chip")!.textContent).toContain("0/22");
     expect(document.getElementById("feats-chip")!.querySelector("svg")).not.toBeNull();
     expect(document.getElementById("library-chip")!.textContent).toContain("0/11");
@@ -120,7 +121,7 @@ describe("the board ledger (§7, issue #270)", () => {
     // No operand chain: the total is the display, the module-linked details
     // disclose beside the panel (issue #154).
     expect(cell.querySelector(".rate-equation")).toBeNull();
-    expect(cell.querySelector('[data-live="rate"]')!.textContent).toBe(formatNumber(0.1));
+    expect(cell.querySelector('[data-live="rate"]')!.textContent).toBe(formatFixed(0.1));
     expect(document.querySelector('#board-ledger [data-live="session"]')).toBeNull();
     expect(document.querySelector('#game-info-strip [data-live="i-session"]')).toBeNull();
     // The arete read rides its live slot once banked; the telegraph slot
@@ -234,7 +235,7 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     // the roster speaks (the instrument standards' identity rule), and the
     // eyebrow carries the dialog's accessible name.
     expect(modal.querySelector("h2")).toBeNull();
-    expect(document.getElementById("modal-title")!.textContent).toBe("RATE");
+    expect(document.getElementById("modal-title")!.textContent).toBe("LEDGER");
     expect(modal.querySelector(".rd-total")).not.toBeNull();
     expect(modal.querySelectorAll(".rd-synth")).toHaveLength(1);
     expect(modal.querySelector(".rd-synth")!.getAttribute("data-module-id")).toBeTruthy();
@@ -352,158 +353,58 @@ describe("the rate details disclosure (§7, issue #154)", () => {
     app.closeModal();
   });
 
-  it("the zoom cluster rises above an open modal sheet (§7, ADR-0029)", () => {
-    // The cluster's reaction rides a body class: up with the sheet, down
-    // when it closes — inspection never buries it.
+  it("tracks modal sheet visibility without changing the zoom control nodes", () => {
+    // Sheet visibility remains tracked; the cluster itself keeps its nodes.
+    const zoom = document.getElementById("board-zoom");
     setAppWidth(720);
     app.render();
     expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
     document.getElementById("rate-cell")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("rate");
     expect(document.body.classList.contains("modal-sheet-open")).toBe(true);
+    expect(document.getElementById("board-zoom")).toBe(zoom);
     app.closeModal();
     expect(document.body.classList.contains("modal-sheet-open")).toBe(false);
   });
 });
 
-describe("the horizon bar (§7, issue #156)", () => {
-  it("is an ambient curve: centered label with the log percentage; no totals, marks, countdown, or button", () => {
-    app.render();
-    expect(document.getElementById("status-monitor")).toBeNull();
-    expect(document.querySelector(".board-footer")).toBeNull();
-    const bar = document.getElementById("horizon-bar")!;
-    expect(bar.querySelector(".horizon-track")).not.toBeNull();
-    // The bar answers as a progressbar (issue #351): AT queries the same
-    // percentage the word reads.
-    expect(bar.getAttribute("role")).toBe("progressbar");
-    expect(bar.getAttribute("aria-label")).toBe("The Arete horizon: this era's progress toward prestige");
-    expect(bar.getAttribute("aria-valuemin")).toBe("0");
-    expect(bar.getAttribute("aria-valuemax")).toBe("100");
-    expect(bar.getAttribute("aria-valuenow")).toBe("0");
-    // The label rides centered with its one figure: the bar's log percentage.
-    const word = bar.querySelector(".horizon-word")!;
-    expect(word.textContent).toContain("Arete");
-    expect(word.querySelector('[data-live="h-word"]')!.textContent).toBe("0%");
-    // No endpoint tick, no lifetime total, no decade marks, no practice
-    // beat, no prestige door.
-    expect(bar.querySelector(".horizon-cap")).toBeNull();
-    expect(bar.querySelector('[data-live="p-total"]')).toBeNull();
-    expect(bar.querySelector(".pill-grad")).toBeNull();
-    expect(bar.querySelector(".pill-head")).toBeNull();
-    expect(bar.querySelector("button")).toBeNull();
+describe("prestige in the shared ledger", () => {
+  it("removes the horizon and makes every resource a ledger door", () => {
+    expect(document.getElementById("horizon-bar")).toBeNull();
+    for (const section of ["nous", "arete", "scrap", "capacity"] as const) {
+      document.querySelector<HTMLButtonElement>(`#board-ledger [data-ledger="${section}"]`)!.click();
+      expect(app.ui.modal).toBe("rate");
+      expect(document.activeElement?.id).toBe("ledger-nous");
+      app.closeModal();
+    }
   });
-
-  it("moves visibly in early play: clip width and label percentage follow the log scale", () => {
-    app.render();
-    const clip = document.querySelector<SVGRectElement>('#horizon-bar [data-live="h-clip"]')!;
-    // At the floor the bar starts empty.
-    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(0);
-    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
-    // The bar reads the era's measure (ADR-0039), not the lifetime total.
-    // Two of the rebased scale's decades through it (floor 1e3, horizon
-    // 7e6), patched in place — no rebuild.
-    app.state.eraEarned = ARETE_LOG_FLOOR * 100;
-    app.render();
-    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBeCloseTo(600 * (2 / accumulatorSpan()), 1);
-    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe(`${Math.floor((100 * 2) / accumulatorSpan())}%`);
-    // The valuenow tracks the visible word in place (#351).
-    expect(document.getElementById("horizon-bar")!.getAttribute("aria-valuenow"))
-      .toBe(`${Math.floor((100 * 2) / accumulatorSpan())}`);
-    expect(document.querySelector(".horizon-word")).not.toBeNull();
-  });
-
-  it("the completed era hosts the prestige door in upgrade mode (ADR-0039)", () => {
+  it("keeps the existing eligibility gate and allows a confirmed zero claim", () => {
+    app.openLedger("arete");
+    expect(document.querySelector<HTMLButtonElement>("#prestige-door")!.disabled).toBe(true);
     app.state.eraEarned = ARETE_HORIZON;
     app.render();
-    const bar = document.getElementById("horizon-bar")!;
-    expect(bar.classList.contains("reached")).toBe(true);
-    // The percentage readout gives way to the door, its claim live — and
-    // the figure role stands down with it (#351).
-    expect(bar.getAttribute("role")).toBeNull();
-    expect(bar.getAttribute("aria-valuenow")).toBeNull();
-    expect(bar.querySelector(".horizon-word")).toBeNull();
-    const door = bar.querySelector<HTMLButtonElement>("#prestige-door")!;
-    // The bare horizon sits below the World entry: the door reads the
-    // zero claim it would bank (issue #425), and the confirm names it.
-    expect(door.textContent).toContain("Prestige and Claim 0 Arete");
-    // The fill sits complete at the horizon.
-    const clip = bar.querySelector<SVGRectElement>('[data-live="h-clip"]')!;
-    expect(Number.parseFloat(clip.style.getPropertyValue("width"))).toBe(600);
-  });
-
-  it("outside upgrade mode the door shows locked — a readout, never a button", () => {
-    app.state.eraEarned = ARETE_HORIZON;
-    startSession(app.state, null);
-    app.render();
-    const bar = document.getElementById("horizon-bar")!;
-    expect(bar.querySelector("#prestige-door")).toBeNull();
-    expect(bar.querySelector("button")).toBeNull();
-    expect(bar.querySelector(".horizon-state")!.textContent).toContain("enter upgrade mode");
-    // And nothing about the locked state opens the confirm.
-    app.openPrestigeConfirm();
-    expect(app.ui.modal).toBeNull();
-  });
-
-  it("pressing the door opens a confirm; confirming banks the claim and begins the next era", () => {
-    app.state.sessionsCompleted = 1;
-    app.state.eraEarned = ARETE_HORIZON;
-    app.state.nous = 8_000;
-    const prestigeGen = give(app.state, "focusKeyed", hex(2, 0));
-    prestigeGen.reserve = 120;
-    app.render();
-    document.getElementById("prestige-door")!.click();
-    expect(app.ui.modal).toBe("prestige");
-    const content = document.getElementById("modal-content")!;
-    // Below the World entry the door still opens — the claim reads zero
-    // and the confirm names it (issue #425).
-    expect(content.textContent).toContain("banks no Arete");
-    expect(content.textContent).toContain("feats");
-    expect(content.textContent).not.toContain("achievements");
-    document.getElementById("prestige-confirm")!.click();
-    expect(app.ui.modal).toBeNull();
-    expect(app.state.arete).toBe(0);
-    expect(app.state.prestiges).toBe(1);
-    expect(document.getElementById("status")!.textContent).toContain("Banked 0 Arete");
-    expect(document.getElementById("status")!.textContent).toContain("Feat unlocked — First prestige");
-    // The boundary: era bar rebased, nous and charge reset.
-    expect(app.state.eraEarned).toBe(0);
-    expect(app.state.nous).toBe(BALANCE.openingGrant);
-    expect(app.state.modules.every((m) => m.reserve === 0)).toBe(true);
-    // The bar reads the fresh era: 0%, no door.
-    app.render();
-    const bar = document.getElementById("horizon-bar")!;
-    expect(bar.querySelector("#prestige-door")).toBeNull();
-    expect(document.querySelector('#horizon-bar [data-live="h-word"]')!.textContent).toBe("0%");
-  });
-
-  it("the door's claim reads the frontier curve live: the entry grant, then a decade more (issue #425)", () => {
-    app.state.eraEarned = BALANCE.world.entryNous;
-    app.render();
-    const door = document.getElementById("prestige-door")!;
-    expect(door.textContent).toContain("Claim 2 Arete");
+    const door=document.querySelector<HTMLButtonElement>("#prestige-door")!;
+    expect(door.disabled).toBe(false);
+    expect(door.textContent).toBe("Prestige now for 0 Arete");
     door.click();
+    expect(app.ui.modal).toBe("prestige");
+    expect(document.getElementById("modal-content")!.textContent).toContain("banks no Arete");
     document.getElementById("prestige-confirm")!.click();
-    expect(app.state.arete).toBe(2);
     expect(app.state.prestiges).toBe(1);
-    // The next era pushing one decade past the entry raises the pending
-    // claim by the curve's slope, live on the door.
-    app.state.eraEarned = BALANCE.world.entryNous * 10;
-    app.render();
-    expect(document.getElementById("prestige-door")!.textContent).toContain("Claim 2 Arete");
+    expect(app.state.arete).toBe(0);
+    expect(app.state.eraEarned).toBe(0);
   });
-
-  it("carries no formula chip", () => {
+  it("updates the frontier claim in place and refuses prestige during flow", () => {
+    app.openLedger("arete");
+    const door=document.querySelector<HTMLButtonElement>("#prestige-door")!;
+    app.state.eraEarned=BALANCE.world.entryNous;
     app.render();
-    expect(document.querySelector(".monitor-formula")).toBeNull();
-    expect(document.querySelector(".monitor-rail")).toBeNull();
-  });
-
-  it("the break beat's flare is a dedicated layer behind the track, not an animated filter on the bar", () => {
-    app.render();
-    const flare = document.querySelector("#horizon-bar .horizon-flare")!;
-    expect(flare).not.toBeNull();
-    // The light sits under the bar it flares, where the old drop-shadow drew.
-    expect(flare.nextElementSibling!.classList.contains("horizon-track")).toBe(true);
+    expect(document.getElementById("prestige-door")).toBe(door);
+    expect(door.textContent).toBe("Prestige now for 2 Arete");
+    app.closeModal(); startSession(app.state,null); app.render(); app.openLedger("arete");
+    expect(document.querySelector<HTMLButtonElement>("#prestige-door")!.disabled).toBe(true);
+    app.openPrestigeConfirm();
+    expect(app.ui.modal).toBe("rate");
   });
 });
 

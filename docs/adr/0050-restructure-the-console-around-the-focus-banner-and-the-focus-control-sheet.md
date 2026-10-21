@@ -24,3 +24,7 @@ The logo, habit, and timer share one native Focus button at desktop and phone wi
 ## Notes modal amendment — issue #332 (2026-10-13 play-feedback interview)
 
 Notes leaves the shared anchored frame this ADR gave it: its launcher opens a modal composition in the dialog layer — centered on desktop and phone — independent of the clock or launcher location, so its placement is predictable from the door. The composition opens on CAPTURE and retains LOGGED; capture and live habit tagging are unchanged. Notes stays usable during flow while the modal blocks the board. The dialog manages keyboard focus within itself and returns it to the invoking control on dismissal; ✕, Escape (from the composer included), and backdrop dismissal serve keyboard and touch. Everything else here stands — the Focus control sheet keeps the anchored frame.
+
+## Interface refinement amendment — 2026-10-20
+
+The approved interface-refinement review preserves the compact one-row header and existing Focus identity, centers the session console on desktop, and embeds the independent Notes icon touch surface beside the Focus door inside its dark well. Notes is a sibling control, never nested inside the Focus button. Settings stays at the header edge; Goals gets no independent header button. Habit/state reflows below the clock on narrow screens. Pause/Resume and the main action keep fixed dimensions and remain visible across modes, with Pause disabled where unavailable. Breather’s caption is simply “Breather”.

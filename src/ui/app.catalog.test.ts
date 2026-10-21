@@ -95,6 +95,7 @@ describe("the catalog door (issue #271)", () => {
     // The first World-eligible claim (issue #425): the entry's two Arete.
     app.state.eraEarned = BALANCE.world.entryNous;
     app.render();
+    app.openLedger("arete");
     document.getElementById("prestige-door")!.click();
     document.getElementById("prestige-confirm")!.click();
     expect(app.state.arete).toBe(2);
@@ -449,6 +450,7 @@ describe("the Arete Catalog (issue #197)", () => {
     // weapon.
     app.state.eraEarned = BALANCE.world.entryNous;
     app.render();
+    app.openLedger("arete");
     document.getElementById("prestige-door")!.click();
     document.getElementById("prestige-confirm")!.click();
     expect(app.state.arete).toBe(2);
@@ -457,6 +459,7 @@ describe("the Arete Catalog (issue #197)", () => {
   it("discloses Hone in the prestige confirmation and dismisses it with Escape", () => {
     app.state.eraEarned = BALANCE.world.entryNous;
     app.render();
+    app.openLedger("arete");
     document.getElementById("prestige-door")!.click();
     const hone = document.querySelector<HTMLButtonElement>('[aria-label="Hone — what it means"]')!;
     hone.focus();
@@ -478,12 +481,12 @@ describe("the Arete Catalog (issue #197)", () => {
     // and its tooltip names the lock it teaches.
     const ledgerSlot = document.querySelector("#board-ledger .ledger-arete")!;
     expect(ledgerSlot.classList.contains("arete-dim")).toBe(true);
-    expect(ledgerSlot.getAttribute("title")).toBe("Unlocks at first Arete Reset");
+    expect(ledgerSlot.closest("button")!.getAttribute("aria-label")).toBe("Open ledger");
     expect(ledgerSlot.querySelector("b")!.textContent).toBe("—");
     expect(ledgerSlot.querySelector(".arete-mark svg")).not.toBeNull();
     const stripSlot = document.querySelector("#game-info-strip .info-arete")!;
     expect(stripSlot.classList.contains("arete-dim")).toBe(true);
-    expect(stripSlot.getAttribute("title")).toBe("Unlocks at first Arete Reset");
+    expect(stripSlot.closest("button")!.getAttribute("aria-label")).toBe("Open ledger");
     expect(stripSlot.querySelector("b")!.textContent).toBe("—");
     // Even with the board grown to the unlock boundary and add-cell mode
     // armed, the banner never renders — the lock is the prestige count
@@ -494,7 +497,7 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(document.querySelector("[data-unlock-row]")).toBeNull();
   });
 
-  it("the first banked Arete raises the read on the ledger — a read, never a door (issue #271)", () => {
+  it("banked Arete opens the ledger while Catalog retains purchasing", () => {
     bankFirstArete();
     app.render();
     // The old tap-through door is gone; the read is the surface.
@@ -507,7 +510,8 @@ describe("the Arete Catalog (issue #197)", () => {
     // starter grant's one presentation; dismiss it once.
     if (app.ui.modal === "grant") { document.getElementById("grant-close")!.click(); }
     figure.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.ui.modal).toBeNull();
+    expect(app.ui.modal).toBe("rate");
+    app.closeModal();
     // The tabbed shop rides the Catalog door instead.
     document.querySelector<HTMLButtonElement>('#board-tools [data-op="catalog"]')!.click();
     expect(app.ui.modal).toBe("catalog");

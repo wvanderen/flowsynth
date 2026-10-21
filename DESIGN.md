@@ -85,7 +85,7 @@ components:
     textColor: "{colors.switch-ink}"
     typography: "{typography.control}"
     rounded: "{rounded.control}"
-    size: "76px"
+    size: "44px"
   goal-bar:
     backgroundColor: "{colors.panel-deep}"
     textColor: "{colors.ink}"
@@ -213,9 +213,10 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 
 ### Main Switch
 
-- **Shape:** the console's dominant centered control, square-cut.
-- **Live:** switch-vermillion fill, steady illumination and an inset marker; **paused:** held, not glowing; **idle:** dim `#96562f`.
-- The mode indicator — its state says what the session is doing; the thin session strip along the console's bottom edge is its expression, never a second colored element.
+- **Shape:** the console's dominant centered control — a chamfered key, square-cut with all four corners cut (the rack's answer to the round key: angle cuts, no curves), carrying the one power glyph in every state. The key rides the pause button's 44px square — one transport rhythm; the hairline is the plate path's own stroke, even on every edge.
+- **The word leaves the key:** it reads on a console readout plate on the key's outer side — the key borders the display panel, the plate faces Settings — panel-deep, hairline, tabular mono caps lit in ink (`ENTER FLOW` / `EXIT FLOW` / `END BREATHER`). Sentence case in aria; uppercase in the display.
+- **Live:** bright vermillion rim over the deep key face with a steady bottom light; **paused:** held — the same fill, the light rests; **idle:** dim rim, faint face, bright glyph.
+- **The mode lamp:** the brand mark's filled core is the console's indicator light — vermillion flow (the one glow, earned by live activity), amber hold, charge-green breather, engraved core at standby. The session strip wears the same state color; the lamp, the strip, and the key's own state share the console's one `data-mode`.
 
 ### Display Well
 
@@ -280,3 +281,7 @@ The [confirmed inventory brief](docs/inventory-ux-brief.md) standardizes grey-ci
 ## Header display amendment (2026-10-19)
 
 The [header-status brief](docs/header-status-brief.md) recomposes the Focus door as a display panel: recessed display well, full-height 36px display clock (reserved-moment ladder 36/28/24, amending this file's ramp), program block, and the selected habit's goal meter as a seven-segment vertical LED column wearing its goal's palette token. The five-bar all-goals banner retires from the header. The provisional line joins the program block in the switch's vermillion. The main logo — unchanged by the inventory amendment — is now provisionally the inventory hypercube with its filled core, adopted dated and cheap to reverse. See the brief for the pick rule and behavior matrix.
+
+## Mode lamp and main-switch key amendment (2026-10-20)
+
+The console's iteration on #441: the main switch rebuilds as a chamfered key — square-cut, all four corners cut, one power glyph in every state — with its word on a console readout plate beside it (`ENTER FLOW` / `EXIT FLOW` / `END BREATHER`; "Finish" retires for "Exit flow"). The switch's own state dot retires: the brand mark's filled core becomes the console's mode lamp — vermillion flow (the one glow), amber hold, charge-green breather, engraved core at standby — and the session strip wears the same state color (vermillion fill, amber frozen, green toward the allowance, empty at standby). The lamp, the strip, and the key share the console's one `data-mode`; the Monochrome Console Rule now reads "monochrome but for the switch and its mode expression" — the amber and green ride the sanctioned goal/charge tokens, and only the live state glows.

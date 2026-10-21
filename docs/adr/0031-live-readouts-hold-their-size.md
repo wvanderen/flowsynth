@@ -12,3 +12,7 @@ Tight production surfaces breathed with their own numbers: the game-info strip w
 
 - Remaining jumps are one-off, not rhythmic: decade and thousand crossings (`9.99 → 10.00`), the ladder handoff at 1e6, and the countdown's hour boundary (`59:59 → 1h 0m`) inside its locked bubble. Accepted as inherent to live numbers.
 - A readout that starts breathing again means it moved off `formatFixed` or lost its reserved lane — the regression is a one-line diff, not a redesign.
+
+## Interface refinement amendment — 2026-10-20
+
+The shared ledger is now a tight live surface too. Its production rate uses fixed decimals, and numeric lanes reserve width so trailing zeros and magnitude changes do not move adjacent reads. The former exemption for ledgers no longer applies to this standing strip.

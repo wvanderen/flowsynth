@@ -374,41 +374,115 @@ h1, h2, h3, p { margin: 0; }
 }
 .session-strip > span { display: block; height: 100%; width: 0; background: var(--switch); opacity: 0.7; }
 
-/* The Enter/Exit main switch: vermillion, and the header's dominant element
-   (issue #148) — the largest control in the row, centered in the session
-   cluster. Bright = flow live; dim = idle; paused holds bright
-   but still. Text holds AA in every state (#347): live/held fill on the
-   deep stop, idle text on the bright stop; borders, glow, and state dot
-   ride the session vermillion unchanged. */
+/* The Enter/Exit main switch: the console's dominant control (issue #148),
+   rebuilt as a hardware key — a square-cut key with all four corners
+   chamfered (the rack's answer to the round key: angle cuts, no curves),
+   carrying the one power glyph in every state. The key rides the pause
+   button's 44px square, so the transport shares one rhythm. Its word
+   rides the console readout plate on the key's outer side. Bright = flow
+   live; dim = idle; paused holds bright but still. The key's glyph rides
+   the AA pairing (#347); the readout is the lit display — ink on the
+   deep well. */
 .main-switch {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 18px;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: 0.02em;
-  white-space: nowrap;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  /* The key's two stops: rim and face. The face mixes over the panel,
+     never over transparency — the rim must not read through the wash.
+     The idle rim rides between the dim and bright stops: a clear
+     outline (the available state), still a step under live's bright
+     rim; faint hairlines antialias into mush at fractional positions. */
+  --key-rim: color-mix(in srgb, var(--switch) 72%, var(--switch-dim));
+  --key-face: color-mix(in srgb, var(--switch) 7%, var(--panel-soft));
 }
-.main-switch svg { width: 16px; height: 16px; }
-/* The switch's own state light: the mode indicator lives here now. */
-.switch-state { width: 8px; height: 8px; border-radius: 0; border: 1px solid currentColor; opacity: 0.65; }
-.main-switch.live .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; box-shadow: 0 0 8px var(--switch-glow); }
-.main-switch.held .switch-state { background: var(--switch-ink); border-color: var(--switch-ink); opacity: 1; }
-.main-switch.idle {
-  color: var(--switch-bright);
-  border-color: var(--switch-dim);
-  background: var(--switch-faint);
+/* The key stands bare — no chassis chrome of its own; the plate below
+   carries the whole key. The generic button hover and border stay off it. */
+.main-switch,
+.main-switch:hover:not(:disabled),
+.main-switch:disabled {
+  border: 0;
+  background: transparent;
 }
-.main-switch.idle:hover { background: var(--switch-faint-strong); border-color: var(--switch); }
+.main-switch.idle { color: var(--switch-bright); }
+.main-switch .key {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+/* The chamfered plate is one SVG path, so the 1px hairline is the path's
+   own stroke — even on every edge and every corner, crisp at any
+   density; the state colors paint fill and stroke from the stops above.
+   The specificity here also lifts the plate and the glyph clear of the
+   session-actions svg sizing, which would shrink them to icon scale. */
+.main-switch .key-plate { display: block; width: 100%; height: 100%; overflow: visible; }
+.main-switch .key-glyph { width: 17px; height: 17px; }
+.key-shape {
+  fill: var(--key-face);
+  stroke: var(--key-rim);
+  transition: fill 0.15s, stroke 0.15s;
+}
+/* Live's steady bottom light, inside the face and clear of the chamfer. */
+.key-light { stroke: var(--switch); opacity: 0; transition: opacity 0.15s; }
+.main-switch.idle:hover {
+  --key-rim: var(--switch);
+  --key-face: color-mix(in srgb, var(--switch) 14%, var(--panel-soft));
+}
 .main-switch.live,
 .main-switch.held {
   color: var(--switch-ink);
-  background: var(--switch-deep);
-  border-color: var(--switch);
-  text-shadow: 0 1px 2px var(--shadow);
+  --key-rim: var(--switch);
+  --key-face: var(--switch-deep);
 }
-.main-switch.live { box-shadow: inset 0 -2px var(--switch); }
+.main-switch.live .key-light { opacity: 1; }
+/* The key's one word, on its own console display: a small deep-well plate
+   in tabular mono caps — the hardware panel's label plate, set on the
+   ramp's micro band (engraved micro-label). Square-cut, hairline border;
+   the display well's material in miniature, lit in ink. */
+.switch-readout {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  background: var(--panel-deep);
+  border-radius: 0;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--ink);
+  /* The readout belongs to the key: a touch tighter than the row's gap.
+     It hangs on the key's outer side, so the key itself borders the
+     console's display panel. */
+  margin-left: -2px;
+}
+.main-switch:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* The mode lamp (the header-status iteration): the brand mark's filled
+   core is the console's indicator light — the one place the machine says
+   what it is doing from across the room. Vermillion flow — the one glow,
+   earned by live activity: a tight halo on the core and a soft backlight
+   behind the mark, so the lamp reads at a glance; amber hold and
+   charge-green breather light the core steadily; standby leaves it
+   engraved. The session strip wears the same state color. */
+#console-logo .brand-core { fill: var(--line); transition: fill 0.15s; }
+.console[data-mode="flow"] #console-logo .brand-core {
+  fill: var(--switch);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--switch) 85%, transparent));
+}
+.console[data-mode="flow"] #console-logo svg {
+  filter: drop-shadow(0 0 7px color-mix(in srgb, var(--switch) 55%, transparent));
+}
+.console[data-mode="paused"] #console-logo .brand-core { fill: var(--goal-amber); }
+.console[data-mode="breather"] #console-logo .brand-core { fill: var(--charge); }
+.console[data-mode="paused"] .session-strip > span { background: var(--goal-amber); }
+.console[data-mode="breather"] .session-strip > span { background: var(--charge); }
 
 .session-actions { display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; }
 .session-actions button { white-space: nowrap; }
@@ -3500,8 +3574,6 @@ body.hex-detail-open .upgrade-all {
   .session-clock { font-size: 28px; }
   .display-well { min-height: 46px; gap: 10px; padding: 4px 10px 4px 12px; }
   .clock-disclose { width: 10px; height: 10px; }
-  .main-switch { padding: 10px 13px; font-size: 14px; }
-  .main-switch svg { width: 14px; height: 14px; }
   /* Pause keeps its icon; the word yields to the row's width budget. */
   #pause-flow span { display: none; }
   .bread { max-width: 12ch; }
@@ -3564,8 +3636,6 @@ body.hex-detail-open .upgrade-all {
      44px touch floor. */
   .bread { max-width: 10ch; }
   .clock-provisional { display: none; }
-  .main-switch { padding: 9px 6px; }
-  .main-switch span { display: none; }
   #pause-flow { padding: 9px 6px; }
   /* The doors ride with Settings at the row's right end: the session
      cluster ends at the switch, and the auto margin moves to the doors. */
@@ -3659,7 +3729,6 @@ body.hex-detail-open .upgrade-all {
   .session-focus { gap: 4px; padding: 2px; }
   .display-well { gap: 5px; padding: 4px 6px; }
   .session-actions { gap: 4px; }
-  .main-switch { padding: 9px 5px; }
   #pause-flow { padding: 9px 5px; }
   .app-tile { width: 34px; height: 34px; }
   #console-settings { width: 36px; height: 40px; padding: 9px 8px; }
@@ -4369,3 +4438,168 @@ body.hex-detail-open .tray-column { z-index: 24; }
 .hex-detail-world-line { margin: 4px 0 0; font: 12px var(--font-sans); color: var(--ink); }
 
 .world-placement-preview { display: flex; flex-direction: column; gap: 4px; }
+
+/* Interface refinement: preserve the one-row console and center the session. */
+.console { display: grid; grid-template-columns: minmax(44px, 1fr) minmax(0, auto) minmax(44px, 1fr); gap: 10px; }
+.console-session { grid-column: 2; justify-content: center; }
+#console-settings { grid-column: 3; justify-self: end; margin-left: 0; }
+.clock-anchor { flex: 0 1 auto; gap: 0; background: var(--panel-deep); border: 1px solid var(--line); }
+.clock-anchor .display-well { border: 0; background: transparent; padding-right: 8px; }
+.clock-anchor .session-focus { min-height: 52px; padding: 0 4px; }
+.clock-anchor .console-apps { flex: none; margin: 0; padding: 0 4px; border-left: 1px solid var(--line); }
+.clock-anchor .app-tile { width: 44px; height: 44px; min-height: 44px; }
+.session-actions #pause-flow { box-sizing: border-box; height: 44px; min-width: 76px; justify-content: center; padding: 8px; }
+.session-actions #pause-flow:disabled { opacity: .45; }
+.ledger-face > button, .ledger-face .capacity-trigger { border: 0; background: transparent; padding: 4px 0; min-height: 36px; }
+.ledger-face b[data-live="nous"], .ledger-face b[data-live="rate"] { display: inline-block; width: 11ch; text-align: right; }
+.ledger-face b[data-live="arete"], .ledger-face b[data-live="scrap"] { display: inline-block; width: 7ch; text-align: right; }
+.ledger-section { margin-top: 18px; padding-top: 10px; border-top: 1px solid var(--line); scroll-margin-top: 12px; }
+.ledger-section h3 { font: 600 13px var(--font-condensed); text-transform: uppercase; margin: 0 0 12px; }
+.ledger-section:focus { outline: 1px solid var(--ink); outline-offset: 4px; }
+.ledger-detail-row { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 8px 0; }
+.ledger-detail-row b { flex-shrink: 0; }
+.ledger-destinations { display: flex; gap: 10px; margin-top: 20px; }
+.ledger-section .prestige-door { margin-top: 10px; position: static; transform: none; max-width: 100%; white-space: normal; }
+.prestige-availability { display: block; margin-top: 8px; color: var(--muted); }
+/* Marks carry state themselves; no nested chip around a lock or roll count. */
+.tool-lock { border: 0; background: transparent; }
+.zoom-cluster { flex-direction: row; align-items: center; gap: 8px; bottom: 12px; }
+.zoom-cluster input { width: 120px; min-height: 44px; accent-color: var(--ink); }
+.zoom-cluster output { width: 5ch; text-align: right; font: 12px var(--mono); }
+.zoom-cluster button { width: auto; min-width: 44px; padding: 0 8px; }
+body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 12px; z-index: 24; }
+.hex-upgrade, .hex-detail-actions, .hex-detail-buy, .hex-detail-stack { min-width: 0; max-width: 100%; }
+.hex-upgrade-title, .hex-upgrade-benefit { white-space: normal; overflow-wrap: anywhere; }
+.hex-upgrade-title strong { display: inline-block; max-width: 100%; overflow-wrap: anywhere; }
+.catalog-top, .catalog-modal .modal-top { min-width: 0; gap: 8px; }
+.catalog-modal #close-modal { flex: none; }
+@container app (width < 900px) {
+  .console { grid-template-columns: minmax(0, 1fr) 44px; padding: 0 10px; gap: 6px; }
+  .console-session { grid-column: 1; }
+  #console-settings { grid-column: 2; }
+}
+@container app (width < 600px) {
+  .console { height: 64px; padding: 0 6px; gap: 4px; }
+  .console-session, .session-group { gap: 4px; }
+  .clock-anchor { flex: 1 1 0; min-width: 0; }
+  .clock-anchor .session-focus { flex: 1 1 0; padding: 0; gap: 2px; }
+  .clock-anchor .session-focus .brand { display: none; }
+  .clock-anchor .display-well { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 4px; padding: 4px; width: 100%; }
+  .clock-row { grid-column: 1; grid-row: 1; }
+  .program-block { grid-column: 1; grid-row: 2; }
+  .display-well .goal-meter { grid-column: 2; grid-row: 1 / span 2; }
+  .program-block .bread { font-size: 10px; letter-spacing: .02em; }
+  .clock-caption { font-size: 9px; }
+  .program-block { flex-direction: row; justify-content: flex-start; align-items: baseline; gap: 5px; }
+  .clock-anchor .console-apps { padding: 0; }
+  .clock-anchor .app-tile { width: 44px; }
+  .session-actions { gap: 4px; }
+  .session-actions #pause-flow { width: 44px; min-width: 44px; padding: 6px; }
+  .switch-readout { display: none; }
+  .game-info-face { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; padding: 2px 8px; }
+  .game-info-face .info-rate { grid-row: 1; grid-column: 2; }
+  .game-info-face .info-capacity { display: none; }
+  .game-info-face .info-read { min-height: 32px; justify-content: flex-end; border: 0; background: transparent; }
+  .game-info-face .info-read b { display: inline-block; width: 10ch; text-align: right; }
+  .zoom-cluster, body.modal-sheet-open .zoom-cluster { right: 10px; bottom: 64px; }
+  .zoom-cluster input { width: 100px; }
+}
+
+#grid.pan-ready, #grid.pan-ready .cell-node { cursor: grab; }
+#grid { touch-action: none; }
+.tool-icon .tool-badge { border: 0; background: transparent; color: var(--ink); padding: 0; }
+.ctx-expand { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
+.ctx-expand .ctx-map { pointer-events: none; }
+.context-overview { width: min(760px, calc(100% - 24px)); max-height: 88dvh; padding: 1px; border: 0; background: var(--line-strong); color: var(--ink); clip-path: var(--inst-clip); overflow: hidden; }
+.context-overview::backdrop { background: var(--scrim); }
+.context-overview-face { padding: 18px; background: var(--panel); clip-path: var(--inst-clip); max-height: calc(88dvh - 2px); overflow: auto; }
+.context-overview header { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.context-overview h2 { font: 600 19px var(--font-condensed); }
+.context-overview-stage { overflow: hidden; margin: 12px 0; }
+.context-overview .ctx-map { display: block; width: 100%; height: min(42dvh, 360px); touch-action: none; }
+.context-destinations { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+.context-destinations button { min-height: 44px; }
+.context-destinations small { font-size: 10px; color: var(--muted); }
+.context-destinations [aria-current=true] { box-shadow: inset 0 -3px var(--ink); }
+.map-zoom { display: flex; align-items: center; gap: 12px; font-size: 12px; }
+.map-zoom input { flex: 1; min-height: 44px; accent-color: var(--ink); }
+/* Two clipped plates keep the corner rim visible while content scrolls. */
+.modal.framed-modal { padding: 1px; border: 0; background: var(--line-strong); overflow: hidden; }
+.modal-face { padding: var(--modal-pad); background: var(--panel); clip-path: var(--inst-clip); max-height: calc(min(82vh, 720px) - 2px); overflow-y: auto; }
+.modal-backdrop.sheet .modal-face { max-height: calc(78vh - 2px); }
+@media (max-width: 600px) { .modal-face { padding: 16px; max-height: calc(78dvh - 2px); } }
+.session-actions #pause-flow { width: 76px; flex: 0 0 76px; }
+@container app (width < 600px) {
+  .session-actions #pause-flow { width: 44px; flex: 0 0 44px; }
+  .game-info-face .info-read { min-height: 44px; }
+}
+@container app (width < 600px) {
+  /* The two-row ledger clears Return and the detail stack. */
+  .hex-detail.sheet { top: 112px; }
+  .clock-anchor .program-block { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  #console-settings { width: 44px; }
+}
+
+/* Header and ledger: identity, transport, display, completion. */
+#console-logo { grid-column: 1; grid-row: 1; display: flex; align-items: center; color: var(--ink); }
+.console-session, #console-settings { grid-row: 1; }
+.session-group > #pause-flow { flex: 0 0 44px; width: 44px; height: 44px; padding: 10px; }
+.session-group > #pause-flow svg { width: 20px; height: 20px; }
+.session-group > #pause-flow:disabled { opacity: .45; }
+.ledger-face { gap: 0; align-items: stretch; }
+.ledger-face .ledger-overview { display: flex; flex: 1; align-items: stretch; gap: 32px; padding: 10px 16px; text-align: left; border: 0; background: transparent; min-width: 0; }
+.ledger-overview:hover { background: var(--panel); }
+.ledger-overview:focus-visible { outline: 1px solid var(--ink); outline-offset: -3px; }
+.ledger-resource { display: grid; grid-template-rows: 14px minmax(24px, auto) 16px; align-content: center; gap: 2px; min-width: 0; }
+.ledger-resource-name { display: block; color: var(--muted); font: 600 11px var(--font-condensed); text-transform: uppercase; letter-spacing: .05em; }
+.ledger-resource-value { display: flex; align-items: center; gap: 6px; font: 15px var(--mono); white-space: nowrap; }
+.ledger-resource-value b { font-weight: 500; }
+.ledger-face b[data-live="nous"], .ledger-face b[data-live="rate"], .ledger-face b[data-live="arete"], .ledger-face b[data-live="scrap"] { width: auto; text-align: left; min-width: 7ch; }
+.ledger-face b[data-live="nous"] { min-width: 11ch; }
+.ledger-production { color: var(--muted); font: 11px var(--mono); white-space: nowrap; }
+.ledger-face b[data-live="rate"] { min-width: 0; }
+.ledger-chips { align-self: center; border-left: 1px solid var(--line); padding: 0 12px; gap: 8px; }
+.ledger-chip { min-height: 44px; }
+.ledger-destinations button { display: flex; flex: 1; align-items: center; gap: 8px; min-height: 44px; }
+.ledger-destinations svg { width: 20px; height: 20px; flex: none; }
+.ledger-destinations .mono { margin-left: auto; }
+#ledger-nous .rate-details-sheet { margin-top: 8px; }
+@container app (width < 1100px) {
+  .ledger-face .ledger-overview { gap: 16px; }
+}
+@container app (width < 900px) {
+  .console { grid-template-columns: 28px minmax(0, 1fr) 44px; }
+  .console-session { grid-column: 2; }
+  #console-settings { grid-column: 3; }
+}
+@container app (width < 600px) {
+  #console-logo svg { width: 24px; height: 24px; }
+  .console { grid-template-columns: 24px minmax(0, 1fr) 44px; }
+  .session-group > #pause-flow { padding: 10px; }
+  .game-info-face.ledger-overview { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 10px; width: 100%; min-height: 72px; padding: 8px 12px; border: 0; text-align: left; background: var(--panel-deep); color: var(--ink); }
+  .game-info-face > span { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 0; font: 12px var(--mono); }
+  .game-info-face > span > span:not(.ledger-resource-name) { white-space: nowrap; display: flex; align-items: center; gap: 4px; }
+  .game-info-face small svg { width: 14px; height: 14px; }
+  .game-info-face .ledger-production { font-size: 10px; }
+  .clock-anchor .display-well { padding: 2px; }
+  .session-clock { font-size: 24px; }
+}
+
+.ledger-production b[data-live="rate"] { display: inline-block; width: 11ch; }
+.phone-nous [data-live="i-nous"], .phone-nous [data-live="i-rate"] { display: inline-block; min-width: 9ch; }
+.ledger-face .ledger-overview { display: grid; grid-template-columns: 160px 100px 100px minmax(130px, 1fr); gap: 24px; }
+.ledger-face .ledger-resource b[data-live] { width: auto; min-width: 0; }
+.ledger-resource-value small { flex: none; }
+/* Exact integer balances can outgrow a lane. Keep its width and let only
+   the figure wrap, leaving the resource mark and adjacent reads intact. */
+.ledger-face .ledger-resource-value b[data-live],
+.game-info-face > span > span:not(.ledger-resource-name) b[data-live] {
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.game-info-face > span > span:not(.ledger-resource-name) { max-width: 100%; }
+.game-info-face small { flex: none; }
+@container app (width < 1100px) {
+  .ledger-face .ledger-overview { grid-template-columns: 130px 80px 80px minmax(120px, 1fr); gap: 16px; }
+}

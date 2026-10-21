@@ -2494,6 +2494,16 @@ export class App {
     this.render();
   }
 
+  openLedger(section: "nous" | "production" | "arete" | "scrap" | "capacity" = "production"): void {
+    this.ledgerSection = section;
+    this.openModal("rate");
+    const target = document.getElementById(`ledger-${section}`);
+    target?.scrollIntoView?.({ block: "nearest" });
+    target?.focus({ preventScroll: true });
+  }
+
+  ledgerSection: "nous" | "production" | "arete" | "scrap" | "capacity" = "production";
+
   openModal(kind: ModalKind): void {
     // The catalog door opens on the layer's face — layer wins (issue #426,
     // the mode-wins rule's successor): the World face lands on the ◇ face

@@ -612,18 +612,15 @@ describe("the canvas-edge capacity read (#333)", () => {
   beforeEach(() => { app = boot(undefined, true); });
   const ledgerRead = (): string =>
     (document.querySelector("#board-ledger .ledger-capacity [data-live='capacity']") as HTMLElement).textContent!;
-  const stripRead = (): string =>
-    (document.querySelector("#game-info-strip .info-capacity [data-live='i-capacity']") as HTMLElement).textContent!;
   const askVoice = (q: number, r: number): string => {
     document.querySelector(`[data-cell="${q},${r}"]`)!.dispatchEvent(new MouseEvent("pointerover", { bubbles: true }));
     return (document.getElementById("chord-readout") as HTMLElement).textContent ?? "";
   };
 
-  it("the allowance reads at the canvas edge on the ledger and the phone strip", () => {
+  it("the allowance and ceiling read together at the canvas edge", () => {
     // One ambient figure — the per-voice whole-chord allowance the
-    // authoritative economy itself spends — live on both faces.
-    expect(ledgerRead()).toBe("1");
-    expect(stripRead()).toBe("1");
+    // authoritative economy itself spends — with the ladder ceiling.
+    expect(ledgerRead()).toBe(`1 / ${capacityCeiling(app.state)}`);
   });
 
   it("the allowance answers as a meter within the ladder's ceiling (#351)", () => {
@@ -635,36 +632,20 @@ describe("the canvas-edge capacity read (#333)", () => {
     // A purchase moves the figure and the meter's value together.
     app.state.nous = 1_000_000;
     app.buyCapacityAction();
-    expect(value.textContent).toBe("2");
+    expect(value.textContent).toBe(`2 / ${capacityCeiling(app.state)}`);
     expect(value.getAttribute("aria-valuenow")).toBe("2");
-    // The phone face carries the same semantics.
-    const strip = document.querySelector<HTMLElement>("#game-info-strip .info-capacity [data-live='i-capacity']")!;
-    expect(strip.getAttribute("role")).toBe("meter");
-    expect(strip.getAttribute("aria-valuenow")).toBe("2");
-    expect(strip.getAttribute("aria-valuemax")).toBe(String(capacityCeiling(app.state)));
+
   });
 
-  it.each([".ledger-capacity", ".info-capacity"])("%s discloses by focus and tap, dismisses, and survives live updates", (selector) => {
-    const trigger = document.querySelector<HTMLButtonElement>(selector)!;
-    const tip = () => document.getElementById(trigger.getAttribute("aria-describedby")!)!;
-    expect(trigger.tagName).toBe("BUTTON");
-    const name = () => trigger.getAttribute("aria-labelledby")!.split(" ").map((id) => document.getElementById(id)!.textContent).join(" ");
-    expect(name()).toBe("Harmonic capacity 1");
-    trigger.focus();
-    expect(tip().classList.contains("inst-show")).toBe(true);
-    expect(tip().textContent).toBe("Whole-chord budget per standard voice");
-    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(tip().classList.contains("inst-show")).toBe(false);
-    trigger.click();
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-    app.state.nous = 1_000_000;
-    app.buyCapacityAction();
-    expect(trigger.querySelector("b")!.textContent).toBe("2");
-    expect(name()).toBe("Harmonic capacity 2");
-    expect(tip().classList.contains("inst-show")).toBe(true);
-    document.body.click();
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-    expect(tip().classList.contains("inst-show")).toBe(false);
+  it.each(["#ledger-overview", "#phone-ledger-overview"])("%s opens the shared ledger with capacity available", selector => {
+    app.render();
+    document.querySelector<HTMLButtonElement>(selector)!.click();
+    expect(app.ui.modal).toBe("rate");
+    expect(document.activeElement?.id).toBe("ledger-nous");
+    expect(document.querySelector('[data-live="ledger-capacity"]')!.textContent).toBe(`1 / ${capacityCeiling(app.state)}`);
+    app.state.capacityBought=1;app.render();
+    expect(document.querySelector('[data-live="ledger-capacity"]')!.textContent).toBe(`2 / ${capacityCeiling(app.state)}`);
+    app.closeModal();expect(app.ui.modal).toBeNull();
   });
 
   it("buying Poly Expander advances the ambient allowance and the selected-voice denominator; new voices inherit it", () => {
@@ -672,8 +653,7 @@ describe("the canvas-edge capacity read (#333)", () => {
     app.state.nous = 1_000_000;
     app.buyCapacityAction();
     expect(app.state.capacityBought).toBe(1);
-    expect(ledgerRead()).toBe("2");
-    expect(stripRead()).toBe("2");
+    expect(ledgerRead()).toBe(`2 / ${capacityCeiling(app.state)}`);
     // The C4·G4 Fifth spends one of G4's two units — the denominator moved
     // with the purchase, the used count stays the allocation's own.
     expect(askVoice(1, 0)).toContain("(1/2)");
@@ -693,15 +673,14 @@ describe("the canvas-edge capacity read (#333)", () => {
     app.state.cells.push(hex(3, 1));
     give(app.state, "blaster", hex(3, 1));
     app.render();
-    expect(ledgerRead()).toBe("1");
-    expect(stripRead()).toBe("1");
+    expect(ledgerRead()).toBe(`1 / ${capacityCeiling(app.state)}`);
     expect(askVoice(3, 1)).toContain("(0/2)");
     // A Poly Expander purchase adds the shared rung to every voice: the
     // ambient figure moves to 2 and the Blaster reads 0/3 — its intrinsic
     // seat rides above the purchase, not inside it.
     app.state.nous = 1_000_000;
     app.buyCapacityAction();
-    expect(ledgerRead()).toBe("2");
+    expect(ledgerRead()).toBe(`2 / ${capacityCeiling(app.state)}`);
     expect(askVoice(3, 1)).toContain("(0/3)");
   });
 
@@ -710,20 +689,20 @@ describe("the canvas-edge capacity read (#333)", () => {
     app.buyCapacityAction();
     expect(app.state.capacityBought).toBe(0);
     expect(document.getElementById("status")!.textContent).toContain("Not enough");
-    expect(ledgerRead()).toBe("1");
+    expect(ledgerRead()).toBe(`1 / ${capacityCeiling(app.state)}`);
     startSession(app.state, null);
     app.state.nous = 1_000_000;
     app.buyCapacityAction();
     expect(app.state.capacityBought).toBe(0);
     expect(document.getElementById("status")!.textContent).toContain("between sessions");
     app.render();
-    expect(ledgerRead()).toBe("1");
+    expect(ledgerRead()).toBe(`1 / ${capacityCeiling(app.state)}`);
   });
 
   it("the ceiling holds the ambient allowance; an Expansion Bay opens the next rung", () => {
     app.state.capacityBought = 2;
     app.render();
-    expect(ledgerRead()).toBe("3");
+    expect(ledgerRead()).toBe(`3 / ${capacityCeiling(app.state)}`);
     app.state.nous = 1_000_000;
     app.buyCapacityAction();
     expect(app.state.capacityBought).toBe(2);
@@ -735,8 +714,7 @@ describe("the canvas-edge capacity read (#333)", () => {
     expect(app.state.capacityCeilings).toBe(1);
     app.buyCapacityAction();
     expect(app.state.capacityBought).toBe(3);
-    expect(ledgerRead()).toBe("4");
-    expect(stripRead()).toBe("4");
+    expect(ledgerRead()).toBe(`4 / ${capacityCeiling(app.state)}`);
   });
 
   it("the allowance rides the real save/reload path", () => {
@@ -745,21 +723,20 @@ describe("the canvas-edge capacity read (#333)", () => {
     expect(app.state.capacityBought).toBe(1);
     app = boot();
     expect(app.state.capacityBought).toBe(1);
-    expect(ledgerRead()).toBe("2");
+    expect(ledgerRead()).toBe(`2 / ${capacityCeiling(app.state)}`);
   });
 
   it("the arete reset returns the voices to one — the ambient read follows", () => {
     app.state.nous = 1_000_000;
     app.buyCapacityAction();
     expect(app.state.capacityBought).toBe(1);
-    expect(ledgerRead()).toBe("2");
+    expect(ledgerRead()).toBe(`2 / ${capacityCeiling(app.state)}`);
     app.state.eraEarned = ARETE_HORIZON;
     app.openPrestigeConfirm();
     document.querySelector<HTMLButtonElement>("#prestige-confirm")!.click();
     expect(app.state.capacityBought).toBe(0);
     app.render();
-    expect(ledgerRead()).toBe("1");
-    expect(stripRead()).toBe("1");
+    expect(ledgerRead()).toBe(`1 / ${capacityCeiling(app.state)}`);
   });
 
   it("selected-voice usage stays accurate when allocation leaves capacity unused", () => {
