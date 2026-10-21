@@ -407,10 +407,10 @@ The Goals app's capacity product — the console long goal's first tenant: each 
 _Avoid_: One more goal slot, goal slot purchase, extra slot, slot expander
 
 **Habit**:
-A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development is its habit class's (issue #423, ADR-0074) — the legacy habit build retired with its bonuses (issue #444, ADR-0076) — and is separate from nous.
+A repeatable real-life practice, such as piano or cooking, selected for a flow session. Its lifetime practice includes credited sessions and manual logs; class development requires credited flow and is its single progression system per habit/class (ADR-0074, ADR-0076), separate from nous. ADR-0075's confirmed model gives each habit its own color and one optional practice goal, independently of class; those ownership changes remain pending implementation.
 
 **Habit build**:
-_Retired_ (issue #444, ADR-0076; superseded ADR-0046): the per-habit set of equipped build nodes, whose effects applied only while that habit was the session's active habit. Class development is the single progression system per habit/class; old saves' equipped ids strip at load with no compensatory XP, while class ledgers, practice history, and the one-time recorded-practice conversion stand.
+_Retired_ (issue #444, ADR-0076; carrying ADR-0075's direction and superseding ADR-0046): the per-habit set of equipped build nodes, whose effects applied only while that habit was the session's active habit. Class development is the single progression system per habit/class; old saves' equipped ids strip at load with no compensatory XP, while class ledgers, practice history, and the one-time recorded-practice conversion stand.
 _Avoid_: habit upgrade, perk
 
 **Build node**:
@@ -442,14 +442,14 @@ The focus app for recording notes — during a flow session or between sessions.
 A note tagged with the session's selected habit at capture, surfaced in that habit's development summary and chipped in the Notes stream. Unstructured and upgrade-mode notes go untagged.
 
 **Goals app**:
-The focus app for tracking goals; completion is the tracking itself, surfaced in the session summary. A completion is the fact every owned generator reads, crediting its reserve its profile's multiple of the focus equivalent prorated by the goal's live share (issue #371), under the goal-generator fuel budget (issue #423). Each habit owns a small fixed slot capacity (issue #423) — the shared slot economy and its Channel Strips purchase retired with the World experiment.
+The existing separate goal-tracking surface. ADR-0075 retires this destination in favor of editing the goal within its habit; production still carries the separate face pending implementation. Goal completion retains its generator credit under the goal-generator fuel budget.
 
 **Goal**:
-A practice condition to fulfill, owned by one habit (issue #423): only the selected habit's goals display, and only credited practice for that habit advances them. Progress accrues only while active, and a session may advance several of the habit's goals.
+A practice target owned by one habit and inheriting its color, optional and independent of class, recurring daily or weekly or fulfilled once. Only credited practice for that habit advances it. ADR-0075 narrows the existing plural-goal model to one per habit, pending implementation. Target edits retain qualifying practice; cadence edits recalculate qualifying practice for the new period without repeating previously awarded generator fuel.
 _Avoid_: Task, any-habit goal (the retired cross-habit template)
 
 **Goal slot**:
-Capacity for one tracked goal within a habit's fixed set (issue #423); each habit owns the same small capacity, never purchasable.
+The existing capacity for a tracked goal within a habit's fixed set. ADR-0075 replaces this capacity model with one optional goal per habit, pending implementation.
 
 **Goal template**:
 A configurable definition of valid practice conditions within the Goals app; players select habits and targets within the template.
@@ -598,6 +598,9 @@ _Avoid_: live claim (the retired accumulator sense), claim preview
 
 **Engineer**:
 The first habit class, earning module rolls through credited flow time and developing bounded choices in cadence, draft control, and merge progression. Its class ability is the practice-roll meter itself — practice mints modules. Each habit retains its own Engineer experience, tree allocation, and partial roll progress.
+
+**Next module roll**:
+The player-facing name for Engineer's practice-roll progress in the confirmed Focus redesign (ADR-0075). It measures credited practice toward a module roll, separate from class XP and from board or World charge.
 
 **Class ability**:
 The mechanic a habit class owns: present and useful from level one, never progression-gated, progressing only through credited flow time and never goal completion. ADR-0074's "every class starts with a useful ability" promises the core mechanic, never an additional starter effect. The weapon-roll ability's home is Blacksmith (working name, unshipped); until that class exists, weapon mints ride the module path.
