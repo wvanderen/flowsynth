@@ -155,7 +155,7 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
   } else if (module.type === "ritual") {
     // The legacy build amplification retired with the builds (ADR-0076):
     // the RITUAL reads what it receives, and its level buys nothing.
-    if (relationship !== "charge") rows.push(row("Received charge", `⌁${formatNumber(strength)}`));
+    if (relationship !== "charge") rows.push(row("Incoming charge", `⌁${formatNumber(strength)}`));
   } else if (category === "generator") {
     // The temporal generator's current cycle factor (issue #372), named
     // while it moves — the reserve spends at this same factor.

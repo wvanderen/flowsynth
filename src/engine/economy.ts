@@ -340,7 +340,8 @@ export function emittedStrength(state: GameState, module: ModuleInstance, flow: 
 }
 
 // The charge a module receives, read off a relay net — the one shared read
-// for the rate pass and the public seam below.
+// the rate pass and its supporting passes (booster grants, infusor uplift)
+// walk.
 function receivedOn(state: GameState, module: ModuleInstance, flow: boolean, placed: ModuleInstance[], net: RelayNet): number {
   if (module.pos === null || !CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type])) return 0;
   if (module.type === "amplifier") {
@@ -365,10 +366,6 @@ function receivedOn(state: GameState, module: ModuleInstance, flow: boolean, pla
 // Generators never charge themselves or each other, amplifiers never feed
 // generators, and only the receiving categories receive. The spacer
 // receives nothing — it is silent wire.
-export function receivedStrength(state: GameState, module: ModuleInstance, flow: boolean): number {
-  return receivedOn(state, module, flow, deployed(state), relayNet(state, flow));
-}
-
 function infusorBonusAt(
   state: GameState,
   module: ModuleInstance,
@@ -515,13 +512,10 @@ function boosterGrantAt(
 // uncapped recognition (ADR-0049); the development board passes the
 // capacity allocator's drop-in analysis so allocation quality and
 // performance ride the one real rate path instead of a parallel read.
-// `bonusScale` scales every named instance's bonus — the economy's pass
-// threads ×1 (the habit-build scale retired with the builds); the
-// displayed bonus still rides the term.
 // `responses` (issue #375) carries the effective chord response per voice — the Sideband's charged conversion
 // and the Chorus's grants — computed by the same pass that reads the
 // charge strengths.
-export type ChordPass = (singers: Singer[], spacers: DeployedModule[], bonusScale: number, responses?: ReadonlyMap<string, number>) => ChordAnalysis;
+export type ChordPass = (singers: Singer[], spacers: DeployedModule[], responses?: ReadonlyMap<string, number>) => ChordAnalysis;
 
 // The unified rate (ADR-0021/0022 as amended by ADR-0036, ADR-0048, and
 // ADR-0049; leg naming per ADR-0020): every effect lands on the producer
@@ -683,7 +677,7 @@ export function computeRates(
   // their derived pitches and count in the quality's read. The formation
   // quality and the silent-voice uplift are untouched — the chord-touching
   // levers stayed with the harmony contracts.
-  const analysis = chordPass(singers, spacers, 1, responses);
+  const analysis = chordPass(singers, spacers, responses);
 
   // Pass three: the unified synths leg. Chords are local (ADR-0036): each
   // oscillator carries its own chordFactor — the formation's named product
@@ -991,11 +985,10 @@ export function allocateRates(
     });
   }
   let read: AllocationRead | null = null;
-  const snapshot = computeRates(state, flow, (singers, spacers, bonusScale) => {
+  const snapshot = computeRates(state, flow, (singers, spacers) => {
     read = allocateChords(singers, spacers, {
       ...(options.capacity !== undefined ? { capacity: options.capacity } : {}),
       params,
-      bonusScale,
       ...(options.keep ? { keep: options.keep } : {}),
       budget,
     });

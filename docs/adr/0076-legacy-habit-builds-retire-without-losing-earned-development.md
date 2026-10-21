@@ -13,6 +13,6 @@ Accepted, 2026-10-21 (issue #444, a slice of the Focus redesign #443). This supe
 ## Consequences
 
 - Habit practice time (`habit.seconds`) remains the honest lifetime record and the class level thresholds' accrual basis; it no longer unlocks anything else.
-- The allocation memo no longer keys on the active habit or its build: a habit switch alone is not a rate input.
+- The allocation memo no longer keys on the active habit or its build: a habit switch alone is not a rate input. The chord pass's `bonusScale` parameter retires with the named-chord scale — its only author was the build; every read now quotes the chord table's authored bonus directly.
 - `docs/modules.md`'s RITUAL row reads the receiver role; the glossary's build entries record the retirement.
 - Economy and migration regressions cover both shapes a returning save can carry — a previously equipped loadout and an empty one — asserting production, charge, Forge, and focus-bank equality against the stripped shape, the strip's byte-stable round-trip, the conversion's once-only rule, and prestige's ledger preservation.

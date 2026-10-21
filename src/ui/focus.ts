@@ -418,9 +418,9 @@ function habitClassHtml(app: App, habit: Habit): string {
     const rank = rankOf(pair, node);
     const available = nodeAvailable(pair, node);
     if (!available) {
-      return `<div class="build-node locked">
-        <span class="build-node-mark mono" aria-hidden="true">·</span>
-        <span class="build-node-name">${name}<small>unlocks at class level ${node.requiredLevel} · ${escapeHtml(node.effect)}</small></span>
+      return `<div class="tree-node locked">
+        <span class="tree-node-mark mono" aria-hidden="true">·</span>
+        <span class="tree-node-name">${name}<small>unlocks at class level ${node.requiredLevel} · ${escapeHtml(node.effect)}</small></span>
       </div>`;
     }
     const full = rank >= node.maxRank;
@@ -433,13 +433,13 @@ function habitClassHtml(app: App, habit: Habit): string {
           : "Allocate a point"
       : "The tree is read-only during flow";
     return full
-      ? `<div class="build-node equipped">
-          <span class="build-node-mark mono">${mark}</span>
-          <span class="build-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
+      ? `<div class="tree-node equipped">
+          <span class="tree-node-mark mono">${mark}</span>
+          <span class="tree-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
         </div>`
-      : `<div class="build-node">
+      : `<div class="tree-node">
           <button class="class-rank-action mono" data-class-allocate="${node.id}" data-habit="${habit.id}" ${!upgrade || pair.points < 1 ? "disabled" : ""} aria-label="Allocate ${escapeHtml(node.name)}, rank ${rank} of ${node.maxRank}" title="${title}">+${mark}</button>
-          <span class="build-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
+          <span class="tree-node-name">${name}<small>${escapeHtml(node.effect)}</small></span>
         </div>`;
   }).join("");
   const spentTotal = def.nodes.reduce((sum, node) => sum + rankOf(pair, node), 0);
@@ -460,7 +460,7 @@ function habitClassHtml(app: App, habit: Habit): string {
     <div class="class-tree">
       <span class="eyebrow">TREE</span>
       <p class="small muted mono">${spentTotal} spent · ${termTipHtml("Respec", "respec")} is free</p>
-      <div class="build-nodes">${rows}</div>
+      <div class="tree-nodes">${rows}</div>
       <div class="class-tree-actions">
         ${upgrade ? `<button class="quiet small" data-class-respec="${habit.id}" ${spentTotal > 0 ? "" : "disabled"} title="Returns every spent point — experience and level stay">Respec</button>` : ""}
         ${upgrade ? `<span class="class-presets" role="group" aria-label="Presets">${presets}</span>` : ""}

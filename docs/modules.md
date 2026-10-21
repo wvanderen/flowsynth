@@ -6,7 +6,7 @@ new types and game-design concepts — the engine keys and records live in code
 design thinking lives. The roster table reflects the code as of the last
 update; when a type lands, update the table in the same change.
 
-Last updated: 2026-10-16 (the Arete merge cap — issue #380)
+Last updated: 2026-10-21 (the legacy habit builds retire — issue #444; RITUAL reads as a charge receiver)
 
 ## Roster
 

@@ -132,10 +132,6 @@ export interface AllocateOptions {
   // supplies per-voice budgets instead (issue #373).
   capacity?: number;
   params: Map<string, AllocationVoiceParams>;
-  // The bonus scale the rate pass threads — the economy's pass sends ×1
-  // (the habit-build scale retired with the builds); the displayed bonus
-  // still rides the term.
-  bonusScale?: number;
   // Instance keys from the previous allocation: on equal output the solver
   // retains these before falling back to the stable order.
   keep?: ReadonlySet<string>;
@@ -377,7 +373,6 @@ function combinations<T>(items: readonly T[], k: number): T[][] {
 // search below is deterministic and dives into strong incumbents first.
 function surveyCandidates(
   byClass: ClusterVoice[][],
-  bonusScale: number,
   q: number,
 ): { solvable: Candidate[]; silentOnly: AllocatedInstance[]; recognized: number } {
   const out: Candidate[] = [];
@@ -395,7 +390,7 @@ function surveyCandidates(
           recognized++;
           const sorted = [...members].sort((a, b) => a.id.localeCompare(b.id));
           const memberIds = sorted.map((voice) => voice.id);
-          const bonus = def.bonus * bonusScale + sorted.reduce((total, voice) => total + voice.uplift, 0);
+          const bonus = def.bonus + sorted.reduce((total, voice) => total + voice.uplift, 0);
           const inst: AllocatedInstance = {
             key: `${def.name}|${root}|${memberIds.join(",")}`,
             name: def.name,
@@ -599,7 +594,6 @@ function exactSearch(solve: Solve, start: number): void {
 // brings its own whole-chord budget (issue #373).
 function solveCluster(
   voices: ClusterVoice[],
-  bonusScale: number,
   keep: ReadonlySet<string>,
   budget: AllocationBudget,
 ): { instances: AllocatedInstance[]; recognizedInstances: AllocatedInstance[]; candidates: number; certified: boolean; nodes: number } {
@@ -607,7 +601,7 @@ function solveCluster(
   for (const voice of voices) byClass[voice.klass]!.push(voice);
   const q = qualityOf(voices);
   const idle = voices.reduce((total, voice) => total + voice.weight, 0);
-  const survey = surveyCandidates(byClass, bonusScale, q);
+  const survey = surveyCandidates(byClass, q);
   const candidates = survey.solvable;
   const solve: Solve = {
     voices,
@@ -662,7 +656,6 @@ function solveCluster(
 // exactly ×1 — no Q, no resonance — while the formation's Q stays scored
 // over every voice in it, participant or not.
 export function allocateChords(singers: Singer[], spacers: DeployedModule[] = [], opts: AllocateOptions): AllocationRead {
-  const bonusScale = opts.bonusScale ?? 1;
   const keep = opts.keep ?? new Set<string>();
   const budget = opts.budget ?? DEFAULT_ALLOCATION_BUDGET;
   const started = performance.now();
@@ -696,7 +689,7 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
       })
       .sort((a, b) => a.id.localeCompare(b.id));
     voices.forEach((voice, i) => (voice.index = i));
-    const solved = solveCluster(voices, bonusScale, keep, budget);
+    const solved = solveCluster(voices, keep, budget);
     recognized += solved.candidates;
     recognizedInstances.push(...solved.recognizedInstances);
     nodes += solved.nodes;

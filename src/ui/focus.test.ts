@@ -704,7 +704,7 @@ describe("the habit-class face (issue #423)", () => {
       expect(trigger.getAttribute("aria-expanded")).toBe("true");
       expect(pair.spent).toEqual({ governor: 2, reed: 1 });
     }
-    const fullRank = frame.querySelector(".build-node.equipped .build-node-mark")!;
+    const fullRank = frame.querySelector(".tree-node.equipped .tree-node-mark")!;
     expect(fullRank.textContent).toBe("2/2");
     expect(fullRank.hasAttribute("aria-hidden")).toBe(false);
     expect(frame.querySelector('[data-class-allocate="reed"]')!.getAttribute("aria-label")).toContain("rank 1 of 2");

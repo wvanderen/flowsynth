@@ -410,8 +410,8 @@ _Avoid_: One more goal slot, goal slot purchase, extra slot, slot expander
 A repeatable real-life practice, such as piano or cooking, that develops through credited practice time and manually logged practice time and can be selected for a flow session. Its development is its habit class's (issue #423, ADR-0074) — the legacy habit build retired with its bonuses (issue #444, ADR-0076) — and is separate from nous.
 
 **Habit build**:
-_Retired_ (issue #444, ADR-0076; superseded ADR-0046): the per-habit loadout of equipped build nodes, whose effects applied only while that habit was the session's active habit. Class development is the single progression system per habit/class; old saves' equipped ids strip at load with no compensatory XP, while class ledgers, practice history, and the one-time recorded-practice conversion stand.
-_Avoid_: habit upgrade, perk, loadout
+_Retired_ (issue #444, ADR-0076; superseded ADR-0046): the per-habit set of equipped build nodes, whose effects applied only while that habit was the session's active habit. Class development is the single progression system per habit/class; old saves' equipped ids strip at load with no compensatory XP, while class ledgers, practice history, and the one-time recorded-practice conversion stand.
+_Avoid_: habit upgrade, perk
 
 **Build node**:
 _Retired_ (issue #444, ADR-0076): one effect option of the former shared habit-build catalog, unlocked as its habit's practice time crossed milestones and equipped into limited slots. The tree node (the habit class's rank-capped allocation row) is the surviving sense of "node".
