@@ -98,8 +98,8 @@ describe("theme token table", () => {
     it("wires the stops to the key's states in the stylesheet", () => {
       expect(stylesheet).toMatch(/\.main-switch\.idle \{[^}]*color:\s*var\(--switch-bright\)/);
       expect(stylesheet).toMatch(/\.main-switch\.live,[\s\S]*?\.main-switch\.held \{[^}]*color:\s*var\(--switch-ink\)/);
-      expect(stylesheet).toMatch(/\.main-switch\.live \.key,[\s\S]*?\.main-switch\.held \.key \{[^}]*background:\s*var\(--switch\)/);
-      expect(stylesheet).toMatch(/\.main-switch\.live \.key::before,[\s\S]*?\.main-switch\.held \.key::before \{[^}]*background:\s*var\(--switch-deep\)/);
+      expect(stylesheet).toMatch(/\.main-switch\.live,[\s\S]*?\.main-switch\.held \{[^}]*--key-rim:\s*var\(--switch\)/);
+      expect(stylesheet).toMatch(/\.main-switch\.live,[\s\S]*?\.main-switch\.held \{[^}]*--key-face:\s*var\(--switch-deep\)/);
     });
   });
 

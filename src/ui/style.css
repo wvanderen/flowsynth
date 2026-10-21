@@ -377,18 +377,27 @@ h1, h2, h3, p { margin: 0; }
 /* The Enter/Exit main switch: the console's dominant control (issue #148),
    rebuilt as a hardware key — a square-cut key with all four corners
    chamfered (the rack's answer to the round key: angle cuts, no curves),
-   carrying the one power glyph in every state. Its word rides the console
-   readout plate beside it. Bright = flow live; dim = idle; paused holds
-   bright but still. The key's glyph rides the AA pairing (#347); the
-   readout wears the vermillion family on the deep well. */
+   carrying the one power glyph in every state. The key rides the pause
+   button's 44px square, so the transport shares one rhythm. Its word
+   rides the console readout plate on the key's outer side. Bright = flow
+   live; dim = idle; paused holds bright but still. The key's glyph rides
+   the AA pairing (#347); the readout is the lit display — ink on the
+   deep well. */
 .main-switch {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
   padding: 0;
+  /* The key's two stops: rim and face. The face mixes over the panel,
+     never over transparency — the rim must not read through the wash.
+     The idle rim rides between the dim and bright stops: a clear
+     outline (the available state), still a step under live's bright
+     rim; faint hairlines antialias into mush at fractional positions. */
+  --key-rim: color-mix(in srgb, var(--switch) 72%, var(--switch-dim));
+  --key-face: color-mix(in srgb, var(--switch) 7%, var(--panel-soft));
 }
 /* The key stands bare — no chassis chrome of its own; the plate below
    carries the whole key. The generic button hover and border stay off it. */
@@ -399,38 +408,41 @@ h1, h2, h3, p { margin: 0; }
   background: transparent;
 }
 .main-switch.idle { color: var(--switch-bright); }
-/* The key plate: the chamfered square. The rim rides the plate's own
-   background; the face is the inset layer above it — one element each,
-   so the hairline follows the cut. The face mixes over the panel (never
-   over transparency — the rim must not read through the wash). */
-.main-switch {
-  --key-face: color-mix(in srgb, var(--switch) 7%, var(--panel-soft));
-  --key-face-hover: color-mix(in srgb, var(--switch) 14%, var(--panel-soft));
-}
 .main-switch .key {
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: block;
   width: 100%;
   height: 100%;
-  clip-path: polygon(9px 0, calc(100% - 9px) 0, 100% 9px, 100% calc(100% - 9px), calc(100% - 9px) 100%, 9px 100%, 0 calc(100% - 9px), 0 9px);
-  background: var(--switch-dim);
-  transition: background 0.15s;
 }
-.main-switch .key::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
-  background: var(--key-face);
-  transition: background 0.15s;
+/* The chamfered plate is one SVG path, so the 1px hairline is the path's
+   own stroke — even on every edge and every corner, crisp at any
+   density; the state colors paint fill and stroke from the stops above.
+   The specificity here also lifts the plate and the glyph clear of the
+   session-actions svg sizing, which would shrink them to icon scale. */
+.main-switch .key-plate { display: block; width: 100%; height: 100%; overflow: visible; }
+.main-switch .key-glyph { width: 17px; height: 17px; }
+.key-shape {
+  fill: var(--key-face);
+  stroke: var(--key-rim);
+  transition: fill 0.15s, stroke 0.15s;
 }
-.main-switch .key svg { position: relative; width: 20px; height: 20px; }
+/* Live's steady bottom light, inside the face and clear of the chamfer. */
+.key-light { stroke: var(--switch); opacity: 0; transition: opacity 0.15s; }
+.main-switch.idle:hover {
+  --key-rim: var(--switch);
+  --key-face: color-mix(in srgb, var(--switch) 14%, var(--panel-soft));
+}
+.main-switch.live,
+.main-switch.held {
+  color: var(--switch-ink);
+  --key-rim: var(--switch);
+  --key-face: var(--switch-deep);
+}
+.main-switch.live .key-light { opacity: 1; }
 /* The key's one word, on its own console display: a small deep-well plate
    in tabular mono caps — the hardware panel's label plate, set on the
    ramp's micro band (engraved micro-label). Square-cut, hairline border;
-   the display well's material in miniature. */
+   the display well's material in miniature, lit in ink. */
 .switch-readout {
   display: inline-flex;
   align-items: center;
@@ -444,32 +456,11 @@ h1, h2, h3, p { margin: 0; }
   letter-spacing: 0.12em;
   text-transform: uppercase;
   white-space: nowrap;
-  color: var(--switch-bright);
-  transition: color 0.15s;
+  color: var(--ink);
   /* The readout belongs to the key: a touch tighter than the row's gap.
      It hangs on the key's outer side, so the key itself borders the
      console's display panel. */
   margin-left: -2px;
-}
-.console[data-mode="flow"] .switch-readout,
-.console[data-mode="paused"] .switch-readout { color: var(--switch); }
-.main-switch.idle:hover .key { background: var(--switch); }
-.main-switch.idle:hover .key::before { background: var(--key-face-hover); }
-.main-switch.live,
-.main-switch.held { color: var(--switch-ink); }
-.main-switch.live .key,
-.main-switch.held .key { background: var(--switch); }
-.main-switch.live .key::before,
-.main-switch.held .key::before { background: var(--switch-deep); }
-/* Live's steady bottom light: the fill's inner edge, clear of the chamfer. */
-.main-switch.live .key::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: 0;
-  height: 2px;
-  background: var(--switch);
 }
 .main-switch:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
@@ -4458,7 +4449,6 @@ body.hex-detail-open .tray-column { z-index: 24; }
 .clock-anchor .console-apps { flex: none; margin: 0; padding: 0 4px; border-left: 1px solid var(--line); }
 .clock-anchor .app-tile { width: 44px; height: 44px; min-height: 44px; }
 .session-actions #pause-flow { box-sizing: border-box; height: 44px; min-width: 76px; justify-content: center; padding: 8px; }
-.session-actions #flow-switch { box-sizing: border-box; width: 52px; height: 52px; flex: 0 0 52px; justify-content: center; padding: 0; }
 .session-actions #pause-flow:disabled { opacity: .45; }
 .ledger-face > button, .ledger-face .capacity-trigger { border: 0; background: transparent; padding: 4px 0; min-height: 36px; }
 .ledger-face b[data-live="nous"], .ledger-face b[data-live="rate"] { display: inline-block; width: 11ch; text-align: right; }
@@ -4505,10 +4495,6 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
   .clock-anchor .app-tile { width: 44px; }
   .session-actions { gap: 4px; }
   .session-actions #pause-flow { width: 44px; min-width: 44px; padding: 6px; }
-  .session-actions #flow-switch { width: 44px; height: 44px; flex-basis: 44px; }
-  .session-actions #flow-switch .key { clip-path: polygon(7px 0, calc(100% - 7px) 0, 100% 7px, 100% calc(100% - 7px), calc(100% - 7px) 100%, 7px 100%, 0 calc(100% - 7px), 0 7px); }
-  .session-actions #flow-switch .key::before { clip-path: polygon(6px 0, calc(100% - 6px) 0, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0 calc(100% - 6px), 0 6px); }
-  .session-actions #flow-switch .key svg { width: 18px; height: 18px; }
   .switch-readout { display: none; }
   .game-info-face { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; padding: 2px 8px; }
   .game-info-face .info-rate { grid-row: 1; grid-column: 2; }

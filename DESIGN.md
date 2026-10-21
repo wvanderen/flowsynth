@@ -85,7 +85,7 @@ components:
     textColor: "{colors.switch-ink}"
     typography: "{typography.control}"
     rounded: "{rounded.control}"
-    size: "52px"
+    size: "44px"
   goal-bar:
     backgroundColor: "{colors.panel-deep}"
     textColor: "{colors.ink}"
@@ -213,8 +213,8 @@ Controls are square-cut — hairline border, condensed technical lettering, no r
 
 ### Main Switch
 
-- **Shape:** the console's dominant centered control — a chamfered key, square-cut with all four corners cut (the rack's answer to the round key: angle cuts, no curves), carrying the one power glyph in every state.
-- **The word leaves the key:** it reads on a console readout plate on the key's outer side — the key borders the display panel, the plate faces Settings — panel-deep, hairline, tabular mono caps (`ENTER FLOW` / `EXIT FLOW` / `END BREATHER`). Sentence case in aria; uppercase in the display.
+- **Shape:** the console's dominant centered control — a chamfered key, square-cut with all four corners cut (the rack's answer to the round key: angle cuts, no curves), carrying the one power glyph in every state. The key rides the pause button's 44px square — one transport rhythm; the hairline is the plate path's own stroke, even on every edge.
+- **The word leaves the key:** it reads on a console readout plate on the key's outer side — the key borders the display panel, the plate faces Settings — panel-deep, hairline, tabular mono caps lit in ink (`ENTER FLOW` / `EXIT FLOW` / `END BREATHER`). Sentence case in aria; uppercase in the display.
 - **Live:** bright vermillion rim over the deep key face with a steady bottom light; **paused:** held — the same fill, the light rests; **idle:** dim rim, faint face, bright glyph.
 - **The mode lamp:** the brand mark's filled core is the console's indicator light — vermillion flow (the one glow, earned by live activity), amber hold, charge-green breather, engraved core at standby. The session strip wears the same state color; the lamp, the strip, and the key's own state share the console's one `data-mode`.
 

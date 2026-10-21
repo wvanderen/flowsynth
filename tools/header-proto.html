@@ -20,7 +20,7 @@
     <script type="module">
       // Static harness: the real stylesheet, the real header markup per
       // mode — no engine, no ticking. Built from render.ts's templates.
-      const powerSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg>`;
+      const keySvg = `<svg class="key-plate" viewBox="0 0 44 44" aria-hidden="true"><path class="key-shape" d="M8 .5H36L43.5 8V36L36 43.5H8L.5 36V8Z" stroke-width="1"/><path class="key-light" d="M14 42h16" fill="none" stroke-width="2"/><svg class="key-glyph" x="13.5" y="13.5" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v8"/><path d="M6.2 6.6a8 8 0 1 0 11.6 0"/></svg></svg>`;
       const pauseSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 5v14M15 5v14"/></svg>`;
       const resumeSvg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 5.5v13l10.5-6.5Z"/></svg>`;
       const discloseSvg = `<svg class="clock-disclose" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m2.5 4.5 3.5 3.5 3.5-3.5"/></svg>`;
@@ -55,7 +55,7 @@
               </div>
               <div class="session-actions">
                 <button class="main-switch ${keyState}" id="flow-switch" aria-label="${word}">
-                  <span class="key" aria-hidden="true">${powerSvg}</span>
+                  <span class="key" aria-hidden="true">${keySvg}</span>
                 </button>
                 <span class="switch-readout mono" aria-hidden="true">${word}</span>
               </div>
