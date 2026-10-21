@@ -8,7 +8,10 @@
 // session the PLAN face becomes the running read (live elapsed, End flow
 // mirroring the main switch, targets visibly disabled); habit add/log and
 // goal create/edit lock — the engine's own upgrade-mode gates answer any
-// stray landing, and the sheet stops drawing the controls at all.
+// stray landing, and the sheet stops drawing the controls at all. The
+// habit detail's compact class summary (issue #446) stays live through
+// flow on the active read, while the Develop tree stays a
+// between-sessions surface.
 //
 // FocusApp ids keep their meaning (habit / time / notes): the sheet
 // is presentational, and `ui.app` still names which app's face stands —
@@ -179,6 +182,7 @@ export function focusSheetKey(app: App): string {
     ui.drillSession,
     ui.historyLimit,
     ui.detailHabitId,
+    ui.developHabitId,
     ui.editingHabitId,
     state.activeHabitId,
     state.habits.map((h) => `${h.archived ? "·" : ""}${h.name}:${h.color}`).join("|"),
@@ -359,29 +363,62 @@ function classMeterRead(habit: Habit): { threshold: number; fill: string; line: 
   return { threshold, fill, line: practiceMeterLine(pair) };
 }
 
-// The meter's live row (issue #423): the track carries the same
-// progressbar semantics its fill shows (#351) — valuenow and valuetext
-// mirror the visible read. Rendered in the flow-mode active read and the
-// habit/class detail; the live patcher fills both.
+// The pair's next-level read (issue #446): the XP countdown expressed in
+// practice time — the credited practice still owed to the next threshold —
+// or the maximum's own word. One builder for the summary's markup and its
+// live patch slot, so the two can never drift.
+function classXpRead(habit: Habit): string {
+  const pair = pairOf(habit);
+  const def = pairDef(habit);
+  if (pair.level >= def.levelThresholds.length) return "max level";
+  const nextAt = def.levelThresholds[pair.level]!;
+  return `${formatCountdown(Math.max(0, nextAt - pair.experience))} of practice to level ${pair.level + 1}`;
+}
+
+// The meter's live row (issue #423, renamed by ADR-0075): the track
+// carries the same progressbar semantics its fill shows (#351) —
+// valuenow and valuetext mirror the visible read — under the reward's
+// player-facing name, distinct from the XP line's "Next level". Rendered
+// in the compact summary; the live patcher fills both the track and line.
 function classMeterRowHtml(habit: Habit): string {
   const { threshold, fill, line } = classMeterRead(habit);
   return `<div class="folio-row class-meter-row">
-    <span class="folio-key">${termTipHtml("practice-roll meter", "Practice-roll meter")}</span>
+    <span class="folio-key">${termTipHtml("Next module roll")}</span>
     <span class="folio-main class-meter">
-      <span class="class-meter-track" data-live="class-meter-track" data-habit="${habit.id}" role="progressbar" aria-label="Practice-roll meter" aria-valuemin="0" aria-valuemax="${threshold}" aria-valuenow="${pairOf(habit).rollMeter.progress}" aria-valuetext="${escapeHtml(line)}"><i data-live="class-meter-pip" style="width:${fill}"></i></span>
+      <span class="class-meter-track" data-live="class-meter-track" data-habit="${habit.id}" role="progressbar" aria-label="Next module roll" aria-valuemin="0" aria-valuemax="${threshold}" aria-valuenow="${pairOf(habit).rollMeter.progress}" aria-valuetext="${escapeHtml(line)}"><i data-live="class-meter-pip" style="width:${fill}"></i></span>
       <small class="mono" data-live="class-meter-line" data-habit="${habit.id}">${escapeHtml(line)}</small>
     </span>
   </div>`;
 }
 
-// The habit's class face (issue #423, ADR-0074): the wear chips, the
-// pair's development read — class, level, the unspent point balance, the
-// next threshold — the practice-roll meter, the tree's bounded-rank nodes
-// with their explicit prerequisites, and the respec/preset moves. This
-// detail is the one surface class experience, level, and the point
-// balance read on; the pair's meter renders here and in the flow-mode
-// active read, nowhere else.
-function habitClassHtml(app: App, habit: Habit): string {
+// The compact class summary (issue #446, ADR-0075): the selected habit's
+// one advancement read — class, level, free tree points, the XP countdown
+// in practice time, and Next module roll. The two progress reads keep
+// distinct labels ("Next level" vs "Next module roll"), both in
+// practice-time units, and neither is board or World charge. The live
+// slots ride updateFocusSheetLive, so the countdowns move while the view
+// stands — no ending the session, no structural rerender. Upgrade mode
+// adds the one deliberate Develop action; flow renders the read alone.
+function classSummaryHtml(app: App, habit: Habit): string {
+  const upgrade = app.state.mode === "upgrade";
+  const def = pairDef(habit);
+  const pair = pairOf(habit);
+  return `<div class="habit-class">
+    <div class="stat-row"><span class="mono">${termTipHtml(def.id === "engineer" ? "Engineer" : "Habit class", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
+    <div class="stat-row"><span>Next level</span><span class="mono" data-live="class-xp-line" data-habit="${habit.id}">${escapeHtml(classXpRead(habit))}</span></div>
+    ${classMeterRowHtml(habit)}
+    ${upgrade ? `<div class="folio-row"><button class="focus-action" data-habit-develop="${habit.id}">Develop</button></div>` : ""}
+  </div>`;
+}
+
+// The Develop view (issue #446): the class tree the summary's Develop
+// action opens — the wear chips, the bounded-rank nodes with their
+// explicit prerequisites, and the respec/preset moves. It repeats none of
+// the summary's advancement figures: class, level, free points, the XP
+// countdown, and the roll meter read on the summary alone, one move back.
+// The tree is a between-sessions surface — flow renders no Develop action,
+// and the engine's own upgrade-mode gates answer any stray landing.
+function habitDevelopHtml(app: App, habit: Habit): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
   const def = pairDef(habit);
@@ -392,9 +429,6 @@ function habitClassHtml(app: App, habit: Habit): string {
       ? `<button class="class-chip${selected ? " st-selected" : ""}" data-class-pick="${cls.id}" data-habit="${habit.id}" aria-pressed="${selected}"${selected ? " disabled" : ""}>${cls.name}</button>`
       : `<span class="class-chip${selected ? " st-selected" : ""}">${cls.name}</span>`;
   }).join("");
-  const atCap = pair.level >= def.levelThresholds.length;
-  const nextAt = atCap ? null : def.levelThresholds[pair.level]!;
-  const nextRead = atCap ? "max level" : `${formatCountdown(Math.max(0, nextAt! - pair.experience))} of practice to level ${pair.level + 1}`;
   const nodeTerms: Record<string, CatalogTerm> = { governor: "Governor", reed: "Reed", "punch-card": "Punch card" };
   const rows = def.nodes.map((node) => {
     const term = nodeTerms[node.id];
@@ -436,11 +470,9 @@ function habitClassHtml(app: App, habit: Habit): string {
       return `<button class="plan-chip" data-class-preset="${preset.id}" data-habit="${habit.id}" ${affordable ? "" : "disabled"} title="Applies as an ordinary allocation">${escapeHtml(preset.name)}</button>`;
     })
     .join("");
-  return `<div class="habit-class">
+  return `<button class="focus-back" id="habit-develop-back">← Summary</button>
+    <div class="habit-class">
     ${CLASSES.length > 1 ? `<div class="class-chips" role="group" aria-label="Class">${chips}</div>` : ""}
-    <div class="stat-row"><span class="mono">${termTipHtml(def.id === "engineer" ? "Engineer" : "Habit class", def.name)} · Level ${pair.level} · ${pair.points} ${termTipHtml("tree point", pair.points === 1 ? "tree point" : "tree points")} free</span></div>
-    <div class="stat-row"><span>Next level</span><span class="mono">${nextRead}</span></div>
-    ${classMeterRowHtml(habit)}
     <div class="class-tree">
       <span class="eyebrow">TREE</span>
       <p class="small muted mono">${spentTotal} spent · ${termTipHtml("Respec", "respec")} is free</p>
@@ -456,10 +488,12 @@ function habitClassHtml(app: App, habit: Habit): string {
 // The development detail (§9): lifetime practice (the development total),
 // sessions practiced and last practiced — aggregates off the practice log,
 // live sessions and manual logs together — the habit's color and its one
-// optional goal (issue #445), the habit's class (issue #423), and the
-// habit's tagged notes beneath, newest first, each with its date and
-// in-session stamp.
+// optional goal (issue #445), the compact class summary with its Develop
+// action (issue #446), and the habit's tagged notes beneath, newest first,
+// each with its date and in-session stamp. The Develop view stands in for
+// the whole read while the class tree is open.
 function habitDetailBodyHtml(app: App, habit: Habit): string {
+  if (app.ui.developHabitId === habit.id) return habitDevelopHtml(app, habit);
   const { state } = app;
   const { sessions, lastPracticed } = habitPracticeSummary(state, habit.id);
   const notes = habitTaggedNotes(state, habit.id);
@@ -471,15 +505,16 @@ function habitDetailBodyHtml(app: App, habit: Habit): string {
     ${stat("Last practiced", lastPracticed !== null && lastPracticed > 0 ? formatDate(lastPracticed, true) : "—")}
     ${habitColorHtml(habit)}
     ${habitGoalHtml(app, habit)}
-    ${habitClassHtml(app, habit)}
+    ${classSummaryHtml(app, habit)}
     ${noteRows ? `<div class="note-list">${noteRows}</div>` : `<p class="small muted">No tagged notes yet.</p>`}`;
 }
 
 // The HABIT face. Flow: the running active read — selection locked — with
-// the active pair's practice-roll meter live beneath it (issue #423): the
-// one place the meter's fill reads during a session. Upgrade: the
-// figure-led list with add and log as on-demand action-button forms, or
-// the drilled habit's detail with rename and archive in its head.
+// the active pair's compact class summary live beneath it (issue #446):
+// advancement and the Next module roll stay readable without ending the
+// session. Upgrade: the figure-led list with add and log as on-demand
+// action-button forms, or the drilled habit's detail with rename and
+// archive in its head.
 function habitFaceHtml(app: App): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
@@ -494,7 +529,7 @@ function habitFaceHtml(app: App): string {
         <span class="folio-key">This session</span>
         <span class="folio-main"><span class="folio-fig mono" data-live="focus-habit-session">${formatClock(state.session?.elapsed ?? 0)} of practice</span></span>
       </div>
-      ${active ? classMeterRowHtml(active) : ""}
+      ${active ? classSummaryHtml(app, active) : ""}
     </div>`;
   }
 
@@ -988,6 +1023,14 @@ export function updateFocusSheetLive(app: App, scope: ParentNode): void {
   // line patch in place — the active one moves during flow, the frozen
   // pairs never do, and both read through the one builder.
   const habitById = new Map(state.habits.map((habit) => [habit.id, habit] as const));
+  // The XP countdowns (issue #446): every rendered summary's next-level
+  // read patches in place, so credited practice moves it while the view
+  // stays open — never waiting on a structural rerender.
+  for (const line of scope.querySelectorAll<HTMLElement>('[data-live="class-xp-line"]')) {
+    const habit = habitById.get(line.getAttribute("data-habit") ?? "");
+    if (!habit) continue;
+    setText(line, classXpRead(habit));
+  }
   for (const track of scope.querySelectorAll<HTMLElement>('[data-live="class-meter-track"]')) {
     const habit = habitById.get(track.getAttribute("data-habit") ?? "");
     if (!habit) continue;
@@ -1077,6 +1120,16 @@ export function bindFocusSheet(app: App, scope: HTMLElement): void {
     });
   });
   app.listen(scope.querySelector("#habit-detail-back"), "click", () => app.closeHabitDetail());
+  // The class summary's Develop action (issue #446): the tree opens in the
+  // detail's place and its back control returns — the summary keeps the
+  // advancement figures, the tree keeps only the allocation moves.
+  scope.querySelectorAll<HTMLElement>("[data-habit-develop]").forEach((button) => {
+    app.listen(button, "click", () => {
+      const id = button.getAttribute("data-habit-develop");
+      if (id) app.openHabitDevelop(id);
+    });
+  });
+  app.listen(scope.querySelector("#habit-develop-back"), "click", () => app.closeHabitDevelop());
   app.listen(scope.querySelector("#habit-add-open"), "click", () => app.setFocusForm("habit-add"));
   app.listen(scope.querySelector("#habit-log-open"), "click", () => app.setFocusForm("habit-log"));
   app.listen(scope.querySelector("#habit-create"), "click", () => {

@@ -244,6 +244,10 @@ export interface UiState {
   // time, reached from the figure-led list's rows. Light furniture — never
   // saved.
   detailHabitId: string | null;
+  // The drilled habit's Develop view (issue #446): the class tree one at a
+  // time, opened by the summary's Develop action. Light furniture — never
+  // saved; cleared with the detail it lives inside.
+  developHabitId: string | null;
   // Board navigation (§7): the zoom level and the world point the wrap
   // holds at its center — null means fitted. Light furniture — never
   // saved; fit resets zoom to 1 and the pan to null.
@@ -425,6 +429,7 @@ export class App {
     historyLimit: HISTORY_PAGE_ROWS,
     drillSession: null,
     detailHabitId: null,
+    developHabitId: null,
     zoom: 1,
     pan: null,
     bulkCount: 1,
@@ -2013,7 +2018,10 @@ export class App {
       this.closeHistory();
       return;
     }
-    if (face === "habit" && ui.detailHabitId !== null) ui.detailHabitId = null;
+    if (face === "habit" && ui.detailHabitId !== null) {
+      ui.detailHabitId = null;
+      ui.developHabitId = null;
+    }
     ui.focusForm = null;
     this.render();
   }
@@ -2057,6 +2065,7 @@ export class App {
   private resetHistorySurfaces(): void {
     this.resetHistoryUi();
     this.ui.detailHabitId = null;
+    this.ui.developHabitId = null;
   }
 
   // The HISTORY facetab's body: the newest-first record list. One-way in —
@@ -2095,12 +2104,28 @@ export class App {
   // surface, not a form holder.
   openHabitDetail(id: string): void {
     this.ui.detailHabitId = id;
+    this.ui.developHabitId = null;
     this.ui.focusForm = null;
     this.render();
   }
 
   closeHabitDetail(): void {
     this.ui.detailHabitId = null;
+    this.ui.developHabitId = null;
+    this.render();
+  }
+
+  // The summary's Develop action (issue #446): the drilled habit's class
+  // tree stands in for its development read — one deliberate move out of
+  // session preparation. A revealed form collapses with it.
+  openHabitDevelop(id: string): void {
+    this.ui.developHabitId = id;
+    this.ui.focusForm = null;
+    this.render();
+  }
+
+  closeHabitDevelop(): void {
+    this.ui.developHabitId = null;
     this.render();
   }
 

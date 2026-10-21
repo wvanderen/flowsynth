@@ -3,7 +3,7 @@
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "goals" | "Habit class" | "Engineer" | "practice-roll meter" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card" | "World layer" | "Charge Blade" | "Charge Column" | "Enemy" | "Penalty" | "Era bonus" | "Reserved cell" | "Cleared" | "Unfed" | "Target priority" | "Hone" | "World tray" | "Claimed frontier" | "Pending claim";
+export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "goals" | "Habit class" | "Engineer" | "Next module roll" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card" | "World layer" | "Charge Blade" | "Charge Column" | "Enemy" | "Penalty" | "Era bonus" | "Reserved cell" | "Cleared" | "Unfed" | "Target priority" | "Hone" | "World tray" | "Claimed frontier" | "Pending claim";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
   Breather: "Timed post-flow break with profile-scaled production",
   Oscillator: "Pitched module contributing production",
@@ -31,7 +31,7 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   goals: "Practice targets credited by flow sessions",
   "Habit class": "A habit’s specialization, keeping its own progress",
   Engineer: "Earns module rolls through credited practice",
-  "practice-roll meter": "Credited practice fills it toward a module roll",
+  "Next module roll": "Practice-earned, separate from class XP and board charge",
   "tree point": "Grants per class level, allocating into rank-capped nodes",
   Respec: "Returns every allocated point, keeping experience and level",
   Preset: "A named ordinary allocation the tree applies in one move",

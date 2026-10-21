@@ -421,7 +421,7 @@ _Avoid_: habit upgrade, perk
 The always-free focus app through which the player selects the active habit for a session, or practices unstructured. On phone, the launcher's entry names the selected practice inline and reads "none selected" when the next session would be unstructured (ADR-0033) — the UI's word for the unstructured choice.
 
 **Habit development summary**:
-The Habit app's per-habit view: lifetime practice time, sessions practiced, last practiced, and the habit's tagged notes. Its aggregates read the practice log — live sessions and manual logs together.
+The Habit app's per-habit view: lifetime practice time, sessions practiced, last practiced, and the habit's tagged notes. It also carries the selected habit's compact class summary (issue #446, ADR-0075) — class, level, XP progress toward the next level in practice time, free tree points, and Next module roll — the one advancement read, live during flow on the active read as well. The summary's Develop action opens the class tree alone: allocation, presets, and respec live there, and the advancement figures never repeat inside it. Its aggregates read the practice log — live sessions and manual logs together.
 
 **Practice run**:
 A stretch of consecutive days on which any credited practice was logged for a habit, live or manual; surfaced as its current and longest runs. Joins post-launch. _Avoid_: streak
