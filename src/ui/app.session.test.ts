@@ -210,7 +210,7 @@ describe("the unified Focus surface", () => {
     expect(app.ui.app).toBe("time");
     expect(door().getAttribute("aria-expanded")).toBe("true");
     expect(door().contains(document.getElementById("app-popover"))).toBe(false);
-    app.showFocusFace("goals");
+    app.showFocusFace("habit");
     document.getElementById("session-habit")!.click();
     expect(app.ui.app).toBe("time");
     expect(door().classList.contains("open")).toBe(true);

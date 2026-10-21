@@ -30,8 +30,9 @@ const MODULE_TYPES: readonly ModuleType[] = [
 ];
 
 // The door-wearing apps (issue #313): Time wears no glyph — the console
-// clock is the PLAN face's affordance.
-const APPS: readonly Exclude<FocusApp, "time">[] = ["habit", "goals", "notes"];
+// clock is the PLAN face's affordance. The Goals glyph retired with the
+// Goals app (issue #445).
+const APPS: readonly Exclude<FocusApp, "time">[] = ["habit", "notes"];
 
 describe("the feat marks' place in the glyph language", () => {
   it("no feat mark reuses a module's or a focus app's glyph (issue #269)", () => {

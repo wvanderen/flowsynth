@@ -126,9 +126,9 @@ describe("the session record", () => {
     startSession(s, null, START);
     practice(s, 120);
     endSession(s, END);
-    expect(s.sessionRecords[0]!.goalsAdvanced).toEqual([{ goalId: goal.id, seconds: 120 }]);
+    expect(s.sessionRecords[0]!.goalsAdvanced).toMatchObject([{ goalId: goal.id, seconds: 120 }]);
     deleteGoal(s, goal.id);
-    expect(s.sessionRecords[0]!.goalsAdvanced).toEqual([{ goalId: goal.id, seconds: 120 }]);
+    expect(s.sessionRecords[0]!.goalsAdvanced).toMatchObject([{ goalId: goal.id, seconds: 120 }]);
   });
 
   it("credited provisional time from the honesty report joins the goals-advanced snapshot", () => {
@@ -143,7 +143,7 @@ describe("the session record", () => {
     resolveHonestyReport(s, "full");
     endSession(s, END);
     // 30 presence minutes + 10 credited from the report complete the 40.
-    expect(s.sessionRecords[0]!.goalsAdvanced).toEqual([{ goalId: goal.id, seconds: 2400 }]);
+    expect(s.sessionRecords[0]!.goalsAdvanced).toMatchObject([{ goalId: goal.id, seconds: 2400 }]);
   });
 
   it("manual practice logs never join a session's goals-advanced snapshot", () => {

@@ -174,7 +174,10 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     earned,
     honestyEvents: events,
     reflection: null,
-    goalsAdvanced: Object.entries(session?.goalSeconds ?? {}).map(([goalId, seconds]) => ({ goalId, seconds })),
+    goalsAdvanced: Object.entries(session?.goalSeconds ?? {}).map(([goalId, seconds]) => {
+      const goal = state.goals.find((row) => row.id === goalId);
+      return { goalId, seconds, ...(goal ? { goal: structuredClone(goal) } : {}) };
+    }),
     achievements,
     // No breather followed at write time — the line fills if one is taken
     // (docs/breather-spec.md §5).

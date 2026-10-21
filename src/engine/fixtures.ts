@@ -1,5 +1,5 @@
 import { createInitialState, createModule } from "./state";
-import { createHabit, selectHabit } from "./habits";
+import { createHabit, DEFAULT_HABIT_COLOR, selectHabit } from "./habits";
 import { createHabitClasses, pairOf } from "./classes";
 import { investment } from "./economy";
 import { isOscillatorType } from "./constants";
@@ -20,9 +20,10 @@ export function giveHabit(state: GameState, name = "Piano"): { habit: Habit; pai
 }
 
 // A complete hand-built habit shape for tests that push habits directly —
-// the save's shape, launch class wear included (issue #423).
+// the save's shape, launch class wear and the palette default included
+// (issue #423, issue #445).
 export function plainHabit(id = "h1", name = "Piano"): Habit {
-  return { id, name, seconds: 0, archived: false, classId: "engineer", classes: createHabitClasses() };
+  return { id, name, seconds: 0, archived: false, color: DEFAULT_HABIT_COLOR, classId: "engineer", classes: createHabitClasses() };
 }
 
 export function give(state: GameState, type: ModuleType, pos: Hex | null, level = 0): ModuleInstance {

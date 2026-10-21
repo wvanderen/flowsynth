@@ -369,7 +369,7 @@ describe("PR #304 review regressions", () => {
   it("all oscillator breakdowns include external production terms and update when bonuses change", () => {
     seedEra();
     give(app.state, "infusor", hex(0, 1));
-    app.state.habits.push({ id: "review-habit", name: "Practice", seconds: 1000000, archived: false, classId: "engineer", classes: { engineer: { experience: 0, level: 0, points: 0, spent: {}, rollMeter: { progress: 0, earned: 0 } } } });
+    app.state.habits.push({ id: "review-habit", name: "Practice", seconds: 1000000, archived: false, color: "vermillion" as const, classId: "engineer", classes: { engineer: { experience: 0, level: 0, points: 0, spent: {}, rollMeter: { progress: 0, earned: 0 } } } });
     app.state.activeHabitId = "review-habit";
     app.state.achievements["first-light"] = 1000;
     app.render();

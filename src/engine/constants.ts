@@ -148,19 +148,17 @@ export interface Balance {
   openingGrant: number;
   // Console long goals (ADR-0012 as amended by ADR-0034, issue #150):
   // RETIRED by the World experiment (issue #423) — the shared goal-slot
-  // economy and its Channel Strips purchase no longer sell, and each habit
-  // owns a small fixed capacity (habitGoalSlots). The purchase ladder's
-  // figures stay for the migration's exact nous refund (#427), which reads
-  // the same price function the purchases charged; goalBaseSlots is the
-  // pre-experiment shared figure, likewise kept only for that audit.
+  // economy and its Channel Strips purchase no longer sell. The purchase
+  // ladder's figures stay for the migration's exact nous refund (#427),
+  // which reads the same price function the purchases charged;
+  // goalBaseSlots is the pre-experiment shared figure, likewise kept only
+  // for that audit. The per-habit capacity retired with the one-goal
+  // narrowing (issue #445); the v10 migration's historical figure lives
+  // beside that step.
   longGoalFirstCost: number;
   longGoalGrowthNumerator: bigint;
   longGoalGrowthDenominator: bigint;
   goalBaseSlots: number;
-  // The per-habit goal capacity (issue #423): each habit owns this many
-  // goal slots, fixed — capacity is no longer purchasable. Provisional
-  // tuning.
-  habitGoalSlots: number;
   // The goal-generator fuel rate (issue #423): the budget behind goal
   // completions' generator credit, accrued per credited practice second
   // into the goalFuel pool that completions draw down. Anchored to the
@@ -412,7 +410,6 @@ export const BALANCE: Balance = {
   longGoalGrowthNumerator: 5n,
   longGoalGrowthDenominator: 1n,
   goalBaseSlots: 2,
-  habitGoalSlots: 3,
   goalFuelPerCreditedSecond: 0.1,
   forgeInitialThreshold: 60,
   forgeThresholdGrowth: 1.5,
@@ -828,10 +825,11 @@ export const REFLECTION_SLIDER_MIN = 1;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-// ADR-0017's pattern at the v11 boundary (issue #423): SAVE_VERSION 11 —
-// the habit-class cut. The v10 → v11 conversion (Engineer XP conversion,
-// the flow meter's final payout, the retired purchases' refunds) belongs
-// to the migration brief (#427) and does not exist yet: v10 saves load
-// through the lenient-default block alone, and the dead v9 step is
-// retired with its version.
-export const SAVE_VERSION = 11;
+// ADR-0017's pattern at the version boundary: SAVE_VERSION 12 — the
+// one-goal-per-habit cut (issue #445). The v10 → v11 conversion (the
+// habit-class cut, issue #423) and the v11 → v12 conversion (habit colors
+// adopted from transferred single goals, multi-goal rows held pending a
+// retain-one choice) run for their own versions alone, and a retired step
+// is gone with its version: nothing below v10 loads, so nothing can still
+// need the dead ones.
+export const SAVE_VERSION = 12;

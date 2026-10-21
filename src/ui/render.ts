@@ -481,23 +481,22 @@ function goalMeterHtml(app: App): string {
   const tip = `goal-meter-tip-${++meterTipSequence}`;
   const lit = meterLitCount(read.fraction);
   const segs = Array.from({ length: GOAL_METER_SEGMENTS }, (_, i) => `<i class="gm-seg${i < lit ? " lit" : ""}"></i>`).join("");
-  return `<span class="goal-meter inst-tip" id="goal-meter" role="img" tabindex="0" aria-label="${escapeHtml(read.aria)}" aria-describedby="${tip}" style="--gm-color:var(--goal-${read.color})">
+  return `<span class="goal-meter inst-tip" id="goal-meter" role="img" tabindex="0" aria-label="${escapeHtml(read.aria)}" aria-describedby="${tip}" style="--gm-color:var(--habit-${read.color})">
           <span class="gm-row" aria-hidden="true">
             <span class="gm-track">${segs}</span>
-            ${read.extra > 0 ? `<span class="gm-count mono">·${read.extra}</span>` : ""}
           </span>
           <span class="inst-tip-body" id="${tip}" role="tooltip">${escapeHtml(read.label)}</span>
         </span>`;
 }
 
-// The reads' rebuild signature: which meter stands (its palette key, done
-// mark, and count — a re-pick or completion must rebuild), and the habit —
+// The reads' rebuild signature: which meter stands (its palette key and
+// done mark — a re-pick or completion must rebuild), and the habit —
 // the session group's own read rides the same cluster key, so a selection
 // change lands in one rebuild. The fraction deliberately stays out: the
 // live patch moves it without a rebuild.
 function sessionReadsKey(app: App): string {
   const read = goalMeterOf(app.state);
-  return `${activeHabit(app.state)?.id ?? "—"}|${read ? `${read.color}${read.done ? 1 : 0}${read.extra}` : "—"}`;
+  return `${activeHabit(app.state)?.id ?? "—"}|${read ? `${read.color}${read.done ? 1 : 0}` : "—"}`;
 }
 
 // The reads' in-place patch: the habit name and the meter's lit steps move

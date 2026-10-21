@@ -13,7 +13,7 @@ import {
   selectHabitClass,
   totalPracticeRollsEarned,
 } from "./classes";
-import { accrueGoalFuel, accrueGoalProgress, createGoal } from "./goals";
+import { accrueGoalFuel, accrueGoalProgress, createGoal, deleteGoal } from "./goals";
 import { creditGoalEarning } from "./reserves";
 import { BALANCE } from "./constants";
 import { fresh, give, giveHabit, stubRng } from "./fixtures";
@@ -376,15 +376,18 @@ describe("the goal-fuel budget", () => {
     const s = fresh();
     const { habit } = giveHabit(s);
     const gen = give(s, "goalKeyed", null);
-    createGoal(s, { habitId: habit.id, minutes: 1, schedule: "once", now: 1 });
+    const first = createGoal(s, { habitId: habit.id, minutes: 1, schedule: "once", now: 1 }).goal!;
     // No credited time, no fuel: the completion draws nothing and the
     // pool never reads a debt.
     accrueGoalProgress(s, habit.id, 60);
-    expect(s.goals[0]!.completed).toBe(true);
+    expect(first.completed).toBe(true);
     expect(gen.reserve).toBe(0);
     expect(s.goalFuel).toBe(0);
-    // A partial budget pays its share, and the pool floors at zero.
+    // A partial budget pays its share, and the pool floors at zero. The
+    // habit owns one active goal (issue #445): the first retires before
+    // the replacement lands.
     accrueGoalFuel(s, 300); // 30 fuel
+    deleteGoal(s, first.id);
     createGoal(s, { habitId: habit.id, minutes: 1, schedule: "once", now: 2 });
     accrueGoalProgress(s, habit.id, 60);
     // Desired: 5 × 0.1 × 60 = 30 — exactly the pool; it drains to zero.
@@ -392,7 +395,7 @@ describe("the goal-fuel budget", () => {
     expect(s.goalFuel).toBeCloseTo(0, 9);
   });
 
-  it("the budget invariant: any rearrangement of goals over a fixed credited-time budget banks no more than the rate allows", () => {
+  it("the budget invariant: edits, replacements, and cadence changes over a fixed credited-time budget bank no more than the rate allows", () => {
     const credited = 3600;
     const budget = credited * BALANCE.goalFuelPerCreditedSecond;
     const arrangements: number[][] = [
@@ -405,13 +408,20 @@ describe("the goal-fuel budget", () => {
       const { habit } = giveHabit(s);
       give(s, "goalKeyed", null);
       give(s, "goalKeyed", null);
-      for (let i = 0; i < minutes.length; i++) {
-        createGoal(s, { habitId: habit.id, minutes: minutes[i]!, schedule: "once", now: i + 1 });
-      }
-      // The credited time lands whole; every qualifying completion draws
-      // as it lands, and the seam scales the draws the pool cannot cover.
       accrueGoalFuel(s, credited);
-      accrueGoalProgress(s, habit.id, credited);
+      // The habit owns one active goal at a time (issue #445): the
+      // rearrangement is sequential — a target rides, lands its credit,
+      // and is replaced by the next. Every draw scales against the one
+      // pool the credited time accrued.
+      let left = credited;
+      for (const target of minutes) {
+        if (left <= 0) break;
+        const made = createGoal(s, { habitId: habit.id, minutes: target, schedule: "once", now: 1 });
+        const spent = Math.min(left, target * 60);
+        accrueGoalProgress(s, habit.id, spent);
+        left -= spent;
+        deleteGoal(s, made.goal!.id);
+      }
       const banked = s.modules.reduce((total, module) => total + module.reserve, 0);
       expect(banked, minutes.join("/")).toBeLessThanOrEqual(budget + 1e-6);
     }

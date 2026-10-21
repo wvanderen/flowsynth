@@ -76,12 +76,13 @@ import {
   createHabit,
   renameHabit,
   selectHabit,
+  setHabitColor,
 } from "../engine/habits";
 import { allocateClassNode, applyClassPreset, classDefOf, respecClassTree, selectHabitClass } from "../engine/classes";
-import { createGoal, deleteGoal, rollGoalOccurrences, setGoalColor, DEFAULT_GOAL_COLOR } from "../engine/goals";
+import { createGoal, deleteGoal, editGoal, retainGoalChoice, rollGoalOccurrences } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { Category, ClassId, GameState, GoalColor, Hex, ModuleInstance, ShelfType, SpecialDraftKind } from "../engine/types";
+import type { Category, ClassId, GameState, HabitColor, Hex, ModuleInstance, ShelfType, SpecialDraftKind } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render, updateChordReadout } from "./render";
 import { FAMILY_WORD } from "./mutators";
@@ -165,10 +166,11 @@ export const DEV_BOARD_CAPACITIES = [1, 2, 3, 4, 5] as const;
 export type DetailFace = "modules" | "world";
 
 // The Focus sheet's on-demand forms (ADR-0050, issue #275): add and log on
-// the HABIT face, create on the GOALS face stand as action buttons until
-// pressed, then reveal their input row. Light furniture — never saved;
-// closed by Escape, a landing, and every sheet teardown.
-export type FocusForm = "habit-add" | "habit-log" | "goal-create";
+// the HABIT face, the goal's create and edit in the habit detail, stand as
+// action buttons until pressed, then reveal their input row. Light
+// furniture — never saved; closed by Escape, a landing, and every sheet
+// teardown.
+export type FocusForm = "habit-add" | "habit-log" | "goal-create" | "goal-edit";
 
 // The Hex detail's standing state (issue #295): the owned board coordinate
 // whose cross-section replaces the grid, and which layer's face is
@@ -229,11 +231,6 @@ export interface UiState {
   // action-button form stands, if any. Light furniture — cleared with the
   // transient modes.
   focusForm: FocusForm | null;
-  // The goal palette's standing draft (issue #312): the swatch the create
-  // form will land — vermillion until picked — and the goal id whose row
-  // shows the six swatches for a re-pick. Light furniture — never saved.
-  goalColor: GoalColor;
-  goalRecolorId: string | null;
   // The notes modal's standing face (issue #277): CAPTURE leads — the
   // modal opens on it, and any departure (close, another surface) puts the
   // tab back. Light furniture — never saved.
@@ -423,8 +420,6 @@ export class App {
     catalogFace: "nous",
     editingHabitId: null,
     focusForm: null,
-    goalColor: DEFAULT_GOAL_COLOR,
-    goalRecolorId: null,
     notesFace: "capture",
     historyOpen: false,
     historyLimit: HISTORY_PAGE_ROWS,
@@ -703,7 +698,6 @@ export class App {
     inv.scrapMode = false; inv.scrapReview = false; inv.selected = []; inv.dragOpen = false;
     this.ui.app = null;
     this.ui.focusForm = null;
-    this.ui.goalRecolorId = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
     this.ui.chordHover = null;
@@ -2046,7 +2040,6 @@ export class App {
     this.ui.app = null;
     this.ui.editingHabitId = null;
     this.ui.focusForm = null;
-    this.ui.goalRecolorId = null;
     this.resetHistorySurfaces();
   }
 
@@ -2118,7 +2111,8 @@ export class App {
   static readonly FOCUS_FORM_FOCUS: Record<FocusForm, string> = {
     "habit-add": "habit-name-input",
     "habit-log": "habit-log-minutes",
-    "goal-create": "goal-habit",
+    "goal-create": "goal-minutes",
+    "goal-edit": "goal-minutes",
   };
 
   setFocusForm(form: FocusForm | null): void {
@@ -2289,15 +2283,12 @@ export class App {
     this.habitAction(() => applyClassPreset(this.state, habitId, presetId), "Preset applied — the points stay freely adjustable.");
   }
 
-  // ── Goals (#6) ──────────────────────────────────────────────────────────
+  // ── The habit editor's goal and color (issue #445) ──────────────────────
 
-  createGoalAction(habitId: string | null, minutes: number, schedule: "once" | "daily" | "weekly", color: GoalColor): void {
-    const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now(), color });
+  createGoalAction(habitId: string, minutes: number, schedule: "once" | "daily" | "weekly"): void {
+    const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now() });
     if (result.ok) {
       this.ui.focusForm = null;
-      // The next create defaults to vermillion again — the pick belongs to
-      // the goal that landed, not to the form (#312).
-      this.ui.goalColor = DEFAULT_GOAL_COLOR;
       this.save();
       this.say("Goal added.");
     } else {
@@ -2306,28 +2297,14 @@ export class App {
     this.render();
   }
 
-  // The palette's standing draft (issue #312): a swatch press re-renders
-  // the picker with the pick standing — nothing lands until Add.
-  pickGoalColor(color: GoalColor): void {
-    if (this.ui.focusForm !== "goal-create") return;
-    this.ui.goalColor = color;
-    this.render();
-  }
-
-  // A goal row's re-pick (issue #312): the row shows the six swatches, a
-  // second press puts them away.
-  toggleGoalRecolor(id: string): void {
-    this.ui.goalRecolorId = this.ui.goalRecolorId === id ? null : id;
-    this.render();
-  }
-
-  setGoalColorAction(id: string, color: GoalColor): void {
-    const result = setGoalColor(this.state, id, color);
+  editGoalAction(goalId: string, minutes: number, schedule: "once" | "daily" | "weekly"): void {
+    const result = editGoal(this.state, goalId, { minutes, schedule }, Date.now());
     if (result.ok) {
-      this.ui.goalRecolorId = null;
+      this.ui.focusForm = null;
       this.save();
+      this.say("Goal updated.");
     } else {
-      this.say(result.reason ?? "Could not set the color.");
+      this.say(result.reason ?? "Could not edit the goal.");
     }
     this.render();
   }
@@ -2336,9 +2313,27 @@ export class App {
     const result = deleteGoal(this.state, id);
     this.say(result.ok ? "Goal removed." : result.reason ?? "Could not remove the goal.");
     if (result.ok) {
-      if (this.ui.goalRecolorId === id) this.ui.goalRecolorId = null;
+      if (this.ui.focusForm === "goal-edit") this.ui.focusForm = null;
       this.save();
     }
+    this.render();
+  }
+
+  // The migration choice's landing: one carried-over row kept, its pending
+  // siblings retired to history.
+  retainGoalChoiceAction(id: string): void {
+    const result = retainGoalChoice(this.state, id);
+    this.say(result.ok ? "Goal kept." : result.reason ?? "Could not keep the goal.");
+    if (result.ok) this.save();
+    this.render();
+  }
+
+  // The habit's palette pick: identity alone, and every goal read inherits
+  // it.
+  setHabitColorAction(habitId: string, color: HabitColor): void {
+    const result = setHabitColor(this.state, habitId, color);
+    if (result.ok) this.save();
+    else this.say(result.reason ?? "Could not set the color.");
     this.render();
   }
 

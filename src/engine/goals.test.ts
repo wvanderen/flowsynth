@@ -7,18 +7,18 @@ import { hex } from "./hex";
 import {
   accrueGoalProgress,
   createGoal,
-  DEFAULT_GOAL_COLOR,
   deleteGoal,
-  GOAL_COLORS,
-  goalCapacity,
-  goalTrackerState,
+  editGoal,
   normalizeGoals,
+  occurrenceKeyFor,
+  pendingGoalsOf,
+  retainGoalChoice,
   rollGoalOccurrences,
-  setGoalColor,
+  activeGoalOf,
 } from "./goals";
 import { deserialize, serialize } from "./save";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
-import { BALANCE } from "./constants";
+import type { Goal } from "./types";
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -36,20 +36,32 @@ function fullFuel(s: ReturnType<typeof fresh>): void {
   s.goalFuel = 1e12;
 }
 
-describe("goal slots and creation", () => {
-  it("each habit owns a small fixed capacity — never purchasable (issue #423)", () => {
+describe("one goal per habit", () => {
+  it("create refuses while an active goal stands, and answers again once it is gone (issue #445)", () => {
     const s = fresh();
-    expect(goalCapacity()).toBe(BALANCE.habitGoalSlots);
     const habit = withHabit(s);
-    for (let i = 0; i < BALANCE.habitGoalSlots; i++) {
-      expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
-    }
+    const made = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 });
+    expect(made.ok).toBe(true);
     expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(false);
-    deleteGoal(s, s.goals[0]!.id);
+    deleteGoal(s, made.goal!.id);
     expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
-    // Another habit's slots are its own.
+    // Another habit's goal is its own.
     const other = createHabit(s, "Cooking")!.habit!;
     expect(createGoal(s, { habitId: other.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
+  });
+
+  it("an unresolved migration choice also refuses create until a goal is retained (issue #445)", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).goal!;
+    goal.pendingChoice = true;
+    expect(createGoal(s, { habitId: habit.id, minutes: 9, schedule: "once", now: 1 }).ok).toBe(false);
+    expect(retainGoalChoice(s, goal.id).ok).toBe(true);
+    // The retained row is the habit's active goal; a fresh goal waits for
+    // its removal.
+    expect(createGoal(s, { habitId: habit.id, minutes: 9, schedule: "once", now: 1 }).ok).toBe(false);
+    deleteGoal(s, goal.id);
+    expect(createGoal(s, { habitId: habit.id, minutes: 9, schedule: "once", now: 1 }).ok).toBe(true);
   });
 
   it("goals are habit-owned: the cross-habit template refuses (issue #423)", () => {
@@ -68,43 +80,17 @@ describe("goal slots and creation", () => {
     expect(createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).ok).toBe(true);
   });
 
-  it("colors a goal at creation — vermillion default, chosen key kept (#312)", () => {
+  it("delete removes the habit's active goal and never a carried-over row (issue #445)", () => {
     const s = fresh();
     const habit = withHabit(s);
-    const plain = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
-    expect(plain.color).toBe(DEFAULT_GOAL_COLOR);
-    expect(GOAL_COLORS).toEqual(["vermillion", "amber", "green", "cyan", "indigo", "violet"]);
-    const picked = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1, color: "cyan" }).goal!;
-    expect(picked.color).toBe("cyan");
-    // An unknown key falls back to the default, never a made-up token.
-    const stray = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1, color: "chartreuse" as never }).goal!;
-    expect(stray.color).toBe(DEFAULT_GOAL_COLOR);
-  });
-
-  it("re-colors a goal in upgrade mode only, on real goals with real keys (#312)", () => {
-    const s = fresh();
-    const habit = withHabit(s);
-    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
-    expect(setGoalColor(s, goal.id, "indigo").ok).toBe(true);
-    expect(goal.color).toBe("indigo");
-    expect(setGoalColor(s, "nope", "cyan").ok).toBe(false);
-    expect(setGoalColor(s, goal.id, "chartreuse" as never).ok).toBe(false);
-    expect(goal.color).toBe("indigo");
-    startSession(s, 600);
-    expect(setGoalColor(s, goal.id, "cyan").ok).toBe(false);
-    endSession(s);
-    expect(goal.color).toBe("indigo");
-  });
-
-  it("lenient-defaults a pre-palette save's color and drops corrupt keys (#312)", () => {
-    const s = fresh();
-    const habit = withHabit(s);
-    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1, color: "violet" }).goal!;
-    const legacy = { ...goal, color: undefined } as unknown as typeof goal;
-    const corrupt = { ...goal, id: `${goal.id}x`, color: 7 } as unknown as typeof goal;
-    normalizeGoals([legacy, corrupt]);
-    expect(legacy.color).toBe(DEFAULT_GOAL_COLOR);
-    expect(corrupt.color).toBe(DEFAULT_GOAL_COLOR);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: 1 }).goal!;
+    goal.pendingChoice = true;
+    expect(deleteGoal(s, goal.id).ok).toBe(false);
+    expect(s.goals).toHaveLength(1);
+    retainGoalChoice(s, goal.id);
+    expect(deleteGoal(s, goal.id).ok).toBe(true);
+    expect(activeGoalOf(s, habit.id)).toBeUndefined();
+    expect(goal.retired).toBe(true);
   });
 });
 
@@ -185,6 +171,231 @@ describe("goal progress and completion", () => {
   });
 });
 
+describe("goal edits (issue #445)", () => {
+  it("a target edit retains qualifying practice: 30 to 60 after 20 qualifying minutes", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 30, schedule: "daily", now: 1 }).goal!;
+    startSession(s, null);
+    advance(s, 20 * 60);
+    endSession(s);
+    expect(editGoal(s, goal.id, { minutes: 60, schedule: "daily" }, 9_000).ok).toBe(true);
+    expect(goal.condition.minutes).toBe(60);
+    expect(goal.progressSeconds).toBeCloseTo(20 * 60, 6);
+    expect(goal.completed).toBe(false);
+    // The retained minutes ride toward the raised target: forty more
+    // completes it.
+    startSession(s, null);
+    expect(advance(s, 40 * 60).goalsCompleted).toBe(1);
+    endSession(s);
+    expect(goal.completedCount).toBe(1);
+  });
+
+  it("a met goal stays completed until a raised target un-completes it, and no credit replays", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
+    startSession(s, null);
+    advance(s, 600);
+    endSession(s);
+    expect(goal.completed).toBe(true);
+    const creditedOnce = gen.reserve;
+    // Lower the target below met progress: already complete, no second
+    // completion tick, no second credit.
+    editGoal(s, goal.id, { minutes: 5, schedule: "once" }, 9_000);
+    expect(goal.completed).toBe(true);
+    expect(gen.reserve).toBe(creditedOnce);
+    // Raise it: the completion un-lands, the practice stays.
+    editGoal(s, goal.id, { minutes: 15, schedule: "once" }, 9_100);
+    expect(goal.completed).toBe(false);
+    expect(goal.progressSeconds).toBeCloseTo(600, 6);
+    startSession(s, null);
+    expect(advance(s, 300).goalsCompleted).toBe(1);
+    endSession(s);
+    // The raised target's completion is the goal's second lifetime
+    // completion — the count accrues across the edit.
+    expect(goal.completedCount).toBe(2);
+  });
+
+  it("a cadence edit splits live practice at midnight and never replays fuel", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const midnight = new Date(2026, 9, 21).getTime();
+    const goal = createGoal(s, { habitId: habit.id, minutes: 60, schedule: "weekly", now: midnight - DAY }).goal!;
+    startSession(s, null, midnight - 600_000);
+    advance(s, 1200);
+    endSession(s, midnight + 600_000);
+    const fuel = s.goalFuel;
+    editGoal(s, goal.id, { minutes: 60, schedule: "daily" }, midnight + 600_000);
+    expect(goal.progressSeconds).toBeCloseTo(600);
+    expect(goal.liveSeconds).toBeCloseTo(600);
+    expect(s.goalFuel).toBe(fuel);
+    const loaded = deserialize(serialize(s)).state!;
+    expect(activeGoalOf(loaded, habit.id)!.progressSeconds).toBeCloseTo(600);
+  });
+
+  it("removal, replacement, edits and reload preserve previous goal descriptions", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 30, schedule: "daily", now: 1 }).goal!;
+    startSession(s, null, 1000);
+    advance(s, 600);
+    endSession(s, 601000);
+    editGoal(s, goal.id, { minutes: 60, schedule: "weekly" }, 602000);
+    deleteGoal(s, goal.id);
+    expect(createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 603000 }).ok).toBe(true);
+    const loaded = deserialize(serialize(s)).state!;
+    expect(loaded.sessionRecords[0]!.goalsAdvanced[0]!.goal!.condition.minutes).toBe(30);
+    expect(loaded.sessionRecords[0]!.goalsAdvanced[0]!.goal!.schedule.kind).toBe("daily");
+    expect(loaded.goals.find(row => row.id === goal.id)!.retired).toBe(true);
+  });
+
+  it("edits refuse bad figures and lock in flow", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
+    expect(editGoal(s, goal.id, { minutes: 0, schedule: "once" }, 9_000).ok).toBe(false);
+    expect(editGoal(s, "nope", { minutes: 10, schedule: "once" }, 9_000).ok).toBe(false);
+    startSession(s, 600);
+    expect(editGoal(s, goal.id, { minutes: 20, schedule: "once" }, 9_000).ok).toBe(false);
+    endSession(s);
+    expect(goal.condition.minutes).toBe(10);
+  });
+
+  it("a cadence edit recalculates from qualifying practice in the new period", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const wednesday = Date.UTC(2026, 9, 21, 10); // 2026-10-21 Wed
+    const goal = createGoal(s, { habitId: habit.id, minutes: 30, schedule: "daily", now: wednesday - 3 * DAY }).goal!;
+    // Yesterday's credited session (10 min) and last week's (12 min).
+    startSession(s, null);
+    advance(s, 600);
+    endSession(s, wednesday - DAY);
+    startSession(s, null);
+    advance(s, 720);
+    endSession(s, wednesday - 8 * DAY);
+    // Today's live practice and manual condition progress both survive.
+    startSession(s, null);
+    advance(s, 300);
+    endSession(s, wednesday);
+    addPracticeLog(s, habit.id, 10, wednesday + 1_000);
+    editGoal(s, goal.id, { minutes: 30, schedule: "weekly" }, wednesday + 2_000);
+    expect(goal.schedule.kind).toBe("weekly");
+    expect(goal.occurrenceKey).toBe(occurrenceKeyFor(goal.schedule, wednesday + 2_000));
+    // Last week stays outside the period; manual time never joins live credit.
+    expect(goal.progressSeconds).toBeCloseTo(300 + 600 + 600, 6);
+    expect(goal.liveSeconds).toBeCloseTo(300 + 600, 6);
+    expect(goal.completed).toBe(false);
+  });
+
+  it("a cadence edit to once reads from the goal's creation; daily reads from local midnight", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const created = new Date(2026, 9, 19, 23).getTime(); // created late on the 19th
+    const goal = createGoal(s, { habitId: habit.id, minutes: 60, schedule: "once", now: created }).goal!;
+    startSession(s, null);
+    advance(s, 1_200);
+    endSession(s, created + DAY + 3_600_000 + 1_200_000); // the 21st, 00:00 local
+    editGoal(s, goal.id, { minutes: 60, schedule: "daily" }, created + DAY + 3_600_000 + 1_200_000);
+    // Daily's period is today: the whole session landed after midnight.
+    expect(goal.progressSeconds).toBeCloseTo(1_200, 6);
+    // Back to once reads from creation: the whole record.
+    editGoal(s, goal.id, { minutes: 60, schedule: "once" }, created + DAY + 3_600_000 + 1_200_000);
+    expect(goal.progressSeconds).toBeCloseTo(1_200, 6);
+    editGoal(s, goal.id, { minutes: 10, schedule: "daily" }, created + DAY + 3_600_000 + 1_200_000);
+    expect(goal.completed).toBe(true);
+    expect(goal.completedCount).toBe(0); // the recalculation never mints a completion
+  });
+});
+
+describe("the migration's retain-one choice (issue #445)", () => {
+  // The v11 → v12 conversion's shape, built by hand: several active rows
+  // for one habit, every row held pending.
+  function pendingPair(s: ReturnType<typeof fresh>): [Goal, Goal] {
+    const habit = s.habits[0]!;
+    const a = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
+    const b: Goal = {
+      ...structuredClone(a),
+      id: `${a.id}b`,
+      condition: { kind: "habit-minutes", habitId: habit.id, minutes: 45 },
+      progressSeconds: 900,
+      createdAt: a.createdAt + 1,
+    };
+    s.goals.push(b);
+    a.pendingChoice = true;
+    b.pendingChoice = true;
+    return [a, b];
+  }
+
+  it("pending rows neither accrue nor complete, and practice is never blocked", () => {
+    const s = fresh();
+    withHabit(s);
+    const gen = give(s, "goalKeyed", null);
+    fullFuel(s);
+    const [a, b] = pendingPair(s);
+    expect(activeGoalOf(s, s.habits[0]!.id)).toBeUndefined();
+    // An unresolved choice never blocks a session.
+    startSession(s, null);
+    advance(s, 3_600);
+    endSession(s);
+    expect(a.progressSeconds).toBe(0);
+    expect(b.progressSeconds).toBe(900);
+    expect(a.completed).toBe(false);
+    expect(b.completed).toBe(false);
+    // The reserve holds the session-end focus earning alone — no goal
+    // credit rode on the unresolved rows (Milestone's 0.02 × 3600).
+    expect(gen.reserve).toBeCloseTo(72, 6);
+  });
+
+  it("retaining one row activates it with its record and retires the siblings to history", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const [a, b] = pendingPair(s);
+    expect(retainGoalChoice(s, b.id).ok).toBe(true);
+    expect(b.pendingChoice).toBeUndefined();
+    expect(b.retired).toBeUndefined();
+    expect(a.retired).toBe(true);
+    expect(pendingGoalsOf(s, habit.id)).toHaveLength(0);
+    expect(activeGoalOf(s, habit.id)).toBe(b);
+    expect(b.progressSeconds).toBe(900);
+    // The retained row runs: credited practice advances it again.
+    fullFuel(s);
+    expect(accrueGoalProgress(s, habit.id, 1_800)).toBe(1);
+    expect(b.completed).toBe(true);
+    // The retired sibling's facts never moved.
+    expect(a.progressSeconds).toBe(0);
+    expect(a.condition).toEqual({ kind: "habit-minutes", habitId: habit.id, minutes: 10 });
+  });
+
+  it("the choice locks in flow like every goal mutation", () => {
+    const s = fresh();
+    withHabit(s);
+    const [a] = pendingPair(s);
+    startSession(s, 600);
+    expect(retainGoalChoice(s, a.id).ok).toBe(false);
+    endSession(s);
+    expect(a.pendingChoice).toBe(true);
+  });
+
+  it("a pending selection and its records survive reload", () => {
+    const s = fresh();
+    withHabit(s);
+    const [a, b] = pendingPair(s);
+    const loaded = deserialize(serialize(s)).state!;
+    const loadedA = loaded.goals.find((g) => g.id === a.id)!;
+    const loadedB = loaded.goals.find((g) => g.id === b.id)!;
+    expect(loadedA.pendingChoice).toBe(true);
+    expect(loadedB.pendingChoice).toBe(true);
+    expect(loadedB.progressSeconds).toBe(900);
+    expect(loaded.habits[0]!.color).toBe("vermillion");
+    retainGoalChoice(loaded, loadedA.id);
+    expect(loadedA.pendingChoice).toBeUndefined();
+    expect(loadedB.retired).toBe(true);
+  });
+});
+
 describe("recurrence", () => {
   it("daily goals reset at the local calendar day boundary", () => {
     const s = fresh();
@@ -212,7 +423,7 @@ describe("recurrence", () => {
     expect(s.goals[0]!.progressSeconds).toBe(0);
   });
 
-  it("one-time goals never reset and keep their slot", () => {
+  it("one-time goals never reset and keep running until edited or replaced", () => {
     const s = fresh();
     const habit = withHabit(s);
     createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
@@ -223,47 +434,27 @@ describe("recurrence", () => {
   });
 });
 
-describe("the tracker's rolled-up state (#149)", () => {
-  it("distinguishes no tracked goals, work in progress, and every occurrence complete", () => {
-    const s = fresh();
-    expect(goalTrackerState(s)).toBe("none"); // no habit selected
-    const habit = withHabit(s);
-    expect(goalTrackerState(s)).toBe("none"); // the habit tracks nothing yet
-    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1 });
-    expect(goalTrackerState(s)).toBe("open");
-    accrueGoalProgress(s, habit.id, 600);
-    expect(goalTrackerState(s)).toBe("complete");
-    // One incomplete current occurrence is enough for in progress, whatever
-    // the others say.
-    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "once", now: 2 });
-    expect(goalTrackerState(s)).toBe("open");
-    // Another habit's goals never qualify the tracker.
-    const other = createHabit(s, "Cooking")!.habit!;
-    selectHabit(s, other.id);
-    expect(goalTrackerState(s)).toBe("none");
-  });
-
-  it("a recurring reset returns the tracker to in progress", () => {
-    const s = fresh();
-    const habit = withHabit(s);
-    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "daily", now: 1 });
-    accrueGoalProgress(s, habit.id, 600);
-    expect(goalTrackerState(s)).toBe("complete");
-    rollGoalOccurrences(s, DAY + 3600_000); // next local day: fresh occurrence
-    expect(goalTrackerState(s)).toBe("open");
-  });
-});
-
 describe("persistence", () => {
   it("round-trips goals with their progress", () => {
     const s = fresh();
     const habit = withHabit(s);
-    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: 7_000, color: "amber" });
+    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: 7_000 });
     accrueGoalProgress(s, habit.id, 240);
     const loaded = deserialize(serialize(s))!;
     expect(loaded.state!.goals).toHaveLength(1);
     expect(loaded.state!.goals[0]!.progressSeconds).toBeCloseTo(240, 6);
-    expect(loaded.state!.goals[0]!.color).toBe("amber");
+  });
+
+  it("normalizeGoals drops the retired per-goal palette key and carries a pending flag as written", () => {
+    const s = fresh();
+    const habit = withHabit(s);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
+    const legacy = { ...structuredClone(goal), color: "cyan", liveSeconds: undefined } as unknown as Goal;
+    const pending = { ...structuredClone(goal), id: `${goal.id}p`, pendingChoice: false } as unknown as Goal;
+    normalizeGoals([legacy, pending]);
+    expect("color" in legacy).toBe(false);
+    expect(legacy.liveSeconds).toBe(0);
+    expect("pendingChoice" in pending).toBe(false);
   });
 });
 
@@ -309,7 +500,6 @@ describe("the completion tick's credit", () => {
       const tray = give(s, "goalKeyed", null);
       const habit = giveHabit(s).habit;
       createGoal(s, { habitId: habit.id, minutes: 1, schedule: "once", now: 1 });
-      createGoal(s, { habitId: habit.id, minutes: 2, schedule: "once", now: 1 });
       fullFuel(s);
       startSession(s, 600);
       return { s, board, tray };
@@ -319,13 +509,13 @@ describe("the completion tick's credit", () => {
     applyGap(batch.s, 600, "away", 0, () => 0.5);
     const result = flushPendingAway(batch.s, () => 0.5);
     for (let i = 0; i < 600; i++) advance(ticks.s, 1, () => 0.5);
-    expect(result.goalsCompleted).toBe(2);
-    // The sub-floor absence auto-credits through the live legs, so both
-    // completions bank their full live shares: 60 s and 120 s of credited
-    // time × the Milestone's 5 × 0.1, on every owned generator. The board
-    // copy's reserve already drained its window — the tray copy holds both.
+    expect(result.goalsCompleted).toBe(1);
+    // The sub-floor absence auto-credits through the live legs, so the
+    // completion banks its full live share: 60 s of credited time × the
+    // Milestone's 5 × 0.1, on every owned generator. The board copy's
+    // reserve already drained its window — the tray copy holds it.
     expect(batch.board.reserve).toBe(0);
-    expect(batch.tray.reserve).toBe(90);
+    expect(batch.tray.reserve).toBe(30);
     expect(batch.s.nous).toBeCloseTo(ticks.s.nous, 6);
     expect(batch.s.forge.progress).toBeCloseTo(ticks.s.forge.progress, 6);
     expect(batch.s.session!.goalSeconds).toEqual(ticks.s.session!.goalSeconds);
@@ -403,16 +593,29 @@ describe("the completion tick's credit", () => {
     expect(gen.reserve).toBeCloseTo(600, 6);
   });
 
-  it("overlapping completions each credit", () => {
+  it("edits and replacements never replay the pool: total credit is the credited time the budget accrued", () => {
     const s = fresh();
     const habit = withHabit(s);
     const gen = give(s, "goalKeyed", null);
-    fullFuel(s);
-    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 });
-    createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 2 });
-    accrueGoalProgress(s, habit.id, 600); // completes both at once
-    // Each goal's own credit lands: 2 × 300 s on the one generator.
-    expect(gen.reserve).toBeCloseTo(600, 6);
+    const goal = createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: 1 }).goal!;
+    startSession(s, null);
+    advance(s, 600); // completes; the pool accrued 0.1 × 600 and the draw took it all
+    endSession(s);
+    const first = gen.reserve;
+    // The pool-limited draw (60) beside the session-end focus earning
+    // (Milestone's 0.02 × 600 = 12).
+    expect(first).toBeCloseTo(72, 6);
+    expect(s.goalFuel).toBeCloseTo(0, 9);
+    // A raised target re-opens the goal; only the budget the new practice
+    // accrued can pay the second completion.
+    editGoal(s, goal.id, { minutes: 20, schedule: "once" }, 9_000);
+    startSession(s, null);
+    advance(s, 600); // completes the 20 at 1200 s of progress
+    endSession(s);
+    // The goal-credit legs took exactly the accrued fuel twice (60 + 60 =
+    // 0.1 × 1200 credited seconds); the focus earnings rode beside (24).
+    expect(gen.reserve).toBeCloseTo(144, 6);
+    expect(s.goalFuel).toBeCloseTo(0, 9);
   });
 
   it("the occurrence reset clears the live slice with the progress", () => {

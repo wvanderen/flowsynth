@@ -2,7 +2,7 @@
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
 import { addPracticeLog, archiveHabit, createHabit, selectHabit } from "../engine/habits";
-import { createGoal, deleteGoal, goalCapacity, goalSummary, accrueGoalProgress } from "../engine/goals";
+import { createGoal, deleteGoal, goalSummary, accrueGoalProgress } from "../engine/goals";
 import { recordSummaryReflection } from "../engine/actions";
 import { writeNote } from "../engine/notes";
 import { STORAGE_KEY, serialize } from "../engine/save";
@@ -28,11 +28,10 @@ afterEach(() => fixture.release());
 const DAY = new Date(2026, 8, 18, 12).getTime();
 
 describe("the console tiles", () => {
-  it("Notes alone wears a door tile; no habit, goals, or time tiles stand (#313)", () => {
+  it("Notes alone wears a door tile; no habit or time tiles stand (#313, the Goals app retired with #445)", () => {
     app.render();
     // One tile, icon-only: the clock block is the Focus sheet's wide entry,
-    // so Habit and Goals ride the sheet's faces; Time never wore a tile
-    // (issue #148).
+    // so Habit rides the sheet's faces; Time never wore a tile (issue #148).
     expect([...document.querySelectorAll("#console-apps .app-tile")].map((t) => t.id)).toEqual(["app-tile-notes"]);
     const tile = document.getElementById("app-tile-notes")!;
     expect(tile.querySelector(".app-tile-glyph svg")).not.toBeNull();
@@ -57,25 +56,21 @@ describe("the console tiles", () => {
     expect(document.getElementById("modal")!.hidden).toBe(true);
   });
 
-  it("the HABIT and GOALS faces stay reachable inside the Focus sheet (ADR-0050, #313)", () => {
-    for (const key of ["habit", "goals"] as const) {
-      app.openApp(key);
-      const sheet = document.getElementById("app-popover")!;
-      expect(sheet.classList.contains("focus-sheet")).toBe(true);
-      expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
-      app.closeApp();
-    }
+  it("the HABIT face stays reachable inside the Focus sheet (ADR-0050, #313; the GOALS face retired with #445)", () => {
+    app.openApp("habit");
+    const sheet = document.getElementById("app-popover")!;
+    expect(sheet.classList.contains("focus-sheet")).toBe(true);
+    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+    app.closeApp();
   });
 
-  it("habit and goals walk into the one frame and Notes into its own modal; the apps row hosts no panel (ADR-0050, #277, #332)", () => {
+  it("habit walks into the one frame and Notes into its own modal; the apps row hosts no panel (ADR-0050, #277, #332)", () => {
     app.render();
-    for (const key of ["habit", "goals"] as const) {
-      app.openApp(key);
-      // One frame under the clock's own disclosure, whatever the door.
-      const sheet = document.getElementById("app-popover")!;
-      expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
-      app.closeApp();
-    }
+    app.openApp("habit");
+    // One frame under the clock's own disclosure, whatever the door.
+    const sheet = document.getElementById("app-popover")!;
+    expect(document.getElementById("console-session")!.contains(sheet)).toBe(true);
+    app.closeApp();
     // Notes stands in the modal layer, never in the apps row.
     app.openApp("notes");
     expect(document.getElementById("console-apps")!.querySelector(".app-popover")).toBeNull();
@@ -414,7 +409,7 @@ describe("the app popovers", () => {
     expect(sheet.querySelector(".focus-head .focus-name")!.textContent).toBe("FOCUS");
     expect(sheet.querySelector("#focus-close")).not.toBeNull();
     const tabs = [...sheet.querySelectorAll(".ftab")].map((t) => t.textContent);
-    expect(tabs).toEqual(["PLAN", "HABIT", "GOALS", "HISTORY"]);
+    expect(tabs).toEqual(["PLAN", "HABIT", "HISTORY"]);
     // No expandable detail furniture: the deeper mechanics live in the
     // tooltip layer.
     expect(sheet.querySelector("details")).toBeNull();
@@ -634,10 +629,8 @@ describe("the confirmed prose cuts (issue #280)", () => {
   });
 
   it("no surface explains the goals or empty states in prose", () => {
-    app.openApp("goals");
-    expect(document.body.textContent).not.toContain("Goals track practice conditions");
-    app.closeApp();
     app.openApp("habit");
+    expect(document.body.textContent).not.toContain("Goals track practice conditions");
     expect(document.body.textContent).not.toContain("Name what you practice");
     expect(document.body.textContent).not.toContain("The console clock keeps session time");
   });
@@ -748,7 +741,8 @@ describe("the sheet's HISTORY face (§9)", () => {
     // Back returns to the list; the deleted goal still renders its snapshot.
     deleteGoal(s, goal.id);
     app.openDrill(1);
-    expect(document.getElementById("app-popover")!.textContent).toContain("a since-removed goal");
+    expect(document.getElementById("app-popover")!.textContent).toContain(`2 min · ${goalSummary(s, goal)}`);
+    expect(document.getElementById("app-popover")!.textContent).not.toContain("a since-removed goal");
     document.getElementById("history-back")!.click();
     expect(document.getElementById("app-popover")!.querySelector(".history-row")).not.toBeNull();
   });
@@ -876,133 +870,51 @@ describe("the Notes stream's habit chips (§9)", () => {
   });
 });
 
-describe("the GOALS face's slots and create action (issue #423)", () => {
+describe("the habit editor's color and goal in the console sheet (issue #445)", () => {
   const sheet = () => document.getElementById("app-popover")!;
+  const drill = (habitId: string) => {
+    app.openApp("habit");
+    document.querySelector<HTMLButtonElement>(`[data-drill-habit="${habitId}"]`)!.click();
+  };
 
-  it("the create form offers exactly the six swatches, vermillion pressed by default (#312)", () => {
+  it("a palette pick lands at once and keeps keyboard focus on its swatch", () => {
     const habit = createHabit(app.state, "Piano").habit!;
-    selectHabit(app.state, habit.id);
-    app.openApp("goals");
+    drill(habit.id);
+    const swatch = sheet().querySelector<HTMLButtonElement>('[data-habit-set-color="amber"]')!;
+    swatch.focus();
+    swatch.click();
+    expect(habit.color).toBe("amber");
+    // The rebuild answered through the key; the fresh swatch holds focus.
+    const fresh = document.querySelector<HTMLButtonElement>('[data-habit-set-color="amber"]')!;
+    expect(fresh.getAttribute("aria-pressed")).toBe("true");
+    expect(document.activeElement).toBe(fresh);
+  });
+
+  it("the goal form's landing resets to the editor row; Escape puts it away", () => {
+    const habit = createHabit(app.state, "Piano").habit!;
+    drill(habit.id);
     sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
-    const swatches = [...sheet().querySelectorAll<HTMLButtonElement>(".goal-swatch")];
-    expect(swatches.map((s) => s.getAttribute("data-goal-draft-color"))).toEqual([
-      "vermillion",
-      "amber",
-      "green",
-      "cyan",
-      "indigo",
-      "violet",
-    ]);
-    expect(swatches.filter((s) => s.getAttribute("aria-pressed") === "true")).toHaveLength(1);
-    expect(swatches.find((s) => s.getAttribute("aria-pressed") === "true")!.getAttribute("data-goal-draft-color")).toBe("vermillion");
-    // A pick stands on the form; Add lands it on the goal and the draft
-    // resets — the next create defaults to vermillion again.
-    swatches[1]!.click();
-    const repicked = [...sheet().querySelectorAll<HTMLButtonElement>(".goal-swatch")];
-    expect(repicked[1]!.getAttribute("aria-pressed")).toBe("true");
-    (document.getElementById("goal-minutes") as HTMLInputElement).value = "15";
-    sheet().querySelector<HTMLButtonElement>("#goal-add")!.click();
-    expect(app.state.goals[0]!.color).toBe("amber");
+    const minutes = document.getElementById("goal-minutes") as HTMLInputElement;
+    minutes.value = "15";
+    (document.getElementById("goal-schedule") as HTMLSelectElement).value = "once";
+    // Escape collapses the form without landing.
+    minutes.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(app.ui.focusForm).toBeNull();
-    // The sheet stayed open; the create action stands again with the draft
-    // back at vermillion.
-    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
-    expect(sheet().querySelector<HTMLButtonElement>('.goal-swatch[aria-pressed="true"]')!.getAttribute("data-goal-draft-color")).toBe("vermillion");
+    expect(document.getElementById("goal-minutes")).toBeNull();
+    expect(app.state.goals).toHaveLength(0);
   });
 
-  it("keeps goal fields and keyboard focus when picking a color", () => {
-    const habit = createHabit(app.state, "Piano").habit!;
-    app.openApp("goals");
-    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
-    const minutes = sheet().querySelector<HTMLInputElement>("#goal-minutes")!;
-    const habitSelect = sheet().querySelector<HTMLSelectElement>("#goal-habit")!;
-    const schedule = sheet().querySelector<HTMLSelectElement>("#goal-schedule")!;
-    minutes.value = "30";
-    habitSelect.value = habit.id;
-    schedule.value = "weekly";
-    const amber = sheet().querySelector<HTMLButtonElement>('[data-goal-draft-color="amber"]')!;
-    amber.focus();
-    amber.click();
-    app.render();
-    expect(document.activeElement).toBe(amber);
-    expect(sheet().querySelector("#goal-minutes")).toBe(minutes);
-    expect(minutes.value).toBe("30");
-    expect(habitSelect.value).toBe(habit.id);
-    expect(schedule.value).toBe("weekly");
-    expect(amber.getAttribute("aria-pressed")).toBe("true");
-    expect(amber.classList.contains("selected")).toBe(true);
-    sheet().querySelector<HTMLButtonElement>("#goal-add")!.click();
-    expect(app.state.goals[0]).toMatchObject({ color: "amber", condition: { habitId: habit.id, minutes: 30 }, schedule: { kind: "weekly" } });
-  });
-
-  it("a goal row's re-pick is the palette's edit half — the track and banner follow the goal (#312)", () => {
+  it("the goal and its color read with the habit everywhere the sheet renders them", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    const goal = createGoal(app.state, { habitId: habit.id, minutes: 30, schedule: "once", now: DAY, color: "vermillion" }).goal!;
-    app.openApp("goals");
-    const row = () => sheet().querySelector(`[data-goal="${goal.id}"]`)!;
-    // The row carries its color as the re-pick trigger; the picker is the
-    // same six swatches.
-    row().querySelector<HTMLButtonElement>('[data-goal-recolor]')!.click();
-    const swatches = [...row().querySelectorAll<HTMLButtonElement>(".goal-swatch")];
-    expect(swatches).toHaveLength(6);
-    swatches.find((s) => s.getAttribute("data-goal-set-color") === "green")!.click();
-    expect(app.state.goals[0]!.color).toBe("green");
-    expect(app.ui.goalRecolorId).toBeNull();
-    // Read from goal state everywhere: the face track and the banner bars
-    // both wear the picked token after the render.
-    expect(row().querySelector<HTMLElement>("[data-goal-progress]")!.style.background).toBe("var(--goal-green)");
-    const bannerFill = document.querySelector<HTMLElement>("#console-session .gbar i")!;
-    expect(bannerFill.style.background).toBe("var(--goal-green)");
-  });
-
-  it("reads tracked goals first — open work above completed — then the on-demand create action", () => {
-    const s = app.state;
-    const habit = createHabit(s, "Piano").habit!;
-    selectHabit(s, habit.id);
-    createGoal(s, { habitId: habit.id, minutes: 20, schedule: "daily", now: DAY });
-    const recurringDone = createGoal(s, { habitId: habit.id, minutes: 5, schedule: "daily", now: DAY }).goal!;
-    accrueGoalProgress(s, habit.id, 300); // completes the daily goal until its reset
-    app.openApp("goals");
-    const rows = [...sheet().querySelectorAll(".goal-row")];
-    expect(rows).toHaveLength(2);
-    expect(rows[0]!.classList.contains("done")).toBe(false);
-    expect(rows[0]!.textContent).toContain("20 min");
-    // Completed occurrences trail the open work, creation order kept.
-    expect(rows[1]!.classList.contains("done")).toBe(true);
-    expect(rows[1]!.getAttribute("data-goal")).toBe(recurringDone.id);
-    // The create form is on-demand: the action button stands where the
-    // habit's own slots have room.
-    expect(sheet().querySelector("#goal-add")).toBeNull();
-    sheet().querySelector<HTMLButtonElement>("#goal-create-open")!.click();
-    expect(sheet().querySelector("#goal-add")).not.toBeNull();
-  });
-
-  it("a habit's full slot set hides the create action; another habit's slots stay its own", () => {
-    const s = app.state;
-    const habit = createHabit(s, "Piano").habit!;
-    selectHabit(s, habit.id);
-    const capacity = goalCapacity();
-    for (let i = 0; i < capacity; i++) {
-      createGoal(s, { habitId: habit.id, minutes: 10, schedule: "once", now: DAY + i });
-    }
-    app.openApp("goals");
-    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain(`${capacity}/${capacity}`);
-    expect(sheet().querySelector("#goal-create-open")).toBeNull();
-    // A second habit's slots are its own: switching the selection shows
-    // its empty set with the create action standing.
-    const other = createHabit(s, "Cooking").habit!;
-    selectHabit(s, other.id);
-    app.render();
-    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain(`0/${capacity}`);
-    expect(sheet().querySelector("#goal-create-open")).not.toBeNull();
-  });
-
-  it("with no habit selected the face reads none and shows no rows", () => {
-    createHabit(app.state, "Piano");
-    app.openApp("goals");
-    expect(sheet().querySelector("#focus-slots-read")!.textContent).toContain("no habit selected");
-    expect(sheet().querySelectorAll(".goal-row")).toHaveLength(0);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: DAY }).goal!;
+    accrueGoalProgress(app.state, habit.id, 5 * 60);
+    app.setHabitColorAction(habit.id, "green");
+    drill(habit.id);
+    // The one spelling: the track paints the habit token, the row's figures
+    // ride the live slots.
+    expect(sheet().querySelector<HTMLElement>(`[data-goal="${goal.id}"] [data-goal-progress]`)!.style.background).toBe("var(--habit-green)");
+    expect(sheet().querySelector(`[data-goal-minutes="${goal.id}"]`)!.textContent).toContain("5 min / 20 min");
   });
 });
 

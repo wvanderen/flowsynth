@@ -479,9 +479,9 @@ h1, h2, h3, p { margin: 0; }
 .console[data-mode="flow"] #console-logo svg {
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--switch) 55%, transparent));
 }
-.console[data-mode="paused"] #console-logo .brand-core { fill: var(--goal-amber); }
+.console[data-mode="paused"] #console-logo .brand-core { fill: var(--habit-amber); }
 .console[data-mode="breather"] #console-logo .brand-core { fill: var(--charge); }
-.console[data-mode="paused"] .session-strip > span { background: var(--goal-amber); }
+.console[data-mode="paused"] .session-strip > span { background: var(--habit-amber); }
 .console[data-mode="breather"] .session-strip > span { background: var(--charge); }
 
 .session-actions { display: flex; gap: 8px; flex-wrap: nowrap; align-items: center; }
@@ -1315,14 +1315,16 @@ button.tree-node:hover { background: var(--hover-bg); border-color: var(--line);
 .history-line { font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
 .history-line.muted { color: var(--muted); }
 
-/* Goals: tracked practice conditions in limited slots. */
-.goal-create { display: flex; gap: 6px; flex-wrap: wrap; }
-.goal-create select, .goal-create input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 7px 8px; font-size: 12px; }
-.goal-create input { width: 64px; }
-.goal-create select:focus-visible, .goal-create input:focus-visible { border-color: var(--charge); }
-/* The GOALS face's rows: the shared bar column leads the ledger — fill by
-   height, palette token from the markup, the done row's bar holding full
-   height under the engraved check. */
+/* The habit editor's goal form (issue #445): minutes and cadence — the
+   color is the habit's, so the form carries no palette. */
+.goal-form { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.goal-form select, .goal-form input { background: var(--panel-soft); color: var(--ink); border: 1px solid var(--line); border-radius: 0; padding: 7px 8px; font-size: 12px; }
+.goal-form input { width: 64px; }
+.goal-form select:focus-visible, .goal-form input:focus-visible { border-color: var(--charge); }
+/* The habit editor's goal row (issue #445 — the GOALS face retired): the
+   shared bar column leads the ledger — fill by height, the habit's
+   palette token from the markup, the done row's bar holding full height
+   under the engraved check. */
 .goal-ledger {
   flex: 1;
   min-width: 0;
@@ -1332,13 +1334,13 @@ button.tree-node:hover { background: var(--hover-bg); border-color: var(--line);
   align-items: center;
 }
 .goal-ledger .gbar { grid-column: 1; grid-row: 1 / span 3; }
-.goal-ledger-head, .goal-ledger small, .goal-ledger .goal-swatches { grid-column: 2; }
-/* The palette picker (issue #312): exactly the six swatches as the sheet
-   renders them — square-cut controls, the standing pick under the firm
-   inset marker. Colors ride the goal palette tokens — the markup paints
-   them, never this sheet. */
-.goal-swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.goal-swatch {
+.goal-ledger-head, .goal-ledger small, .goal-ledger .habit-swatches { grid-column: 2; }
+/* The palette picker (issue #312, re-owned by the habit with issue #445):
+   exactly the six swatches as the sheet renders them — square-cut
+   controls, the standing pick under the firm inset marker. Colors ride
+   the habit palette tokens — the markup paints them, never this sheet. */
+.habit-swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.habit-swatch {
   width: 44px;
   height: 44px;
   padding: 9px;
@@ -1346,15 +1348,13 @@ button.tree-node:hover { background: var(--hover-bg); border-color: var(--line);
   place-items: center;
   flex-shrink: 0;
 }
-.goal-swatch > span {
+.habit-swatch > span {
   display: block;
   width: 24px;
   height: 24px;
   border: 1px solid var(--line);
 }
-.goal-swatch.selected { border-color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
-.goal-recolor { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; min-width: 44px; min-height: 44px; }
-.goal-recolor-dot { display: block; width: 10px; height: 10px; }
+.habit-swatch.selected { border-color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 .goal-status { font: 10px var(--mono); color: var(--muted); flex-shrink: 0; }
 .goal-status.done { color: var(--charge); }
 .goal-row small { color: var(--muted); font-size: 10px; }

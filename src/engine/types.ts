@@ -445,8 +445,10 @@ export type SessionMode = "planned" | "open-ended";
 
 // The goals-advanced snapshot (§9): one row per goal the session credited
 // time toward, captured at close so deleting or replacing a goal never
-// rewrites history — the id resolves at render.
+// rewrites history. Older records resolve by id until the next edit/removal
+// captures their description.
 export interface GoalAdvanceSnapshot {
+  goal?: Goal;
   goalId: string;
   seconds: number;
 }
@@ -501,6 +503,12 @@ export interface Habit {
   name: string;
   seconds: number;
   archived: boolean;
+  // The habit's own palette key (issue #445, ADR-0075): identity rides the
+  // habit, independently of its class, and every goal read inherits it.
+  // Lenient-defaulted at load — a save written before the palette wave
+  // carried no color, and the default is what a fresh habit wears. The
+  // v11 → v12 migration adopts a transferred single goal's color instead.
+  color: HabitColor;
   // The habit's selected class (ADR-0074): the specialization its next
   // session practices under. Locked for the whole session like the habit
   // itself; changes happen between sessions. Lenient-defaulted to
@@ -531,21 +539,25 @@ export interface GoalCondition {
 
 export type GoalSchedule = { kind: "once" } | { kind: "daily" } | { kind: "weekly" };
 
-// The player-picked palette key (issue #312): one of the six swatches the
-// GOALS face offers at creation and re-pick. The key rides goal state; the
-// UI reads its theme token everywhere the goal renders.
-export type GoalColor = "vermillion" | "amber" | "green" | "cyan" | "indigo" | "violet";
+// The player-picked palette key (issue #312, re-owned by the habit with
+// issue #445): one of the six swatches the habit editor offers. The key
+// rides habit state; the UI reads its theme token everywhere the habit —
+// and the goal that inherits it — renders.
+export type HabitColor = "vermillion" | "amber" | "green" | "cyan" | "indigo" | "violet";
 
 export interface Goal {
   // Retired goals retain their facts for session history but never run.
   retired?: true;
+  // A multi-goal habit's carried-over row (issue #445): the save held more
+  // than the one active goal a habit now owns, and which to retain is the
+  // player's explicit choice at the next habit edit. A pending row never
+  // accrues, never completes, and never lights a read; retaining one row
+  // retires its pending siblings. The flag survives reload until resolved.
+  pendingChoice?: true;
   id: string;
   condition: GoalCondition;
   schedule: GoalSchedule;
   occurrenceKey: string;
-  // The banner bars' and face tracks' color, chosen once at create/edit and
-  // read from here everywhere (issue #312).
-  color: GoalColor;
   progressSeconds: number;
   // The occurrence's live slice of `progressSeconds` (ADR-0047): credited
   // present, trusted, and honesty-credited seconds — manual logs never
@@ -595,7 +607,9 @@ export interface RollSources {
 
 // The console's fixed-function instruments (ADR-0012). Defined here because
 // the save state records which of them the activation ladder has unlocked.
-export type FocusApp = "habit" | "time" | "notes" | "goals";
+// The Goals app retired with its separate face (issue #445): goals edit
+// inside their habit.
+export type FocusApp = "habit" | "time" | "notes";
 
 export interface GameState {
   mode: Mode;
