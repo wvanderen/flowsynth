@@ -8,6 +8,8 @@
 import { execFileSync } from "node:child_process";
 import path from "node:path";
 
+export const ENDPOINT_PATH = "/-/dev/provenance";
+
 // Issue #454: evidence outputs are products of capturing evidence, not inputs
 // to the served app — the captures and their READMEs, the preflight's own
 // record, and the dev-server log. They never taint source cleanliness.
@@ -80,6 +82,53 @@ export function devProvenance(root = process.cwd()) {
 }
 
 const shortSha = (commit) => (commit ? commit.slice(0, 8) : "(none)");
+
+// Issue #457: the provenance fetch shared by the capture preflight and the
+// evidence health check — the health check must read the exact URL the same
+// way the preflight does, or its server/provenance classification could
+// disagree with the gate that accepts evidence.
+//
+// The endpoint hangs off the origin; a bare server URL or the endpoint URL
+// itself are both accepted.
+export function endpointUrl(rawUrl) {
+  const base = new URL(rawUrl);
+  if (base.pathname.replace(/\/+$/, "") === ENDPOINT_PATH) return base.href;
+  return new URL(ENDPOINT_PATH, base.origin).href;
+}
+
+// Answers { provenance, detail }: provenance is the parsed body on success,
+// null otherwise, with `detail` naming why — an invalid URL, a non-dev
+// server, or an unreachable one. Every rejection is a diagnostic, never a
+// throw, so callers can print the fix instead of a stack.
+export async function fetchProvenance(rawUrl) {
+  let href;
+  try {
+    href = endpointUrl(rawUrl);
+  } catch {
+    return {
+      provenance: null,
+      detail: `"${rawUrl}" is not a valid URL — pass the server URL exactly as the launcher printed it.`,
+    };
+  }
+  try {
+    const response = await fetch(href, {
+      signal: AbortSignal.timeout(5000),
+      headers: { accept: "application/json" },
+    });
+    if (!response.ok) {
+      return { provenance: null, detail: `${href} answered HTTP ${response.status} — not a FlowSynth dev server.` };
+    }
+    const body = await response.text();
+    try {
+      return { provenance: JSON.parse(body), detail: null };
+    } catch {
+      return { provenance: null, detail: `${href} answered a non-JSON body — not a FlowSynth dev server.` };
+    }
+  } catch (error) {
+    const code = error?.cause?.code ?? error?.name ?? "error";
+    return { provenance: null, detail: `${href} is unreachable (${code}) — the server may have died.` };
+  }
+}
 
 // Issue #454: the one capture gate, shared by the preflight CLI and any
 // workflow that would accept evidence. Identity first — the served worktree

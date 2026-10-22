@@ -57,14 +57,27 @@ A pass prints the ✓ summary line in the dev panel (`Focus setup` readout) and 
 
 Verify and screenshot both a desktop and a ~390px phone viewport from the verified URL. A viewport pass that fails or cannot run is recorded as unavailable — never claimed as verified. The evidence backs a review against the [instrument standards](../instrument-standards.md), which also requires keyboard/touch disclosure checks, non-color state distinctions, and reduced-motion behavior where applicable.
 
-### Resize flakiness
+## 5. Recover a stalled pass: the health check, bounded retries, honest records
 
-`preview_resize` fails most attempts at any viewport size — "Preview automation resize timed out after 15000ms" — while click/evaluate/snapshot on the same tab usually keep working. Get resizing done before captures, not during:
+A pass that stalls — a hidden tab hangs its captures, a resize never lands, a snapshot times out, the server stops answering (issue #456's pass lost its failure capture to snapshot hangs that outlived two tabs) — is not the end of verification. Do not abandon the pass and do not retry blindly: run the health check first.
 
-- Resize to each viewport **before** capturing at that size, and batch that viewport's whole capture pass before resizing again.
-- After a timeout, call `preview_status` once (it often revives the viewport), then retry resize at most once more.
-- Three failed attempts is the whole budget; beyond that, record the viewport pass as unavailable per the rule above.
+```
+node tools/evidence-healthcheck.mjs --url http://localhost:PORT --viewport 390x844
+```
+
+It checks the server/provenance side for real — the exact URL, read the same way the capture preflight reads it — and prints the browser-side checks precisely: `preview_status`, `preview_snapshot`, `preview_resize`, each with the observable that passes and the failure class its failure maps to. A stalled pass is in exactly one of four classes, each with one bounded recovery:
+
+- **server-provenance** — the preflight rejects the URL or the server stops answering between captures. Relaunch `npm run dev` in this worktree, repoint the tab if the port changed, and re-run the preflight — it is the acceptance gate; the health check is diagnostic. Budget: one relaunch, then re-check. A rejection that survives its relaunch blocks the pass: record it and mark every capture on that URL unavailable.
+- **browser-visibility** — `preview_status` reports the tab hidden, loading forever, dialog-bound, or on a URL that is not the verified one; the hidden tab is the case behind capture hangs. Activate the tab so it is the session's visible tab and re-read the status; answer any pending dialog first. Budget: two activation attempts, each confirmed by a status read.
+- **browser-snapshot** — `preview_snapshot` times out or errors while the server is verified and the status read shows a visible, loaded tab on the verified URL. Read `preview_status` once (it classifies visibility and often revives the pipeline), then retry the same snapshot — the record must name the check that failed, so retry the failed snapshot, not a different capture. Budget: three attempts, the recovery action between them.
+- **browser-viewport** — `preview_resize` times out ("Preview automation resize timed out after 15000ms") or a later status read reports a size that differs from the target. Get resizing done before captures, not during: resize to each viewport **before** capturing at that size, and batch that viewport's whole capture pass before resizing again. After a timeout, call `preview_status` once (it often revives the viewport), then retry the same resize at most once more. Three failed attempts is the whole budget; beyond that, the viewport pass is unavailable.
 
 A resize that lands after retries is still a good viewport — capture everything before touching the size again.
 
-The launcher, its log, the provenance endpoint, and the preflight are development-only: `vite build` ships neither the endpoint nor any absolute local path (asserted by `tools/build-purity.test.ts`).
+**Resuming after recovery.** Recovery must preserve the verified checkout and URL. Before the pass claims anything again: re-run the capture preflight against the exact URL (if the port changed, preflight the new URL — that revalidation is what keeps provenance true) and confirm from `preview_status` that the tab is visible and reports the exact expected viewport size. A viewport confirmed only by the resize's own success is not confirmed. Then resume captures at the same URL.
+
+**When the budget is exhausted.** Record, in the evidence README: the raw failure (class and message, verbatim), the recovery attempts in order with their outcomes, and the exact checks that are unavailable — e.g. "phone 390×844 unavailable: preview_resize timed out ×3" — never claimed as verified and never silently dropped. Evaluate/click work that kept running (seeding, assertions) is named as run, never presented as the missing captures.
+
+**External limits.** The preview service is outside this repo: snapshots can hang and resizes can time out with no local cause, and neither can be forced or fixed from here. The budgets bound the cost of finding that out; the record keeps an exhausted pass honest instead of unbounded.
+
+The launcher, its log, the provenance endpoint, the preflight, and the health check are development-only: `vite build` ships neither the endpoint nor any absolute local path (asserted by `tools/build-purity.test.ts`).
