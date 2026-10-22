@@ -719,3 +719,13 @@ A reward for an already completed task that waits for full funding from task rew
 ### Header/ledger refinement — 2026-10-20 follow-up
 
 Logo alone at the header's left edge; Pause/Resume is icon-only before the centered dark clock/Notes well, Finish after it with a save-and-check mark. Nous balance and production are paired in the banner and ledger. The entire banner resource region is one ledger button; resource spans have no independent actions. Feats/Chords retain destinations and repeat their icons/totals in the ledger. Harmonic capacity reads allowance / ceiling. See [brief](docs/interface-refinement-brief.md#header-and-ledger-follow-up).
+
+
+### Header presentation amendment — 2026-10-22
+
+The main session action reads Enter flow, Finish flow while running or paused, and End breather. The logo is accompanied by FlowSynth and a mode status where space permits; the wordmark yields first, and status moves below the single-row header on narrow screens. This supersedes the earlier logo-alone/Finish presentation choice. Session meanings and accounting are unchanged. See [the confirmed brief](docs/flow-control-header-brief.md).
+
+
+## Phone header trial — 2026-10-22
+
+The user requested a two-row phone layout after reviewing the compact implementation. Below 600px, the first row carries logo, FlowSynth with mode status, and Settings; the second carries Pause/Resume, the clock/Notes well, and the labeled main action. The wordmark and status now fit within the header. This supersedes the single-row phone constraint and below-header status fallback on phones only; desktop and intermediate-width presentation remain unchanged. Session behavior and the clipped vermillion action remain unchanged.

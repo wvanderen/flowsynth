@@ -285,3 +285,13 @@ The [header-status brief](docs/header-status-brief.md) recomposes the Focus door
 ## Mode lamp and main-switch key amendment (2026-10-20)
 
 The console's iteration on #441: the main switch rebuilds as a chamfered key — square-cut, all four corners cut, one power glyph in every state — with its word on a console readout plate beside it (`ENTER FLOW` / `EXIT FLOW` / `END BREATHER`; "Finish" retires for "Exit flow"). The switch's own state dot retires: the brand mark's filled core becomes the console's mode lamp — vermillion flow (the one glow), amber hold, charge-green breather, engraved core at standby — and the session strip wears the same state color (vermillion fill, amber frozen, green toward the allowance, empty at standby). The lamp, the strip, and the key share the console's one `data-mode`; the Monochrome Console Rule now reads "monochrome but for the switch and its mode expression" — the amber and green ride the sanctioned goal/charge tokens, and only the live state glows.
+
+
+## Flow control and status amendment — 2026-10-22
+
+The confirmed [flow-control/header brief](docs/flow-control-header-brief.md) replaces the power key and separate readout with a text-only vermillion button: Enter flow, Finish flow (running or paused), and End breather. Top-right/bottom-left clipping is an explicit exception for this primary control only; other controls remain square. Beside the logo, FlowSynth sits above a readable mode status: Upgrade mode, Flow active, Flow paused, or Breather active. Hide the wordmark first as width tightens, then move status directly below the single-row header when needed. Labels and touch targets remain readable on phone. This supersedes logo-alone and earlier Finish/Exit presentation contracts; behavior is unchanged.
+
+
+## Phone header trial — 2026-10-22
+
+The user requested a two-row phone layout after reviewing the compact implementation. Below 600px, the first row carries logo, FlowSynth with mode status, and Settings; the second carries Pause/Resume, the clock/Notes well, and the labeled main action. The wordmark and status now fit within the header. This supersedes the single-row phone constraint and below-header status fallback on phones only; desktop and intermediate-width presentation remain unchanged. Session behavior and the clipped vermillion action remain unchanged.

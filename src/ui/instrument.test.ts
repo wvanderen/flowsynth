@@ -374,7 +374,6 @@ describe("the controls sheet's stylesheet contract", () => {
       ".habit-chip {",
       ".history-chip {",
       ".tool-badge {",
-      ".switch-readout {",
       ".rate-hint {",
       ".chord-pip {",
       ".habit-dot {",
