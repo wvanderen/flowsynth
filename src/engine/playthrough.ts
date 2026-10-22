@@ -52,12 +52,11 @@ import type { GameState, Hex } from "./types";
 // The runner's own version: a behavior-affecting change here is a source
 // change, and a rerun against different source identifies separately
 // (story 36's foundation).
-export const PLAYTHROUGH_RUNNER_VERSION = 1;
+export const PLAYTHROUGH_RUNNER_VERSION = 2;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
 const STEP_SECONDS = 60;
-const DAY_MS = 86_400_000;
 const NOTE_TEXT = "keep the shoulders down and the wrist loose through the scale run";
 
 // The player policies. "prompt" is this ticket's readable baseline; the
@@ -78,7 +77,7 @@ export const PROMPT_POLICY: PlaythroughPolicy = {
     "Buy every unowned shelf module it can afford — generator, infusor, then forge.",
     "Buy board cells while affordable, nearest first along the compact frontier.",
     "Place every tray module on the vacancy the authoritative preview scores highest.",
-    "Buy every affordable capacity rung, then sweep five-level upgrades over the deployed voices, cheapest first, while the bank covers the next gesture.",
+    "Buy every affordable Poly Expander, then sweep five-level upgrades over the deployed voices, cheapest first, while the bank covers the next gesture.",
     "Bank the Catalog entry when affordable, then the discount and ceiling offerings.",
     "Attempt World Columns and Hone ranks only once an enemy is discovered, and only while affordable.",
     "Prestige at the first between-sessions moment the horizon is reached.",
@@ -101,6 +100,8 @@ export interface PlaythroughSchedule {
   // Day 1, session 1 (epoch ms). Declared, never read off the wall clock:
   // the same recipe builds the same run.
   readonly startAt: number;
+  // Engine goal accounting uses the host calendar; reject a different host.
+  readonly timeZone: string;
 }
 
 // The recipe: every behavior-affecting input in one place (story 11).
@@ -134,6 +135,7 @@ export function defaultPlaythroughRecipe(): PlaythroughRecipe {
       habitName: "Practice",
       goalMinutes: 25,
       startAt: Date.UTC(2026, 0, 5, 9, 0, 0),
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
     budgetDays: 30,
     overrides: {},
@@ -203,8 +205,19 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
   if (!Number.isInteger(schedule.goalMinutes) || schedule.goalMinutes < 1 || schedule.goalMinutes > 1440) {
     fail(`goalMinutes must be a whole number 1–1440 — found ${schedule.goalMinutes}.`);
   }
-  if (!Number.isFinite(schedule.startAt) || schedule.startAt < 0) {
+  if (!Number.isFinite(schedule.startAt) || schedule.startAt < 0 || !Number.isFinite(new Date(schedule.startAt).getTime())) {
     fail("startAt must be a finite epoch-millis stamp.");
+  }
+  if (schedule.timeZone !== Intl.DateTimeFormat().resolvedOptions().timeZone) {
+    fail(`timeZone must match the engine's host calendar (${Intl.DateTimeFormat().resolvedOptions().timeZone}) — found ${schedule.timeZone}.`);
+  }
+  const dailySpan = schedule.sessionsPerDay * (schedule.sessionMinutes + schedule.breatherMinutes) * 60_000;
+  for (let day = 0; day < recipe.budgetDays; day++) {
+    const start = sessionStartMs(schedule, day, 0);
+    const next = sessionStartMs(schedule, day + 1, 0);
+    if (!Number.isFinite(next) || dailySpan > next - start) {
+      fail("schedule must fit each calendar day, including declared breathers and daylight-saving transitions.");
+    }
   }
   return recipe;
 }
@@ -216,10 +229,31 @@ export interface PlaythroughSource {
   readonly game: "flowsynth";
   readonly saveVersion: number;
   readonly runnerVersion: number;
+  readonly engineSource: string;
+}
+
+// Vite tracks these raw dependencies in dev and embeds the exact engine
+// content in builds/tests. Changes to actions, balance, and scenarios all
+// change provenance, including during hot reload; test files are excluded.
+const engineFiles = import.meta.glob<string>(["./**/*.ts", "!./**/*.test.ts"], {
+  query: "?raw", import: "default", eager: true,
+});
+
+function fingerprint(text: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    hash ^= text.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return hash.toString(16).padStart(8, "0");
 }
 
 export function playthroughSource(): PlaythroughSource {
-  return { game: "flowsynth", saveVersion: SAVE_VERSION, runnerVersion: PLAYTHROUGH_RUNNER_VERSION };
+  const content = JSON.stringify(Object.keys(engineFiles).sort().map((path) => [path, engineFiles[path]]));
+  return {
+    game: "flowsynth", saveVersion: SAVE_VERSION,
+    runnerVersion: PLAYTHROUGH_RUNNER_VERSION, engineSource: fingerprint(content),
+  };
 }
 
 // Stable identity: the same recipe and source share one run id; a changed
@@ -227,12 +261,7 @@ export function playthroughSource(): PlaythroughSource {
 // wall-clock stamps and platform hash variance.
 export function playthroughRunId(recipe: PlaythroughRecipe, source: PlaythroughSource): string {
   const text = JSON.stringify({ recipe, source });
-  let hash = 0x811c9dc5;
-  for (let i = 0; i < text.length; i++) {
-    hash ^= text.charCodeAt(i);
-    hash = Math.imul(hash, 0x01000193) >>> 0;
-  }
-  return `${recipe.scenarioId}-s${recipe.seed}-${hash.toString(16).padStart(8, "0")}`;
+  return `${recipe.scenarioId}-s${recipe.seed}-${fingerprint(text)}`;
 }
 
 // One recorded decision (story 18): the simulated moment, the credited
@@ -327,14 +356,16 @@ interface RunContext {
 // accounting (story 15).
 function sessionStartMs(schedule: PlaythroughSchedule, day: number, session: number): number {
   const stride = (schedule.sessionMinutes + schedule.breatherMinutes) * 60_000;
-  return schedule.startAt + day * DAY_MS + session * stride;
+  const date = new Date(schedule.startAt);
+  date.setDate(date.getDate() + day);
+  return date.getTime() + session * stride;
 }
 
 function record(
   ctx: RunContext,
   event: Omit<PlaythroughEvent, "at" | "credited"> & { ok: boolean; reason?: string },
 ): void {
-  ctx.events.push({ at: Math.round(ctx.elapsedMs / 1000), credited: Math.round(ctx.credited), ...event });
+  ctx.events.push({ at: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000), credited: Math.round(ctx.credited), ...event });
   if (event.milestone && event.ok) ctx.lastMilestone = event.label;
 }
 
@@ -350,7 +381,7 @@ function outcome(result: ActionResult): { ok: boolean; reason?: string } {
 function pushTrajectory(ctx: RunContext, state: GameState): void {
   const snapshot = syncRates(state, false);
   ctx.trajectory.push({
-    elapsed: Math.round(ctx.elapsedMs / 1000),
+    elapsed: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000),
     credited: Math.round(ctx.credited),
     rate: snapshot.rate,
     forgeRate: snapshot.forgeRate,
@@ -491,17 +522,17 @@ function manage(ctx: RunContext, state: GameState): void {
       const after = syncRates(state, false).rate;
       record(ctx, {
         kind: "milestone",
-        label: `Capacity rung ${state.capacityBought} — ${before.toFixed(2)}ν/s → ${after.toFixed(2)}ν/s`,
+        label: `Poly Expander ${state.capacityBought} — ${before.toFixed(2)}ν/s → ${after.toFixed(2)}ν/s`,
         ok: true,
         milestone: true,
       });
     } else {
       record(ctx, {
         kind: "milestone",
-        label: `Capacity rung ${state.capacityBought + 1}`,
+        label: `Poly Expander ${state.capacityBought + 1}`,
         ...outcome(result),
       });
-      decline(ctx, `capacity rung ${state.capacityBought + 1}`, result.reason ?? "declined");
+      decline(ctx, `Poly Expander ${state.capacityBought + 1}`, result.reason ?? "declined");
       break;
     }
   }
@@ -535,8 +566,8 @@ function manage(ctx: RunContext, state: GameState): void {
     if (!result.ok) decline(ctx, "catalog entry", result.reason ?? "declined");
   } else {
     for (const [label, attempt] of [
-      ["capacity discount", () => buyCapacityDiscount(state)],
-      ["capacity ceiling", () => buyCapacityCeiling(state)],
+      ["Chord Catalysts", () => buyCapacityDiscount(state)],
+      ["Expansion Bays", () => buyCapacityCeiling(state)],
     ] as const) {
       const result = attempt();
       record(ctx, { kind: "arete", label: `Arete — ${label}`, ...outcome(result) });
@@ -709,14 +740,11 @@ export function runPlaythrough(
       }
       manage(ctx, state);
       runSession(ctx, state, day, session);
-    }
-  }
-  if (!complete && horizonReached(state)) {
-    // The budget ended between sessions with the door already open — one
-    // last prompt check before calling the run incomplete.
-    if (tryPrestige(ctx, state)) {
-      complete = true;
-      stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
+      if (tryPrestige(ctx, state)) {
+        complete = true;
+        stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
+        break day;
+      }
     }
   }
   const lastSessionLabel = [...ctx.events].reverse().find((event) => event.kind === "session")?.label ?? null;

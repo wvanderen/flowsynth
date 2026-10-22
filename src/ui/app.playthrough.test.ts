@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
-import type { PlaythroughRecord } from "../engine/playthrough";
+import { playthroughRunId, type PlaythroughRecord } from "../engine/playthrough";
 import { createAppFixture } from "./testing/app-fixture";
 import { STORAGE_KEY } from "../engine/save";
 
@@ -52,6 +52,7 @@ describe("the declared recipe", () => {
       breatherMinutes: 5,
       habitName: "Practice",
       goalMinutes: 25,
+      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     expect(typeof recipe.schedule.startAt).toBe("number");
     expect(recipe.budgetDays).toBe(30);
@@ -83,6 +84,23 @@ describe("reproducibility", () => {
     // different trajectory to satisfy the recipe's contract.
     void changed;
   });
+  it("records engine content provenance and identifies a changed source", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ budgetDays: 1 });
+    expect(record.source.engineSource).toMatch(/^[0-9a-f]{8}$/);
+    expect(playthroughRunId(record.recipe, { ...record.source, engineSource: "changed-engine" }))
+      .not.toBe(record.runId);
+  });
+
+  it("declares the host calendar and rejects a different timezone before running", () => {
+    app = boot(undefined, true);
+    const timeZone = app.devPlaythroughRecipe().schedule.timeZone;
+    expect(timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+    const other = timeZone === "UTC" ? "America/New_York" : "UTC";
+    expect(() => app.devRunPlaythrough({ schedule: { timeZone: other } })).toThrow(/timeZone.*host calendar/);
+    expect(app.devPlaythrough).toBeNull();
+  });
+
 });
 
 describe("schedule accounting", () => {
@@ -126,6 +144,31 @@ describe("schedule accounting", () => {
     expect(goal.completed).toBe(true);
     expect(goal.occurrenceKey).toBe(dayTwo);
   });
+  it("rejects schedules that overlap a calendar day or overrun the budget", () => {
+    app = boot(undefined, true);
+    for (const schedule of [
+      { sessionsPerDay: 8, sessionMinutes: 600, breatherMinutes: 0 },
+      { sessionsPerDay: 8, sessionMinutes: 1, breatherMinutes: 600 },
+    ]) {
+      expect(() => app.devRunPlaythrough({ budgetDays: 2, schedule })).toThrow(/fit each calendar day/);
+    }
+    expect(app.devPlaythrough).toBeNull();
+  });
+
+  it("keeps local calendar starts and monotonic elapsed clocks across daylight-saving dates", () => {
+    app = boot(undefined, true);
+    const startAt = new Date(2026, 2, 7, 9).getTime();
+    const record = app.devRunPlaythrough({ budgetDays: 3, schedule: { startAt } });
+    const starts = record.state.sessionRecords.filter((_, i) => i % 2 === 0).map((r) => r.startedAt);
+    expect(starts).toEqual([7, 8, 9].map((day) => new Date(2026, 2, day, 9).getTime()));
+    expect(record.events[0]!.at).toBe(0);
+    expect(record.trajectory[0]!.elapsed).toBe(0);
+    expect(record.trajectory.at(-1)!.elapsed).toBe(record.elapsedSeconds);
+    expect(record.events.every((e, i) => i === 0 || e.at >= record.events[i - 1]!.at)).toBe(true);
+    const deadline = new Date(2026, 2, 10, 9).getTime();
+    expect(record.elapsedSeconds).toBeLessThanOrEqual((deadline - startAt) / 1000);
+  });
+
 });
 
 describe("the prompt policy's record", () => {
@@ -143,7 +186,7 @@ describe("the prompt policy's record", () => {
     const purchases = record.events.filter((event) => event.kind === "purchase" && event.ok);
     expect(purchases[0]!.label).toBe("Shelf — generator");
     expect(record.events.some((event) => event.kind === "placement" && event.ok)).toBe(true);
-    expect(record.events.some((event) => event.kind === "milestone" && event.label.startsWith("Capacity rung 1"))).toBe(true);
+    expect(record.events.some((event) => event.kind === "milestone" && event.label.startsWith("Poly Expander 1"))).toBe(true);
     // The engine's own reasons ride the declines verbatim.
     const declined = record.events.filter((event) => !event.ok);
     expect(declined.length).toBeGreaterThan(0);
@@ -203,6 +246,17 @@ describe("completion", () => {
     expect(record.creditedSeconds).toBeGreaterThan(0);
     expect(record.state.totalEarned).toBeGreaterThan(0);
   });
+  it("reports the same prestige day when the budget ends on the crossing day", () => {
+    app = boot(undefined, true);
+    const first = app.devRunPlaythrough({ budgetDays: 20, schedule: { sessionsPerDay: 1 } });
+    expect(first.complete).toBe(true);
+    const bounded = app.devRunPlaythrough({ budgetDays: first.days, schedule: { sessionsPerDay: 1 } });
+    expect(bounded.complete).toBe(true);
+    expect(bounded.days).toBe(first.days);
+    expect(bounded.elapsedSeconds).toBe(first.elapsedSeconds);
+    expect(bounded.events).toEqual(first.events);
+  });
+
 });
 
 describe("the panel's visible wiring", () => {
