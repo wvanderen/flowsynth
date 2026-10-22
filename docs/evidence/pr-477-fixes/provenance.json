@@ -1,0 +1,31 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-22T22:53:11.092Z",
+  "url": "http://localhost:5173",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-e14fa6d4",
+  "branch": null,
+  "commit": "fce8c0d71147e3f8e317b6c4cfd426d628ba31db",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/pr-477-review/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/pr-477-review/desktop.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/pr-477-review/phone.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/pr-477-review/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}
