@@ -44,6 +44,10 @@ When your output names a domain concept (in an issue title, a refactor proposal,
 
 If the concept you need isn't in the glossary yet, that's a signal: either you're inventing language the project doesn't use (reconsider) or there's a real gap (note it for `/domain-modeling`).
 
+## Update CONTEXT.md with the change
+
+When a change alters behavior an existing CONTEXT.md passage describes, correct that passage in the same change as a plain accuracy edit — no ceremony, and no call for `/domain-modeling`. Reach for `/domain-modeling` only when the change resolves a term or decision worth recording (a new definition, a named choice).
+
 ## Flag ADR conflicts
 
 If your output contradicts an existing ADR, surface it explicitly rather than silently overriding:
