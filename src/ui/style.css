@@ -715,6 +715,14 @@ h1, h2, h3, p { margin: 0; }
 .plan-habit-chip-add { border-style: dashed; color: var(--muted); }
 .plan-habit-chip-add:hover:not(:disabled) { color: var(--ink); }
 
+/* The PLAN face's selected-habit context (issue #447): the goal read and
+   the compact class summary beneath the selection and duration rows —
+   read-only, ruled like the detail's sections — with Edit habit and
+   Develop closing the hierarchy as the two deliberate moves. */
+.focus-prepare { margin-top: 12px; }
+.focus-prepare .habit-goal .folio-row { align-items: flex-start; }
+.focus-prepare .habit-class { margin-top: 12px; }
+
 /* The HABIT face's figure-led list: figures lead — lifetime, sessions —
    the name grows, the active habit wears its dot, every row drills. */
 .habit-ledger-row { width: 100%; text-align: left; cursor: pointer; }
