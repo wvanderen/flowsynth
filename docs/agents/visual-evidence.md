@@ -56,7 +56,7 @@ app.devScenarioAssert();        // re-confirms; throws a named failure if the se
 app.showFocusFace("plan");      // opens the Focus sheet on the PLAN face
 ```
 
-A pass prints the ✓ summary line — figures, origin, isolation — in the dev panel's note readout and returns from `devScenarioAssert()`; a failure throws a named `Focus scenario: …` (or `Fresh start: …`) reason and prints the ✗ line. Record both in the demonstration: the dev panel's line is visible in captures, and the assertion call belongs in the capture script so an unconfirmed setup cannot pass silently. The Focus goal anchors to the install day — relaunch when the capture spans local midnight.
+A pass prints the ✓ declaration line — figures, situation, origin, isolation — in the dev panel's note readout and returns from `devScenarioAssert()`; a failure throws a named `Focus scenario: …` (or `Fresh start: …`) reason and prints the ✗ line. Record both in the demonstration: the dev panel's line is visible in captures, and the assertion call belongs in the capture script so an unconfirmed setup cannot pass silently. The Focus goal anchors to the install day — relaunch when the capture spans local midnight.
 
 ## 4. Capture desktop and phone against that same server
 

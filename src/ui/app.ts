@@ -2768,6 +2768,16 @@ export class App {
     return SCENARIOS;
   }
 
+  // The launch's standing declaration (issue #467): the setup's figures,
+  // its intended situation, its origin, and the isolation — the ✓ line
+  // every launch and passed assertion writes, the ✗ line replacing on a
+  // named failure.
+  private scenarioNote(scenario: ScenarioDescriptor, ok: boolean): string {
+    return ok
+      ? `${scenario.name} ✓ ${scenario.summary()} · ${scenario.situation} · ${scenario.origin} · isolated save`
+      : `${scenario.name} ✗`;
+  }
+
   devLaunchScenario(id: string, now: number = Date.now()): void {
     if (!this.dev) return;
     const scenario = scenarioOf(id);
@@ -2780,8 +2790,10 @@ export class App {
       candidate = scenario.build(now);
       scenario.assert(candidate, now);
     } catch (error) {
-      this.devScenarioId = null;
-      this.devScenarioNote = `${scenario.id} ✗ ${(error as Error).message}`;
+      // The candidate never installed: whatever scenario the state still
+      // carries stays the active one, and the ✗ line names the refused
+      // candidate.
+      this.devScenarioNote = `${this.scenarioNote(scenario, false)} ${(error as Error).message}`;
       this.say(`Dev scenario failed: ${(error as Error).message}`);
       this.render();
       throw error;
@@ -2795,7 +2807,7 @@ export class App {
     this.lastWall = null;
     this.exitPending = false;
     this.save(now, true);
-    this.devScenarioNote = `${scenario.summary()} · ${scenario.origin} · isolated save`;
+    this.devScenarioNote = this.scenarioNote(scenario, true);
     this.say(`Dev: ${scenario.name} installed in an isolated save — ${scenario.situation}.`);
     this.render();
   }
@@ -2814,11 +2826,11 @@ export class App {
     try {
       scenario.assert(this.state, now);
     } catch (error) {
-      this.devScenarioNote = `${scenario.id} ✗ ${(error as Error).message}`;
+      this.devScenarioNote = `${this.scenarioNote(scenario, false)} ${(error as Error).message}`;
       this.render();
       throw error;
     }
-    this.devScenarioNote = `${scenario.summary()} · ${scenario.origin} · isolated save`;
+    this.devScenarioNote = this.scenarioNote(scenario, true);
     this.say(`Dev: ${scenario.name} assertions passed.`);
     this.render();
   }

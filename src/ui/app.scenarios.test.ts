@@ -31,6 +31,16 @@ afterEach(() => fixture.release());
 
 const status = (): string => document.getElementById("status")?.textContent ?? "";
 
+// The prior-save boot the isolation cases share: an ordinary save with
+// 500ν on the slot, then a dev boot over it.
+function seedOrdinaryAndBoot(t: number): number {
+  const prior = createInitialState();
+  prior.nous = 500;
+  localStorage.setItem(STORAGE_KEY, serialize(prior, t - 60_000));
+  app = boot(undefined, true);
+  return prior.nous;
+}
+
 describe("the suite's catalog", () => {
   it("declares the fresh start and the Focus setup with their situations and origins", () => {
     app = boot(undefined, true);
@@ -50,17 +60,15 @@ describe("the suite's catalog", () => {
 describe("the launch command", () => {
   it("launching fresh start installs the shipped opening state and leaves the ordinary save untouched", () => {
     const t = Date.now();
-    const prior = createInitialState();
-    prior.nous = 500;
-    localStorage.setItem(STORAGE_KEY, serialize(prior, t - 60_000));
-    app = boot(undefined, true);
+    seedOrdinaryAndBoot(t);
     const ordinary = localStorage.getItem(STORAGE_KEY)!;
-    expect(app.state.nous).toBe(500);
 
     app.devLaunchScenario("fresh-start", t);
     expect(app.state).toEqual(createInitialState());
     expect(app.devScenarioId).toBe("fresh-start");
-    expect(app.devScenarioNote).toContain("fresh ✓");
+    // The launch declares its situation and origin in the standing note.
+    expect(app.devScenarioNote).toContain("Fresh start ✓");
+    expect(app.devScenarioNote).toContain("the shipped opening board");
     expect(app.devScenarioNote).toContain("initial state");
     expect(app.devScenarioNote).toContain("isolated save");
     expect(status()).toContain("Fresh start installed in an isolated save");
@@ -81,16 +89,14 @@ describe("the launch command", () => {
 
   it("launching Focus through the same boundary keeps the prior guarantees (#456)", () => {
     const t = Date.now();
-    const prior = createInitialState();
-    prior.nous = 500;
-    localStorage.setItem(STORAGE_KEY, serialize(prior, t - 60_000));
-    app = boot(undefined, true);
+    seedOrdinaryAndBoot(t);
     const ordinary = localStorage.getItem(STORAGE_KEY)!;
 
     app.devLaunchScenario("focus", t);
     assertFocusScenario(app.state);
     expect(app.state).toEqual(createFocusScenarioState(t));
-    expect(app.devScenarioNote).toContain("focus ✓");
+    expect(app.devScenarioNote).toContain("Focus ✓");
+    expect(app.devScenarioNote).toContain("session preparation with class development");
     expect(app.devScenarioNote).toContain("constructed fixture");
     expect(app.devScenarioNote).toContain("isolated save");
 
@@ -125,7 +131,7 @@ describe("the launch command", () => {
       app.devNous();
       createHabit(app.state, "Sketching");
       addPracticeLog(app.state, app.state.habits[0]!.id, 10, t);
-      expect(app.state.habits.length).toBeGreaterThanOrEqual(1);
+      expect(app.state.habits).toHaveLength(id === "focus" ? 2 : 1);
 
       app.devLaunchScenario(id, t);
       expect(app.state).toEqual(id === "focus" ? createFocusScenarioState(t) : createInitialState());
@@ -134,19 +140,31 @@ describe("the launch command", () => {
     }
   });
 
-  it("an unknown scenario id refuses by name and touches nothing", () => {
+  it("an unknown scenario id refuses by name and leaves the installed scenario standing", () => {
     const t = Date.now();
     app = boot(undefined, true);
     const before = structuredClone(app.state);
     const slotBefore = localStorage.getItem(STORAGE_KEY);
 
+    app.devLaunchScenario("focus", t);
     app.devLaunchScenario("speedrun", t);
 
     expect(status()).toBe('Dev: no scenario "speedrun" — the suite offers fresh-start, focus.');
-    expect(app.state).toEqual(before);
+    // The refused candidate never installed: the Focus setup stays the
+    // active scenario, its note and its assertion intact.
+    expect(app.devScenarioId).toBe("focus");
+    expect(app.devScenarioNote).toContain("Focus ✓");
+    expect(() => app.devScenarioAssert(t)).not.toThrow();
+    expect(app.state).not.toEqual(before);
     expect(localStorage.getItem(STORAGE_KEY)).toBe(slotBefore);
-    expect(app.devScenarioId).toBeNull();
-    expect(app.devScenarioNote).toBeNull();
+
+    // An unknown id on a scenario-free boot touches nothing at all.
+    const fresh = boot(undefined, true);
+    const untouched = structuredClone(fresh.state);
+    fresh.devLaunchScenario("speedrun", t);
+    expect(fresh.state).toEqual(untouched);
+    expect(fresh.devScenarioId).toBeNull();
+    expect(fresh.devScenarioNote).toBeNull();
   });
 
   it("is dev-gated: a normal instrument ignores the boundary", () => {
@@ -201,13 +219,14 @@ describe("the active scenario's assertion", () => {
     app.devLaunchScenario("focus", t);
     deleteGoal(app.state, activeGoalOf(app.state, app.state.habits[0]!.id)!.id);
     expect(() => app.devScenarioAssert(t)).toThrowError(/Focus scenario: expected the active goal/);
-    expect(app.devScenarioNote).toContain("focus ✗");
-    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("focus ✗");
+    expect(app.devScenarioNote).toContain("Focus ✗");
+    expect(app.devScenarioNote).toContain("expected the active goal");
+    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("Focus ✗");
 
     app.devLaunchScenario("focus", t);
     expect(() => app.devScenarioAssert(t)).not.toThrow();
-    expect(app.devScenarioNote).toContain("focus ✓");
-    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("focus ✓");
+    expect(app.devScenarioNote).toContain("Focus ✓");
+    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("Focus ✓");
   });
 
   it("asserts a fresh start by its own named facts", () => {
@@ -215,7 +234,7 @@ describe("the active scenario's assertion", () => {
     app = boot(undefined, true);
     app.devLaunchScenario("fresh-start", t);
     expect(() => app.devScenarioAssert(t)).not.toThrow();
-    expect(app.devScenarioNote).toContain("fresh ✓");
+    expect(app.devScenarioNote).toContain("Fresh start ✓");
 
     app.state.prestiges = 1;
     expect(() => app.devScenarioAssert(t)).toThrowError(/Fresh start: expected the first era/);
@@ -234,12 +253,14 @@ describe("the dev panel's suite entry", () => {
     const select = document.getElementById("dev-scenario") as HTMLSelectElement;
     expect(select).not.toBeNull();
     expect([...select.options].map((option) => option.value)).toEqual(["fresh-start", "focus"]);
+    expect(select.options[0]!.title).toContain("opening board");
+    expect(select.options[0]!.textContent).toBe("Fresh start");
 
     select.value = "fresh-start";
     document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
     expect(app.state).toEqual(createInitialState());
     expect(app.devScenarioId).toBe("fresh-start");
-    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("fresh ✓");
+    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("Fresh start ✓");
 
     // The active scenario's option carries the selected marker after a
     // launch, whoever drove it. The render replaces the panel's controls,

@@ -4090,7 +4090,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
     .devScenarios()
     .map(
       (scenario) =>
-        `<option value="${scenario.id}" ${scenario.id === app.devScenarioId ? "selected" : ""} title="${scenario.situation}">${scenario.name}</option>`,
+        `<option value="${escapeHtml(scenario.id)}" ${scenario.id === app.devScenarioId ? "selected" : ""} title="${escapeHtml(scenario.situation)}">${escapeHtml(scenario.name)}</option>`,
     )
     .join("");
   panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>

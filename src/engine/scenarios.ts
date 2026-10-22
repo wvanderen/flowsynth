@@ -12,16 +12,18 @@ import type { GameState } from "./types";
 // consumer runs on the candidate before an install touches anything. New
 // scenarios join this catalog; they never add a parallel launch path.
 
+// The origin classification (parent story 9): where the setup's state
+// comes from. "initial state" is the shipped opening itself;
+// "constructed fixture" is a development-built setup ordinary play cannot
+// reach; later tickets add recipe-generated checkpoints.
+export type ScenarioOrigin = "initial state" | "constructed fixture";
+
 export interface ScenarioDescriptor {
   readonly id: string;
   readonly name: string;
   // The intended situation, one line: what the launch is for.
   readonly situation: string;
-  // The origin classification (parent story 9): where the setup's state
-  // comes from — "initial state" (the shipped opening), "constructed
-  // fixture" (a development-built setup ordinary play cannot reach),
-  // later tickets add recipe-generated checkpoints.
-  readonly origin: string;
+  readonly origin: ScenarioOrigin;
   // The intended state, rebuilt from nothing every call.
   build(now: number): GameState;
   // The intended setup restated as checks, failing with a named reason.
@@ -36,11 +38,11 @@ export interface ScenarioDescriptor {
 const FRESH_START: ScenarioDescriptor = {
   id: "fresh-start",
   name: "Fresh start",
-  situation: "the shipped opening board — one synth, first upgrade mode",
+  situation: "the shipped opening board, one synth, first upgrade mode",
   origin: "initial state",
   build: () => createInitialState(),
   assert: (state) => assertFreshStart(state),
-  summary: () => `fresh ✓ ${openingGrant()}ν grant · one synth · upgrade mode`,
+  summary: () => `${openingGrant()}ν grant · one synth · upgrade mode`,
 };
 
 // The Focus evidence scenario (issue #456), unchanged beneath the suite:
@@ -48,7 +50,7 @@ const FRESH_START: ScenarioDescriptor = {
 const FOCUS: ScenarioDescriptor = {
   id: "focus",
   name: "Focus",
-  situation: "session preparation with class development — the evidence setup of #456",
+  situation: "session preparation with class development (#456)",
   origin: "constructed fixture",
   build: (now) => createFocusScenarioState(now),
   assert: (state, now) => assertFocusScenario(state, now),
