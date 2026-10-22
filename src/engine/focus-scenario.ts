@@ -3,7 +3,7 @@ import { seededRng } from "./capacity-calibration";
 import { allocateClassNode, classDefOf, pairOf, practiceRollThreshold, rankOf } from "./classes";
 import { BALANCE } from "./constants";
 import { addPracticeLog, createHabit, selectHabit, setHabitColor } from "./habits";
-import { activeGoalOf, createGoal } from "./goals";
+import { activeGoalOf, createGoal, occurrenceKeyFor } from "./goals";
 import { bankRolls, generateOffer } from "./rolls";
 import { createInitialState } from "./state";
 import type { GameState } from "./types";
@@ -127,9 +127,11 @@ export function createFocusScenarioState(now: number = Date.now()): GameState {
 // goal, or advancement is absent, and when any figure is inconsistent with
 // the scenario — including the ledger agreements the builder guarantees
 // (the queue carrying the meter's crossings, the conservation of tree
-// points). Runs on the candidate before an install touches anything, and
-// on live state whenever a capture pass re-confirms its setup.
-export function assertFocusScenario(state: GameState): void {
+// points) and the goal living in today's occurrence. `now` anchors that
+// occurrence check; the default is the real clock, a fixed stamp serves
+// the suites. Runs on the candidate before an install touches anything,
+// and on live state whenever a capture pass re-confirms its setup.
+export function assertFocusScenario(state: GameState, now: number = Date.now()): void {
   const fail: (why: string) => never = (why) => {
     throw new Error(`Focus scenario: ${why}`);
   };
@@ -159,6 +161,10 @@ export function assertFocusScenario(state: GameState): void {
       `expected the ${scenario.goalSchedule} ${scenario.goalMinutes}-minute goal — found ` +
         `${goal.schedule.kind} ${goal.condition.minutes}-minute.`,
     );
+  }
+  const today = occurrenceKeyFor(goal.schedule, now);
+  if (goal.occurrenceKey !== today) {
+    fail(`expected the goal in today's occurrence (${today}) — found ${goal.occurrenceKey}: reinstall the scenario.`);
   }
   if (goal.progressSeconds !== scenario.loggedMinutes * 60) {
     fail(`expected ${scenario.loggedMinutes}m logged toward the goal — found ${goal.progressSeconds}s.`);
@@ -196,6 +202,17 @@ export function assertFocusScenario(state: GameState): void {
 
   if (state.sessionRecords.length !== 1 || state.sessionRecords[0]!.creditedSeconds !== scenario.sessionSeconds) {
     fail(`expected one recorded ${scenario.sessionSeconds}s session — found ${state.sessionRecords.length}.`);
+  }
+  const record = state.sessionRecords[0]!;
+  if (record.habitId !== habit.id || record.earned !== scenario.sessionEarnedNous) {
+    fail(`expected the scenario's session (habit ${habit.id}, ${scenario.sessionEarnedNous}ν earned) — found ` +
+      `habit ${record.habitId}, ${record.earned}ν.`);
+  }
+  if (state.sessionsCompleted !== 1 || state.nous !== BALANCE.openingGrant + scenario.sessionEarnedNous) {
+    fail(
+      `expected one completed session and ${BALANCE.openingGrant + scenario.sessionEarnedNous}ν banked — found ` +
+        `${state.sessionsCompleted} and ${state.nous}ν.`,
+    );
   }
   if (BALANCE.engineerLevelThresholds[scenario.classLevel - 1]! > scenario.creditedSeconds) {
     fail(`the constants do not reach level ${scenario.classLevel} — raise creditedSeconds.`);

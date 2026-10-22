@@ -38,6 +38,29 @@ focus ✓ Piano · daily 60m · 25m logged · Engineer Lv 3 · isolated save
 with the console status line `Dev: Focus scenario assertions passed.` The
 dev panel's `Focus setup` readout is visible in every capture below.
 
+The failure form ran in the same verified tab, same pass, after the ✓
+captures: with the scenario installed, the capture script emptied the
+goal list (`app.state.goals.length = 0`) and re-ran
+`devFocusScenarioAssert()`, which threw
+
+```
+Focus scenario: expected the active goal on "Piano" — none found.
+```
+
+and the dev panel's readout flipped to
+
+```
+focus ✗ Focus scenario: expected the active goal on "Piano" — none found.
+```
+
+The reinstall then restored the intended setup and the ✓ line. A
+screenshot of the ✗ readout was not captured: the browser screenshot
+pipeline began timing out on every snapshot (evaluate and clicks stayed
+responsive) after the ✓ captures, on two tabs, and the pass is recorded
+unavailable per the evidence rules — the transcript above is the
+demonstration's record, and the ✗ readout's rendering is the same dev
+panel line the captures show for ✓.
+
 ### The setup's reads (exact DOM text at capture time)
 
 - Session host: `Focus controls, Piano, --:-- open-ended`; header goal
@@ -94,10 +117,12 @@ button and its one-line assertion readout.
   no new gesture was introduced. Verified by inspection of the rendered
   panel; no separate touch pass was run.
 - Non-color state: the readout distinguishes pass and failure by the `✓`
-  / `✗` glyph and the named text, never color alone. The ✗ form is
-  exercised by the automated case ("assertions fail clearly when the
-  setup drifts, and reinstall restores it"), not by a browser capture —
-  recorded evidence shows the ✓ form only.
+  / `✗` glyph and the named text, never color alone. Both forms ran in
+  the verified tab (transcripts above); only the ✓ form has a screenshot —
+  the ✗ capture pass is recorded unavailable above. The automated case
+  ("assertions fail clearly when the setup drifts, and reinstall restores
+  it") additionally asserts the ✗ readout's content after a drift and the
+  ✓ line after a reinstall.
 - Square controls, condensed mono lettering, open divisions: the button
   inherits the dev panel's existing control style; the readout is one
   plain mono line. Verified in the captures.
