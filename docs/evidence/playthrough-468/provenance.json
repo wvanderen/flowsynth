@@ -1,0 +1,19 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-22T22:18:44.276Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-61c7088c",
+  "branch": "t3/issue-468-implementation",
+  "commit": "ebd27b5bbfc0b20e9a402b7e424f89727a1a976f",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/playthrough-468/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

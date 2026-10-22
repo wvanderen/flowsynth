@@ -113,6 +113,10 @@ describe("schedule accounting", () => {
     // The day's last session takes its breather too, so the day spans
     // 25 + 5 + 25 + 5 minutes inside the 24-hour gap to day two.
     expect(record.elapsedSeconds).toBe(86_400 + 60 * 60);
+    // The overnight gap produced nothing: every ν the state ever banked
+    // came from the sessions and their breathers — a phantom gap credit
+    // would inflate totalEarned past the run's own accounting.
+    expect(record.state.totalEarned).toBeCloseTo(record.earnedNous, 6);
     // The daily goal rolled at the local day boundary: day one's
     // occurrence completed, day two's re-keyed and completed again.
     const dayOne = state.sessionRecords[0]!.goalsAdvanced[0]!.goal!.occurrenceKey;
@@ -178,11 +182,14 @@ describe("budget exhaustion", () => {
 });
 
 describe("completion", () => {
-  it("prestiges at first eligibility and banks the honest zero-Arete claim", { timeout: 300_000 }, () => {
+  it("prestiges at first eligibility and banks the honest zero-Arete claim", { timeout: 120_000 }, () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({});
+    // The budget stays clear of the crossing: the recipe completes inside
+    // it, so the stop is the prestige, never the budget.
+    const record = app.devRunPlaythrough({ budgetDays: 20 });
     expect(record.complete).toBe(true);
     expect(record.stop.kind).toBe("prestige");
+    expect(record.days).toBeLessThan(20);
     expect(record.claims).toEqual([0]);
     expect(record.state.prestiges).toBe(1);
     expect(record.state.arete).toBe(0);

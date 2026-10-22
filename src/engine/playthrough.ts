@@ -668,7 +668,8 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
 export function runPlaythrough(
   recipe: PlaythroughRecipe,
   source: PlaythroughSource = playthroughSource(),
-): PlaythroughRecord {  validatePlaythroughRecipe(recipe);
+): PlaythroughRecord {
+  validatePlaythroughRecipe(recipe);
   const scenario = scenarioOf(recipe.scenarioId)!;
   const state = scenario.build(recipe.schedule.startAt);
   scenario.assert(state, recipe.schedule.startAt);

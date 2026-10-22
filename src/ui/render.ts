@@ -4133,10 +4133,10 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
   // The playthrough's result readout (#468): the run's ✓/✗ line — both
   // clocks, the claim, the identity, and an incomplete run's honest stop —
   // set as text like the scenario note: state-derived, never templated.
-  const playthroughNote = byId("dev-playthrough-note");
-  if (playthroughNote) {
-    playthroughNote.textContent = app.devPlaythroughNote;
-    playthroughNote.hidden = !app.devPlaythroughNote;
+  const resultNote = byId("dev-playthrough-note");
+  if (resultNote) {
+    resultNote.textContent = app.devPlaythroughNote;
+    resultNote.hidden = !app.devPlaythroughNote;
   }
   if (!mountControls) return;
   // The grip (ADR-0050): a pointer-capture drag — the press records the
