@@ -3371,6 +3371,21 @@ body.hex-detail-open .upgrade-all {
   border: 1px solid var(--line);
   border-radius: 0;
 }
+/* The playthrough's seed and budget inputs (#468): the select's square-cut
+   register — hairline, mono, the same touch floor — sized to their
+   figures; the placeholder names the declared default a blank carries. */
+.dev-panel input[type="number"] {
+  padding: 4px 8px;
+  min-height: 44px;
+  width: 76px;
+  font: 11px var(--mono);
+  letter-spacing: 0.02em;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.dev-panel input[type="number"]::placeholder { color: var(--muted); }
 /* The scenario's assertion readout (#456, #467): one plain mono line on
    its own row — the ✓ summary with its origin and isolation, or the
    named ✗ failure, never color alone. */

@@ -4099,6 +4099,9 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       <span>DEV</span>
       <select id="dev-scenario" aria-label="Playtesting scenario">${scenarioOptions}</select>
       <button data-dev="scenario">Launch</button>
+      <input id="dev-playthrough-seed" type="number" min="0" step="1" inputmode="numeric" aria-label="Playthrough seed" placeholder="seed" />
+      <input id="dev-playthrough-budget" type="number" min="1" max="366" step="1" inputmode="numeric" aria-label="Playthrough budget in days" placeholder="days" />
+      <button data-dev="playthrough">Run playthrough</button>
       <button data-dev="60">+1m</button>
       <button data-dev="600">+10m</button>
       <button data-dev="target">→ target</button>
@@ -4106,7 +4109,8 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       <button data-dev="synth">+synth</button>
       <button data-dev="worldera">World era</button>
       <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>
-      <span class="dev-note" id="dev-scenario-note"></span>`;
+      <span class="dev-note" id="dev-scenario-note"></span>
+      <span class="dev-note" id="dev-playthrough-note"></span>`;
   }
   // Keep native controls mounted through live ticks: pending choice,
   // keyboard focus, and the platform picker belong to the same nodes.
@@ -4125,6 +4129,14 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
   if (scenarioNote) {
     scenarioNote.textContent = app.devScenarioNote;
     scenarioNote.hidden = !app.devScenarioNote;
+  }
+  // The playthrough's result readout (#468): the run's ✓/✗ line — both
+  // clocks, the claim, the identity, and an incomplete run's honest stop —
+  // set as text like the scenario note: state-derived, never templated.
+  const playthroughNote = byId("dev-playthrough-note");
+  if (playthroughNote) {
+    playthroughNote.textContent = app.devPlaythroughNote;
+    playthroughNote.hidden = !app.devPlaythroughNote;
   }
   if (!mountControls) return;
   // The grip (ADR-0050): a pointer-capture drag — the press records the
@@ -4155,6 +4167,20 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       else if (key === "scenario") {
         const select = byId("dev-scenario") as HTMLSelectElement | null;
         if (select) app.devLaunchScenario(select.value);
+      } else if (key === "playthrough") {
+        // The run composes from the panel's own selections: the scenario
+        // select names the starting state; blank inputs mean the declared
+        // defaults. The same composition the agent command takes.
+        const select = byId("dev-scenario") as HTMLSelectElement | null;
+        const seedField = byId("dev-playthrough-seed") as HTMLInputElement | null;
+        const budgetField = byId("dev-playthrough-budget") as HTMLInputElement | null;
+        const seed = seedField?.value.trim() ? Number(seedField.value) : undefined;
+        const budgetDays = budgetField?.value.trim() ? Number(budgetField.value) : undefined;
+        app.devRunPlaythrough({
+          ...(select ? { scenarioId: select.value } : {}),
+          ...(seed !== undefined ? { seed } : {}),
+          ...(budgetDays !== undefined ? { budgetDays } : {}),
+        });
       } else if (key === "board") app.devToggleBoard();
       else app.devAdvance(Number(key));
     });
