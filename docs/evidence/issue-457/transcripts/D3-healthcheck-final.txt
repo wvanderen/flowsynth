@@ -1,0 +1,31 @@
+
+FlowSynth evidence health check
+
+  url       http://localhost:5173/
+  worktree  /Users/eggfam/.t3/worktrees/flowsynth/t3-df3775cc
+  commit    e9f63655
+
+  server    OK — provenance verified for this checkout at commit e9f63655, clean source.
+
+Browser checks — run against the stalled tab, in this order. Each maps to one failure class and one bounded recovery.
+
+  1. Visible tab — preview_status
+     pass: the tab answers: visible, not loading, and its url matches the verified URL above.
+     fail → browser-visibility: hidden or stale tab, pending dialog, or a url that is not the verified one.
+
+  2. Snapshot — preview_snapshot
+     pass: a snapshot returns (image and page state).
+     fail → browser-snapshot: timeout or error while check 1 passes.
+
+  3. Viewport — preview_resize to 390×844, then confirm the page's live size
+     pass: the resize returns and a page read (window.innerWidth / window.innerHeight) reports exactly the target size — the resize's own echo and the status read's viewportSetting can both be stale.
+     fail → browser-viewport: timeout, or a page read that differs from the target.
+
+  Budget: At most three attempts per browser operation — the first failure plus two recoveries — with the class's recovery action between attempts. Three failed attempts is the whole budget; exhausting it ends recovery for this pass. Record, don't retry.
+
+  After any successful recovery, before the pass claims anything again:
+  1. Re-run the capture preflight against the exact URL before capturing — recovery keeps the same checkout and URL; if the port changed, preflight the new URL instead.
+  2. Confirm the tab is visible and actually at 390×844: a resize's own success is not a confirmation (its response can echo a stale size, and preview_status carries the requested setting), so read the live size in the page — window.innerWidth / window.innerHeight — when the status read shows only the setting. Then resume the pass at the same URL.
+
+  Recovery rules: docs/agents/visual-evidence.md §5
+

@@ -1,0 +1,27 @@
+
+FlowSynth evidence health check
+
+  url       http://localhost:5173/
+  worktree  /Users/eggfam/.t3/worktrees/flowsynth/t3-df3775cc
+  commit    bd38bd8d
+
+  server    FAIL — server-provenance (unavailable)
+  http://localhost:5173/-/dev/provenance is unreachable (ECONNREFUSED) — the server may have died.
+  No FlowSynth provenance answered at http://localhost:5173/ — the tab may be stale, or pointed at a server that is not this project's dev server.
+  Relaunch `npm run dev` in `/Users/eggfam/.t3/worktrees/flowsynth/t3-df3775cc` and run the preflight again against the URL it prints.
+
+  Recovery for server-provenance (unavailable)
+  Looks like:
+    The capture preflight rejects the URL, or the server stops answering between captures:
+    unreachable, non-JSON, HTTP-not-ok, foreign-worktree, commit-mismatch, dirty-source.
+  Recovery (bounded):
+    1. Relaunch `npm run dev` in this worktree and note the URL it prints.
+    2. If the port changed, repoint the tab at the new URL — never capture from a stale tab.
+    3. Re-run the capture preflight (tools/evidence-preflight.mjs) against the URL before any capture. The preflight is the acceptance gate; this health check is diagnostic.
+  Budget: The budget is one relaunch, then re-check; a provenance failure that survives its relaunch ends recovery for this pass.
+  If the budget is exhausted, record:
+    Record the pass blocked: the raw preflight rejection (class + reason, verbatim), the relaunch attempt and its outcome,
+    and that every browser check and capture on this URL is unavailable. Nothing from this pass may be claimed as verified.
+
+  Recovery rules: docs/agents/visual-evidence.md §5
+

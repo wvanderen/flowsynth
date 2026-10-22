@@ -1,0 +1,59 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-22T18:01:18.588Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-df3775cc",
+  "branch": "t3/issue-457-implementation",
+  "commit": "e9f636550c791e4340fc18d6b716bb8a4ca66623",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-457/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/phone-after-exhaustion-recovered.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/phone-resumed-390x844.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/transcripts/A0-healthy.txt",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/transcripts/A1-server-provenance-failure.txt",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/transcripts/A2-recovered.txt",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/transcripts/A3-preflight-after-recovery.txt",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/transcripts/D0-during-stall-server-ok.txt",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/transcripts/D1-preflight-after-tab-return.txt",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-457/transcripts/D2-preflight-final.txt",
+        "state": "??"
+      }
+    ]
+  }
+}
