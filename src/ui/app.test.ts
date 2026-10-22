@@ -82,7 +82,7 @@ describe("the console tiles", () => {
 describe("the console", () => {
   it("is pure control: no production readout, no trophy, no nous balance (§7)", () => {
     app.render();
-    expect(document.getElementById("console-status")).toBeNull();
+    expect(document.getElementById("console-status")!.textContent).toBe("Upgrade mode");
     expect(document.getElementById("nous-balance")).toBeNull();
     expect(document.querySelector(".production-slot")).toBeNull();
     expect(document.querySelector(".trophy-glyph")).toBeNull();
@@ -92,7 +92,7 @@ describe("the console", () => {
     expect(document.getElementById("console-settings")).not.toBeNull();
     // The key carries the glyph; the word rides the readout plate.
     expect(document.querySelector("#flow-switch .key svg")).not.toBeNull();
-    expect(document.querySelector("#console-session .switch-readout")).not.toBeNull();
+    expect(document.querySelector("#console-session #flow-switch")).not.toBeNull();
   });
 
   it("the upgrade-mode clock is the plan affordance: clicking it opens the Time app", () => {
@@ -172,8 +172,8 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-settings")!));
     // The session cluster is the switch's home — the header's dominant
     // control: the chamfered key and its console readout.
-    expect(document.querySelector("#console-session #flow-switch .key")).not.toBeNull();
-    expect(document.querySelector("#console-session .switch-readout")).not.toBeNull();
+    expect(document.querySelector("#console-session #flow-switch")).not.toBeNull();
+    expect(document.querySelector("#console-session #flow-switch")).not.toBeNull();
   });
 
   it("the clock wears a small disclosure affordance that tracks the Time popover", () => {
@@ -237,26 +237,27 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
   it("the main switch's accessible name tracks its state and never falls back to the title (#347)", () => {
     app.render();
     const sw = () => document.getElementById("flow-switch")!;
-    const readout = () => document.querySelector("#console-session .switch-readout")!;
-    // Idle: Enter flow — the name is the switch's own words, not the hover
-    // title, and the console readout beside the key reads the same words
-    // (the phone row hides the readout, so the aria-label is the only
-    // name there).
+    const readout = () => document.querySelector("#console-session #flow-switch")!;
+    // The visible action remains inside the button at every width.
+    expect(document.getElementById("console-status")!.textContent).toBe("Upgrade mode");
+    expect(sw().querySelector("svg")).toBeNull();
     expect(sw().getAttribute("aria-label")).toBe("Enter flow");
     expect(sw().getAttribute("title")).not.toBe(sw().getAttribute("aria-label"));
     expect(readout().textContent).toBe(sw().getAttribute("aria-label"));
-    // Live: Exit flow.
+    // Live: Finish flow.
     startSession(app.state, 600);
     app.render();
     expect(app.state.mode).toBe("flow");
+    expect(document.getElementById("console-status")!.textContent).toBe("Flow active");
     expect(sw().classList.contains("live")).toBe(true);
-    expect(sw().getAttribute("aria-label")).toBe("Exit flow");
-    expect(readout().textContent).toBe("Exit flow");
+    expect(sw().getAttribute("aria-label")).toBe("Finish flow");
+    expect(readout().textContent).toBe("Finish flow");
     // Held: the switch still ends the session; the sibling names the hold.
     app.pause();
     app.render();
+    expect(document.getElementById("console-status")!.textContent).toBe("Flow paused");
     expect(sw().classList.contains("held")).toBe(true);
-    expect(sw().getAttribute("aria-label")).toBe("Exit flow");
+    expect(sw().getAttribute("aria-label")).toBe("Finish flow");
     expect(document.getElementById("pause-flow")!.getAttribute("aria-label")).toBe("Resume");
   });
 

@@ -116,3 +116,8 @@ Surveyed at commit `491771f` (`src/ui/render.ts`), demonstrating the criteria on
 ### 2026-10-20 header and ledger follow-up
 
 The approved follow-up places the logo alone at the header's left edge, icon-only Pause/Resume before the dark clock/Notes well, and Finish with a save-and-complete mark after it. Nous pool and rate form one group. The banner resource area is one Ledger button; Feats/Chords keep separate destinations. Harmonic capacity shows allowance / ceiling. Ledger production belongs within Nous, and its Feats/Chords doors repeat the banner icons and totals. See the [refinement brief](interface-refinement-brief.md#header-and-ledger-follow-up).
+
+
+## Flow control and status amendment — 2026-10-22
+
+The confirmed [flow-control/header brief](flow-control-header-brief.md) replaces the power key and separate readout with a text-only vermillion button: Enter flow, Finish flow (running or paused), and End breather. Top-right/bottom-left clipping is an explicit exception for this primary control only; other controls remain square. Beside the logo, FlowSynth sits above a readable mode status: Upgrade mode, Flow active, Flow paused, or Breather active. Hide the wordmark first as width tightens, then move status directly below the single-row header when needed. Labels and touch targets remain readable on phone. This supersedes logo-alone and earlier Finish/Exit presentation contracts; behavior is unchanged.
