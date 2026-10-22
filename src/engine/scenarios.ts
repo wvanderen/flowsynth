@@ -38,7 +38,7 @@ export interface ScenarioDescriptor {
 const FRESH_START: ScenarioDescriptor = {
   id: "fresh-start",
   name: "Fresh start",
-  situation: "the shipped opening board, one synth, first upgrade mode",
+  situation: "the shipped opening board",
   origin: "initial state",
   build: () => createInitialState(),
   assert: (state) => assertFreshStart(state),

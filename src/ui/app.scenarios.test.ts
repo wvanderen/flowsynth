@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { createAppFixture, setVisibility } from "./testing/app-fixture";
 import { STORAGE_KEY, serialize } from "../engine/save";
@@ -58,6 +58,47 @@ describe("the suite's catalog", () => {
 });
 
 describe("the launch command", () => {
+  it("rejects a failing candidate before changing state or the save destination", () => {
+    const t = Date.now();
+    seedOrdinaryAndBoot(t);
+    const state = app.state;
+    const ordinary = localStorage.getItem(STORAGE_KEY)!;
+    const fresh = SCENARIOS[0]!;
+    const assertion = vi.spyOn(fresh, "assert").mockImplementation(() => {
+      throw new Error("rejected candidate");
+    });
+    try {
+      expect(() => app.devLaunchScenario("fresh-start", t)).toThrow("rejected candidate");
+      expect(app.state).toBe(state);
+      expect(app.devScenarioId).toBeNull();
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(ordinary);
+      app.state.nous = 501;
+      app.save(t + 1000, true);
+      expect(boot(undefined, true).state.nous).toBe(501);
+    } finally {
+      assertion.mockRestore();
+    }
+
+    app = boot(undefined, true);
+    app.devLaunchScenario("focus", t);
+    const installed = app.state;
+    const bytes = localStorage.getItem(STORAGE_KEY);
+    const failed = vi.spyOn(fresh, "assert").mockImplementation(() => {
+      throw new Error("rejected candidate");
+    });
+    try {
+      expect(() => app.devLaunchScenario("fresh-start", t)).toThrow("rejected candidate");
+      expect(app.state).toBe(installed);
+      expect(app.devScenarioId).toBe("focus");
+      app.state.nous += 1;
+      app.save(t + 2000, true);
+      window.dispatchEvent(new Event("beforeunload"));
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(bytes);
+    } finally {
+      failed.mockRestore();
+    }
+  });
+
   it("launching fresh start installs the shipped opening state and leaves the ordinary save untouched", () => {
     const t = Date.now();
     seedOrdinaryAndBoot(t);
@@ -253,7 +294,7 @@ describe("the dev panel's suite entry", () => {
     const select = document.getElementById("dev-scenario") as HTMLSelectElement;
     expect(select).not.toBeNull();
     expect([...select.options].map((option) => option.value)).toEqual(["fresh-start", "focus"]);
-    expect(select.options[0]!.title).toContain("opening board");
+    expect(select.options[0]!.hasAttribute("title")).toBe(false);
     expect(select.options[0]!.textContent).toBe("Fresh start");
 
     select.value = "fresh-start";
@@ -263,13 +304,29 @@ describe("the dev panel's suite entry", () => {
     expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("Fresh start ✓");
 
     // The active scenario's option carries the selected marker after a
-    // launch, whoever drove it. The render replaces the panel's controls,
-    // so the next gesture reads the fresh select.
+    // launch, whoever drove it. Controls retain their nodes across renders.
     const relaunched = document.getElementById("dev-scenario") as HTMLSelectElement;
     expect(relaunched.value).toBe("fresh-start");
     relaunched.value = "focus";
     document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
     assertFocusScenario(app.state);
+  });
+
+  it.each(["flow", "breather"] as const)("keeps pending selection and focus through %s ticks", (mode) => {
+    app = boot(undefined, true);
+    app.devLaunchScenario("focus");
+    app.beginFlowFromPlan();
+    app.state.mode = mode;
+    const select = document.getElementById("dev-scenario") as HTMLSelectElement;
+    select.value = "fresh-start";
+    select.focus();
+    app.tick();
+    expect(document.getElementById("dev-scenario")).toBe(select);
+    expect(document.activeElement).toBe(select);
+    expect(select.value).toBe("fresh-start");
+    document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
+    expect(app.devScenarioId).toBe("fresh-start");
+    expect(app.state).toEqual(createInitialState());
   });
 
   it("is absent on a normal instrument", () => {
