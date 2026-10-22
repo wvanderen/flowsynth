@@ -1,0 +1,19 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-22T18:56:05.545Z",
+  "url": "http://localhost:5174",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-698b54ac",
+  "branch": "t3/flow-status-header-design",
+  "commit": "89466ebae7ff2532d6a24ec0851e548fed71d367",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/flow-control-header-2026-10-22/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}
