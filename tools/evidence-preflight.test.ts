@@ -31,7 +31,7 @@ const servedProvenance = (overrides: Partial<DevProvenance> = {}): DevProvenance
 });
 
 const check = (overrides: {
-  provenance?: DevProvenance | null;
+  provenance?: unknown;
   expectedWorktree?: string;
   expectedCommit?: string;
 } = {}) =>
@@ -121,6 +121,21 @@ describe("verifyCaptureProvenance (issue #454)", () => {
     expect(verdict.diagnostics.join("\n")).toContain("issue #454");
   });
 
+  it.each([
+    { app: "other" },
+    { worktree: 42 },
+    { commit: 42 },
+    { source: { clean: "false" } },
+    { source: { clean: true, changes: [{ path: "src/main.ts", state: " M" }], evidence: [] } },
+    { source: { clean: true, changes: [], evidence: [{ path: "src/main.ts", state: " M" }] } },
+    { source: { clean: false, changes: [null], evidence: [] } },
+  ])("rejects malformed provenance: %j", (override) => {
+    const verdict = check({ provenance: { ...servedProvenance(), ...override } });
+    expect(verdict.accepted).toBe(false);
+    expect(verdict.record).toBeNull();
+    expect(verdict.diagnostics.join("\n")).toContain("npm run dev");
+  });
+
   it("checks identity before cleanliness", () => {
     const dirty = servedProvenance({
       worktree: "/sibling/other",
@@ -152,12 +167,12 @@ describe("evidence preflight CLI (issue #454)", () => {
 
   // Async on purpose: a synchronous spawn would block this process's event
   // loop and the in-test provenance server could never answer the child.
-  const runCli = (args: string[]): Promise<{ status: number | null; stdout: string; stderr: string }> =>
+  const runCli = (args: string[], cwd = repoRoot): Promise<{ status: number | null; stdout: string; stderr: string }> =>
     new Promise((resolve, reject) => {
       const child = spawn(
         process.execPath,
         [path.join(repoRoot, "tools", "evidence-preflight.mjs"), ...args],
-        { cwd: repoRoot },
+        { cwd },
       );
       let stdout = "";
       let stderr = "";
@@ -206,6 +221,34 @@ describe("evidence preflight CLI (issue #454)", () => {
       expect(record.commit).toBe(head());
       expect(record.source.clean).toBe(true);
       expect(record.check).toBe("capture-preflight");
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("persists a default record when --record is omitted", async () => {
+    const server = await provenanceServer(served());
+    const cwd = tempDir();
+    try {
+      const result = await runCli(["--url", server.url, "--worktree", worktree()], cwd);
+      expect(result.status).toBe(0);
+      const record = JSON.parse(fs.readFileSync(path.join(cwd, "docs/evidence/preflight/provenance.json"), "utf8"));
+      expect(record.worktree).toBe(worktree());
+      expect(record.commit).toBe(head());
+      expect(record.source.clean).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("does not announce acceptance when the record cannot be written", async () => {
+    const server = await provenanceServer(served());
+    const recordPath = tempDir();
+    try {
+      const result = await runCli(["--url", server.url, "--record", recordPath]);
+      expect(result.status).toBe(1);
+      expect(result.stdout).not.toContain("ACCEPT");
+      expect(result.stderr).toContain("writable file path");
     } finally {
       await server.close();
     }

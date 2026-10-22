@@ -89,7 +89,10 @@ const shortSha = (commit) => (commit ? commit.slice(0, 8) : "(none)");
 // instruction, not a dead end.
 export function verifyCaptureProvenance({ provenance, url, expectedWorktree, expectedCommit }) {
   const relaunch = `Relaunch \`npm run dev\` in \`${expectedWorktree}\` and run the preflight again against the URL it prints.`;
-  if (!provenance || typeof provenance !== "object" || !provenance.worktree || !provenance.commit) {
+  if (!provenance || typeof provenance !== "object" || provenance.app !== "flowsynth" ||
+      typeof provenance.worktree !== "string" || !provenance.worktree ||
+      typeof provenance.commit !== "string" || !provenance.commit ||
+      (provenance.branch !== null && typeof provenance.branch !== "string")) {
     return {
       accepted: false,
       reason: "unavailable",
@@ -128,6 +131,24 @@ export function verifyCaptureProvenance({ provenance, url, expectedWorktree, exp
       reason: "cleanliness-unavailable",
       diagnostics: [
         `The provenance at ${url} reports no source cleanliness — this server predates the capture preflight (issue #454) and cannot promise the browser shows committed code.`,
+        relaunch,
+      ],
+      record: null,
+    };
+  }
+  const source = provenance.source;
+  const validChange = (entry) => entry !== null && typeof entry === "object" &&
+    typeof entry.path === "string" && entry.path.length > 0 && typeof entry.state === "string";
+  if (typeof source.clean !== "boolean" ||
+      !Array.isArray(source.changes) || !source.changes.every(validChange) ||
+      !Array.isArray(source.evidence) || !source.evidence.every(validChange) ||
+      source.clean !== (source.changes.length === 0) ||
+      !source.evidence.every((entry) => isEvidenceOutputPath(entry.path))) {
+    return {
+      accepted: false,
+      reason: "cleanliness-unavailable",
+      diagnostics: [
+        `The provenance at ${url} reports malformed or contradictory source cleanliness; clean must be a boolean matching the source change list, and evidence entries must be evidence-output paths.`,
         relaunch,
       ],
       record: null,

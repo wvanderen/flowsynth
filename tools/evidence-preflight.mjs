@@ -3,9 +3,9 @@
 // verifies the served worktree and commit against the checkout it runs in,
 // and refuses evidence from uncommitted source — tracked changes and
 // non-ignored untracked files alike, evidence outputs exempt. Every rejection
-// exits 1 with the fix in its output; acceptance can record the verified
-// provenance beside the captures with --record. Development-only: never part
-// of a production build.
+// exits 1 with the fix in its output; acceptance records the verified
+// provenance with --record (default: docs/evidence/preflight/provenance.json).
+// Development-only: never part of a production build.
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
@@ -121,13 +121,17 @@ export async function runPreflight(argv) {
   for (const line of verdict.diagnostics) console.log(`  ${line}`);
   console.log("");
   if (verdict.accepted) {
-    console.log("  ACCEPT — evidence may be captured from this URL.");
-    if (record) {
-      const recordPath = path.resolve(record);
+    const recordPath = path.resolve(record ?? "docs/evidence/preflight/provenance.json");
+    try {
       fs.mkdirSync(path.dirname(recordPath), { recursive: true });
       fs.writeFileSync(recordPath, `${JSON.stringify(verdict.record, null, 2)}\n`);
-      console.log(`  record    ${recordPath}`);
+    } catch (error) {
+      console.error(`  REJECT — could not save provenance to ${recordPath}: ${error.message}`);
+      console.error("  Pass --record with a writable file path, then run the preflight again.");
+      return 1;
     }
+    console.log(`  record    ${recordPath}`);
+    console.log("  ACCEPT — evidence may be captured from this URL.");
   } else {
     console.log(`  REJECT (${verdict.reason}) — do not capture evidence from this URL.`);
   }

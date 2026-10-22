@@ -60,7 +60,7 @@ export declare function readSourceStatus(root: string): SourceStatus | null;
 export declare function devProvenance(root?: string): DevProvenance;
 
 export declare function verifyCaptureProvenance(input: {
-  provenance: DevProvenance | null;
+  provenance: unknown;
   url: string;
   expectedWorktree: string;
   expectedCommit: string;
