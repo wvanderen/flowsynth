@@ -144,6 +144,24 @@ describe("the World era grant (#466)", () => {
     expect(app.state.world.weapons).toHaveLength(2);
   });
 
+  it("refuses while paused and preserves the complete state, board layer, and save", () => {
+    app = boot(undefined, true);
+    beginFlowWithPlan(600);
+    app.devAdvance(120);
+    app.pause();
+    expect(app.state.mode).toBe("paused");
+    const before = structuredClone(app.state);
+    const layerBefore = app.ui.boardLayer;
+    const slotBefore = localStorage.getItem(STORAGE_KEY);
+
+    app.devWorldEra();
+
+    expect(status()).toBe("World era needs upgrade mode — end the running session or breather first.");
+    expect(app.state).toEqual(before);
+    expect(app.ui.boardLayer).toBe(layerBefore);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(slotBefore);
+  });
+
   it("in upgrade mode it grants the era and saves it: a reload returns the same era", () => {
     app = boot(undefined, true);
     app.devWorldEra();
@@ -169,15 +187,23 @@ describe("the World era grant (#466)", () => {
 describe("the dev gating contract (#466)", () => {
   it("a normal instrument ignores every dev helper", () => {
     app = boot();
-    const before = app.state;
-    app.devAdvance(60);
-    app.devToTarget();
-    app.devNous();
-    app.devSynth();
-    app.devWorldEra();
-    app.devFocusScenario();
-    app.devToggleBoard();
-    expect(app.state).toBe(before);
+    const before = structuredClone(app.state);
+    const slotBefore = localStorage.getItem(STORAGE_KEY);
+    const layerBefore = app.ui.boardLayer;
+    for (const invoke of [
+      () => app.devAdvance(60),
+      () => app.devToTarget(),
+      () => app.devNous(),
+      () => app.devSynth(),
+      () => app.devWorldEra(),
+      () => app.devFocusScenario(),
+      () => app.devToggleBoard(),
+    ]) {
+      invoke();
+      expect(app.state).toEqual(before);
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(slotBefore);
+      expect(app.ui.boardLayer).toBe(layerBefore);
+    }
     expect(app.state.session).toBeNull();
     expect(app.devBoard).toBeNull();
     expect(app.devFocusScenarioNote).toBeNull();
