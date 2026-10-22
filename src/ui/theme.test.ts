@@ -98,7 +98,7 @@ describe("theme token table", () => {
     it("uses one readable vermillion treatment for every main action", () => {
       expect(stylesheet).toMatch(/\.main-switch \{[^}]*background:\s*var\(--switch-deep\)/);
       expect(stylesheet).toMatch(/\.main-switch \{[^}]*color:\s*var\(--switch-ink\)/);
-      expect(stylesheet).toContain("color-mix(in srgb, var(--switch-deep) 90%, black)");
+      expect(stylesheet).toContain("color-mix(in srgb, var(--switch-deep) 90%, var(--panel-deep))");
     });
   });
 

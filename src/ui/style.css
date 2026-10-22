@@ -391,7 +391,7 @@ h1, h2, h3, p { margin: 0; }
   clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
   font: 600 15px/1.2 var(--font-condensed);
 }
-.main-switch:hover:not(:disabled) { background: color-mix(in srgb, var(--switch-deep) 90%, black); color: var(--switch-ink); }
+.main-switch:hover:not(:disabled) { background: color-mix(in srgb, var(--switch-deep) 90%, var(--panel-deep)); color: var(--switch-ink); }
 /* Inset focus survives the clipped silhouette, including forced colors. */
 .main-switch:focus-visible { outline: 2px solid var(--ink); outline-offset: -4px; }
 

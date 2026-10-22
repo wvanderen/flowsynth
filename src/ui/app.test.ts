@@ -90,8 +90,8 @@ describe("the console", () => {
     expect(document.getElementById("console-session")!.querySelector(".main-switch")).not.toBeNull();
     expect(document.getElementById("console-apps")).not.toBeNull();
     expect(document.getElementById("console-settings")).not.toBeNull();
-    // The key carries the glyph; the word rides the readout plate.
-    expect(document.querySelector("#flow-switch .key svg")).not.toBeNull();
+    // The main action carries visible words, without a separate icon plate.
+    expect(document.querySelector("#flow-switch svg")).toBeNull();
     expect(document.querySelector("#console-session #flow-switch")).not.toBeNull();
   });
 
@@ -259,6 +259,17 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(sw().classList.contains("held")).toBe(true);
     expect(sw().getAttribute("aria-label")).toBe("Finish flow");
     expect(document.getElementById("pause-flow")!.getAttribute("aria-label")).toBe("Resume");
+  });
+
+  it("names Breather status separately from its early-exit action", () => {
+    app.state.mode = "breather";
+    app.state.breather = { startedAt: Date.now(), allowanceSeconds: 300, elapsed: 0 };
+    app.render();
+    expect(document.getElementById("console-status")!.textContent).toBe("Breather active");
+    const button = document.getElementById("flow-switch")!;
+    expect(button.textContent).toBe("End breather");
+    expect(button.getAttribute("aria-label")).toBe("End breather");
+    expect(document.querySelector<HTMLButtonElement>("#pause-flow")!.disabled).toBe(true);
   });
 
   it("the console's mode attribute drives the lamp and the strip from one state voice", () => {
