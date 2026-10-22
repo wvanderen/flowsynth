@@ -64,6 +64,15 @@ import { formatInt, formatNumber } from "./format";
 import { applyBreatherGap, applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule, createWeapon, createWorldColumn } from "../engine/state";
 import { SCENARIOS, scenarioOf, type ScenarioDescriptor } from "../engine/scenarios";
+import {
+  composePlaythroughRecipe,
+  defaultPlaythroughRecipe,
+  playthroughNote,
+  runPlaythrough,
+  type PlaythroughRecipe,
+  type PlaythroughRecipeInput,
+  type PlaythroughRecord,
+} from "../engine/playthrough";
 import { BALANCE } from "../engine/constants";
 import type { FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
@@ -2833,6 +2842,49 @@ export class App {
     this.devScenarioNote = this.scenarioNote(scenario, true);
     this.say(`Dev: ${scenario.name} assertions passed.`);
     this.render();
+  }
+
+  // The playthrough boundary (issue #468): one command set shared by the
+  // dev panel's run control and agent access — the same composition, run,
+  // and result either way. The runner is a pure engine walk on its own
+  // candidate state: it never touches the live state, the save, or the
+  // scenario installation, so a run cannot contaminate anything. The
+  // recipe composes from the default by an explicit, validated input;
+  // a bad input is a thrown, named error and a ✗ line in the panel.
+  // The result stands in the panel's note — measurements and explicit
+  // outcomes, never a pacing verdict (story 37).
+
+  devPlaythrough: PlaythroughRecord | null = null;
+  devPlaythroughNote: string | null = null;
+
+  // The declared recipe: the default, so configuration reads what a run
+  // would carry before running it.
+  devPlaythroughRecipe(): PlaythroughRecipe {
+    return defaultPlaythroughRecipe();
+  }
+
+  devRunPlaythrough(input: PlaythroughRecipeInput = {}): PlaythroughRecord {
+    if (!this.dev) {
+      throw new Error("The playthrough commands are development commands.");
+    }
+    let record: PlaythroughRecord;
+    try {
+      record = runPlaythrough(composePlaythroughRecipe(input));
+    } catch (error) {
+      this.devPlaythroughNote = `Playthrough ✗ ${(error as Error).message}`;
+      this.say(`Dev playthrough failed: ${(error as Error).message}`);
+      this.render();
+      throw error;
+    }
+    this.devPlaythrough = record;
+    this.devPlaythroughNote = playthroughNote(record);
+    this.say(
+      record.complete
+        ? `Dev: playthrough ${record.runId} complete — ${record.days} days, ${Math.round(record.creditedSeconds / 60)}m credited, prestige banked ${record.claims[0] ?? 0} Arete.`
+        : `Dev: playthrough ${record.runId} incomplete after ${record.days} days — see the dev panel.`,
+    );
+    this.render();
+    return record;
   }
 
   // The development allocation board (#257 hands-on): a deterministic
