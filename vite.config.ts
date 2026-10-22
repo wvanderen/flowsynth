@@ -1,7 +1,7 @@
 /// <reference types="vitest/config" />
 import { defineConfig } from "vite";
 import { defaultTheme, themeCss } from "./src/ui/theme";
-import { devProvenance } from "./tools/dev/provenance";
+import { devProvenance } from "./tools/dev/provenance.mjs";
 
 export default defineConfig({
   base: "./",

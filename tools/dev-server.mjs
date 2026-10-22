@@ -66,6 +66,28 @@ async function main() {
   if (provenance?.commit) console.log(`  commit    ${provenance.commit}`);
   console.log(`  url       ${url ?? "(no local URL resolved)"}`);
   console.log(`  log       ${logFile}`);
+  const source = provenance?.source;
+  if (source) {
+    // Issue #454: the banner carries the same cleanliness read the preflight
+    // gates on, so a dirty launch is visible before any tab is opened.
+    if (source.clean) {
+      console.log("  source    clean (working tree matches the commit above)");
+    } else {
+      console.log(
+        `  source    DIRTY — ${source.changes.length} uncommitted change(s), evidence outputs excluded:`,
+      );
+      for (const change of source.changes.slice(0, 8)) {
+        console.log(`              ${change.state.trim() || "?"} ${change.path}`);
+      }
+      if (source.changes.length > 8) {
+        console.log(`              … and ${source.changes.length - 8} more`);
+      }
+      console.log("              Commit or stash before capturing evidence from this server.");
+    }
+  } else if (provenance?.commit) {
+    console.log("  source    unknown — relaunch to pick up the capture preflight.");
+  }
+  if (url) console.log(`  preflight node tools/evidence-preflight.mjs --url ${url}`);
   if (!provenance?.commit) {
     console.log(
       "\n  ! The server did not confirm its provenance (GET /-/dev/provenance).",
