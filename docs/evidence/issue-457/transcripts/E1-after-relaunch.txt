@@ -1,0 +1,21 @@
+
+FlowSynth capture preflight
+
+  url       http://localhost:5174/
+  worktree  /Users/eggfam/.t3/worktrees/flowsynth/t3-614a5b6c
+  commit    9008f7a4
+
+  The served source differs from commit 9008f7a4 — 6 uncommitted change(s) the browser may already be displaying:
+    M docs/agents/visual-evidence.md
+    M tools/dev/provenance.d.mts
+    M tools/dev/provenance.mjs
+    M tools/evidence-healthcheck.mjs
+    M tools/evidence-healthcheck.test.ts
+    M tools/evidence-preflight.mjs
+  Commit or stash the changes above, then run the preflight again — a new commit needs no relaunch, because the endpoint recomputes per request and the served commit moves with HEAD.
+  Not counted as source (evidence outputs): docs/evidence/issue-457/README.md, docs/evidence/issue-457/transcripts/E0-dirty-source.txt, docs/evidence/issue-457/transcripts/E1-after-relaunch.txt.
+
+  REJECT (dirty-source) — do not capture evidence from this URL.
+
+  Evidence rules: docs/agents/visual-evidence.md
+

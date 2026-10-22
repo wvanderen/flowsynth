@@ -1,0 +1,31 @@
+
+FlowSynth evidence health check
+
+  url       http://localhost:5173/
+  worktree  /Users/eggfam/.t3/worktrees/flowsynth/t3-df3775cc
+  commit    bd38bd8d
+
+  server    OK — provenance verified for this checkout at commit bd38bd8d, clean source.
+
+Browser checks — run against the stalled tab, in this order. Each maps to one failure class and one bounded recovery.
+
+  1. Visible tab — preview_status
+     pass: the tab answers: visible, not loading, and its url matches the verified URL above.
+     fail → browser-visibility: hidden or stale tab, pending dialog, or a url that is not the verified one.
+
+  2. Snapshot — preview_snapshot
+     pass: a snapshot returns (image and page state).
+     fail → browser-snapshot: timeout or error while check 1 passes.
+
+  3. Viewport — preview_resize to (your capture viewport — e.g. run with --viewport 390x844 to pin it), then preview_status
+     pass: the resize returns and a status read reports exactly the target size.
+     fail → browser-viewport: timeout, or a status size that differs from the target.
+
+  Budget: At most three attempts per browser operation — the first failure plus two recoveries — with the class's recovery action between attempts. Three failed attempts is the whole budget; exhausting it ends recovery for this pass. Record, don't retry.
+
+  After any successful recovery, before the pass claims anything again:
+  1. Re-run the capture preflight against the exact URL before capturing — recovery keeps the same checkout and URL; if the port changed, preflight the new URL instead.
+  2. Confirm from preview_status that the tab is visible and reports the exact expected viewport, then resume the pass at the same URL. A viewport confirmed only by the resize's own success is not confirmed.
+
+  Recovery rules: docs/agents/visual-evidence.md §5
+

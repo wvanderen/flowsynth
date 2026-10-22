@@ -6,13 +6,11 @@
 // exits 1 with the fix in its output; acceptance records the verified
 // provenance with --record (default: docs/evidence/preflight/provenance.json).
 // Development-only: never part of a production build.
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { verifyCaptureProvenance } from "./dev/provenance.mjs";
+import { verifyCaptureProvenance, fetchProvenance, expectedCheckout } from "./dev/provenance.mjs";
 
-const ENDPOINT_PATH = "/-/dev/provenance";
 const USAGE =
   "Usage: node tools/evidence-preflight.mjs --url <server-url> [--worktree <dir>] [--record <file>]";
 
@@ -26,64 +24,6 @@ function parseFlags(argv) {
     else return { error: `Unknown argument: ${flag}\n${USAGE}` };
   }
   return { flags };
-}
-
-// The endpoint hangs off the origin; a bare server URL or the endpoint URL
-// itself are both accepted.
-function endpointUrl(rawUrl) {
-  const base = new URL(rawUrl);
-  if (base.pathname.replace(/\/+$/, "") === ENDPOINT_PATH) return base.href;
-  return new URL(ENDPOINT_PATH, base.origin).href;
-}
-
-async function fetchProvenance(rawUrl) {
-  let href;
-  try {
-    href = endpointUrl(rawUrl);
-  } catch {
-    return {
-      provenance: null,
-      detail: `"${rawUrl}" is not a valid URL — pass the server URL exactly as the launcher printed it.`,
-    };
-  }
-  try {
-    const response = await fetch(href, {
-      signal: AbortSignal.timeout(5000),
-      headers: { accept: "application/json" },
-    });
-    if (!response.ok) {
-      return { provenance: null, detail: `${href} answered HTTP ${response.status} — not a FlowSynth dev server.` };
-    }
-    const body = await response.text();
-    try {
-      return { provenance: JSON.parse(body), detail: null };
-    } catch {
-      return { provenance: null, detail: `${href} answered a non-JSON body — not a FlowSynth dev server.` };
-    }
-  } catch (error) {
-    const code = error?.cause?.code ?? error?.name ?? "error";
-    return { provenance: null, detail: `${href} is unreachable (${code}) — the server may have died.` };
-  }
-}
-
-const git = (args, cwd) => {
-  try {
-    return execFileSync("git", args, { cwd, encoding: "utf8" }).trim() || null;
-  } catch {
-    return null;
-  }
-};
-
-function expectedCheckout(dir) {
-  const worktree = dir ? path.resolve(dir) : git(["rev-parse", "--show-toplevel"], process.cwd());
-  if (!worktree) {
-    return { error: "Not inside a git checkout — run the preflight from the worktree you are editing, or pass --worktree <dir>." };
-  }
-  const commit = git(["rev-parse", "HEAD"], worktree);
-  if (!commit) {
-    return { error: `\`${worktree}\` has no HEAD commit — commit the work before capturing evidence from it.` };
-  }
-  return { worktree, commit };
 }
 
 export async function runPreflight(argv) {

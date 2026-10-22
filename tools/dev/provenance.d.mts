@@ -65,3 +65,22 @@ export declare function verifyCaptureProvenance(input: {
   expectedWorktree: string;
   expectedCommit: string;
 }): CaptureVerification;
+
+/** The dev server's provenance route, hung off the origin. */
+export declare const ENDPOINT_PATH: string;
+
+/** The endpoint URL for a raw server URL (or the endpoint URL itself). */
+export declare function endpointUrl(rawUrl: string): string;
+
+/**
+ * Fetches and parses provenance from a raw URL, answering
+ * { provenance: null, detail } instead of throwing on every failure.
+ */
+export declare function fetchProvenance(
+  rawUrl: string,
+): Promise<{ provenance: unknown; detail: string | null }>;
+
+/** Shared checkout identity resolution for both evidence commands. */
+export declare function expectedCheckout(dir?: string):
+  | { worktree: string; commit: string; error?: undefined }
+  | { error: string; worktree?: undefined; commit?: undefined };

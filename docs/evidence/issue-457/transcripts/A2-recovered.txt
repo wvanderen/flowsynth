@@ -1,0 +1,8 @@
+
+FlowSynth evidence health check
+
+  url       http://localhost:5173/
+  worktree  /Users/eggfam/.t3/worktrees/flowsynth/t3-df3775cc
+  commit    bd38bd8d
+
+  server    OK — provenance verified for this checkout at commit bd38bd8d, clean source.
