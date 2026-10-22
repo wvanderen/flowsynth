@@ -234,3 +234,15 @@ export function verifyCaptureProvenance({ provenance, url, expectedWorktree, exp
     },
   };
 }
+
+export function expectedCheckout(dir) {
+  const worktree = dir ? path.resolve(dir) : git(["rev-parse", "--show-toplevel"], process.cwd());
+  if (!worktree) {
+    return { error: "Not inside a git checkout — run the evidence command from the worktree you are editing, or pass --worktree <dir>." };
+  }
+  const commit = git(["rev-parse", "HEAD"], worktree);
+  if (!commit) {
+    return { error: `\`${worktree}\` has no HEAD commit — commit the work before capturing evidence from it.` };
+  }
+  return { worktree, commit };
+}

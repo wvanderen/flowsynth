@@ -79,3 +79,8 @@ export declare function endpointUrl(rawUrl: string): string;
 export declare function fetchProvenance(
   rawUrl: string,
 ): Promise<{ provenance: unknown; detail: string | null }>;
+
+/** Shared checkout identity resolution for both evidence commands. */
+export declare function expectedCheckout(dir?: string):
+  | { worktree: string; commit: string; error?: undefined }
+  | { error: string; worktree?: undefined; commit?: undefined };

@@ -6,11 +6,10 @@
 // exits 1 with the fix in its output; acceptance records the verified
 // provenance with --record (default: docs/evidence/preflight/provenance.json).
 // Development-only: never part of a production build.
-import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { verifyCaptureProvenance, fetchProvenance } from "./dev/provenance.mjs";
+import { verifyCaptureProvenance, fetchProvenance, expectedCheckout } from "./dev/provenance.mjs";
 
 const USAGE =
   "Usage: node tools/evidence-preflight.mjs --url <server-url> [--worktree <dir>] [--record <file>]";
@@ -25,26 +24,6 @@ function parseFlags(argv) {
     else return { error: `Unknown argument: ${flag}\n${USAGE}` };
   }
   return { flags };
-}
-
-const git = (args, cwd) => {
-  try {
-    return execFileSync("git", args, { cwd, encoding: "utf8" }).trim() || null;
-  } catch {
-    return null;
-  }
-};
-
-function expectedCheckout(dir) {
-  const worktree = dir ? path.resolve(dir) : git(["rev-parse", "--show-toplevel"], process.cwd());
-  if (!worktree) {
-    return { error: "Not inside a git checkout — run the preflight from the worktree you are editing, or pass --worktree <dir>." };
-  }
-  const commit = git(["rev-parse", "HEAD"], worktree);
-  if (!commit) {
-    return { error: `\`${worktree}\` has no HEAD commit — commit the work before capturing evidence from it.` };
-  }
-  return { worktree, commit };
 }
 
 export async function runPreflight(argv) {

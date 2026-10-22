@@ -57,6 +57,18 @@ describe("recovery plans (issue #457)", () => {
     expect(plan.budget).toContain("two activation attempts");
   });
 
+  it("does not reject a usable tab solely because visible remains false", () => {
+    const recovery = recoveryPlan(VISIBILITY).recovery.join(" ");
+    const checks = browserChecks({ width: 390, height: 844 }).join(" ");
+    expect(checks).toContain("A false visible flag alone is not a failure");
+    expect(recovery).toContain("available, not loading, no dialog");
+    expect(recovery).toContain("successful preview_snapshot on the same tab");
+    expect(recovery).toContain("visibility confirmation unavailable");
+    expect(recovery).toContain("navigate the same tab to the verified URL");
+    expect(fs.readFileSync(path.join(repoRoot, "docs/agents/visual-evidence.md"), "utf8"))
+      .toContain("without claiming visibility was verified");
+  });
+
   it("recovers browser-snapshot with a status read and a retry of the same snapshot, three attempts", () => {
     const plan = recoveryPlan(SNAPSHOT);
     expect(plan.recovery.join(" ")).toContain("preview_status");
