@@ -2629,12 +2629,16 @@ export class App {
   // the only ordinary-boot door, and the gate makes the "dev boots only"
   // contract true of the family, not just of its surfaces (#466 audit).
 
+  // The dev clock's one prerequisite: flow, live and unpaused. Both clock
+  // entries refuse through this guard so their message can never drift.
+  private devClockReady(): boolean {
+    if (this.state.mode === "flow") return true;
+    this.say("Dev clock only works during flow.");
+    return false;
+  }
+
   devAdvance(seconds: number): void {
-    if (!this.dev) return;
-    if (this.state.mode !== "flow") {
-      this.say("Dev clock only works during flow.");
-      return;
-    }
+    if (!this.dev || !this.devClockReady()) return;
     const result = advance(this.state, seconds);
     this.reportAdvance(result);
     this.say(`Dev clock +${seconds}s.`);
@@ -2642,11 +2646,7 @@ export class App {
   }
 
   devToTarget(): void {
-    if (!this.dev) return;
-    if (this.state.mode !== "flow") {
-      this.say("Dev clock only works during flow.");
-      return;
-    }
+    if (!this.dev || !this.devClockReady()) return;
     const session = this.state.session;
     if (!session || session.target === null) {
       this.say("No timed target running.");

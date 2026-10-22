@@ -24,9 +24,9 @@ afterEach(() => fixture.release());
 
 const status = (): string => document.getElementById("status")?.textContent ?? "";
 
-function beginTimedFlow(seconds: number): void {
+function beginFlowWithPlan(target: number | null): void {
   app.state.sessionsCompleted = 1;
-  startSession(app.state, seconds);
+  startSession(app.state, target);
 }
 
 describe("the dev clock: flow-only time advancement (#466)", () => {
@@ -39,7 +39,7 @@ describe("the dev clock: flow-only time advancement (#466)", () => {
     expect(app.state.nous).toBe(nousBefore);
     expect(app.state.session).toBeNull();
 
-    beginTimedFlow(600);
+    beginFlowWithPlan(600);
     app.pause();
     app.devAdvance(60);
     expect(status()).toBe("Dev clock only works during flow.");
@@ -49,7 +49,7 @@ describe("the dev clock: flow-only time advancement (#466)", () => {
 
   it("in flow it advances the real seam: production, credited practice, and elapsed together", () => {
     app = boot(undefined, true);
-    beginTimedFlow(600);
+    beginFlowWithPlan(600);
     const nousBefore = app.state.nous;
     app.devAdvance(60);
     expect(status()).toBe("Dev clock +60s.");
@@ -61,7 +61,7 @@ describe("the dev clock: flow-only time advancement (#466)", () => {
 
   it("the panel's +1m button drives the same advance", () => {
     app = boot(undefined, true);
-    beginTimedFlow(600);
+    beginFlowWithPlan(600);
     app.render();
     document.querySelector<HTMLButtonElement>('[data-dev="60"]')!.click();
     expect(status()).toBe("Dev clock +60s.");
@@ -75,7 +75,7 @@ describe("the timed-target jump (#466)", () => {
     app.devToTarget();
     expect(status()).toBe("Dev clock only works during flow.");
 
-    beginTimedFlow(null as unknown as number);
+    beginFlowWithPlan(null);
     app.devToTarget();
     expect(status()).toBe("No timed target running.");
     expect(app.state.session!.elapsed).toBe(0);
@@ -84,7 +84,7 @@ describe("the timed-target jump (#466)", () => {
   it("lands exactly on the target; the next wake-up fires the overrun signals", () => {
     const recorder = makeRecorder();
     app = boot(recorder.channels, true);
-    beginTimedFlow(600);
+    beginFlowWithPlan(600);
     app.devToTarget();
     expect(status()).toBe("Dev clock +600s.");
     expect(app.state.session!.elapsed).toBe(600);
@@ -125,7 +125,7 @@ describe("the +100ν quick grant (ADR-0077's live-save tier, #466)", () => {
 describe("the World era grant (#466)", () => {
   it("refuses while a session is live and leaves the session and the save untouched", () => {
     app = boot(undefined, true);
-    beginTimedFlow(600);
+    beginFlowWithPlan(600);
     app.devAdvance(120);
     const slotBefore = localStorage.getItem(STORAGE_KEY);
     app.devWorldEra();
