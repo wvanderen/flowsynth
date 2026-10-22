@@ -35,7 +35,7 @@ if (!app) throw new Error("Open the verified URL with ?dev=1 first.");
 app.devWorldEra();
 ```
 
-`devWorldEra()` switches to upgrade mode, grants the World-era setup, selects the World board layer, saves, and renders. It needs no separate mode change or render call. Other helpers have different prerequisites: `devSynth()` places a synth only in upgrade mode (otherwise it goes to inventory), while `devAdvance(seconds)` requires flow mode. Both render internally. Check the helper before rerunning a seed: grants such as `devSynth()` add another module and save it.
+`devWorldEra()` grants the World-era setup, selects the World board layer, saves, and renders. It requires upgrade mode: a live session or breather refuses the grant with a status message and leaves the phase untouched (#466). Other helpers have different prerequisites: `devSynth()` places a synth only in upgrade mode (otherwise it goes to inventory), while `devAdvance(seconds)` requires flow mode. Both render internally. Check the helper before rerunning a seed: grants such as `devSynth()` add another module and save it.
 
 ### The Focus evidence scenario (issue #456)
 
