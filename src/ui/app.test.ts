@@ -170,9 +170,7 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(document.querySelector(".clock-anchor #app-tile-notes")).not.toBeNull();
     expect(document.getElementById("clock-plan")!.contains(document.getElementById("app-tile-notes"))).toBe(false);
     expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-settings")!));
-    // The session cluster is the switch's home — the header's dominant
-    // control: the chamfered key and its console readout.
-    expect(document.querySelector("#console-session #flow-switch")).not.toBeNull();
+    // The session cluster owns the header's primary text action.
     expect(document.querySelector("#console-session #flow-switch")).not.toBeNull();
   });
 
