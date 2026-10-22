@@ -36,8 +36,8 @@ Absent all three, the rerun is waste: it re-executes files that just passed, at 
 The change edits the Focus goal readout (`src/ui/focus.ts`) and adds cases to `src/ui/focus.test.ts`:
 
 1. **Iterate targeted.** `npx vitest run src/ui/focus.test.ts` until green; `-t '<name>'` to chase an individual failing case; optionally `--project ui` once mid-stream to see the file against its project siblings. Nothing here needs recording.
-2. **Capture browser evidence.** The change touches a UI surface, so desktop and phone evidence from the verified checkout is owed per [visual evidence](visual-evidence.md). This is a separate required item, not a suite; run it after the code settles, before hand-off.
-3. **Commit.**
+2. **Commit the source changes.** The capture preflight requires clean, committed source.
+3. **Capture browser evidence.** Launch this checkout and pass the capture preflight, then capture desktop and phone evidence per [visual evidence](visual-evidence.md). Commit the evidence artifacts and their provenance record afterward; cite the verified source commit in the evidence README. Evidence-only additions do not change the captured source. This is a separate required item, not a suite.
 4. **Final verification, once, at that commit:** `npm run check`, then `npm test`. The full suite just executed every UI file, the new cases included — a `--project ui` rerun would repeat identical work at an unchanged revision.
 5. **Review asks for a fix?** That is a new source change: steps 1–4 again — targeted first, then the single full pass at the new revision. The old green doesn't carry over, and the new pass doesn't re-earn the old runs.
 
@@ -45,4 +45,4 @@ Total: two commands at the final revision, one capture pass, zero duplicate full
 
 ## For review
 
-A green full suite at the reviewed commit satisfies the UI project; do not request or perform a second full UI run on an unchanged revision. If the concern is coverage, the tool is the [completion record](verification.md) — which named case demonstrates the criterion — not which command ran how many times. The converse also holds: results recorded before the revision's last source change do not cover it, so the record must cite runs at the revision under review, and captures must come from the verified checkout whose commit matches it (the capture preflight enforces that match).
+A green full suite at the reviewed commit satisfies the UI project; do not request or perform a second full UI run on an unchanged revision. If the concern is coverage, the tool is the [completion record](verification.md) — which named case demonstrates the criterion — not which command ran how many times. The converse also holds: results recorded before the revision's last source change do not cover it, so the record must cite runs at the revision under review, and captures must come from the verified checkout at the reviewed source commit (the capture preflight enforces that match). A later commit containing only evidence artifacts retains that provenance; any intervening source change requires a new capture pass.

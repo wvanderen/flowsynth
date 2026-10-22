@@ -22,6 +22,8 @@ npm run preview   # serve the built bundle
 npm run deploy:vercel  # deploy to production at flowsynth.vercel.app
 ```
 
+For targeted iteration, final verification, and result invalidation, see [check selection](docs/agents/checks.md).
+
 Deploys typecheck and build locally, then push the exact artifact to Vercel. First-time setup on a new machine: `vercel login`, then `vercel link --yes --project flowsynth && vercel pull --yes`.
 
 Saves live in your browser's local storage. Use Export/Import in the console's settings menu for backups or moving between machines; Reset starts a fresh instrument.
