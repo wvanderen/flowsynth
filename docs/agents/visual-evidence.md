@@ -37,6 +37,22 @@ app.devWorldEra();
 
 `devWorldEra()` switches to upgrade mode, grants the World-era setup, selects the World board layer, saves, and renders. It needs no separate mode change or render call. Other helpers have different prerequisites: `devSynth()` places a synth only in upgrade mode (otherwise it goes to inventory), while `devAdvance(seconds)` requires flow mode. Both render internally. Check the helper before rerunning a seed: grants such as `devSynth()` add another module and save it.
 
+### The Focus evidence scenario (issue #456)
+
+The Focus surfaces have one repeatable, save-isolated setup: `app.devFocusScenario()` installs a representative session-preparation state — the selected "Piano" habit with 15 h of seat time, its daily 60-minute goal 25 logged minutes into today's occurrence, Engineer level 3 with one spent Governor rank and two points free, a partial practice-roll meter with its banked rolls waiting, and one recorded session — from arbitrary prior development state (ADR-0077). The install detaches the tab from the player's save before it writes: repeating the setup rebuilds the state without accumulating, an ordinary save is never read or overwritten, and shared-save recovery cannot displace the setup with unrelated state. A reload drops the scenario and returns to the ordinary save.
+
+Run it with its assertions, then open Focus through the real door:
+
+```js
+const app = window.__flowsynth;
+if (!app) throw new Error("Open the verified URL with ?dev=1 first.");
+app.devFocusScenario();       // installs in an isolated save, renders
+app.devFocusScenarioAssert(); // re-confirms; throws a named failure if the setup drifted
+app.showFocusFace("plan");    // opens the Focus sheet on the PLAN face
+```
+
+A pass prints the ✓ summary line in the dev panel (`Focus setup` readout) and returns from `devFocusScenarioAssert()`; a failure throws `Focus scenario: …` with the named reason and prints the ✗ line. Record both in the demonstration: the dev panel's line is visible in captures, and the assertion call belongs in the capture script so an unconfirmed setup cannot pass silently. The goal anchors to the install day — reinstall when the capture spans local midnight.
+
 ## 4. Capture desktop and phone against that same server
 
 Verify and screenshot both a desktop and a ~390px phone viewport from the verified URL. A viewport pass that fails or cannot run is recorded as unavailable — never claimed as verified. The evidence backs a review against the [instrument standards](../instrument-standards.md), which also requires keyboard/touch disclosure checks, non-color state distinctions, and reduced-motion behavior where applicable.

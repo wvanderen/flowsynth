@@ -3427,6 +3427,9 @@ body.hex-detail-open .upgrade-all {
 }
 .dev-panel span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--forge-glow); margin-right: 4px; }
 .dev-panel button { padding: 4px 8px; font-size: 11px; font-family: var(--mono); }
+/* The Focus scenario's assertion readout (#456): one plain mono line on
+   its own row — the ✓ summary or the named ✗ failure, never color alone. */
+.dev-panel .dev-note { flex-basis: 100%; font: 10px var(--mono); letter-spacing: 0.02em; color: var(--muted); margin-right: 0; }
 /* The drag handle (ADR-0050): the ⠿ grip leading the panel — the move
    affordance, pointer-captured and clamped to the stage. Chrome reset to
    the panel's own face; grab/grabbing announce the gesture. */

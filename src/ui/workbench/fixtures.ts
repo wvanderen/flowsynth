@@ -3,14 +3,13 @@ import { createInitialState, createModule } from "../../engine/state";
 import { pauseSession, startSession } from "../../engine/actions";
 import { createHabit, selectHabit } from "../../engine/habits";
 import { createGoal } from "../../engine/goals";
-import { SharedSave } from "../shared-save";
+import { memorySaveStorage, SharedSave } from "../shared-save";
 import type { SignalChannels } from "../signals";
 
 // Every preview owns an in-memory slot. Even interactive imports, resets,
 // beforeunload, and the running App clock cannot read or write the player's save.
 export function previewSave(): SharedSave {
-  let value: string | null = null;
-  return new SharedSave({ getItem: () => value, setItem: (_key, next) => { value = next; } });
+  return new SharedSave(memorySaveStorage());
 }
 
 export const silentChannels: SignalChannels = {
