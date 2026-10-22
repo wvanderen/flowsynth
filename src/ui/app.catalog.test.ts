@@ -308,6 +308,8 @@ describe("the catalog door (issue #271)", () => {
   it("the dev era grant keeps the arete tab standing — the prestige lock agrees with the owned entry", () => {
     // The grant owns the entry, so the first prestige rode along: the
     // prestige-count lock must not dead-end the Catalog's arete tab.
+    // The grant is a dev helper (#466): a dev boot wears it.
+    app = boot(undefined, true);
     app.devWorldEra();
     app.openModal("catalog");
     expect(app.ui.catalogFace).toBe("arete"); // mutator mode directs the face

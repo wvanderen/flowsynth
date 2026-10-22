@@ -2625,12 +2625,20 @@ export class App {
   }
 
   // Dev helpers (?dev=1): time-warp and fixtures for hands-on verification only.
+  // Every helper is dev-gated at the method itself — the panel's absence is
+  // the only ordinary-boot door, and the gate makes the "dev boots only"
+  // contract true of the family, not just of its surfaces (#466 audit).
+
+  // The dev clock's one prerequisite: flow, live and unpaused. Both clock
+  // entries refuse through this guard so their message can never drift.
+  private devClockReady(): boolean {
+    if (this.state.mode === "flow") return true;
+    this.say("Dev clock only works during flow.");
+    return false;
+  }
 
   devAdvance(seconds: number): void {
-    if (this.state.mode !== "flow") {
-      this.say("Dev clock only works during flow.");
-      return;
-    }
+    if (!this.dev || !this.devClockReady()) return;
     const result = advance(this.state, seconds);
     this.reportAdvance(result);
     this.say(`Dev clock +${seconds}s.`);
@@ -2638,8 +2646,9 @@ export class App {
   }
 
   devToTarget(): void {
+    if (!this.dev || !this.devClockReady()) return;
     const session = this.state.session;
-    if (this.state.mode !== "flow" || !session || session.target === null) {
+    if (!session || session.target === null) {
       this.say("No timed target running.");
       return;
     }
@@ -2647,10 +2656,14 @@ export class App {
   }
 
   devNous(): void {
+    if (!this.dev) return;
     // The dev grant produces like flow does, through the one credit seam.
     // It mints nothing — the door opens on the crossing, and Arete still
-    // waits for the prestige action.
+    // waits for the prestige action. The grant saves at once: the quick
+    // grants' tier is the live save (ADR-0077), so a reload keeps what it
+    // gave, exactly like the synth and World era grants beside it.
     earnNous(this.state, 100);
+    this.save();
     this.say("Dev: +100 ν.");
     this.render();
   }
@@ -2661,6 +2674,7 @@ export class App {
   // flow the board stays locked per the standing constraints, so there it
   // lands in the tray to drag into place between sessions.
   devSynth(): void {
+    if (!this.dev) return;
     const module = createModule(this.state, "additive");
     this.state.modules.push(module);
     if (this.state.mode !== "upgrade") {
@@ -2693,9 +2707,18 @@ export class App {
   // twin, and Arete for the World section. The retired mutator-era grant's
   // slot/mutator rig retired with the Mutator Grid's surfaces; the
   // development board keeps a hand onto the second face.
+  // Upgrade mode is the grant's prerequisite (#466 audit): forcing the mode
+  // switch over a live session or breather used to strand that phase — an
+  // orphaned session or breather serialized into the save, a state shape
+  // ordinary play can never produce. The grant now refuses and leaves the
+  // running phase untouched.
   devWorldEra(): void {
+    if (!this.dev) return;
+    if (this.state.mode !== "upgrade") {
+      this.say("World era needs upgrade mode — end the running session or breather first.");
+      return;
+    }
     const s = this.state;
-    s.mode = "upgrade";
     s.prestiges = Math.max(s.prestiges, 1);
     s.catalogEntryOwned = true;
     s.arete = Math.max(s.arete, 20);
