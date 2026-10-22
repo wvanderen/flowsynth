@@ -9,8 +9,8 @@ import { BALANCE } from "../engine/constants";
 
 // The existing developer controls' regression evidence (#466): every quick
 // control exercised in its legal state and in the states that must refuse
-// it, with each control's save behavior pinned. The Focus scenario
-// (app.focusscenario.test.ts) and the allocation board
+// it, with each control's save behavior pinned. The scenario suite
+// (app.scenarios.test.ts) and the allocation board
 // (app.capacity.test.ts) carry their own suites.
 const fixture = createAppFixture();
 const boot = fixture.boot;
@@ -196,7 +196,8 @@ describe("the dev gating contract (#466)", () => {
       () => app.devNous(),
       () => app.devSynth(),
       () => app.devWorldEra(),
-      () => app.devFocusScenario(),
+      () => app.devLaunchScenario("focus"),
+      () => app.devScenarioAssert(),
       () => app.devToggleBoard(),
     ]) {
       invoke();
@@ -206,6 +207,7 @@ describe("the dev gating contract (#466)", () => {
     }
     expect(app.state.session).toBeNull();
     expect(app.devBoard).toBeNull();
-    expect(app.devFocusScenarioNote).toBeNull();
+    expect(app.devScenarioId).toBeNull();
+    expect(app.devScenarioNote).toBeNull();
   });
 });

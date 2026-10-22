@@ -63,7 +63,7 @@ import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
 import { applyBreatherGap, applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule, createWeapon, createWorldColumn } from "../engine/state";
-import { assertFocusScenario, createFocusScenarioState, focusScenarioSummary } from "../engine/focus-scenario";
+import { SCENARIOS, scenarioOf, type ScenarioDescriptor } from "../engine/scenarios";
 import { BALANCE } from "../engine/constants";
 import type { FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
@@ -2745,30 +2745,43 @@ export class App {
     this.render();
   }
 
-  // The Focus evidence scenario (issue #456): one installable, repeatable
-  // session-preparation setup — a selected habit, its goal, and class
-  // advancement — built through the real creation seams in
-  // engine/focus-scenario.ts, the scenario's one authoritative place.
-  // The install detaches the tab from the player's save slot before it
-  // writes anything: a private in-memory slot is seeded with the
-  // scenario, so shared-save recovery can never resurrect unrelated
-  // state into it, and the ordinary save is never read or overwritten.
-  // Repeating the install rebuilds the state from nothing — no
-  // accumulation. The assertion runs on the candidate before anything
-  // changes and again on demand; a failed check is a thrown, named
-  // error and a ✗ line in the dev panel. Reload drops the scenario and
-  // returns to the ordinary save.
+  // The playtesting suite's launch boundary (issue #467, parent #465): one
+  // application-facing command set shared by the dev panel's suite entry
+  // and agent access (window.__flowsynth) — the same methods either way.
+  // A launch builds its scenario's candidate, asserts it before anything
+  // changes, detaches the tab onto a private in-memory slot before any
+  // write (ADR-0077), installs, and saves — shared-save recovery can
+  // never resurrect unrelated state into it, and the ordinary save is
+  // never read or overwritten. Repeating a launch rebuilds the state from
+  // nothing — no accumulation. The active scenario's assertion re-runs on
+  // demand; a failed check is a thrown, named error and a ✗ line in the
+  // dev panel. A reload drops the scenario and returns to the ordinary
+  // save.
 
-  devFocusScenarioNote: string | null = null;
+  devScenarioId: string | null = null;
+  devScenarioNote: string | null = null;
 
-  devFocusScenario(now: number = Date.now()): void {
+  // The catalog read: the launchable scenarios with their intended
+  // situations and origins — the suite entry's data and the agent
+  // discovery read in one.
+  devScenarios(): readonly ScenarioDescriptor[] {
+    return SCENARIOS;
+  }
+
+  devLaunchScenario(id: string, now: number = Date.now()): void {
     if (!this.dev) return;
-    let scenario: GameState;
+    const scenario = scenarioOf(id);
+    if (!scenario) {
+      this.say(`Dev: no scenario "${id}" — the suite offers ${SCENARIOS.map((s) => s.id).join(", ")}.`);
+      return;
+    }
+    let candidate: GameState;
     try {
-      scenario = createFocusScenarioState(now);
-      assertFocusScenario(scenario);
+      candidate = scenario.build(now);
+      scenario.assert(candidate, now);
     } catch (error) {
-      this.devFocusScenarioNote = `focus ✗ ${(error as Error).message}`;
+      this.devScenarioId = null;
+      this.devScenarioNote = `${scenario.id} ✗ ${(error as Error).message}`;
       this.say(`Dev scenario failed: ${(error as Error).message}`);
       this.render();
       throw error;
@@ -2777,30 +2790,36 @@ export class App {
     this.clearTransientUi();
     this.ui.modal = null;
     this.ui.importError = null;
-    this.state = scenario;
+    this.devScenarioId = scenario.id;
+    this.state = candidate;
     this.lastWall = null;
     this.exitPending = false;
     this.save(now, true);
-    this.devFocusScenarioNote = focusScenarioSummary();
-    this.say("Dev: Focus scenario installed in an isolated save.");
+    this.devScenarioNote = `${scenario.summary()} · ${scenario.origin} · isolated save`;
+    this.say(`Dev: ${scenario.name} installed in an isolated save — ${scenario.situation}.`);
     this.render();
   }
 
-  // The capture pass's re-check: confirms the live state still carries
-  // the intended setup and updates the dev panel's note either way.
-  // Throws the named failure — a capture recording its assertions cannot
-  // miss one.
-  devFocusScenarioAssert(): void {
+  // The capture pass's re-check: confirms the live state still carries the
+  // active scenario's intended setup and updates the dev panel's note
+  // either way. Throws the named failure — a capture recording its
+  // assertions cannot miss one.
+  devScenarioAssert(now: number = Date.now()): void {
     if (!this.dev) return;
+    const scenario = this.devScenarioId ? scenarioOf(this.devScenarioId) : null;
+    if (!scenario) {
+      this.say("Dev: no scenario installed — launch one from the suite first.");
+      return;
+    }
     try {
-      assertFocusScenario(this.state);
+      scenario.assert(this.state, now);
     } catch (error) {
-      this.devFocusScenarioNote = `focus ✗ ${(error as Error).message}`;
+      this.devScenarioNote = `${scenario.id} ✗ ${(error as Error).message}`;
       this.render();
       throw error;
     }
-    this.devFocusScenarioNote = focusScenarioSummary();
-    this.say("Dev: Focus scenario assertions passed.");
+    this.devScenarioNote = `${scenario.summary()} · ${scenario.origin} · isolated save`;
+    this.say(`Dev: ${scenario.name} assertions passed.`);
     this.render();
   }
 
