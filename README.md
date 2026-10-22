@@ -16,7 +16,7 @@ A browser application implementing the redesign's opening (ADR-0013): the grante
 ```sh
 npm install
 npm run dev       # play at the printed local URL (append ?dev=1 for the dev clock panel)
-npm test          # engine test suite (ported economy accounting checks and session rules)
+npm test          # full test suite (engine and UI projects in one run)
 npm run build     # typecheck + static bundle in dist/ for offline use
 npm run preview   # serve the built bundle
 npm run deploy:vercel  # deploy to production at flowsynth.vercel.app

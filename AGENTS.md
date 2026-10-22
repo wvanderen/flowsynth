@@ -29,5 +29,8 @@ When changing or reviewing a UI surface (panel, sheet, readout, control, or its 
 Fresh worktrees carry no `node_modules` — run `npm install` before your first check. Then:
 
 - `npm run check` — typecheck (tsc)
-- `npm test` — full suite (UI files run serially with isolation; engine files run in parallel); iterate one failing test with `npx vitest run <file> -t '<name>'`
-- UI regressions: run `npx vitest run --project ui` for current rendering and interaction checks across the domain suites. For browser layout and animation checks, launch this checkout with `npm run dev` — it picks a free port, prints the served worktree, commit, source cleanliness, and URL, and tees logs to `.dev/server.log` — then run the capture preflight (`node tools/evidence-preflight.mjs --url <url>`) and capture desktop and phone evidence per `docs/agents/visual-evidence.md`.
+- `npm test` — the full suite: engine and UI projects in one run (UI files serially with isolation; engine files in parallel). It includes the UI project, so a green full run leaves nothing for a separate UI pass to find. An unchanged revision owes one `npm run check` and one `npm test`; a further full run needs a source change, a failure, or an unresolved concern since the last one.
+- Targeted iteration: `npx vitest run <file> -t '<name>'` for one case, `npx vitest run --project ui` for the UI files alone while iterating. Any source change invalidates earlier runs — finish each revision with targeted reruns for the touched area, then one full pass.
+- Browser evidence is a separate requirement, not a suite: when the change touches a UI surface, launch this checkout with `npm run dev` — it picks a free port, prints the served worktree, commit, source cleanliness, and URL, and tees logs to `.dev/server.log` — then run the capture preflight (`node tools/evidence-preflight.mjs --url <url>`) and capture desktop and phone evidence per `docs/agents/visual-evidence.md`.
+
+The authoritative description of check selection, invalidation, and a worked UI example: `docs/agents/checks.md`.
