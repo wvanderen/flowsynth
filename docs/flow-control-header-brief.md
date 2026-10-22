@@ -33,3 +33,8 @@ Current behavior inspected in source. Browser comparison against the pinned prot
 This is a focused refinement of the existing Rack identity. Preserve session behavior, the separate Pause/Resume control, clock and habit information, and all unrelated surfaces. The main button is the sole scoped exception to square control geometry. Update affected presentation contracts with implementation; these choices introduce no new domain terms or hard-to-reverse architectural decision, so no new glossary or ADR is needed.
 
 Completion requires the repository checks and recorded desktop/phone evidence for all four modes, narrow-width status fallback, keyboard focus, touch access, non-color status readability, and reduced motion. Compare the changed surface against instrument standards with the explicit shape and wordmark amendments above. Record unavailable checks honestly.
+
+
+## Phone header trial — 2026-10-22
+
+The user requested a two-row phone layout after reviewing the compact implementation. Below 600px, the first row carries logo, FlowSynth with mode status, and Settings; the second carries Pause/Resume, the clock/Notes well, and the labeled main action. The wordmark and status now fit within the header. This supersedes the single-row phone constraint and below-header status fallback on phones only; desktop and intermediate-width presentation remain unchanged. Session behavior and the clipped vermillion action remain unchanged.

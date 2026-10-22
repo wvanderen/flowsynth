@@ -4559,3 +4559,38 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
   .main-switch { min-width: 88px; padding: 0 8px; font-size: 13px; }
   .clock-anchor .display-well { gap: 2px; }
 }
+
+/* Phone trial: identity and utilities above a roomy session transport row. */
+@container app (width < 600px) {
+  .console {
+    height: 120px;
+    margin-bottom: 0;
+    padding: 6px 10px;
+    grid-template-columns: 28px minmax(0, 1fr) 44px;
+    grid-template-rows: 44px 56px;
+    gap: 6px 10px;
+  }
+  #console-logo { grid-column: 1; grid-row: 1; }
+  #console-logo svg { width: 28px; height: 28px; }
+  #console-identity {
+    display: flex;
+    grid-column: 2;
+    grid-row: 1;
+    margin-left: 0;
+    gap: 4px;
+  }
+  .console-wordmark { display: block; }
+  #console-status {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+  #console-settings { grid-column: 3; grid-row: 1; }
+  .console-session { grid-column: 1 / -1; grid-row: 2; }
+  .console-session, .session-group { width: 100%; gap: 8px; }
+  .main-switch { min-width: 100px; padding: 0 12px; font-size: 15px; }
+  .clock-anchor .display-well { padding: 4px 6px; }
+}
