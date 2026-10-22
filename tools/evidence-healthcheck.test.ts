@@ -72,6 +72,15 @@ describe("recovery plans (issue #457)", () => {
     expect(plan.budget).toContain("Three failed attempts is the whole budget");
   });
 
+  it("never accepts a resize's own echo as the viewport confirmation — the live page read decides", () => {
+    const plan = recoveryPlan(VIEWPORT);
+    const steps = resumeSteps({ width: 390, height: 844 }).join(" ");
+    for (const text of [plan.recovery.join(" "), steps, browserChecks({ width: 390, height: 844 }).join(" ")]) {
+      expect(text).toContain("window.innerWidth");
+      expect(text).toContain("stale");
+    }
+  });
+
   it("pins the viewport target into the viewport plan when --viewport is given", () => {
     const plan = recoveryPlan(VIEWPORT, { width: 390, height: 844 });
     expect(plan.observed.join(" ")).toContain("390×844");
@@ -113,7 +122,7 @@ describe("viewport parsing (issue #457)", () => {
 });
 
 describe("resume steps (issue #457)", () => {
-  it("re-runs the preflight on the exact URL and confirms the viewport from a status read", () => {
+  it("re-runs the preflight on the exact URL and confirms the live viewport before resuming", () => {
     const steps = resumeSteps({ width: 390, height: 844 });
     expect(steps.join(" ")).toContain("capture preflight");
     expect(steps.join(" ")).toContain("preview_status");
@@ -276,5 +285,11 @@ describe("one authoritative recovery workflow (issue #457)", () => {
 
   it("documents the external service limitation explicitly", () => {
     expect(doc()).toContain("The preview service is outside this repo");
+  });
+
+  it("states the live-viewport confirmation rule: a resize's echo and the status setting can be stale", () => {
+    const text = doc();
+    expect(text).toContain("window.innerWidth");
+    expect(text).toContain("stale");
   });
 });

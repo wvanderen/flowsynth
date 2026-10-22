@@ -145,17 +145,18 @@ export function recoveryPlan(failureClass, viewport) {
       return {
         cls: VIEWPORT,
         observed: [
-          `preview_resize to ${target} times out ("Preview automation resize timed out"), or a later preview_status`,
-          "reports a size that differs from the target — the pass would capture at the wrong viewport and mislabel it.",
+          `preview_resize to ${target} times out ("Preview automation resize timed out"), or the page's live size differs from`,
+          "the target — the pass would capture at the wrong viewport and mislabel it.",
         ],
         recovery: [
           "After a timeout, call preview_status once (it often revives the viewport), then retry the same resize at most once more.",
+          `Confirm the live size with an in-page read (window.innerWidth / window.innerHeight) — the resize's own echo and the status read's viewportSetting can both be stale.`,
           "Get resizing done before captures, not during: after a resize lands, batch that viewport's whole capture pass before resizing again.",
         ],
         budget: `Three failed attempts is the whole budget — the first plus the two recoveries above; beyond that, the ${target} viewport pass is unavailable.`,
         exhausted: [
           `Record that viewport's captures unavailable, e.g. "phone ${target} unavailable: preview_resize timed out ×3",`,
-          "with the preview_status reads between attempts. The other viewport's captures stand on their own evidence.",
+          "with the reads between attempts. The other viewport's captures stand on their own evidence.",
         ],
       };
     default:
@@ -169,7 +170,7 @@ export function resumeSteps(viewport) {
   const target = viewport ? `${viewport.width}×${viewport.height}` : "the exact expected viewport";
   return [
     "Re-run the capture preflight against the exact URL before capturing — recovery keeps the same checkout and URL; if the port changed, preflight the new URL instead.",
-    `Confirm from preview_status that the tab is visible and reports ${target}, then resume the pass at the same URL. A viewport confirmed only by the resize's own success is not confirmed.`,
+    `Confirm the tab is visible and actually at ${target}: a resize's own success is not a confirmation (its response can echo a stale size, and preview_status carries the requested setting), so read the live size in the page — window.innerWidth / window.innerHeight — when the status read shows only the setting. Then resume the pass at the same URL.`,
   ];
 }
 
@@ -202,9 +203,9 @@ export function browserChecks(viewport) {
     "     pass: a snapshot returns (image and page state).",
     `     fail → ${SNAPSHOT}: timeout or error while check 1 passes.`,
     "",
-    `  3. Viewport — preview_resize to ${target}, then preview_status`,
-    "     pass: the resize returns and a status read reports exactly the target size.",
-    `     fail → ${VIEWPORT}: timeout, or a status size that differs from the target.`,
+    `  3. Viewport — preview_resize to ${target}, then confirm the page's live size`,
+    "     pass: the resize returns and a page read (window.innerWidth / window.innerHeight) reports exactly the target size — the resize's own echo and the status read's viewportSetting can both be stale.",
+    `     fail → ${VIEWPORT}: timeout, or a page read that differs from the target.`,
   ];
 }
 
