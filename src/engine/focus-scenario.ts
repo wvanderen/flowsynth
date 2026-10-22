@@ -43,10 +43,12 @@ export const FOCUS_SCENARIO = {
 } as const;
 
 // The dev readout's one-pass summary: the scenario's headline figures.
+// The install's note adds the identity, situation, origin, and isolation —
+// the facts of the launch, not of the setup alone.
 export function focusScenarioSummary(): string {
   return (
-    `focus ✓ ${FOCUS_SCENARIO.habitName} · daily ${FOCUS_SCENARIO.goalMinutes}m · ` +
-    `${FOCUS_SCENARIO.loggedMinutes}m logged · Engineer Lv ${FOCUS_SCENARIO.classLevel} · isolated save`
+    `${FOCUS_SCENARIO.habitName} · daily ${FOCUS_SCENARIO.goalMinutes}m · ` +
+    `${FOCUS_SCENARIO.loggedMinutes}m logged · Engineer Lv ${FOCUS_SCENARIO.classLevel}`
   );
 }
 

@@ -19,6 +19,10 @@ All controls live behind the dev panel (`src/ui/render.ts` `renderDev`) and the 
 
 Out of the console's inventory by design: the design workbench (`workbench.html`) is a separate authoring surface, not a playtesting control; the retired mutator-era grant retired with the Mutator Grid's surfaces.
 
+## Amendment — issue #467 (2026-10-22)
+
+The Focus setup's install became the playtesting suite's boundary (issue #467): the panel's `Focus setup` button is now the suite entry — a scenario select over `app.devScenarios()` plus one Launch control driving `app.devLaunchScenario(id)`, the same method agent access calls — and the fresh start joined the catalog beside Focus. The install's guarantees are unchanged (assert candidate, detach to the private in-memory slot, rebuild on relaunch, recovery-proof); `devScenarioAssert()` replaces `devFocusScenarioAssert()`. Dispositions above are unaffected: the Focus setup stays **Retain**, with its coverage migrated to `src/ui/app.scenarios.test.ts`.
+
 ## Repairs made
 
 1. **`+100ν` now saves.** Before the repair the grant mutated memory only; on an upgrade-mode tab — the grant's main use — nothing ever auto-saved, so a reload silently lost it. The quick grants' documented tier is the live save; now it behaves as advertised (ADR-0077's two-tier split is preserved: the grant writes the ordinary slot at once, the Focus scenario never does).

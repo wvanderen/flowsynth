@@ -14,3 +14,7 @@ Browser evidence capture seeds app state through dev helpers (`?dev=1`, `window.
 - **Dev helpers stay two-tier by intent.** Quick grants (`+100ν`, `World era`) keep mutating the live save for convenience; repeatable evidence setups must follow this pattern instead. The tier is a property of the helper's purpose, not its surface.
 - The scenario's goal anchors to the install day — the occurrence is what makes the preparation read live — so a capture spanning local midnight re-rolls the occurrence; the assertion reports it rather than hiding it.
 - No fixture catalog, no scenario manifest, no second save format: one slot shape, one builder, one assertion. A second scenario joins the same module pattern.
+
+## Amendment — issue #467 (2026-10-22)
+
+The playtesting suite (#465) needed a declared, selectable catalog of scenarios, which the original decision's "no scenario manifest" line ruled out. Amended: a catalog exists — `src/engine/scenarios.ts` — but it is the launch boundary's data, not a fixture framework. Each entry is still exactly the original pattern (one builder, one assertion, one slot shape, no second save format); the catalog adds identity only — name, intended situation, origin classification — and one launch command (`devLaunchScenario`) that every consumer shares. The Focus scenario's module remains its one authoritative place; the first scenario under the catalog, the fresh start, builds the shipped initial state.

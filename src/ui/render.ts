@@ -4060,8 +4060,8 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
     panel.id = "dev-panel";
     document.body.append(panel);
     // The drag's continuation lives on the document, bound once for the
-    // app's lifetime. Capture belongs to the persistent panel, so replacing
-    // its buttons during a tick never interrupts the pointer stream.
+    // app's lifetime. Capture belongs to the persistent panel, so updates
+    // during a tick never interrupt the pointer stream.
     app.listen(document, "pointermove", (event) => {
       if (!devDrag || event.pointerId !== devDrag.pointerId) return;
       const box = devStageBox();
@@ -4082,22 +4082,51 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
   if (!stage) return;
   panel.style.maxWidth = `${Math.max(0, stage.width - 24)}px`;
   panel.style.maxHeight = `${Math.max(0, stage.height - 8)}px`;
-  panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>
-    <span>DEV</span>
-    <button data-dev="60">+1m</button>
-    <button data-dev="600">+10m</button>
-    <button data-dev="target">→ target</button>
-    <button data-dev="nous">+100ν</button>
-    <button data-dev="synth">+synth</button>
-    <button data-dev="worldera">World era</button>
-    <button data-dev="focus">Focus setup</button>
-    <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>
-    ${app.devFocusScenarioNote ? `<span class="dev-note" id="dev-focus-note"></span>` : ""}`;
-  // The scenario's assertion readout (issue #456): the setup's ✓ line or
-  // the named ✗ failure, set as text — the message is state-derived, so
-  // it never rides the template.
-  const focusNote = byId("dev-focus-note");
-  if (focusNote) focusNote.textContent = app.devFocusScenarioNote;
+  // The playtesting suite's entry (issue #467): one scenario select over
+  // the app's catalog — the same descriptors agent access reads — plus
+  // one launch control. Selection and launch are ordinary square-cut
+  // controls; the note line carries the launch's ✓/✗ readout.
+  const mountControls = !panel.querySelector("#dev-scenario");
+  if (mountControls) {
+    const scenarioOptions = app
+      .devScenarios()
+      .map(
+        (scenario) =>
+          `<option value="${escapeHtml(scenario.id)}" ${scenario.id === app.devScenarioId ? "selected" : ""}>${escapeHtml(scenario.name)}</option>`,
+      )
+      .join("");
+    panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>
+      <span>DEV</span>
+      <select id="dev-scenario" aria-label="Playtesting scenario">${scenarioOptions}</select>
+      <button data-dev="scenario">Launch</button>
+      <button data-dev="60">+1m</button>
+      <button data-dev="600">+10m</button>
+      <button data-dev="target">→ target</button>
+      <button data-dev="nous">+100ν</button>
+      <button data-dev="synth">+synth</button>
+      <button data-dev="worldera">World era</button>
+      <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>
+      <span class="dev-note" id="dev-scenario-note"></span>`;
+  }
+  // Keep native controls mounted through live ticks: pending choice,
+  // keyboard focus, and the platform picker belong to the same nodes.
+  const select = byId("dev-scenario") as HTMLSelectElement;
+  const installedId = app.devScenarioId ?? "";
+  if (panel.dataset.scenarioId !== installedId) {
+    if (installedId) select.value = installedId;
+    panel.dataset.scenarioId = installedId;
+  }
+  const boardButton = panel.querySelector<HTMLButtonElement>('[data-dev="board"]');
+  if (boardButton) boardButton.textContent = app.devBoard ? "close board" : "board";
+  // The scenario's assertion readout (#456, #467): the setup's ✓ line —
+  // its figures, origin, and isolation — or the named ✗ failure, set as
+  // text: the message is state-derived, so it never rides the template.
+  const scenarioNote = byId("dev-scenario-note");
+  if (scenarioNote) {
+    scenarioNote.textContent = app.devScenarioNote;
+    scenarioNote.hidden = !app.devScenarioNote;
+  }
+  if (!mountControls) return;
   // The grip (ADR-0050): a pointer-capture drag — the press records the
   // panel's offset inside the stage, the moves carry it clamped within,
   // release ends the gesture. The persistent panel holds capture when the
@@ -4123,8 +4152,10 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       else if (key === "nous") app.devNous();
       else if (key === "synth") app.devSynth();
       else if (key === "worldera") app.devWorldEra();
-      else if (key === "focus") app.devFocusScenario();
-      else if (key === "board") app.devToggleBoard();
+      else if (key === "scenario") {
+        const select = byId("dev-scenario") as HTMLSelectElement | null;
+        if (select) app.devLaunchScenario(select.value);
+      } else if (key === "board") app.devToggleBoard();
       else app.devAdvance(Number(key));
     });
   });

@@ -1928,10 +1928,10 @@ describe("the dev console's drag handle", () => {
     pointer("pointerdown", grip, 100, 500);
     expect(capturedPointer).toBe(1);
     pointer("pointermove", document, 140, 460);
-    // A render (a tick's, any pass) rebuilds the panel's buttons but never
-    // the panel — the drag keeps its origin, the position stays put.
+    // A render preserves the panel and its controls; the drag keeps
+    // its origin and position.
     app.render();
-    expect(document.getElementById("dev-grip")).not.toBe(grip);
+    expect(document.getElementById("dev-grip")).toBe(grip);
     expect(panel.isConnected).toBe(true);
     expect(capturedPointer).toBe(1);
     pointer("pointermove", document, 180, 420);
