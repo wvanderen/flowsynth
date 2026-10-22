@@ -16,6 +16,15 @@ export const browserSaveStorage: SaveStorage = {
   setItem: (key, value) => localStorage.setItem(key, value),
 };
 
+// A private in-memory slot: the storage shape SharedSave reads and writes,
+// backed by one closure cell no other tab — and no other SharedSave — can
+// see. Previews and development scenarios ride this so their state can
+// never read, resurrect, or overwrite the player's save (issue #456).
+export function memorySaveStorage(): SaveStorage {
+  let value: string | null = null;
+  return { getItem: () => value, setItem: (_key, next) => { value = next; } };
+}
+
 function savedAtOf(raw: string): number | null {
   try {
     const savedAt = (JSON.parse(raw) as { savedAt?: unknown }).savedAt;

@@ -4096,7 +4096,14 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
     <button data-dev="nous">+100ν</button>
     <button data-dev="synth">+synth</button>
     <button data-dev="worldera">World era</button>
-    <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>`;
+    <button data-dev="focus">Focus setup</button>
+    <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>
+    ${app.devFocusScenarioNote ? `<span class="dev-note" id="dev-focus-note"></span>` : ""}`;
+  // The scenario's assertion readout (issue #456): the setup's ✓ line or
+  // the named ✗ failure, set as text — the message is state-derived, so
+  // it never rides the template.
+  const focusNote = byId("dev-focus-note");
+  if (focusNote) focusNote.textContent = app.devFocusScenarioNote;
   // The grip (ADR-0050): a pointer-capture drag — the press records the
   // panel's offset inside the stage, the moves carry it clamped within,
   // release ends the gesture. The persistent panel holds capture when the
@@ -4122,6 +4129,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       else if (key === "nous") app.devNous();
       else if (key === "synth") app.devSynth();
       else if (key === "worldera") app.devWorldEra();
+      else if (key === "focus") app.devFocusScenario();
       else if (key === "board") app.devToggleBoard();
       else app.devAdvance(Number(key));
     });

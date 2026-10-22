@@ -55,7 +55,7 @@ import { worldEntered, refreshWorldPreview, worldRevealPreview, worldBoardLive }
 import { WORLD_ENEMIES } from "../engine/constants";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY } from "../engine/save";
-import { SharedSave, browserSaveStorage, type LoadedSave } from "./shared-save";
+import { SharedSave, browserSaveStorage, memorySaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
 import { draftTierChanceOf } from "../engine/rolls";
 import { wireTooltips } from "./instrument";
@@ -63,6 +63,7 @@ import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
 import { applyBreatherGap, applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { createInitialState, createModule, createWeapon, createWorldColumn } from "../engine/state";
+import { assertFocusScenario, createFocusScenarioState, focusScenarioSummary } from "../engine/focus-scenario";
 import { BALANCE } from "../engine/constants";
 import type { FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
@@ -463,7 +464,7 @@ export class App {
   // and greet() passes the observation on.
   private resumedFromDiscard = false;
   lastSaveWall = 0;
-  private readonly sharedSave: SharedSave;
+  private sharedSave: SharedSave;
   dev: boolean;
   // The session's AudioContext (§4): created or resumed inside the start
   // gesture, kept for the target chime. Null where Web Audio is
@@ -2718,6 +2719,65 @@ export class App {
     this.ui.boardLayer = "world";
     this.say("Dev: World era granted — the second face stands.");
     this.save();
+    this.render();
+  }
+
+  // The Focus evidence scenario (issue #456): one installable, repeatable
+  // session-preparation setup — a selected habit, its goal, and class
+  // advancement — built through the real creation seams in
+  // engine/focus-scenario.ts, the scenario's one authoritative place.
+  // The install detaches the tab from the player's save slot before it
+  // writes anything: a private in-memory slot is seeded with the
+  // scenario, so shared-save recovery can never resurrect unrelated
+  // state into it, and the ordinary save is never read or overwritten.
+  // Repeating the install rebuilds the state from nothing — no
+  // accumulation. The assertion runs on the candidate before anything
+  // changes and again on demand; a failed check is a thrown, named
+  // error and a ✗ line in the dev panel. Reload drops the scenario and
+  // returns to the ordinary save.
+
+  devFocusScenarioNote: string | null = null;
+
+  devFocusScenario(now: number = Date.now()): void {
+    if (!this.dev) return;
+    let scenario: GameState;
+    try {
+      scenario = createFocusScenarioState(now);
+      assertFocusScenario(scenario);
+    } catch (error) {
+      this.devFocusScenarioNote = `focus ✗ ${(error as Error).message}`;
+      this.say(`Dev scenario failed: ${(error as Error).message}`);
+      this.render();
+      throw error;
+    }
+    this.sharedSave = new SharedSave(memorySaveStorage());
+    this.clearTransientUi();
+    this.ui.modal = null;
+    this.ui.importError = null;
+    this.state = scenario;
+    this.lastWall = null;
+    this.exitPending = false;
+    this.save(now, true);
+    this.devFocusScenarioNote = focusScenarioSummary();
+    this.say("Dev: Focus scenario installed in an isolated save.");
+    this.render();
+  }
+
+  // The capture pass's re-check: confirms the live state still carries
+  // the intended setup and updates the dev panel's note either way.
+  // Throws the named failure — a capture recording its assertions cannot
+  // miss one.
+  devFocusScenarioAssert(): void {
+    if (!this.dev) return;
+    try {
+      assertFocusScenario(this.state);
+    } catch (error) {
+      this.devFocusScenarioNote = `focus ✗ ${(error as Error).message}`;
+      this.render();
+      throw error;
+    }
+    this.devFocusScenarioNote = focusScenarioSummary();
+    this.say("Dev: Focus scenario assertions passed.");
     this.render();
   }
 
