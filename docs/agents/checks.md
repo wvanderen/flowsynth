@@ -10,7 +10,7 @@ The failure this closes: implementations and reviews ran the full suite and then
 | `npm test` | Every automated regression in the repository, in one run. Vitest executes two projects: `engine` (`src/engine` and `tools`, parallel forks) and `ui` (`src/ui`, serially with file isolation). The UI project is inside this run — a green full run is a green UI run. |
 | `npx vitest run --project ui` | The same UI files, alone. A targeting tool for iteration; not an additional required suite. |
 | `npx vitest run <file> -t '<name>'` | One named test in one file. The narrowest targeting tool. |
-| `npm run build` | Typecheck plus the static bundle. CI runs it on every push and pull request (`.github/workflows/ci.yml`: check → test → build), and deploys run it locally; it is not a separate per-revision local obligation beyond that. |
+| `npm run build` | Typecheck plus the static bundle. CI runs it on pushes to main and on every pull request (`.github/workflows/ci.yml`: check → test → build), and deploys run it locally; it is not a separate per-revision local obligation beyond that. |
 | Browser evidence | Not a suite at all. When a change touches a UI surface, desktop and phone captures from the verified checkout are owed per [visual evidence](visual-evidence.md), judged against the [instrument standards](../instrument-standards.md). No vitest run substitutes for it, and it never substitutes for the suite. |
 
 ## Required once per revision; targeted while iterating
