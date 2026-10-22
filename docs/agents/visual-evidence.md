@@ -4,7 +4,7 @@ Screenshot evidence must come from the checkout whose diff it backs. Sibling wor
 
 ## 1. Launch the checkout you are editing
 
-Run `npm run dev` inside the active worktree. The launcher (`tools/dev-server.mjs`) picks an available port — so two sibling worktrees can serve concurrently at distinct URLs — and prints the actual URL beside the absolute worktree path, branch, and commit. Server output is teed to `.dev/server.log` in the same worktree; a long-running launch can surface as a failed command, so treat a printed URL as the server-is-up signal and `.dev/server.log` as ground truth.
+Run `npm run dev` inside the active worktree. The launcher (`tools/dev-server.mjs`) picks an available port — so two sibling worktrees can serve concurrently at distinct URLs — and prints the actual URL beside the absolute worktree path, branch, and commit. Server output is teed to `.dev/server.log` in the same worktree. A printed URL confirms startup at that moment; if a long-running launch surfaces as a failed command, make a fresh provenance request as described below to check whether the server is still responding. Use the log for diagnostics: it appends across launches, and logging is best-effort.
 
 ## 2. Verify provenance before capturing evidence
 
@@ -24,7 +24,17 @@ The response's `worktree` must equal `git rev-parse --show-toplevel` in the chec
 
 ## 3. Seed states through the dev harness
 
-Serve the checkout with `?dev=1`: the flag exposes the dev panel and `window.__flowsynth`, the app handle for seeding and driving board and session states (defined in `src/main.ts`). Seed through that handle rather than clicking through the UI — a vite reload wipes clicked-through setup, while a seeding script is one evaluate call to re-run.
+Open the verified URL with `?dev=1`: the flag exposes the dev panel and `window.__flowsynth`, the app handle exposed in `src/main.ts`. Its seeding helpers live in `src/ui/app.ts`. Use a script to make the evidence setup reproducible. Persisted board and session state survives reload; transient UI selections and the separate development-board scenario can reset.
+
+For example, run this in the tab's console or a browser evaluate call to show the World era:
+
+```js
+const app = window.__flowsynth;
+if (!app) throw new Error("Open the verified URL with ?dev=1 first.");
+app.devWorldEra();
+```
+
+`devWorldEra()` switches to upgrade mode, grants the World-era setup, selects the World board layer, saves, and renders. It needs no separate mode change or render call. Other helpers have different prerequisites: `devSynth()` places a synth only in upgrade mode (otherwise it goes to inventory), while `devAdvance(seconds)` requires flow mode. Both render internally. Check the helper before rerunning a seed: grants such as `devSynth()` add another module and save it.
 
 ## 4. Capture desktop and phone against that same server
 
