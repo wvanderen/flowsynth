@@ -1,11 +1,11 @@
 {
   "app": "flowsynth",
   "check": "capture-preflight",
-  "acceptedAt": "2026-10-22T20:13:02.496Z",
+  "acceptedAt": "2026-10-22T20:26:11.730Z",
   "url": "http://localhost:5174/",
   "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-842f793a",
   "branch": "t3/implement-issue-466",
-  "commit": "35ebf22bf0181063cf711d2d329a6a6ecaf6bc3a",
+  "commit": "e81269c25b654774cb6bcabd2d5553ccab62dac4",
   "source": {
     "clean": true,
     "changes": [],

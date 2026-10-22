@@ -1,6 +1,21 @@
 # Dev controls audit evidence — issue #466, 2026-10-22
 
-Captured from the verified checkout: worktree `/Users/eggfam/.t3/worktrees/flowsynth/t3-842f793a`, branch `t3/implement-issue-466`, source commit `35ebf22bf0181063cf711d2d329a6a6ecaf6bc3a`, clean source — see `provenance.json`, written by the capture preflight before the first capture. URL: `http://localhost:5174/?dev=1`.
+Captures 1–10 were taken from the verified checkout: worktree `/Users/eggfam/.t3/worktrees/flowsynth/t3-842f793a`, branch `t3/implement-issue-466`, source commit `35ebf22bf0181063cf711d2d329a6a6ecaf6bc3a`, clean source — the capture preflight accepted that commit before the first capture. URL: `http://localhost:5174/?dev=1`. `provenance.json` now holds the later preflight record (commit `e81269c2`, accepted) — see the recapture section below for why the images remain pinned at `35ebf22`.
+
+## Recapture after the review-fix commit: unavailable
+
+Commit `e81269c` changed source after these captures (the dev clock's flow guard extracted into one `devClockReady()` helper — behavior-identical, both refusal messages pinned by assertions in `src/ui/app.dev.test.ts` — plus test renames and documentation). The intervening source change requires a new capture pass, and that pass is **unavailable**: every `preview_snapshot` timed out — "Preview automation snapshot timed out after 15000ms" ×3 against the open tab (with the documented recovery between attempts: a `preview_status` read that reported the tab available, not loading, dialog-free, on the verified URL), then once more after activating the tab, then once more after a fresh navigation, then once more on a brand-new tab. The health check verified the server side throughout ("server OK — provenance verified for this checkout at commit e81269c2, clean source"); the failure is the preview snapshot pipeline, outside this repo.
+
+What the final revision does carry, recorded live through the evaluate channel (which kept working — named here as reads, never presented as the missing captures), at `e81269c` on the verified URL:
+
+- Dev clock: refused in upgrade ("Dev clock only works during flow.", zero nous delta) and paused (elapsed frozen at 60); legal in flow (elapsed 60, credited 60, production flowed, "Dev clock +60s.").
+- Target jump: landed exactly on the 600 s plan ("Dev clock +540s."); `tick()` flipped `targetSignaled` and the title read "done · FlowSynth".
+- +100ν: `totalEarned` +100 in the same tick, the slot carrying it at once (`slotTotal` read); after a full reload `totalEarned` still included the grant.
+- World era: granted from upgrade (2 weapons, 2 columns, `arete` 20, World layer); refused with a live flow ("World era needs upgrade mode — end the running session or breather first.", mode still flow, slot byte-unchanged — the weapons read 2 there only because an earlier grant in the same session had already armed them; the slot-unchanged read is the proof).
+- Focus scenario: installed and asserted — `focus ✓ Piano · daily 60m · 25m logged · Engineer Lv 3 · isolated save`; a reload dropped it and returned to the ordinary save.
+- Allocation board: opened at capacity 3, "6 inst · 9 cands · 33 nodes · 0.4 ms · certified", `certified: true`.
+
+The captures below therefore demonstrate the surfaces and behaviors as of `35ebf22`; the evaluate reads demonstrate the identical behaviors at `e81269c`; the automated suite demonstrates them at the reviewed revision.
 
 ## Desktop (1280×800)
 
