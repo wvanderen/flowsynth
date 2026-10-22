@@ -1122,37 +1122,38 @@ describe("session preparation composition (issue #447)", () => {
     expect(longFrame.querySelector(".goal-ledger-name")!.textContent).toContain("15 min");
   });
 
-  it("the paused session keeps the running read and the live reads locked in place", () => {
+  it("the PLAN reads stay live through practice, pause, resume, and goal completion", () => {
     const habit = createHabit(app.state, "Piano").habit!;
     selectHabit(app.state, habit.id);
-    createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: 1000 });
-    startSession(app.state, 1200);
+    const goal = createGoal(app.state, { habitId: habit.id, minutes: 2, schedule: "once", now: 1000 }).goal!;
+    startSession(app.state, null);
+    let frame = openFace("plan");
+    const figures = frame.querySelector(`[data-goal-minutes="${goal.id}"]`)!;
+    const xp = frame.querySelector('[data-live="class-xp-line"]')!;
+    const initial = figures.textContent;
     advance(app.state, 60);
+    app.render();
+    expect(frame.querySelector(`[data-goal-minutes="${goal.id}"]`)).toBe(figures);
+    expect(figures.textContent).not.toBe(initial);
+    expect(xp.textContent).toContain("1h 59m");
+    expect(frame.querySelector(".goal-status")!.textContent).toContain("1:00 to go");
     app.pause();
-    // PLAN: the running read only — no context, no controls.
-    const frame = openFace("plan");
+    frame = openFace("plan");
     expect(frame.querySelector(".focus-state")!.textContent).toBe("paused");
-    expect(frame.querySelector(".habit-goal")).toBeNull();
-    expect(frame.querySelector("[data-habit-edit]")).toBeNull();
-    // The HABIT face keeps the advancement read live under the same lock.
-    const habitFrame = openFace("habit");
-    expect(habitFrame.querySelector('[data-live="class-xp-line"]')).not.toBeNull();
-    expect(habitFrame.querySelector("[data-habit-develop]")).toBeNull();
-    expect(habitFrame.querySelector("[data-class-allocate]")).toBeNull();
-    endSession(app.state);
-  });
-
-  it("the PLAN face in flow stays the running read: no habit context, no controls", () => {
-    const habit = createHabit(app.state, "Piano").habit!;
-    selectHabit(app.state, habit.id);
-    createGoal(app.state, { habitId: habit.id, minutes: 20, schedule: "once", now: 1000 });
-    startSession(app.state, 1200);
+    expect(frame.querySelector(".habit-goal")).not.toBeNull();
+    expect(frame.querySelector('[data-live="class-xp-line"]')).not.toBeNull();
+    for (const selector of ["[data-habit-edit]", "[data-habit-develop]", "[data-class-allocate]", "[data-habit-pick]", "[data-goal-edit-open]", "[data-goal-remove]"]) {
+      expect(frame.querySelector(selector)).toBeNull();
+    }
+    const pausedFigures = frame.querySelector(`[data-goal-minutes="${goal.id}"]`)!.textContent;
+    advance(app.state, 30);
+    app.render();
+    expect(sheet().querySelector(`[data-goal-minutes="${goal.id}"]`)!.textContent).toBe(pausedFigures);
+    app.resume();
     advance(app.state, 60);
-    const frame = openFace("plan");
-    expect(frame.querySelector(".habit-goal")).toBeNull();
-    expect(frame.querySelector(".habit-class")).toBeNull();
-    expect(frame.querySelector("[data-habit-edit]")).toBeNull();
-    expect(frame.querySelector("[data-habit-develop]")).toBeNull();
+    app.render();
+    expect(sheet().querySelector(`[data-goal="${goal.id}"] .goal-status.done`)!.textContent).toBe("complete");
+    expect(sheet().querySelector('[data-live="class-meter-line"]')!.textContent).toContain("2:00 / 3:00");
     endSession(app.state);
   });
 

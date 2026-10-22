@@ -320,22 +320,20 @@ function planRowsHtml(app: App): string {
 // Edit habit, allocation in Develop, and the summary stands once.
 function planPreparationHtml(app: App, habit: Habit | undefined): string {
   if (!habit) return "";
-  // The read's precedence mirrors the editor's own goal section: a
-  // carried-over choice stands first, then the active goal, then none.
-  const pending = pendingGoalsOf(app.state, habit.id);
-  const goal = activeGoalOf(app.state, habit.id);
+  const upgrade = app.state.mode === "upgrade";
+  const { pending, goal } = habitGoalState(app.state, habit.id);
   const goalRead = pending.length > 0
-    ? `<div class="folio-row"><span class="folio-line muted">Several goals carried over — keep one in Edit habit</span></div>`
+    ? `<div class="folio-row"><span class="folio-line muted">Several goals carried over${upgrade ? " — keep one in Edit habit" : ""}</span></div>`
     : goal
       ? activeGoalRowHtml(habit, goal, false)
       : `<div class="folio-row"><span class="folio-line muted">No goal.</span></div>`;
   return `<div class="focus-prepare">
     <div class="habit-goal"><span class="eyebrow">GOAL</span>${goalRead}</div>
     ${classSummaryHtml(app, habit, { developAction: false })}
-    <div class="folio-rows focus-actions"><div class="folio-row">
+    ${upgrade ? `<div class="folio-rows focus-actions"><div class="folio-row">
       <button class="focus-action" data-habit-edit="${habit.id}">Edit habit</button>
       <button class="focus-action" data-habit-develop="${habit.id}">Develop</button>
-    </div></div>
+    </div></div>` : ""}
   </div>`;
 }
 
@@ -344,9 +342,8 @@ function planPreparationHtml(app: App, habit: Habit | undefined): string {
 // neither a start/end control nor a clock of its own. Both modes show the
 // plan read: the session's habit and the goals tracked. Upgrade mode alone
 // carries the controls — the habit chip row, the time selection, and the
-// selected habit's preparation context (goal read, class summary, Edit
-// habit / Develop); a running session shows none, narrating its habit in
-// the row above while the reads stay live on the HABIT face and header.
+// selected habit's Edit habit / Develop actions. The goal and class reads
+// stay visible during practice and pauses, with all mutations locked.
 function planFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
@@ -358,8 +355,8 @@ function planFaceHtml(app: App): string {
       </span>
     </div>
     ${upgrade ? `${habitChipsHtml(app)}
-    ${planRowsHtml(app)}
-    ${planPreparationHtml(app, habit)}` : ""}`;
+    ${planRowsHtml(app)}` : ""}
+    ${planPreparationHtml(app, habit)}`;
 }
 
 /* ── The HABIT face ────────────────────────────────── */
@@ -663,19 +660,22 @@ function pendingGoalRowHtml(state: GameState, goal: Goal): string {
   </div>`;
 }
 
-// The active goal row: its inherited color on the track, live figures, and
-// the edit and remove controls — create, edit, replace, and remove all
-// land here, in the habit that owns the goal.
-function activeGoalRowHtml(habit: Habit, goal: Goal, upgrade: boolean): string {
+// One status spelling for initial rendering and live progress.
+function goalStatusHtml(goal: Goal): string {
   const required = goalRequiredSeconds(goal);
-  const status = goal.completed
+  return goal.completed
     ? `<span class="goal-status done">complete${goal.schedule.kind === "once" ? "" : ` · resets ${goal.schedule.kind === "daily" ? "tomorrow" : "Monday"}`}</span>`
     : `<span class="goal-status">${formatClock(Math.max(0, required - goal.progressSeconds))} to go</span>`;
+}
+
+// The active goal row keeps editing controls inside the habit editor.
+function activeGoalRowHtml(habit: Habit, goal: Goal, upgrade: boolean): string {
+  const status = goalStatusHtml(goal);
   return `<div class="folio-row goal-row ${goal.completed ? "done" : ""}" data-goal="${goal.id}">
     <div class="goal-ledger">
       <div class="goal-ledger-head">
         <span class="goal-ledger-name">${escapeHtml(goalTargetSummary(goal))}</span>
-        ${status}
+        <span data-goal-status="${goal.id}">${status}</span>
         ${
           upgrade
             ? `<button class="quiet small" data-goal-edit-open="${goal.id}" title="Edit goal" aria-label="Edit goal">✎</button>
@@ -707,11 +707,16 @@ function goalFormHtml(goal: Goal | undefined): string {
 // goal's row with its edit and remove, or the create action when none
 // stands. The engine's upgrade-mode gates answer the session lock; the
 // editor only draws in upgrade mode.
+// Migration choice takes precedence everywhere a habit's goal appears.
+function habitGoalState(state: GameState, habitId: string): { pending: Goal[]; goal: Goal | undefined } {
+  const pending = pendingGoalsOf(state, habitId);
+  return { pending, goal: pending.length > 0 ? undefined : activeGoalOf(state, habitId) };
+}
+
 function habitGoalHtml(app: App, habit: Habit): string {
   const { state, ui } = app;
   const upgrade = state.mode === "upgrade";
-  const pending = pendingGoalsOf(state, habit.id);
-  const goal = activeGoalOf(state, habit.id);
+  const { pending, goal } = habitGoalState(state, habit.id);
   const editing = upgrade && ui.focusForm === "goal-edit" && goal;
   const creating = upgrade && ui.focusForm === "goal-create" && !goal && pending.length === 0;
   return `<div class="habit-goal">
@@ -1092,6 +1097,12 @@ export function updateFocusSheetLive(app: App, scope: ParentNode): void {
   }
   for (const goal of activeGoals(state)) {
     const bar = scope.querySelector(`[data-goal-progress="${goal.id}"]`) as HTMLElement | null;
+    const status = scope.querySelector(`[data-goal-status="${goal.id}"]`);
+    const statusHtml = goalStatusHtml(goal);
+    if (status && status.innerHTML !== statusHtml) status.innerHTML = statusHtml;
+    const row = scope.querySelector(`[data-goal="${goal.id}"]`);
+    row?.classList.toggle("done", goal.completed);
+    row?.querySelector(".gbar")?.classList.toggle("done", goal.completed);
     const barHeight = goalBarHeight(goal);
     if (bar && bar.style.height !== barHeight) bar.style.height = barHeight;
     setText(scope.querySelector(`[data-goal-minutes="${goal.id}"]`), goalFiguresLine(goal));
