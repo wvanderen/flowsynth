@@ -17,4 +17,4 @@ A brief is the only thing an implementer sees of the design conversation. Implem
 
 ## Review
 
-Reviewers check the brief's spirit criteria alongside the standards': every tooltip earns its existence, names hold the register, one-place rules hold, and nothing was built that a non-goal ruled out.
+Reviewers check the brief's spirit criteria alongside the standards': every tooltip earns its existence, names hold the register, one-place rules hold, and nothing was built that a non-goal ruled out. Acceptance criteria get their evidence the same way — each mapped to a named test or recorded verification in the [completion record](verification.md), checked against the requirement rather than the suite count.

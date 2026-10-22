@@ -16,6 +16,10 @@ Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/age
 
 Briefs for implementation agents carry intent, priorities, non-goals, and one-place rules — never bare element lists. See `docs/agents/briefs.md`.
 
+### Verification records
+
+Work against acceptance criteria maps every criterion to a named test or recorded verification in one completion record; review checks the mapping, never the suite count. See `docs/agents/verification.md`.
+
 ## UI surfaces
 
 When changing or reviewing a UI surface (panel, sheet, readout, control, or its copy), read `docs/instrument-standards.md` first and judge the changed surface against the pinned prototype there; record checks that cannot run as unavailable.
