@@ -1171,8 +1171,8 @@ describe("the run artifact boundary", () => {
     expect(app.devSelectedRunId).toBe(first.runId);
     // Export downloads the selected run's artifact file — the same JSON
     // the command returns.
-    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test" as URL);
-    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     document.querySelector<HTMLButtonElement>('[data-dev="export-run"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(createObjectURL).toHaveBeenCalledTimes(1);
@@ -1204,7 +1204,7 @@ describe("the run artifact boundary", () => {
     const record = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
     expect(app.devTerminalRun("runs")).toContain(record.runId);
     expect(app.devTerminalRun("export")).toContain(record.runId);
-    const other = app.devRunPlaythrough({ seed: 10, budgetDays: 1 });
+    app.devRunPlaythrough({ seed: 10, budgetDays: 1 });
     expect(app.devTerminalRun(`select ${record.runId}`)).toContain(record.runId);
     expect(app.devSelectedRunId).toBe(record.runId);
     const artifact = app.devExportPlaythrough();
