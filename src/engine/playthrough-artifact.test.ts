@@ -107,7 +107,7 @@ describe("the run artifact format", () => {
     if (newerLoad.ok) return;
     expect(newerLoad.error).toContain(`Artifact version ${PLAYTHROUGH_ARTIFACT_VERSION + 1} is newer than this build supports`);
     const older = JSON.parse(text) as Record<string, unknown>;
-    older.version = 0;
+    older.version = PLAYTHROUGH_ARTIFACT_VERSION - 1;
     expect(importPlaythroughArtifact(JSON.stringify(older)).ok).toBe(false);
     const unversioned = JSON.parse(text) as Record<string, unknown>;
     delete unversioned.version;

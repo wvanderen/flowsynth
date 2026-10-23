@@ -980,7 +980,7 @@ describe("the run artifact boundary", () => {
     const text = app.devExportPlaythrough();
     const artifact = JSON.parse(text) as Record<string, unknown>;
     expect(artifact.format).toBe("flowsynth-playthrough");
-    expect(artifact.version).toBe(1);
+    expect(artifact.version).toBe(2);
     expect(artifact.runId).toBe(record.runId);
     // The import joins the library as carried, takes the selection, and
     // marks itself: old evidence never reads as a fresh walk.
@@ -1035,7 +1035,7 @@ describe("the run artifact boundary", () => {
     refuse('{"app":"flowsynth","version":14,"savedAt":0,"state":{}}', /not a FlowSynth run artifact/);
     const newer = JSON.parse(app.devExportPlaythrough()) as Record<string, unknown>;
     newer.version = 99;
-    refuse(JSON.stringify(newer), /Artifact version 99 is newer than this build supports \(1\)/);
+    refuse(JSON.stringify(newer), /Artifact version 99 is newer than this build supports \(2\)/);
     expect(app.devResults).toHaveLength(before);
     expect(app.devSelectedRunId).toBe(record.runId);
     expect(app.devPlaythroughNote).toContain("Import ✗");
