@@ -1,6 +1,7 @@
 import { WORLD_ENEMIES, typeRarityOf } from "../engine/constants";
 import { sameHex } from "../engine/hex";
 import { cellNoteOf } from "../engine/lattice";
+import type { Hex } from "../engine/types";
 import type { PlaythroughInspection } from "../engine/playthrough";
 import { boardPoint, HEX_RADIUS, hexPoints, moduleFace } from "./face";
 import { escapeHtml } from "./focus";
@@ -14,11 +15,6 @@ import { termTipHtml } from "./terms";
 export function historicalBoardHtml(inspection: PlaythroughInspection): string {
   const { state } = inspection;
   const positions = [...state.cells, ...WORLD_ENEMIES.map((enemy) => enemy.pos)];
-  const centers = positions.map(boardPoint);
-  const left = Math.min(...centers.map(([x]) => x)) - HEX_RADIUS - 8;
-  const top = Math.min(...centers.map(([, y]) => y)) - HEX_RADIUS - 8;
-  const width = Math.max(...centers.map(([x]) => x)) + HEX_RADIUS + 8 - left;
-  const height = Math.max(...centers.map(([, y]) => y)) + HEX_RADIUS + 8 - top;
   const cell = (pos: { q: number; r: number }, label: string, inner: string, kind: string): string => {
     const [x, y] = boardPoint(pos);
     return `<g data-history-${kind}="${pos.q},${pos.r}" transform="translate(${x},${y})"><title>${escapeHtml(`${cellNoteOf(pos)} · ${label}`)}</title>${inner}</g>`;
@@ -45,6 +41,16 @@ export function historicalBoardHtml(inspection: PlaythroughInspection): string {
     const value = live?.discovered ? `HP ${formatNumber(live.hp)}` : weapon ? `⌁ ${formatNumber(weapon.store)}` : "";
     return cell(pos, `${name} ${value}`, `<rect class="dev-history-plate" x="-45" y="-45" width="90" height="90"/><text class="dev-history-note" text-anchor="middle" y="-20">${name}</text><text class="dev-history-note" text-anchor="middle" y="4">${escapeHtml(value)}</text><text class="dev-history-note" text-anchor="middle" y="30">${escapeHtml(cellNoteOf(pos))}</text>`, "world");
   }).join("");
-  const layer = (name: string, drawing: string, label = name) => `<section class="dev-history-layer"><h3>${label}</h3><div class="dev-history-scroll" tabindex="0" role="region" aria-label="${name} board scroll area"><svg viewBox="${left} ${top} ${width} ${height}" width="${Math.max(320, width)}" height="${height}" role="img" aria-label="Historical ${name} board">${drawing}</svg></div></section>`;
-  return `<div class="dev-history-board">${layer("Mutators", mutators)}${layer("Modules", modules)}${layer("World", world, termTipHtml("World layer", "World"))}</div>`;
+  const layer = (name: string, drawing: string, cells: readonly Hex[], tray: string[], label = name): string => {
+    const centers = (cells.length ? cells : [{ q: 0, r: 0 }]).map(boardPoint);
+    const left = Math.min(...centers.map(([x]) => x)) - HEX_RADIUS - 8;
+    const top = Math.min(...centers.map(([, y]) => y)) - HEX_RADIUS - 8;
+    const width = Math.max(...centers.map(([x]) => x)) + HEX_RADIUS + 8 - left;
+    const height = Math.max(...centers.map(([, y]) => y)) + HEX_RADIUS + 8 - top;
+    return `<section class="dev-history-layer"><h3>${label}</h3><div class="dev-history-scroll" tabindex="0" role="region" aria-label="${name} board scroll area"><svg viewBox="${left} ${top} ${width} ${height}" width="${Math.max(320, width)}" height="${height}" role="img" aria-label="Historical ${name} board">${drawing}</svg></div>${tray.length ? `<div class="dev-history-tray mono">tray · ${tray.map(escapeHtml).join(" · ")}</div>` : ""}</section>`;
+  };
+  const mutatorTray = state.mutators.filter(item => item.pos === null).map(item => `${item.rarity} ${item.family}`);
+  const moduleTray = state.modules.filter(item => item.pos === null).map(item => `${META[item.type].name} Lv. ${item.level}`);
+  const worldTray = [...state.world.columns.filter(item => item.pos === null).map(() => "Column"), ...state.world.weapons.filter(item => item.pos === null).map(item => WORLD_META[item.type].name)];
+  return `<div class="dev-history-board">${layer("Mutators", mutators, state.cells, mutatorTray)}${layer("Modules", modules, state.cells, moduleTray)}${layer("World", world, positions, worldTray, termTipHtml("World layer", "World"))}</div>`;
 }
