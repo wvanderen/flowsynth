@@ -4730,5 +4730,5 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
   .clock-anchor .display-well { padding: 4px 6px; }
 }
 
-.dev-tuning-label { display: flex; flex-direction: column; gap: 3px; font: 11px var(--mono); color: var(--text); }
+.dev-tuning-label { display: flex; flex-direction: column; gap: 3px; font: 11px var(--mono); color: var(--ink); }
 .dev-panel .dev-tuning-label input[type="number"] { width: 126px; }
