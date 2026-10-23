@@ -176,13 +176,13 @@ describe("the preset read's honesty", () => {
 describe("scripted-run entry from a preset", () => {
   it("starts declared runs from every checkpoint preset through the same composition seam", { timeout: 240_000 }, () => {
     for (const id of ["approaching-prestige", "after-first-bank", "world-enemy"] as const) {
-      const recipe = composePlaythroughRecipe({ scenarioId: id, policyId: "pushing", claimTarget: 36, budgetDays: 1 });
+      const recipe = composePlaythroughRecipe({ scenarioId: id, policyId: "pushing", claimTarget: 36, budgetDays: 1, schedule: { breatherMinutes: 0 } });
       expect(recipe.scenarioId).toBe(id);
       // runPlaythrough asserts its built candidate before walking, so a
       // run that started anywhere but the preset's situation would have
       // thrown; the run id names the preset it started from.
       const initial = scenarioOf(id)!.build(recipe.schedule.startAt);
-      const lastEnd = Math.max(...initial.sessionRecords.map((session) => session.endedAt));
+      const lastEnd = Math.max(...initial.sessionRecords.map((session) => session.endedAt + (session.breather?.seconds ?? 0) * 1000));
       const record = runPlaythrough(recipe);
       expect(record.recipe.schedule.startAt).toBeGreaterThanOrEqual(lastEnd);
       const added = record.state.sessionRecords.slice(initial.sessionRecords.length);

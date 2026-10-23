@@ -1165,8 +1165,11 @@ function* walkPlaythrough(
   // A checkpoint carries real session history. Continue after its last
   // session and declared breather rather than restarting at the recipe's
   // original anchor; record the effective input so a rerun is reproducible.
-  const lastEnd = state.sessionRecords.reduce((latest, session) => Math.max(latest, session.endedAt), -Infinity);
-  const startAt = Math.max(recipe.schedule.startAt, lastEnd + recipe.schedule.breatherMinutes * 60_000);
+  const lastEnd = state.sessionRecords.reduce((latest, session) => Math.max(
+    latest,
+    session.endedAt + Math.max(session.breather?.seconds ?? 0, recipe.schedule.breatherMinutes * 60) * 1000,
+  ), -Infinity);
+  const startAt = Math.max(recipe.schedule.startAt, lastEnd);
   recipe = { ...recipe, schedule: { ...recipe.schedule, startAt } };
   validatePlaythroughRecipe(recipe);
   scenario.assert(state, startAt);
