@@ -3386,6 +3386,40 @@ body.hex-detail-open .upgrade-all {
   border-radius: 0;
 }
 .dev-panel input[type="number"]::placeholder { color: var(--muted); }
+/* The terminal row (#472): one text input in the select's square-cut
+   register, free to flex on narrow panels — the phone keeps a full-width
+   entry row while the log scrolls beneath it. */
+.dev-panel input[type="text"] {
+  padding: 4px 8px;
+  min-height: 44px;
+  flex: 1 1 150px;
+  min-width: 0;
+  font: 11px var(--mono);
+  letter-spacing: 0.02em;
+  color: inherit;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+.dev-panel input[type="text"]::placeholder { color: var(--muted); }
+/* The terminal's scrollback (#472): the last lines the dispatcher logged
+   — command, ✓, ✗ alike — one mono block on its own row. State reads from
+   the line prefixes, never color alone. */
+.dev-terminal-log {
+  flex-basis: 100%;
+  max-height: 132px;
+  overflow: auto;
+  display: grid;
+  gap: 2px;
+  padding: 4px 0;
+  font: 10px var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.dev-terminal-log:empty { display: none; }
+.dev-terminal-line { white-space: pre-wrap; word-break: break-word; }
+.dev-terminal-input { color: var(--muted); }
+.dev-terminal-error { color: var(--danger, var(--ink)); }
 /* The scenario's assertion readout (#456, #467): one plain mono line on
    its own row — the ✓ summary with its origin and isolation, or the
    named ✗ failure, never color alone. */

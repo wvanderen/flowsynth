@@ -45,12 +45,12 @@ import {
   type ActionResult,
   type BulkPurchase,
 } from "../engine/actions";
-import { ARETE_HORIZON, bankableClaimOf, frontierEntitlement } from "../engine/accumulator";
+import { ARETE_HORIZON, bankableClaimOf, frontierEntitlement, horizonReached } from "../engine/accumulator";
 import { columnCost, worldOccupantAt } from "../engine/world";
 import type { WeaponType } from "../engine/types";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
-import { displayedRates, flowLive, deployedAt } from "../engine/economy";
+import { displayedRates, flowLive, deployedAt, syncRates, wholeNous } from "../engine/economy";
 import { worldEntered, refreshWorldPreview, worldRevealPreview, worldBoardLive } from "./world";
 import { WORLD_ENEMIES } from "../engine/constants";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
@@ -68,14 +68,16 @@ import {
   composePlaythroughRecipe,
   defaultPlaythroughRecipe,
   playthroughInspection,
-  PLAYTHROUGH_POLICIES,
   playthroughNote,
+  PLAYTHROUGH_POLICIES,
+  PLAYTHROUGH_TUNING,
   runPlaythrough,
   type PlaythroughInspection,
   type PlaythroughPolicy,
   type PlaythroughRecipe,
   type PlaythroughRecipeInput,
   type PlaythroughRecord,
+  type PlaythroughTuningParam,
 } from "../engine/playthrough";
 import { BALANCE } from "../engine/constants";
 import type { FocusApp } from "../engine/apps";
@@ -96,7 +98,7 @@ import { allocateClassNode, applyClassPreset, classDefOf, respecClassTree, selec
 import { createGoal, deleteGoal, editGoal, retainGoalChoice, rollGoalOccurrences } from "../engine/goals";
 import { allocatedDevScenarioRates, createDevScenario, type DevBoardResult } from "../engine/dev-scenario";
 import type { StressProgress, StressRow } from "../engine/allocation-stress";
-import type { Category, ClassId, GameState, HabitColor, Hex, ModuleInstance, ShelfType, SpecialDraftKind } from "../engine/types";
+import type { Category, ClassId, GameState, HabitColor, Hex, ModuleInstance, ModuleType, ShelfType, SpecialDraftKind } from "../engine/types";
 import type { FocusFace, NotesFace } from "./focus";
 import { render, updateChordReadout } from "./render";
 import { FAMILY_WORD } from "./mutators";
@@ -176,6 +178,50 @@ export interface DevBoardState {
 // shipped start, three the first-era ceiling, four and five the Arete
 // ceiling unlocks.
 export const DEV_BOARD_CAPACITIES = [1, 2, 3, 4, 5] as const;
+
+// One interactive intervention on the installed run (issue #472, story
+// 33): what was done beyond the recipe, when, and the engine's own
+// outcome — the record owns interventions, never the baseline recipe.
+export interface DevIntervention {
+  readonly at: number;
+  readonly label: string;
+  readonly ok: boolean;
+  readonly reason?: string;
+}
+
+// The live inspection read (issue #472, story 30): the installed run's
+// figures off an identical working clone — the same preview basis every
+// recorded sample reads — plus the run's identity, its modified mark, and
+// the tray's module ids so a placement command can name its target.
+export interface DevLiveInspection {
+  readonly scenario: string | null;
+  readonly scenarioName: string | null;
+  readonly modified: boolean;
+  readonly interventions: readonly DevIntervention[];
+  readonly mode: GameState["mode"];
+  readonly rate: number;
+  readonly balances: {
+    readonly nous: number;
+    readonly eraEarned: number;
+    readonly arete: number;
+    readonly scrap: number;
+    readonly prestiges: number;
+    readonly sessions: number;
+    readonly cells: number;
+    readonly tray: number;
+  };
+  readonly trayModules: readonly { id: string; type: ModuleType }[];
+  readonly session: { readonly elapsed: number; readonly target: number | null } | null;
+  readonly breather: { readonly allowance: number; readonly elapsed: number } | null;
+  readonly horizonReached: boolean;
+}
+
+// One terminal line (issue #472): the command as typed, its ✓ output, or
+// the named ✗ failure — the same lines the scrollback renders.
+export interface DevTerminalLine {
+  readonly line: string;
+  readonly kind: "input" | "ok" | "error";
+}
 
 export type DetailFace = "modules" | "world";
 
@@ -2655,6 +2701,7 @@ export class App {
     const result = advance(this.state, seconds);
     this.reportAdvance(result);
     this.say(`Dev clock +${seconds}s.`);
+    this.recordDevIntervention(`Dev clock +${seconds}s`);
     this.render();
   }
 
@@ -2678,6 +2725,7 @@ export class App {
     earnNous(this.state, 100);
     this.save();
     this.say("Dev: +100 ν.");
+    this.recordDevIntervention("Dev grant — +100ν");
     this.render();
   }
 
@@ -2712,6 +2760,7 @@ export class App {
         : "Dev: additive synth in your inventory — no free cell chords with a synth.",
     );
     this.save();
+    this.recordDevIntervention(cell ? `Dev grant — additive synth at ${cellNoteOf(cell)}` : "Dev grant — additive synth to the tray");
     this.render();
   }
 
@@ -2755,6 +2804,7 @@ export class App {
     this.ui.boardLayer = "world";
     this.say("Dev: World era granted — the second face stands.");
     this.save();
+    this.recordDevIntervention("Dev grant — World era");
     this.render();
   }
 
@@ -2836,6 +2886,11 @@ export class App {
     this.ui.modal = null;
     this.ui.importError = null;
     this.devScenarioId = scenario.id;
+    // The rebuild semantics (issue #467) extend to the experiment record
+    // (#472): a fresh install carries no interventions and no modified
+    // mark — prior interventions must not contaminate the new evidence.
+    this.devInterventions = [];
+    this.devScenarioModified = false;
     this.state = candidate;
     this.lastWall = null;
     this.exitPending = false;
@@ -2975,6 +3030,350 @@ export class App {
     const count = this.devPlaythrough.snapshots.length;
     const from = this.devInspected ?? (step > 0 ? -1 : 0);
     this.devInspectPlaythrough(((from + step) % count + count) % count);
+  }
+
+  // ── The experiment boundary (issue #472, parent stories 30–33) ──────
+  // Terminal inspection and game-action commands on the installed run,
+  // shared by the panel's controls, the panel's terminal, and agent
+  // access (window.__flowsynth) — the same contracts, validation,
+  // outcomes, and errors either way. The tuning overrides are the
+  // recipe's declared inputs above; this boundary is the live side: it
+  // acts on the isolated scenario installation (ADR-0077) and on nothing
+  // else — the ordinary save is never an experiment.
+
+  // The declared tuning: the same catalog the recipe validates against —
+  // the terminal's `tuning` read and the panel's override inputs' source,
+  // one declaration for every reader.
+  devTuning(): readonly PlaythroughTuningParam[] {
+    return PLAYTHROUGH_TUNING;
+  }
+
+  // One interactive intervention (story 33): what a human or agent did to
+  // the installed run beyond its recipe, and the engine's own outcome.
+  // The record owns interventions; the scenario's declared recipe — the
+  // baseline — stays untouched; the modified mark rides the suite note so
+  // altered evidence cannot masquerade as a baseline rerun.
+  devInterventions: readonly DevIntervention[] = [];
+  devScenarioModified = false;
+
+  // The terminal (issue #472): one input line and its scrollback. The
+  // dispatcher is the same command set agent access calls method by
+  // method; every line lands here, ✓ or the named ✗ failure.
+  devTerminalLog: readonly DevTerminalLine[] = [];
+
+  private requireExperiment(): void {
+    if (!this.dev) throw new Error("The experiment commands are development commands.");
+    if (!this.devScenarioId) {
+      throw new Error("Game actions act on an installed scenario run — launch one from the suite first; the ordinary save is not an experiment.");
+    }
+  }
+
+  // The one recording shape behind every mutation of the installed run,
+  // the quick grants included: the engine's own ok/reason verbatim, the
+  // modified mark, and the note's suffix refreshed.
+  private recordIntervention(label: string, result: { ok: boolean; reason?: string }): void {
+    this.devInterventions = [...this.devInterventions, {
+      at: Date.now(),
+      label,
+      ...(result.ok ? { ok: true } as const : { ok: false, ...(result.reason !== undefined ? { reason: result.reason } : {}) }),
+    }];
+    this.devScenarioModified = true;
+  }
+
+  // The quick grants and the dev clock record only when a run is
+  // installed: on the ordinary save they remain the ADR-0077 quick-grant
+  // tier, no record and no run to mark.
+  private recordDevIntervention(label: string): void {
+    if (!this.devScenarioId) return;
+    this.recordIntervention(label, { ok: true });
+    this.refreshScenarioNote();
+  }
+
+  private refreshScenarioNote(): void {
+    if (!this.devScenarioId || !this.devScenarioModified) return;
+    const scenario = scenarioOf(this.devScenarioId);
+    if (!scenario) return;
+    const count = this.devInterventions.length;
+    this.devScenarioNote =
+      `${this.scenarioNote(scenario, true)} · modified — ${count} intervention${count === 1 ? "" : "s"}`;
+  }
+
+  // The live inspection read (story 30): the installed run's figures,
+  // read off an identical working clone at the preview basis — the same
+  // basis every plotted sample reads. Pure: no save, no render, no write.
+  devInspect(): DevLiveInspection {
+    if (!this.dev) throw new Error("The inspection commands are development commands.");
+    const state = this.state;
+    const rates = syncRates(structuredClone(state), false);
+    const scenario = this.devScenarioId ? scenarioOf(this.devScenarioId) : null;
+    return {
+      scenario: scenario?.id ?? null,
+      scenarioName: scenario?.name ?? null,
+      modified: this.devScenarioModified,
+      interventions: this.devInterventions,
+      mode: state.mode,
+      rate: rates.rate,
+      balances: {
+        nous: wholeNous(state),
+        eraEarned: state.eraEarned,
+        arete: state.arete,
+        scrap: state.scrap,
+        prestiges: state.prestiges,
+        sessions: state.sessionsCompleted,
+        cells: state.cells.length,
+        tray: state.modules.filter((module) => module.pos === null).length,
+      },
+      trayModules: state.modules
+        .filter((module) => module.pos === null)
+        .map((module) => ({ id: module.id, type: module.type })),
+      session: state.session ? { elapsed: state.session.elapsed, target: state.session.target } : null,
+      breather: state.breather
+        ? { allowance: state.breather.allowanceSeconds, elapsed: state.breather.elapsed }
+        : null,
+      horizonReached: horizonReached(state),
+    };
+  }
+
+  // The shared game-action executor (story 30): the engine's own action
+  // on the run's state — real prerequisites, real mode restrictions, the
+  // engine's own outcome — recorded verbatim, saved into the isolated
+  // store on success, and rendered either way.
+  private devGameAction(label: string, perform: () => ActionResult): ActionResult {
+    this.requireExperiment();
+    const result = perform();
+    this.recordIntervention(label, result);
+    this.refreshScenarioNote();
+    if (result.ok) this.save();
+    this.render();
+    return result;
+  }
+
+  devActionStartSession(minutes: number | null): ActionResult {
+    if (minutes !== null && (!Number.isInteger(minutes) || minutes < 1 || minutes > 600)) {
+      throw new Error("minutes must be a whole number 1–600, or null for an open session.");
+    }
+    this.requireExperiment();
+    return this.devGameAction(
+      minutes === null ? "Start an open session" : `Start a ${minutes}-minute session`,
+      () => startSession(this.state, minutes === null ? null : minutes * 60, Date.now()),
+    );
+  }
+
+  devActionEndSession(): ActionResult {
+    return this.devGameAction("End the session", () => endSession(this.state, Date.now()));
+  }
+
+  devActionBreather(): ActionResult {
+    return this.devGameAction("Take the minted breather", () => startBreatherAction(this.state, Date.now()));
+  }
+
+  devActionAdvance(seconds: number): ActionResult {
+    if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 172_800) {
+      throw new Error("seconds must be a positive number up to 172800 (two days).");
+    }
+    this.requireExperiment();
+    // The dev clock's one real restriction, the panel buttons' own rule:
+    // it rides flow, where the engine credits practice.
+    return this.devGameAction(`Dev clock +${Math.round(seconds)}s`, () => {
+      if (this.state.mode !== "flow") return { ok: false, reason: "Dev clock only works during flow." };
+      advance(this.state, seconds);
+      return { ok: true };
+    });
+  }
+
+  devActionBuyShelf(type: ShelfType): ActionResult {
+    return this.devGameAction(`Buy the ${type} shelf offer`, () => buyShelfModule(this.state, type));
+  }
+
+  devActionBuyCell(q: number, r: number): ActionResult {
+    if (!Number.isInteger(q) || !Number.isInteger(r)) throw new Error("cell coordinates must be whole numbers.");
+    this.requireExperiment();
+    return this.devGameAction(`Buy the cell at ${q},${r}`, () => buyCell(this.state, hex(q, r)));
+  }
+
+  devActionPlace(moduleId: string, q: number, r: number): ActionResult {
+    if (!Number.isInteger(q) || !Number.isInteger(r)) throw new Error("cell coordinates must be whole numbers.");
+    this.requireExperiment();
+    return this.devGameAction(`Place ${moduleId} at ${q},${r}`, () => placeModule(this.state, moduleId, hex(q, r)));
+  }
+
+  devActionUpgrade(moduleId: string, levels: number | "max"): ActionResult {
+    if (levels !== "max" && (!Number.isInteger(levels) || levels < 1)) {
+      throw new Error("levels must be a whole number ≥ 1, or \"max\".");
+    }
+    this.requireExperiment();
+    return this.devGameAction(
+      levels === "max" ? `Upgrade ${moduleId} to max` : `Upgrade ${moduleId} by ${levels}`,
+      () => upgradeModuleLevels(this.state, moduleId, levels),
+    );
+  }
+
+  devActionPrestige(): ActionResult {
+    return this.devGameAction("Prestige", () => prestige(this.state));
+  }
+
+  // The terminal dispatcher (issue #472): the one parser both the panel's
+  // input line and agent access drive, returning the output line it
+  // logged. Every command rides the boundary's own methods above — the
+  // same contracts, outcomes, and errors the buttons and agents get.
+  devTerminalRun(input: string): string {
+    if (!this.dev) throw new Error("The terminal is a development surface.");
+    const command = input.trim();
+    if (!command) return "";
+    this.terminalPush(command, "input");
+    let out: string;
+    try {
+      out = this.terminalExecute(command);
+    } catch (error) {
+      out = `✗ ${(error as Error).message}`;
+    }
+    this.terminalPush(out, out.startsWith("✗") ? "error" : "ok");
+    this.render();
+    return out;
+  }
+
+  private terminalPush(line: string, kind: DevTerminalLine["kind"]): void {
+    this.devTerminalLog = [...this.devTerminalLog, { line, kind }].slice(-60);
+  }
+
+  private terminalResult(result: ActionResult, okLine: string): string {
+    return result.ok ? `✓ ${okLine}` : `✗ ${result.reason ?? "refused"}`;
+  }
+
+  private terminalExecute(command: string): string {
+    const [verb, ...args] = command.split(/\s+/);
+    switch (verb) {
+      case "help":
+        return "commands: scenarios · launch <id> · assert · inspect · run [k=v…] · start <min|open> · end · breather · advance <s> · buy <type> · cell <q> <r> · place <id> <q> <r> · levels <id> <n|max> · prestige · grant <nous|synth|world> · tuning";
+      case "scenarios":
+        return this.devScenarios().map((s) => `${s.id} — ${s.name}: ${s.situation}`).join(" · ");
+      case "tuning":
+        return this.devTuning().map((p) => `${p.key} ${p.min}–${p.max} (default ${p.default}) — ${p.description}`).join(" · ");
+      case "launch": {
+        const [id] = args;
+        if (!id) throw new Error("launch needs a scenario id — try `scenarios`.");
+        const pending = this.devLaunchScenario(id);
+        if (pending) {
+          void Promise.resolve(pending).catch(() => {});
+          return `${id} — preparing; the suite note reports the landing.`;
+        }
+        return this.devScenarioNote ?? `${id} launched.`;
+      }
+      case "assert":
+        this.devScenarioAssert();
+        return this.devScenarioNote ?? "✓ assertions passed.";
+      case "inspect": {
+        const read = this.devInspect();
+        const run = read.scenario ? `${read.scenario}${read.modified ? " (modified)" : ""}` : "no scenario installed";
+        const tray = read.trayModules.length > 0
+          ? ` · tray ${read.trayModules.map((m) => `${m.type}#${m.id}`).join(", ")}`
+          : "";
+        const phase = read.session
+          ? ` · session ${Math.round(read.session.elapsed)}s${read.session.target !== null ? `/${read.session.target}s` : " open"}`
+          : read.breather
+            ? ` · breather ${Math.round(read.breather.elapsed)}/${read.breather.allowance}s`
+            : "";
+        return `${run} · mode ${read.mode} · ${read.rate.toFixed(2)}ν/s · ` +
+          `nous ${Math.floor(read.balances.nous)}ν · era ${formatNumber(read.balances.eraEarned)}ν · ` +
+          `arete ${read.balances.arete} · prestiges ${read.balances.prestiges} · ` +
+          `sessions ${read.balances.sessions} · cells ${read.balances.cells} · ` +
+          `door ${read.horizonReached ? "open" : "closed"}${phase}${tray}`;
+      }
+      case "run": {
+        const input: PlaythroughRecipeInput = {};
+        const overrides: Record<string, number> = {};
+        for (const arg of args) {
+          const eq = arg.indexOf("=");
+          if (eq < 0) throw new Error(`run reads key=value pairs — found "${arg}".`);
+          const key = arg.slice(0, eq);
+          const raw = arg.slice(eq + 1);
+          const value = Number(raw);
+          if (key === "scenario") input.scenarioId = raw;
+          else if (key === "policy") input.policyId = raw;
+          else if (key === "seed") input.seed = value;
+          else if (key === "days") input.budgetDays = value;
+          else if (key === "claim") input.claimTarget = value;
+          else if (key === "openingGrant" || key === "claimBase") overrides[key] = value;
+          else throw new Error(`run does not read "${key}" — scenario, policy, seed, days, claim, openingGrant, claimBase.`);
+        }
+        if (Object.keys(overrides).length > 0) input.overrides = overrides;
+        return playthroughNote(this.devRunPlaythrough(input));
+      }
+      case "start": {
+        const [first] = args;
+        if (first === undefined) throw new Error("start needs minutes or `open`.");
+        const minutes = first === "open" ? null : Number(first);
+        const result = this.devActionStartSession(minutes);
+        return this.terminalResult(result, `session live${minutes === null ? " — open-ended" : ` — ${minutes}m planned`}`);
+      }
+      case "end": {
+        const result = this.devActionEndSession();
+        return this.terminalResult(result, "session banked.");
+      }
+      case "breather": {
+        const result = this.devActionBreather();
+        return this.terminalResult(result, "breather live.");
+      }
+      case "advance": {
+        const [first] = args;
+        if (first === undefined) throw new Error("advance needs seconds.");
+        const result = this.devActionAdvance(Number(first));
+        return this.terminalResult(result, `clock +${first}s.`);
+      }
+      case "buy": {
+        const [type] = args;
+        if (type !== "generator" && type !== "infusor" && type !== "forge") {
+          throw new Error("buy needs generator, infusor, or forge.");
+        }
+        const result = this.devActionBuyShelf(type);
+        return this.terminalResult(result, `${type} purchased — it's in your inventory.`);
+      }
+      case "cell": {
+        const [q, r] = args.map(Number);
+        if (args.length !== 2 || !Number.isInteger(q) || !Number.isInteger(r)) {
+          throw new Error("cell needs two whole coordinates — `cell 1 0`.");
+        }
+        const result = this.devActionBuyCell(q, r!);
+        return this.terminalResult(result, `cell ${q},${r} owned.`);
+      }
+      case "place": {
+        const [id, q, r] = args;
+        if (!id || q === undefined || r === undefined) throw new Error("place needs a module id and two coordinates — `place <id> 1 0`.");
+        const result = this.devActionPlace(id, Number(q), Number(r));
+        return this.terminalResult(result, `${id} placed at ${q},${r}.`);
+      }
+      case "levels": {
+        const [id, count] = args;
+        if (!id || count === undefined) throw new Error("levels needs a module id and a count — `levels <id> 5` or `max`.");
+        const result = this.devActionUpgrade(id, count === "max" ? "max" : Number(count));
+        return this.terminalResult(result, `levels on ${id}.`);
+      }
+      case "prestige": {
+        const result = this.devActionPrestige();
+        return this.terminalResult(result, "the next era begins.");
+      }
+      case "grant": {
+        const [what] = args;
+        if (what === "nous") {
+          this.requireExperiment();
+          this.devNous();
+          return "✓ +100ν granted.";
+        }
+        if (what === "synth") {
+          this.requireExperiment();
+          this.devSynth();
+          return "✓ additive synth granted.";
+        }
+        if (what === "world") {
+          this.requireExperiment();
+          this.devWorldEra();
+          return "✓ World era granted.";
+        }
+        throw new Error("grant needs nous, synth, or world.");
+      }
+      default:
+        throw new Error(`unknown command "${verb ?? ""}" — try help.`);
+    }
   }
 
   // The development allocation board (#257 hands-on): a deterministic

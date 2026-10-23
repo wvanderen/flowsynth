@@ -1119,11 +1119,19 @@ export function buyMergeCapIncrease(state: GameState): ActionResult {
 // ladder's purchased capacity (issue #259): the voices return to one. The era measure
 // rebases to 0, which is the bar's own rebase; the era count rises as
 // economy-bearing engine state (ADR-0038's no-new-furniture rule holds).
-export function prestige(state: GameState): ActionResult {
+// The prestige's declared tuning (issue #472): an isolated playtesting run
+// pays its recipe's opening grant and reads its claim curve base; ordinary
+// play passes nothing and keeps the shipped constants.
+export interface PrestigeTuning {
+  readonly openingGrant?: number;
+  readonly claimBase?: number;
+}
+
+export function prestige(state: GameState, tuning: PrestigeTuning = {}): ActionResult {
   if (state.mode !== "upgrade") return fail("Prestige happens between sessions.");
   if (!horizonReached(state)) return fail("The horizon is not reached yet.");
   // The claim transaction (issue #425): bank and advance in one move.
-  const claim = bankableClaimOf(state);
+  const claim = bankableClaimOf(state, tuning.claimBase);
   state.arete += claim;
   state.world.frontier += claim;
   // The starter grant (issue #425, priority 2): the first World-eligible
@@ -1131,7 +1139,7 @@ export function prestige(state: GameState): ActionResult {
   // which the entry grant's construction guarantees — lands the Charge
   // Blade copy outright. Granted exactly once, ever; the eligibility read
   // keeps the grant tied to the curve, not to the claim's rounded figure.
-  if (!state.world.starterWeaponGranted && frontierEntitlement(state.eraEarned) >= columnCost(0)) {
+  if (!state.world.starterWeaponGranted && frontierEntitlement(state.eraEarned, tuning.claimBase) >= columnCost(0)) {
     state.world.weapons.push(createWeapon(state, "chargeBlade"));
     state.world.starterWeaponGranted = true;
   }
@@ -1140,7 +1148,7 @@ export function prestige(state: GameState): ActionResult {
     module.level = 0;
     module.invested = 0;
   }
-  state.nous = openingGrant();
+  state.nous = openingGrant(tuning.openingGrant);
   // Reserves are charge state (ADR-0047): they reset with everything else
   // charge-shaped. Class development, practice history, and the discovery
   // ledger persist.

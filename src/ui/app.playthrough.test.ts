@@ -8,6 +8,7 @@ import { adjacent } from "../engine/hex";
 import { syncRates } from "../engine/economy";
 import { createAppFixture } from "./testing/app-fixture";
 import * as actions from "../engine/actions";
+import { composePlaythroughRecipe } from "../engine/playthrough";
 import { scenarioOf } from "../engine/scenarios";
 import { createInitialState } from "../engine/state";
 import { STORAGE_KEY } from "../engine/save";
@@ -484,6 +485,108 @@ describe("the pushing policy", () => {
     expect(record.stop.kind).toBe("prestige");
     expect(record.claims).toEqual([0]);
     expect(record.claimTarget).toBe(9);
+  });
+});
+
+describe("declared tuning overrides", () => {
+  it("declares the tuning catalog with shipped defaults, and the default recipe carries none", () => {
+    app = boot(undefined, true);
+    const tuning = app.devTuning();
+    expect(tuning.map((param) => param.key)).toEqual(["openingGrant", "claimBase"]);
+    expect(tuning.find((param) => param.key === "openingGrant")!.default).toBe(12);
+    expect(tuning.find((param) => param.key === "claimBase")!.default).toBe(2);
+    for (const param of tuning) {
+      expect(param.max).toBeGreaterThan(param.min);
+      expect(param.description).toBeTruthy();
+    }
+    expect(app.devPlaythroughRecipe().overrides).toEqual({});
+  });
+
+  it("rejects unsupported, invalid, and inapplicable overrides by name before running", () => {
+    app = boot(undefined, true);
+    expect(() => app.devRunPlaythrough({ overrides: { grant: 5 } })).toThrow(/override "grant" is not supported — the suite offers openingGrant, claimBase/);
+    expect(() => app.devRunPlaythrough({ overrides: { openingGrant: 1.5 } })).toThrow(/override "openingGrant" must be a whole number 0–120 — found 1\.5/);
+    expect(() => app.devRunPlaythrough({ overrides: { openingGrant: 999 } })).toThrow(/override "openingGrant" must be a whole number 0–120 — found 999/);
+    expect(() => app.devRunPlaythrough({ overrides: { claimBase: 0 } })).toThrow(/override "claimBase" must be a whole number 1–36 — found 0/);
+    // The prompt door opens below the frontier curve's entry depth, so a
+    // claim-base override cannot bind there — refused, not silently inert.
+    expect(() => app.devRunPlaythrough({ overrides: { claimBase: 4 } })).toThrow(/override "claimBase" is inapplicable/);
+    expect(app.devPlaythrough).toBeNull();
+    // The same override composes once the policy reads the curve —
+    // validated at the composition seam, no walk needed to know.
+    expect(() => composePlaythroughRecipe({ policyId: "pushing", overrides: { claimBase: 4 } })).not.toThrow();
+    expect(composePlaythroughRecipe({ policyId: "pushing", overrides: { claimBase: 4 } }).overrides).toEqual({ claimBase: 4 });
+  });
+
+  it("pays the declared opening grant on a fresh start and names the tuning in the record", () => {
+    app = boot(undefined, true);
+    const tuned = app.devRunPlaythrough({ seed: 7, budgetDays: 1, overrides: { openingGrant: 60 } });
+    // The declared grant is the run's own first moment: the 60ν opening
+    // affords the generator shelf purchase the shipped 12ν never can —
+    // the run's first recorded board carries two modules against the
+    // baseline's one, the purchase landed through the real action.
+    expect(tuned.recipe.overrides).toEqual({ openingGrant: 60 });
+    expect(tuned.snapshots[0]!.state.modules.length).toBe(2);
+    expect(app.devPlaythroughNote).toContain("tuned openingGrant=60");
+    // The baseline beside it, same seed: shipped grant, shipped board.
+    const plain = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    expect(plain.recipe.overrides).toEqual({});
+    expect(plain.snapshots[0]!.state.modules.length).toBe(1);
+    expect(tuned.runId).not.toBe(plain.runId);
+    expect(tuned.runId).not.toBe(plain.runId);
+  });
+
+  it("binds the declared claim base at the pushing bank where the shipped curve pays 2", () => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      state.eraEarned = 1e12;
+      state.totalEarned = 1e12;
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    // The shipped curve pays 2 at the World's entry depth; the declared
+    // base 4 pays 4 — the same walk, the run's own claim curve, banked
+    // through the real prestige action.
+    const shipped = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 1,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
+    expect(shipped.claims).toEqual([2]);
+    const tuned = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 4, budgetDays: 1,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 }, overrides: { claimBase: 4 } });
+    expect(tuned.claims).toEqual([4]);
+    expect(tuned.state.world.frontier).toBe(4);
+    expect(tuned.recipe.overrides).toEqual({ claimBase: 4 });
+    expect(app.devPlaythroughNote).toContain("tuned claimBase=4");
+  });
+
+  it("reproduces a tuned run from the same recipe and identifies a changed override", () => {
+    app = boot(undefined, true);
+    const input = { seed: 9, budgetDays: 2, overrides: { openingGrant: 100 } };
+    const first = app.devRunPlaythrough({ ...input });
+    const second = app.devRunPlaythrough({ ...input });
+    expect(second.runId).toBe(first.runId);
+    expect(comparable(second)).toEqual(comparable(first));
+    const changed = app.devRunPlaythrough({ ...input, overrides: { openingGrant: 101 } });
+    expect(changed.runId).not.toBe(first.runId);
+    expect(changed.recipe.overrides).toEqual({ openingGrant: 101 });
+  });
+
+  it("never lets an override touch the live state or the ordinary save", () => {
+    app = boot(undefined, true);
+    const before = app.state;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const record = app.devRunPlaythrough({
+      seed: 7, budgetDays: 1, policyId: "pushing",
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 },
+      overrides: { openingGrant: 120, claimBase: 36 },
+    });
+    expect(app.state).toBe(before);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    // The declared recipe — the app's baseline — still carries no
+    // overrides: the tuned recipe rode the record alone.
+    expect(app.devPlaythroughRecipe().overrides).toEqual({});
+    expect(record.recipe.overrides).toEqual({ openingGrant: 120, claimBase: 36 });
   });
 });
 
