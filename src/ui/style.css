@@ -3508,6 +3508,72 @@ body.hex-detail-open .upgrade-all {
 .dev-stress-row { font: 9px var(--mono); color: var(--ink); }
 .dev-stress-row.uncert { color: var(--muted); }
 
+/* Dev resource curves (#470): the playthrough's trajectory plot and its
+   selection read. One flat panel in the dev-board register — open
+   divisions, hairline rules, square-cut controls, no animation. Series
+   and markers distinguish by dash pattern and glyph, never color alone;
+   the plot scrolls horizontally on phone with its labels readable. */
+.dev-curves {
+  position: fixed;
+  left: 12px;
+  top: 12px;
+  z-index: 41;
+  width: min(640px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+  background: var(--panel-veil);
+  border: 1px solid var(--line-strong);
+  border-radius: 0;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dev-curves-empty { font: 10px var(--mono); color: var(--muted); }
+.dev-curves-cap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.dev-curves-cap > span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--muted); margin-right: 4px; }
+.dev-curves-cap button { min-width: 44px; min-height: 44px; padding: 3px 8px; font: 11px var(--mono); }
+.dev-curves-cap button.on { box-shadow: inset 0 -3px var(--ink); }
+.dev-curves-cap button[data-devcurve="prev"], .dev-curves-cap button[data-devcurve="next"] { margin-left: auto; }
+.dev-curves-cap button[data-devcurve="next"] { margin-left: 0; }
+.dev-curves-scroll { overflow-x: auto; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+.dev-curves-plot { display: block; min-width: 480px; }
+.dev-curves-axis { stroke: var(--line-strong); stroke-width: 1; }
+.dev-curves-strip { stroke: var(--line); stroke-width: 1; }
+.dev-curves-grid { stroke: var(--line-soft); stroke-width: 1; }
+.dev-curves-tick { font: 8px var(--mono); fill: var(--muted); }
+.dev-curves-pt { fill: var(--panel-deep); stroke: var(--nous); stroke-width: 1; cursor: pointer; }
+.dev-curves-pt.sel { fill: var(--ink); stroke: var(--ink); r: 4; }
+.dev-curves-hit { stroke: transparent; stroke-width: 7; pointer-events: stroke; }
+.dev-curves-mk { font: 8px var(--mono); cursor: pointer; }
+.dev-curves-mk-purchase { fill: var(--ink); }
+.dev-curves-mk-unlock { fill: var(--forge-glow); }
+.dev-curves-mk-breather { stroke: var(--switch); stroke-width: 1; }
+.dev-curves-hair { pointer-events: stroke; cursor: pointer; }
+.dev-curves-hair-session { stroke: var(--switch); stroke-width: 1; opacity: 0.4; }
+.dev-curves-hair-prestige { stroke: var(--arete); stroke-width: 1; stroke-dasharray: 4 3; opacity: 0.8; }
+.dev-curves-sel { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.7; }
+.dev-curves-legend { display: flex; flex-wrap: wrap; gap: 2px 12px; font: 9px var(--mono); color: var(--muted); }
+.dev-curves-key { display: inline-flex; align-items: center; gap: 5px; }
+.dev-curves-read { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.dev-curves-line1 { font: 11px var(--mono); color: var(--ink); }
+.dev-curves-line2 { font: 10px var(--mono); color: var(--muted); }
+.dev-curves-none { font: 10px var(--mono); color: var(--muted); }
+.dev-curves-voices { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 2px; }
+.dev-curve-voice { display: flex; gap: 6px; align-items: baseline; font: 10px var(--mono); }
+.dev-curve-voice .dev-note { width: 34px; color: var(--muted); }
+.dev-curve-voice .dev-type { width: 38px; color: var(--muted); }
+.dev-curve-voice .dev-lvl { width: 34px; color: var(--muted); }
+.dev-curve-voice .dev-value { margin-left: auto; }
+.dev-curves-events { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 1px; max-height: 180px; overflow-y: auto; }
+.dev-curve-event { font: 9px var(--mono); color: var(--ink); display: flex; gap: 6px; }
+.dev-curve-event .dev-curve-ok { flex: 0 0 auto; }
+.dev-curve-event.declined { color: var(--muted); }
+.dev-curves button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .dev-curves, .dev-curves * { transition: none !important; animation: none !important; }
+}
+
 /* ── Responsive ────────────────────────────────────── */
 /* Half-width and phone respond to the app container's own width (§7):
    half-width is fully featured — identical anatomy, in-place compaction
