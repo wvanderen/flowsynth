@@ -84,3 +84,79 @@ keep both surfaces in frame; the app state was untouched otherwise.
   across every tab throughout, including the healthy capture pass;
   confirmation is unavailable per the doctrine's status observables
   (available, loaded, dialog-free, verified URL, same-tab snapshots).
+
+
+## Review fixes: current evidence at `e3cd8820`
+
+The original captures above are historical. Current captures come from the
+active review worktree at `e3cd8820`, served at `http://localhost:5173/?dev=1`.
+The final capture preflight accepted clean source; see
+`review-fix-provenance.json`. No capture operation failed or required a retry
+in this pass. Preview status was available, loaded and dialog-free on the
+verified URL; visibility still reported false, so visibility confirmation
+remains unavailable. Successful same-tab snapshots establish capture readiness.
+
+Reproduction: run `devRunPlaythrough({seed:473,budgetDays:1})` twice. The
+returned execution IDs differ and both library entries remain. Export the
+selected result and import that artifact; the imported entry retains its ID,
+record and source. Open curves and inspect the final snapshot. For the phone
+status demonstration, import the same payload with `modified:true` and one
+named intervention; the selected option reads `✗ · imported · modified` after
+its ID. This is an explicit test artifact, not unmodified baseline evidence.
+
+- `review-fix-desktop.png`: 1280×800, imported historical curves and inspection.
+- `review-fix-phone.png`: 390×844, results controls with the imported/modified
+  entry and focused run select.
+- `review-fix-phone-curves.png`: 390×844, the same modified imported record's
+  curves and inspection. Live `innerWidth`/`innerHeight` confirmed both sizes.
+
+Non-color status semantics were checked in-page: completion has the shared
+✓/✗/◆ glyph, and imported/modified are literal words in the option text.
+A dedicated greyscale visual pass remains **unavailable** (not run); this
+semantic check does not claim that pass. Keyboard/touch disclosure and
+reduced-motion passes remain **unavailable** (not run). Programmatic select
+focus succeeded; it is not a keyboard or touch walkthrough.
+
+### Correction to the historical recovery record
+
+The original pass exceeded the three-attempt browser-snapshot recovery
+budget. The hour-long recapture and fresh-tab retries are a procedural
+breach, not a compliant recovery. The earlier record does not preserve a
+complete ordered attempt log; that historical log is **unavailable** and
+cannot be reconstructed honestly. The reported failures remain raw evidence
+of the stall, not proof that the prescribed recovery sequence ran. Current
+captures above replace the unavailable recapture for the current source;
+they do not retroactively cure the earlier workflow breach.
+
+### Review finding to named verification
+
+- Distinct rerun execution IDs and preserved imported/modified evidence:
+  `app.playthrough.test.ts`, **keeps reruns separately identified and each
+  result's own provenance**. The case repeats the same recipe/source and
+  checks that the prior imported modified entry and intervention survive.
+- Historical production is carried rather than recalculated:
+  `playthrough-artifact.test.ts`, **reads foreign historical rates and
+  contributions exactly as recorded**. Deliberately foreign rate/contribution
+  values survive artifact import and inspection verbatim.
+- Malformed nested payload rejection:
+  `playthrough-artifact.test.ts`, **rejects malformed nested evidence before
+  it can enter inspection** (snapshot state, modules, voice readouts, world,
+  events, trajectory, schedule, stop and intervention); **rejects unsupported
+  versions clearly: newer, older, and missing** now also rejects v1 by name.
+- Shared status semantics: terminal and run select call
+  `playthroughStatusMark`; visible wiring and terminal boundary cases cover
+  their consumers. The original criterion mapping's replacement claim is
+  superseded by the distinct-execution case above.
+
+Artifact version 2 requires recorded snapshot rates and voice contributions;
+v1 is rejected without reinterpretation because those figures cannot be
+recovered faithfully with a different engine. Runner version is 9. Ordinary
+save format is unchanged.
+
+
+Final validation at source commit `e3cd8820`: `npm run check` passed;
+`npm test` passed all 98 files (1,972 passed, 2 skipped). Targeted artifact,
+rerun/parity, and terminal cases passed before the final full run. An earlier
+full pass found the terminal test's obsolete same-ID expectation; the final
+pass above includes its correction. The required UI project is included in
+that full pass; no additional full UI run was performed.
