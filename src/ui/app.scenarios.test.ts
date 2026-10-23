@@ -4,7 +4,7 @@ import type { App } from "./app";
 import { createAppFixture, setVisibility } from "./testing/app-fixture";
 import { STORAGE_KEY, serialize } from "../engine/save";
 import { assertFocusScenario, createFocusScenarioState } from "../engine/focus-scenario";
-import { SCENARIOS } from "../engine/scenarios";
+import { SCENARIOS, scenarioOf } from "../engine/scenarios";
 import { createInitialState } from "../engine/state";
 import { addPracticeLog, createHabit } from "../engine/habits";
 import { activeGoalOf, deleteGoal } from "../engine/goals";
@@ -18,6 +18,9 @@ import { activeGoalOf, deleteGoal } from "../engine/goals";
 // fresh start included. Each install stamps the real wall clock — the
 // Focus goal's occurrence is the current day — so each case anchors one
 // captured stamp and compares against a fresh build of the same stamp.
+// The progression presets (issue #471) ride the same boundary: their
+// builds walk the declared recipes (memoized per engine source, so this
+// file's first launches carry the walk cost and every later one clones).
 const fixture = createAppFixture();
 const boot = fixture.boot;
 
@@ -42,14 +45,37 @@ function seedOrdinaryAndBoot(t: number): number {
 }
 
 describe("the suite's catalog", () => {
-  it("declares the fresh start and the Focus setup with their situations and origins", () => {
+  it("declares the openings, the progression presets, and the Focus setup with their situations and origins", () => {
     app = boot(undefined, true);
-    expect(app.devScenarios().map((scenario) => scenario.id)).toEqual(["fresh-start", "focus"]);
+    expect(app.devScenarios().map((scenario) => scenario.id)).toEqual([
+      "fresh-start",
+      "approaching-prestige",
+      "after-first-bank",
+      "world-enemy",
+      "focus",
+    ]);
     const fresh = app.devScenarios()[0]!;
     expect(fresh.name).toBe("Fresh start");
     expect(fresh.origin).toBe("initial state");
     expect(fresh.situation).toContain("opening board");
-    const focus = app.devScenarios()[1]!;
+    // The progression presets (#471): recipe checkpoints, each carrying
+    // its declared recipe as the reachability evidence.
+    const approaching = app.devScenarios()[1]!;
+    expect(approaching.name).toBe("Approaching prestige");
+    expect(approaching.origin).toBe("recipe checkpoint");
+    expect(approaching.situation).toContain("first prestige door open");
+    expect(approaching.recipe).toMatchObject({ scenarioId: "fresh-start", policyId: "prompt", seed: 468 });
+    const bank = app.devScenarios()[2]!;
+    expect(bank.name).toBe("After first bank");
+    expect(bank.origin).toBe("recipe checkpoint");
+    expect(bank.situation).toContain("earned Arete unspent");
+    expect(bank.recipe).toMatchObject({ policyId: "pushing", claimTarget: 2 });
+    const enemy = app.devScenarios()[3]!;
+    expect(enemy.name).toBe("World enemy");
+    expect(enemy.origin).toBe("recipe checkpoint");
+    expect(enemy.situation).toContain("placement decision unplayed");
+    expect(enemy.recipe).toMatchObject({ policyId: "pushing", claimTarget: 2 });
+    const focus = app.devScenarios()[4]!;
     expect(focus.name).toBe("Focus");
     expect(focus.origin).toBe("constructed fixture");
     expect(focus.situation).toContain("session preparation");
@@ -151,6 +177,92 @@ describe("the launch command", () => {
     expect(revived.state.habits).toHaveLength(0);
   });
 
+  // The progression presets (issue #471): the walked situations install
+  // through the same boundary with the same guarantees. This case carries
+  // the walks — the first launches of this file pay the declared recipes'
+  // cost, the memo makes every later launch a clone.
+  it("launching the progression presets installs each walked situation in an isolated save", { timeout: 240_000 }, () => {
+    const t = Date.now();
+    seedOrdinaryAndBoot(t);
+    const ordinary = localStorage.getItem(STORAGE_KEY)!;
+
+    app.devLaunchScenario("approaching-prestige", t);
+    expect(app.devScenarioId).toBe("approaching-prestige");
+    expect(app.state.prestiges).toBe(0);
+    expect(app.state.arete).toBe(0);
+    expect(app.devScenarioNote).toContain("Approaching prestige ✓");
+    expect(app.devScenarioNote).toContain("first prestige door open");
+    expect(app.devScenarioNote).toContain("recipe checkpoint · isolated save");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(ordinary);
+
+    app.devLaunchScenario("after-first-bank", t);
+    expect(app.devScenarioId).toBe("after-first-bank");
+    expect(app.state.prestiges).toBe(1);
+    expect(app.state.arete).toBe(2);
+    expect(app.state.eraEarned).toBe(0);
+    expect(app.devScenarioNote).toContain("After first bank ✓");
+    expect(app.devScenarioNote).toContain("earned Arete unspent");
+    expect(app.devScenarioNote).toContain("recipe checkpoint · isolated save");
+
+    app.devLaunchScenario("world-enemy", t);
+    expect(app.devScenarioId).toBe("world-enemy");
+    const living = Object.values(app.state.world.enemies).filter((enemy) => enemy.discovered && enemy.hp > 0);
+    expect(living.length).toBeGreaterThanOrEqual(1);
+    expect(app.state.world.weapons.some((weapon) => weapon.pos === null)).toBe(true);
+    expect(app.state.arete).toBe(0);
+    expect(app.devScenarioNote).toContain("World enemy ✓");
+    expect(app.devScenarioNote).toContain("placement decision unplayed");
+    expect(app.devScenarioNote).toContain("recipe checkpoint · isolated save");
+
+    // Every launch is inspectable and its assertions re-run clean on
+    // demand.
+    expect(() => app.devScenarioAssert(t)).not.toThrow();
+
+    // The walked states never reached the ordinary slot.
+    app.state.arete = 1;
+    app.save();
+    window.dispatchEvent(new Event("beforeunload"));
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(ordinary);
+    const revived = boot(undefined, true);
+    expect(revived.state.nous).toBe(500);
+  });
+
+  it("repeating a progression launch rebuilds the walked setup without accumulating", { timeout: 240_000 }, () => {
+    const t = Date.now();
+    app = boot(undefined, true);
+    for (const id of ["fresh-start", "after-first-bank", "world-enemy"] as const) {
+      app.devLaunchScenario(id, t);
+      // The walked states already carry the recipe's own practice habit;
+      // fresh start carries none.
+      const lived = app.state.habits.length;
+      app.devNous();
+      createHabit(app.state, "Sketching");
+      addPracticeLog(app.state, app.state.habits[0]!.id, 10, t);
+      expect(app.state.habits).toHaveLength(lived + 1);
+
+      app.devLaunchScenario(id, t);
+      expect(app.state).toEqual(scenarioOf(id)!.build(t));
+      expect(app.devScenarioNote).toContain("✓");
+      expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");
+    }
+  });
+
+  it("a scripted run starts from a progression preset through the same run command", { timeout: 240_000 }, () => {
+    app = boot(undefined, true);
+    const before = app.state;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const record = app.devRunPlaythrough({ scenarioId: "after-first-bank", budgetDays: 1 });
+    // The run's identity and its walked starting state: the run id names
+    // the preset, and the record's state carries the first bank's era.
+    expect(record.runId).toMatch(/^after-first-bank-s468-/);
+    expect(record.recipe.scenarioId).toBe("after-first-bank");
+    expect(record.state.prestiges).toBe(1);
+    expect(app.devPlaythroughNote).toContain("after-first-bank");
+    // The run never touched the live state or the save.
+    expect(app.state).toBe(before);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+  });
+
   it("launching from a boot with no prior save claims nothing else", () => {
     const t = Date.now();
     app = boot(undefined, true);
@@ -190,7 +302,9 @@ describe("the launch command", () => {
     app.devLaunchScenario("focus", t);
     app.devLaunchScenario("speedrun", t);
 
-    expect(status()).toBe('Dev: no scenario "speedrun" — the suite offers fresh-start, focus.');
+    expect(status()).toBe(
+      'Dev: no scenario "speedrun" — the suite offers fresh-start, approaching-prestige, after-first-bank, world-enemy, focus.',
+    );
     // The refused candidate never installed: the Focus setup stays the
     // active scenario, its note and its assertion intact.
     expect(app.devScenarioId).toBe("focus");
@@ -281,6 +395,26 @@ describe("the active scenario's assertion", () => {
     expect(() => app.devScenarioAssert(t)).toThrowError(/Fresh start: expected the first era/);
   });
 
+  it("asserts a walked preset by its own named facts, and relaunch restores it", { timeout: 240_000 }, () => {
+    const t = Date.now();
+    app = boot(undefined, true);
+    app.devLaunchScenario("after-first-bank", t);
+    expect(() => app.devScenarioAssert(t)).not.toThrow();
+    expect(app.devScenarioNote).toContain("After first bank ✓");
+
+    // The earned claim is the situation's defining figure: spend it and
+    // the assertion names the drift.
+    app.state.arete = 0;
+    expect(() => app.devScenarioAssert(t)).toThrowError(/After first bank: expected the earned 2-Arete claim unspent/);
+    expect(app.devScenarioNote).toContain("After first bank ✗");
+    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✗");
+
+    app.devLaunchScenario("after-first-bank", t);
+    expect(app.state.arete).toBe(2);
+    expect(() => app.devScenarioAssert(t)).not.toThrow();
+    expect(app.devScenarioNote).toContain("After first bank ✓");
+  });
+
   it("without a launch it names the missing scenario", () => {
     app = boot(undefined, true);
     app.devScenarioAssert();
@@ -293,7 +427,13 @@ describe("the dev panel's suite entry", () => {
     app = boot(undefined, true);
     const select = document.getElementById("dev-scenario") as HTMLSelectElement;
     expect(select).not.toBeNull();
-    expect([...select.options].map((option) => option.value)).toEqual(["fresh-start", "focus"]);
+    expect([...select.options].map((option) => option.value)).toEqual([
+      "fresh-start",
+      "approaching-prestige",
+      "after-first-bank",
+      "world-enemy",
+      "focus",
+    ]);
     expect(select.options[0]!.hasAttribute("title")).toBe(false);
     expect(select.options[0]!.textContent).toBe("Fresh start");
 
@@ -310,6 +450,14 @@ describe("the dev panel's suite entry", () => {
     relaunched.value = "focus";
     document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
     assertFocusScenario(app.state);
+
+    // A walked preset drives through the same select and control — the
+    // same launch command, the walked situation installed.
+    relaunched.value = "after-first-bank";
+    document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
+    expect(app.devScenarioId).toBe("after-first-bank");
+    expect(app.state.arete).toBe(2);
+    expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✓");
   });
 
   it.each(["flow", "breather"] as const)("keeps pending selection and focus through %s ticks", (mode) => {

@@ -49,7 +49,11 @@ import type { GameState, Hex, ModuleInstance, WeaponType } from "./types";
 // banks, and its record follows the next era through earned-Arete
 // spending, World placement and purchases, and the two recovery measures —
 // regaining the first era's pre-reset production and reaching prestige
-// eligibility again, each timed on both clocks. Nothing here grants
+// eligibility again, each timed on both clocks. The same walk carries the
+// progression checkpoints (issue #471): declared between-sessions stops —
+// the door approaching, the first earned bank, the World's living fight —
+// whose halted state is the progression presets' ground, reached by the
+// walk rather than built by hand. Nothing here grants
 // resources; an exhausted budget is an explicit incomplete result with the
 // last milestone, the bottleneck, and the declined actions' reasons — and
 // a missing recovery measure is an explicit unreached mark, never a
@@ -266,6 +270,88 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
   return recipe;
 }
 
+// ── The progression checkpoints (issue #471, parent #465) ──
+
+// A declared stop inside a declared walk: the moment a progression preset
+// is. Each checkpoint names the between-sessions moment it halts on, and
+// the situation it stops in is the same words its preset declares — the
+// walk is the only thing that can reach it.
+export type PlaythroughCheckpointId = "approaching-prestige" | "after-first-bank" | "world-enemy-active";
+
+export interface PlaythroughCheckpoint {
+  readonly id: PlaythroughCheckpointId;
+  readonly name: string;
+  // The intended situation, one line: what the stopped state is for.
+  readonly situation: string;
+}
+
+export const PLAYTHROUGH_CHECKPOINTS: readonly PlaythroughCheckpoint[] = [
+  {
+    id: "approaching-prestige",
+    name: "Approaching prestige",
+    situation: "an established board with the first prestige door open",
+  },
+  {
+    id: "after-first-bank",
+    name: "After first bank",
+    situation: "immediately after the first prestige, its earned Arete unspent",
+  },
+  {
+    id: "world-enemy-active",
+    name: "World enemy",
+    situation: "a living discovered enemy with the placement decision unplayed",
+  },
+];
+
+function checkpointOf(id: PlaythroughCheckpointId): PlaythroughCheckpoint {
+  return PLAYTHROUGH_CHECKPOINTS.find((checkpoint) => checkpoint.id === id)!;
+}
+
+// The checkpoints' declared recipes (parent story 8's reachability
+// evidence, carried verbatim on each preset): the approaching door rides
+// the suite's baseline schedule — the prompt walk opens it around day
+// nine — while the earned bank and the World's fight push past the 1T
+// entry depth, deeper than the baseline's credited practice can reach
+// inside any budget, so they declare the pushing fixture's own
+// long-session schedule: two 600-minute daily sessions on the same
+// five-minute breather, the shape the pushing tests ride. Both are
+// fixtures — declared, not typical-player claims — and the preset's
+// provenance names exactly how its situation was reached.
+export const APPROACHING_PRESTIGE_RECIPE: PlaythroughRecipe = {
+  ...defaultPlaythroughRecipe(),
+  budgetDays: 15,
+};
+
+export const PUSHING_CHECKPOINT_RECIPE: PlaythroughRecipe = {
+  ...defaultPlaythroughRecipe(),
+  policyId: PUSHING_POLICY.id,
+  claimTarget: 2,
+  budgetDays: 36,
+  schedule: {
+    ...defaultPlaythroughRecipe().schedule,
+    sessionsPerDay: 2,
+    sessionMinutes: 600,
+    breatherMinutes: 5,
+  },
+};
+
+export function checkpointRecipeOf(id: PlaythroughCheckpointId): PlaythroughRecipe {
+  return id === "approaching-prestige" ? APPROACHING_PRESTIGE_RECIPE : PUSHING_CHECKPOINT_RECIPE;
+}
+
+// The World decision pending (issue #471): a discovered enemy still lives
+// and an owned occupant — weapon or Column — waits in the tray. Read at
+// the between-sessions moment after the prestige door's check and before
+// any spending, placement, or recovery bookkeeping touches the era, so
+// the stopped state is the decision itself, unplayed.
+function worldDecisionPending(state: GameState): boolean {
+  const living = Object.values(state.world.enemies).some((enemy) => enemy.discovered && enemy.hp > 0);
+  const waiting =
+    state.world.weapons.some((weapon) => weapon.pos === null) ||
+    state.world.columns.some((column) => column.pos === null);
+  return living && waiting;
+}
+
 // Source provenance (stories 13, 36): what produced the run, so a rerun
 // against different source identifies separately, and a representative
 // playthrough never masquerades as the economy-only calibration run.
@@ -391,8 +477,10 @@ export interface PlaythroughRecord {
   readonly complete: boolean;
   // "prestige" is the prompt door; "recovered" is the pushing run's
   // completed next-era demonstration — both recovery measures measured.
-  // "budget" is the explicit incomplete outcome (story 21).
-  readonly stop: { readonly kind: "prestige" | "recovered" | "budget"; readonly reason: string };
+  // "budget" is the explicit incomplete outcome (story 21). "checkpoint"
+  // is a declared progression checkpoint's stop (issue #471) — the walk
+  // halted exactly where its preset's situation lives.
+  readonly stop: { readonly kind: "prestige" | "recovered" | "budget" | "checkpoint"; readonly reason: string };
   // The pushing policy's configured pending-claim target, carried beside
   // the actual claims so intent and outcome stay distinguishable
   // (stories 19–20).
@@ -1024,6 +1112,34 @@ export function runPlaythrough(
   recipe: PlaythroughRecipe,
   source: PlaythroughSource = playthroughSource(),
 ): PlaythroughRecord {
+  return walkPlaythrough(recipe, null, source);
+}
+
+// The checkpoint walk (issue #471): the same walk with one declared stop.
+// A checkpoint the budget never reaches is a thrown, named failure — a
+// preset whose situation the recipe can no longer reach must fail its
+// build, never install a lookalike.
+export function runPlaythroughCheckpoint(
+  recipe: PlaythroughRecipe,
+  checkpointId: PlaythroughCheckpointId,
+  source: PlaythroughSource = playthroughSource(),
+): PlaythroughRecord {
+  const checkpoint = checkpointOf(checkpointId);
+  const record = walkPlaythrough(recipe, checkpointId, source);
+  if (record.stop.kind !== "checkpoint") {
+    throw new Error(
+      `Playthrough checkpoint "${checkpointId}" was not reached within the ${recipe.budgetDays}-day budget — ` +
+        `the recipe or engine drifted from its declared situation (${checkpoint.situation}).`,
+    );
+  }
+  return record;
+}
+
+function walkPlaythrough(
+  recipe: PlaythroughRecipe,
+  checkpoint: PlaythroughCheckpointId | null,
+  source: PlaythroughSource,
+): PlaythroughRecord {
   validatePlaythroughRecipe(recipe);
   const scenario = scenarioOf(recipe.scenarioId)!;
   const state = scenario.build(recipe.schedule.startAt);
@@ -1057,11 +1173,35 @@ export function runPlaythrough(
 
   let days = 0;
   let complete = false;
+  let checkpointStop: PlaythroughRecord["stop"] | null = null;
   let stop: PlaythroughRecord["stop"] = {
     kind: "budget",
     reason: ctx.pushing
       ? `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the recovery behind it.`
       : `The ${recipe.budgetDays}-day budget ended before the first prestige.`,
+  };
+  // A checkpoint's halt (issue #471): the declared moment named, the day
+  // counted — the record's stop carries the situation, never a verdict.
+  const haltAt = (id: PlaythroughCheckpointId): void => {
+    const descriptor = checkpointOf(id);
+    checkpointStop = {
+      kind: "checkpoint",
+      reason: `${descriptor.name} reached at day ${days} — ${descriptor.situation}.`,
+    };
+  };
+  // The door's check (issue #471): the approaching-prestige moment is the
+  // horizon's first between-sessions crossing of the first era — read
+  // before the prestige door itself, so the walk stops before the bank.
+  const doorOpen = (): boolean =>
+    checkpoint === "approaching-prestige" && ctx.claims.length === 0 && horizonReached(state);
+  // The bank-and-World read (issue #471): evaluated right after the
+  // prestige door's check at both between-sessions points, before any
+  // spending or recovery bookkeeping touches the era — the first bank
+  // still unspent, or the World's decision still unplayed.
+  const stopAfterDoor = (): boolean => {
+    if (checkpoint === "after-first-bank") return ctx.claims.length === 1;
+    if (checkpoint === "world-enemy-active") return ctx.claims.length >= 1 && worldDecisionPending(state);
+    return false;
   };
   day: for (let day = 0; day < recipe.budgetDays; day++) {
     days = day + 1;
@@ -1072,16 +1212,32 @@ export function runPlaythrough(
       // prompt door is the prompt run's completion; a pushing bank is the
       // demonstration's middle, never its end — the record follows the
       // next era until both recovery measures carry their marks.
+      if (doorOpen()) {
+        haltAt("approaching-prestige");
+        break day;
+      }
       if (tryPrestige(ctx, state) && !ctx.pushing) {
         complete = true;
         stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
         break day;
       }
+      if (stopAfterDoor()) {
+        haltAt(checkpoint === "after-first-bank" ? "after-first-bank" : "world-enemy-active");
+        break day;
+      }
       manage(ctx, state);
       runSession(ctx, state, day, session);
+      if (doorOpen()) {
+        haltAt("approaching-prestige");
+        break day;
+      }
       if (tryPrestige(ctx, state) && !ctx.pushing) {
         complete = true;
         stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
+        break day;
+      }
+      if (stopAfterDoor()) {
+        haltAt(checkpoint === "after-first-bank" ? "after-first-bank" : "world-enemy-active");
         break day;
       }
       // The between-sessions settlement: both recovery measures read here
@@ -1100,15 +1256,19 @@ export function runPlaythrough(
     }
   }
   // A pushing run that banked but never recovered names that stop exactly.
-  if (!complete && ctx.pushing && ctx.claims.length > 0) {
+  if (!complete && ctx.pushing && ctx.claims.length > 0 && !checkpointStop) {
     stop = { kind: "budget", reason: `The ${days}-day budget ended inside the recovery era.` };
   }
   const lastSessionLabel = [...ctx.events].reverse().find((event) => event.kind === "session")?.label ?? null;
-  const bottleneck = complete
+  // A checkpoint stop names its moment; nothing was blocked, so no
+  // bottleneck is written for it.
+  const bottleneck = checkpointStop
     ? null
-    : ctx.lastDecline
-      ? `${stop.reason} Last decline — ${ctx.lastDecline}.`
-      : `${stop.reason} No action was declined — practice rate alone did not reach the horizon.`;
+    : complete
+      ? null
+      : ctx.lastDecline
+        ? `${stop.reason} Last decline — ${ctx.lastDecline}.`
+        : `${stop.reason} No action was declined — practice rate alone did not reach the horizon.`;
   const recovery: PlaythroughRecovery | null =
     ctx.preResetRate === null
       ? null
@@ -1124,7 +1284,7 @@ export function runPlaythrough(
     source,
     policy: { id: policy.id, name: policy.name },
     complete,
-    stop,
+    stop: checkpointStop ?? stop,
     claimTarget: recipe.claimTarget,
     claims: ctx.claims,
     areteSpent: ctx.areteSpent,
@@ -1148,15 +1308,17 @@ export function runPlaythrough(
 // The result's one-line read: the ✓/✗ shape the suite's notes carry, with
 // the figures that matter — both clocks, the claim against its target, the
 // spending, the recovery measures, the identity, and on an incomplete run
-// the honest stop. Measurements and explicit outcomes only; never a pacing
-// verdict (story 37).
+// the honest stop. A checkpoint's ◆ marks its declared halt (issue #471).
+// Measurements and explicit outcomes only; never a pacing verdict
+// (story 37).
 export function playthroughNote(record: PlaythroughRecord): string {
   const credited = Math.round(record.creditedSeconds / 60);
   const elapsed = Math.round(record.elapsedSeconds / 60);
   const claims = record.claims.length > 0 ? record.claims.join(", ") : "none";
   const target = record.policy.id === PUSHING_POLICY.id ? `/${record.claimTarget}` : "";
+  const mark = record.stop.kind === "checkpoint" ? "◆" : record.complete ? "✓" : "✗";
   const parts = [
-    `${record.policy.name} ${record.complete ? "✓" : "✗"} ` +
+    `${record.policy.name} ${mark} ` +
       `${record.days}d · ${credited}m credited of ${elapsed}m elapsed · ` +
       `claim ${claims}${target} Arete · ` +
       `seed ${record.recipe.seed} · ${record.recipe.scenarioId} · ${record.runId}`,
@@ -1164,7 +1326,8 @@ export function playthroughNote(record: PlaythroughRecord): string {
   const spent = spendingNote(record.areteSpent);
   if (spent) parts.push(spent);
   if (record.recovery) parts.push(recoveryNote(record.recovery));
-  if (record.complete) parts.push(record.stop.reason);
+  if (record.stop.kind === "checkpoint") parts.push(record.stop.reason);
+  else if (record.complete) parts.push(record.stop.reason);
   else parts.push(`${record.lastMilestone ?? "no milestone"}`, `${record.bottleneck ?? record.stop.reason}`);
   return parts.join(" · ");
 }
@@ -1184,4 +1347,43 @@ function recoveryNote(recovery: PlaythroughRecovery): string {
   const mark = (value: PlaythroughRecoveryMark | null): string =>
     value ? `${(value.elapsed / 86_400).toFixed(1)}d/${Math.round(value.credited / 60)}m` : "unreached";
   return `recovery — rate ${mark(recovery.productionRegained)}, door ${mark(recovery.eligibilityReached)} (${recovery.preResetRate.toFixed(2)}ν/s pre-reset)`;
+}
+
+// ── The checkpoint presets (issue #471, parent #465) ──
+
+// One progression preset's read: the declared checkpoint, the recipe that
+// reached it, the walk's record (its provenance and its decisions), and
+// the stopped state. The record's state is the ground truth behind every
+// figure; the read hands out a fresh clone of it every call.
+export interface PlaythroughCheckpointPreset {
+  readonly checkpoint: PlaythroughCheckpoint;
+  readonly recipe: PlaythroughRecipe;
+  readonly record: PlaythroughRecord;
+  readonly state: GameState;
+}
+
+interface CheckpointMemoEntry {
+  readonly source: string;
+  readonly record: PlaythroughRecord;
+}
+
+// One walk per checkpoint per engine source, memoized: the walk is a pure
+// function of the declared recipe and the engine — deterministic inputs,
+// no wall-clock reads — so the memo never lies, and a changed engine
+// fingerprint (hot reload included) walks again. Every read clones the
+// stopped state out, so the preset rebuilds from nothing on every launch,
+// installs cannot accumulate, and no consumer can reach the memoized
+// original.
+const checkpointMemo = new Map<PlaythroughCheckpointId, CheckpointMemoEntry>();
+
+export function playthroughCheckpointPreset(id: PlaythroughCheckpointId): PlaythroughCheckpointPreset {
+  const checkpoint = checkpointOf(id);
+  const recipe = checkpointRecipeOf(id);
+  const source = playthroughSource();
+  let memo = checkpointMemo.get(id);
+  if (!memo || memo.source !== source.engineSource) {
+    memo = { source: source.engineSource, record: runPlaythroughCheckpoint(recipe, id, source) };
+    checkpointMemo.set(id, memo);
+  }
+  return { checkpoint, recipe, record: memo.record, state: structuredClone(memo.record.state) };
 }
