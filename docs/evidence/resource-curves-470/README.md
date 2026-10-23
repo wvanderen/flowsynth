@@ -1,5 +1,7 @@
 # Resource curves and historical inspection evidence (#470) — captures unavailable, server provenance verified
 
+**Current completion record:** [PR #479 review corrections](../resource-curves-470-review-fixes/README.md) supplies the corrected criterion mapping, recovery regression tests, full historical board layers, recent preparation decisions, and successful desktop/phone captures. The remainder of this file records the original pass and its historical limitations.
+
 The change adds the resource-curve surface to the playtesting suite: the
 run's trajectory plotted against simulated elapsed time or credited
 practice, the purchase / unlock / session / breather / prestige markers,
