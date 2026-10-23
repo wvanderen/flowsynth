@@ -62,6 +62,18 @@ keep both surfaces in frame; the app state was untouched otherwise.
   The file chooser route was not demonstrable in this harness; the import
   capture used the documented no-picker route (`preview_upload` setting
   the same `<input type=file>` the Import button opens).
+- **Recapture after the review-fix commit — unavailable.** The suite's
+  only post-capture source change is a test-file-only commit
+  (`3f0bb14`: `src/ui/app.playthrough.test.ts` assertion types; the diff
+  from the captured commit `135166e` touches no served UI source). A
+  recapture pass at `3f0bb14` was attempted anyway: preflight re-accepted
+  the same URL at the new commit and the seeded workflow re-ran
+  verifiably in-page, but `preview_snapshot` timed out on every attempt
+  across fresh tabs, navigate-reloads, and ~1 hour of patient waits (the
+  same 15000 ms timeout verbatim, `preview_evaluate`/`preview_resize`/
+  provenance healthy throughout). The captures above stand at
+  `135166e`, whose served UI source is identical to `3f0bb14`; the
+  recapture is recorded unavailable rather than claimed.
 - **Keyboard/touch disclosure pass** — unavailable in this harness pass
   (the surfaces carry no tooltip disclosures of their own; the ◀ ▶
   stepping and select are keyboard-reachable by construction but the
