@@ -276,3 +276,87 @@ describe("human and agent parity", () => {
       "✗ Playthrough recipe: override \"openingGrant\" must be a whole number 0–120 — found 999.");
   });
 });
+
+describe("visual and terminal intervention parity", () => {
+  it("records visual session actions and purchases without rewriting the baseline or ordinary save", () => {
+    app = boot(undefined, true);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    void app.devLaunchScenario("fresh-start");
+    app.beginFlow(null);
+    expect(app.devScenarioModified).toBe(true);
+    expect(app.devInterventions).toHaveLength(1);
+    app.pause();
+    app.resume();
+    app.endFlow();
+    app.upgradeLevels(app.state.modules[0]!.id, 1);
+    expect(app.devInterventions).toHaveLength(5);
+    expect(app.devInterventions.every((entry) => entry.ok)).toBe(true);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    void app.devLaunchScenario("fresh-start");
+    expect(app.devScenarioModified).toBe(false);
+    expect(app.devInterventions).toEqual([]);
+  });
+
+  it("offers pause, resume, honesty, and World actions with real engine outcomes", () => {
+    app = boot(undefined, true);
+    void app.devLaunchScenario("fresh-start");
+    expect(app.devTerminalRun("start 25")).toMatch(/^✓/);
+    expect(app.devTerminalRun("pause")).toMatch(/^✓/);
+    expect(app.state.mode).toBe("paused");
+    expect(app.devTerminalRun("resume")).toMatch(/^✓/);
+    expect(app.state.mode).toBe("flow");
+    app.state.session!.accounting.poolSeconds = 60;
+    expect(app.devTerminalRun("end")).toMatch(/^✗/);
+    expect(app.devTerminalRun("honesty full")).toMatch(/^✓/);
+    expect(app.state.session!.accounting.poolSeconds).toBe(0);
+    expect(app.devTerminalRun("end")).toMatch(/^✓/);
+    expect(app.devTerminalRun("world-buy")).toMatch(/^✗/);
+    expect(app.devTerminalRun("world-place missing 0 0")).toMatch(/^✗/);
+    expect(app.devTerminalRun("world-retrieve missing")).toMatch(/^✗/);
+    expect(app.devTerminalRun("world-hone invalid")).toMatch(/✗.*chargeBlade/);
+  });
+
+  it("keeps tuning names visible after values are entered", () => {
+    app = boot(undefined, true);
+    const input = document.getElementById("dev-tuning-openingGrant") as HTMLInputElement;
+    input.value = "60";
+    expect(input.labels?.[0]?.textContent).toContain("Opening grant");
+  });
+});
+
+describe("declared game-action catalog", () => {
+  it("validates data arguments before mutation and exposes the remaining workspace actions", () => {
+    app = boot(undefined, true);
+    void app.devLaunchScenario("fresh-start");
+    expect(app.devTerminalRun('action createHabit ["Violin"]')).toMatch(/^✓/);
+    const habit = app.state.habits.find((h) => h.name === "Violin")!;
+    expect(habit).toBeDefined();
+    expect(app.devTerminalRun(`action selectHabit ["${habit.id}"]`)).toMatch(/^✓/);
+    expect(app.state.activeHabitId).toBe(habit.id);
+    const before = structuredClone(app.state);
+    expect(app.devTerminalRun('action buyCell [{"q":0.5,"r":0}]')).toMatch(/✗.*whole number/);
+    expect(app.devTerminalRun('action buyHoneRank ["unknown"]')).toMatch(/✗.*chargeBlade/);
+    expect(app.devTerminalRun('action constructor []')).toMatch(/✗.*Unknown game action/);
+    expect(app.state).toEqual(before);
+    const id = app.state.modules[0]!.id;
+    expect(app.devTerminalRun(`action upgradeModuleLevels ["${id}",1]`)).toMatch(/^✓/);
+    expect(app.state.modules[0]!.level).toBe(1);
+    expect(app.devInterventions.at(-1)).toMatchObject({ ok: true, label: `upgradeModuleLevels ["${id}",1]` });
+    expect(app.devTerminalRun("actions")).toContain("chooseMutatorRoll");
+    expect(app.devTerminalRun("actions")).toContain("buyCapacity");
+  });
+
+  it("records successful visual and terminal World actions with equivalent state", () => {
+    app = boot(undefined, true);
+    void app.devLaunchScenario("fresh-start");
+    app.devWorldEra();
+    const id = app.state.world.columns.find((c) => c.pos === null)!.id;
+    expect(app.devTerminalRun(`world-place ${id} 0 0`)).toMatch(/^✓/);
+    expect(app.state.world.columns.find((c) => c.id === id)!.pos).toEqual({ q: 0, r: 0 });
+    app.worldRetrieve(id);
+    expect(app.devInterventions.at(-1)).toMatchObject({ ok: true, label: "retrieveWorldOccupant" });
+    expect(app.state.world.columns.find((c) => c.id === id)!.pos).toBeNull();
+    expect(app.devTerminalRun("world-buy")).toMatch(/^✓/);
+    expect(app.devTerminalRun("world-hone chargeBlade")).toMatch(/^✓/);
+  });
+});

@@ -4114,7 +4114,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       .devTuning()
       .map(
         (param) =>
-          `<input id="dev-tuning-${escapeHtml(param.key)}" type="number" min="${param.min}" max="${param.max}" step="1" inputmode="numeric" aria-label="Run override — ${escapeHtml(param.name)}: ${escapeHtml(param.description)}" placeholder="${escapeHtml(param.key)}" />`,
+          `<label class="dev-tuning-label">${escapeHtml(param.name)}<input id="dev-tuning-${escapeHtml(param.key)}" type="number" min="${param.min}" max="${param.max}" step="1" inputmode="numeric" aria-label="Run override — ${escapeHtml(param.name)}: ${escapeHtml(param.description)}" placeholder="default ${param.default}" /></label>`,
       )
       .join("");
     panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>

@@ -1,3 +1,4 @@
+import { GAME_COMMANDS } from "./game-commands";
 import { advance, earnNous } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
@@ -861,7 +862,7 @@ export class App {
   confirmPrestige(): void {
     const claim = bankableClaimOf(this.state);
     const grantsStarter = !this.state.world.starterWeaponGranted && frontierEntitlement(this.state.eraEarned) >= columnCost(0);
-    const result = prestige(this.state);
+    const result = this.gameAction("prestige", () => prestige(this.state));
     if (!result.ok) {
       this.say(result.reason ?? "The door is not open.");
       this.render();
@@ -1284,7 +1285,7 @@ export class App {
     // can be planned; the enter prompt's duration affordances stay visible
     // but unpushed — the resting plan is open-ended, and only this choice
     // ever arms the chime, the permission ask, and the title flip (§4).
-    const started = startSession(this.state, this.ui.chosenTarget, Date.now());
+    const started = this.gameAction("startSession", () => startSession(this.state, this.ui.chosenTarget, Date.now()));
     if (!started.ok) {
       this.ui.modal = null;
       this.say(started.reason ?? "Cannot enter flow right now.");
@@ -1336,7 +1337,7 @@ export class App {
       this.render();
       return;
     }
-    const result = endSession(this.state, Date.now());
+    const result = this.gameAction("endSession", () => endSession(this.state, Date.now()));
     if (!result.ok) {
       this.say(result.reason ?? "No session is running.");
       this.render();
@@ -1353,7 +1354,7 @@ export class App {
   }
 
   pause(): void {
-    if (this.act(pauseSession(this.state), "Paused.")) {
+    if (this.act(this.gameAction("pauseSession", () => pauseSession(this.state)), "Paused.")) {
       this.lastWall = null;
       // Pausing silences the overrun chime immediately (§4); it never
       // un-silences, since a visible resume acknowledges anyway.
@@ -1362,7 +1363,7 @@ export class App {
   }
 
   resume(): void {
-    if (this.act(resumeSession(this.state), "Flow resumed.")) {
+    if (this.act(this.gameAction("resumeSession", () => resumeSession(this.state)), "Flow resumed.")) {
       this.syncBoundaryClock(Date.now());
     }
   }
@@ -1372,7 +1373,7 @@ export class App {
   // context (§10) — and the boundary clock starts here.
   takeBreather(): void {
     if (this.released) return;
-    const result = startBreatherAction(this.state, Date.now());
+    const result = this.gameAction("startBreatherAction", () => startBreatherAction(this.state, Date.now()));
     if (!result.ok) {
       this.say(result.reason ?? "Cannot take a breather right now.");
       this.render();
@@ -1401,7 +1402,7 @@ export class App {
   private finishBreather(): void {
     const breather = this.state.breather;
     const completed = !!breather && breather.elapsed >= breather.allowanceSeconds - 1e-9;
-    const result = endBreatherAction(this.state);
+    const result = this.gameAction("endBreatherAction", () => endBreatherAction(this.state));
     if (!result.ok) {
       this.say(result.reason ?? "No breather is running.");
       this.render();
@@ -1427,7 +1428,7 @@ export class App {
   buyShelf(type: ShelfType): void {
     // The purchase stays in the catalog: the module lands in inventory and
     // placement happens from Grid & inventory, on the player's beat.
-    this.act(buyShelfModule(this.state, type), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
+    this.act(this.gameAction("buyShelfModule", () => buyShelfModule(this.state, type)), `${META[SHELF_MODULE[type]].name} purchased — it's in your inventory.`);
   }
 
   // ── The Arete Catalog (issue #197) ──────────────────────────────────────
@@ -1443,7 +1444,7 @@ export class App {
   // reads "free"). The purchase's performed roll waits banked; it
   // auto-opens when the first slot lands.
   buyCatalogEntryAction(): void {
-    const result = buyCatalogEntry(this.state);
+    const result = this.gameAction("buyCatalogEntry", () => buyCatalogEntry(this.state));
     if (result.ok) {
       this.ui.modal = null;
       this.ui.detail = null;
@@ -1457,31 +1458,31 @@ export class App {
   }
 
   joinRollPoolAction(): void {
-    this.act(joinRollPool(this.state), "The Mutator Forge joined the module roll pool.");
+    this.act(this.gameAction("joinRollPool", () => joinRollPool(this.state)), "The Mutator Forge joined the module roll pool.");
   }
 
   buyRowUnlockAction(row: number): void {
-    this.act(buyRowUnlock(this.state, row), "Octave row unlocked — its cells now buy with nous.");
+    this.act(this.gameAction("buyRowUnlock", () => buyRowUnlock(this.state, row)), "Octave row unlocked — its cells now buy with nous.");
   }
 
   // The harmonic-capacity ladder's landings (issue #259): the nous rung
   // and the two Arete offerings, each through the shared act() shape.
   buyCapacityAction(): void {
-    this.act(buyCapacity(this.state), "Harmonic capacity raised — every voice carries one more chord.");
+    this.act(this.gameAction("buyCapacity", () => buyCapacity(this.state)), "Harmonic capacity raised — every voice carries one more chord.");
   }
 
   buyCapacityCeilingAction(): void {
-    this.act(buyCapacityCeiling(this.state), "The capacity ceiling rises — the nous ladder sells one rung further.");
+    this.act(this.gameAction("buyCapacityCeiling", () => buyCapacityCeiling(this.state)), "The capacity ceiling rises — the nous ladder sells one rung further.");
   }
 
   buyCapacityDiscountAction(): void {
-    this.act(buyCapacityDiscount(this.state), "Capacity rungs cost less nous.");
+    this.act(this.gameAction("buyCapacityDiscount", () => buyCapacityDiscount(this.state)), "Capacity rungs cost less nous.");
   }
 
   // The merge cap's landing (issue #380): the toast names the beat —
   // pairs now combine one tier past where they stopped.
   buyMergeCapAction(): void {
-    this.act(buyMergeCapIncrease(this.state), `Merge cap raised — copies now combine to ${tierWord(unlockedMergeCap(this.state))}.`);
+    this.act(this.gameAction("buyMergeCapIncrease", () => buyMergeCapIncrease(this.state)), `Merge cap raised — copies now combine to ${tierWord(unlockedMergeCap(this.state))}.`);
   }
 
   // ── The World layer's gestures (issue #426) ─────────────────────────────
@@ -1602,13 +1603,13 @@ export class App {
   worldPlace(id: string, pos: Hex): void {
     this.worldDisarm();
     this.act(
-      placeWorldOccupant(this.state, id, pos),
+      this.gameAction("placeWorldOccupant", () => placeWorldOccupant(this.state, id, pos)),
       `${this.worldOccupantName(id)} placed at ${cellNoteOf(pos)}.`,
     );
   }
 
   worldRetrieve(id: string): void {
-    this.act(retrieveWorldOccupant(this.state, id), `${this.worldOccupantName(id)} retrieved to the World tray.`);
+    this.act(this.gameAction("retrieveWorldOccupant", () => retrieveWorldOccupant(this.state, id)), `${this.worldOccupantName(id)} retrieved to the World tray.`);
   }
 
   private worldOccupantName(id: string): string {
@@ -1623,7 +1624,7 @@ export class App {
   // unknown keys. The move walks the effective order — stored preference
   // first, authored roster behind.
   setWeaponPriority(id: string, keys: string[]): void {
-    this.act(setWeaponTargetPriority(this.state, id, keys), "Target priority set.");
+    this.act(this.gameAction("setWeaponTargetPriority", () => setWeaponTargetPriority(this.state, id, keys)), "Target priority set.");
   }
 
   worldMovePriority(id: string, key: string, dir: number): void {
@@ -1640,11 +1641,11 @@ export class App {
   // The Arete Catalog's World purchases (issue #426): the Column ladder and
   // the Hone ranks, each through the shared act() shape.
   buyChargeColumnAction(): void {
-    this.act(buyChargeColumn(this.state), "Charge Column purchased — it waits in the World tray.");
+    this.act(this.gameAction("buyChargeColumn", () => buyChargeColumn(this.state)), "Charge Column purchased — it waits in the World tray.");
   }
 
   buyHoneRankAction(type: WeaponType): void {
-    this.act(buyHoneRank(this.state, type), `${WORLD_META[type].name} attack power honed.`);
+    this.act(this.gameAction("buyHoneRank", () => buyHoneRank(this.state, type)), `${WORLD_META[type].name} attack power honed.`);
   }
 
   // The live drop preview over the second face (issue #426): hover state
@@ -1668,7 +1669,7 @@ export class App {
     const offer = this.state.bankedMutatorRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
     if (!candidate) return;
-    const result = chooseMutatorRoll(this.state, offerId, candidateId);
+    const result = this.gameAction("chooseMutatorRoll", () => chooseMutatorRoll(this.state, offerId, candidateId));
     if (!result.ok) {
       this.say(result.reason ?? "That roll cannot be taken.");
       this.render();
@@ -1714,7 +1715,7 @@ export class App {
   upgradeLevels(id: string, want: number | "max"): void {
     const module = this.state.modules.find((m) => m.id === id);
     if (!module) return;
-    this.landBulk(upgradeModuleLevels(this.state, id, want), (bulk) =>
+    this.landBulk(this.gameAction("upgradeModuleLevels", () => upgradeModuleLevels(this.state, id, want)), (bulk) =>
       bulk.levels === 1
         ? `${META[module.type].name} upgraded to level ${module.level}.`
         : `${META[module.type].name} +${bulk.levels} levels · ${formatInt(bulk.spent)} ν`,
@@ -1726,7 +1727,7 @@ export class App {
   // the chords move the moment it lands.
   setBendShift(id: string, shift: number): void {
     const before = this.activeInstancesOf(displayedRates(this.state, flowLive(this.state)));
-    if (this.act(setBendShift(this.state, id, shift), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`)) {
+    if (this.act(this.gameAction("setBendShift", () => setBendShift(this.state, id, shift)), `Bend re-pitched ${shift > 0 ? "sharp" : "flat"} ${Math.abs(shift)}.`)) {
       this.strumFormedChords(before, id);
     }
   }
@@ -1737,7 +1738,7 @@ export class App {
   setBoosterTarget(id: string, targetId: string | null): void {
     const recipient = targetId === null ? null : this.state.modules.find((m) => m.id === targetId);
     this.act(
-      setBoosterTarget(this.state, id, targetId),
+      this.gameAction("setBoosterTarget", () => setBoosterTarget(this.state, id, targetId)),
       recipient && recipient.pos ? `Spotlight focused on ${cellNoteOf(recipient.pos)}.` : "Spotlight support cleared.",
     );
   }
@@ -1746,7 +1747,7 @@ export class App {
   // levelable module, deployed and tray alike, spacers never. The toast
   // reports what landed, whatever the chip promised.
   upgradeAllAction(want: number | "max"): void {
-    this.landBulk(upgradeAll(this.state, want), (bulk) =>
+    this.landBulk(this.gameAction("upgradeAll", () => upgradeAll(this.state, want)), (bulk) =>
       want === "max"
         ? `UPGRADE ALL MAX: ${bulk.levels} levels across ${bulk.modules} modules · ${formatNumber(bulk.spent)} ν`
         : `UPGRADE ALL +${want}: ${bulk.levels} level${bulk.levels === 1 ? "" : "s"} across the board · ${formatNumber(bulk.spent)} ν`,
@@ -1787,7 +1788,7 @@ export class App {
       this.restoreModalInvoker();
       return;
     }
-    this.reportCombine(combine(this.state, offer.dragId, offer.targetId));
+    this.reportCombine(this.gameAction("combine", () => combine(this.state, offer.dragId, offer.targetId)));
     this.restoreModalInvoker();
   }
 
@@ -1812,7 +1813,7 @@ export class App {
   // pairs, the flow lock); a landing reports the sweep like the bulk
   // purchases report their buy.
   mergeAllAction(): void {
-    const result = mergeAll(this.state);
+    const result = this.gameAction("mergeAll", () => mergeAll(this.state));
     if (!result.ok) {
       this.say(result.reason ?? "Nothing to combine.");
       this.render();
@@ -1835,7 +1836,7 @@ export class App {
   scrapModuleAction(id: string): void {
     if (this.ui.placing === id) this.ui.placing = null;
     const module = this.state.modules.find((m) => m.id === id);
-    const result = scrapModule(this.state, id);
+    const result = this.gameAction("scrapModule", () => scrapModule(this.state, id));
     if (!result.ok) {
       this.say(result.reason ?? "This module cannot be scrapped.");
       this.render();
@@ -1852,7 +1853,8 @@ export class App {
   confirmInventoryMerge(): void {
     const offer = this.ui.inventory.merge;
     if (!offer?.partner || this.ui.inventory.scrapMode) return;
-    const result = combineInventory(this.state, offer.id, offer.partner);
+    const partner = offer.partner;
+    const result = this.gameAction("combineInventory", () => combineInventory(this.state, offer.id, partner));
     if (result.ok) this.ui.inventory.merge = null;
     this.reportCombine(result);
   }
@@ -1861,7 +1863,7 @@ export class App {
     const inv = this.ui.inventory;
     if (!inv.scrapMode || !inv.scrapReview) return;
     const count = inv.selected.length;
-    const result = scrapInventoryBatch(this.state, inv.selected);
+    const result = this.gameAction("scrapInventoryBatch", () => scrapInventoryBatch(this.state, inv.selected));
     if (!result.ok) { this.say(result.reason ?? "Selection changed."); this.render(); return; }
     inv.selected = []; inv.scrapMode = false; inv.scrapReview = false;
     this.ui.placing = null;
@@ -1875,7 +1877,7 @@ export class App {
   // when the branch empties, closing when both run dry — so a sweep of
   // skips and picks is one panel visit (2026-10-18 feedback).
   skipDraftAction(offerId: string): void {
-    const result = skipRoll(this.state, offerId);
+    const result = this.gameAction("skipRoll", () => skipRoll(this.state, offerId));
     if (!result.ok) {
       this.say(result.reason ?? "That roll cannot be skipped.");
       this.render();
@@ -1892,7 +1894,7 @@ export class App {
   // permanent rung and the toast names the new chance. A refusal — flow
   // lock, empty bank, tuned ladder — says so and touches nothing.
   buyDraftUpgradeAction(): void {
-    const result = buyDraftUpgrade(this.state);
+    const result = this.gameAction("buyDraftUpgrade", () => buyDraftUpgrade(this.state));
     if (!result.ok) {
       this.say(result.reason ?? "The Draft Loom cannot be improved.");
       this.render();
@@ -1909,7 +1911,7 @@ export class App {
   // lock, empty bank, or a tier product the unlocked cap cannot honor —
   // says so and touches nothing.
   buySpecialDraftAction(kind: SpecialDraftKind): void {
-    const result = buySpecialDraft(this.state, kind);
+    const result = this.gameAction("buySpecialDraft", () => buySpecialDraft(this.state, kind));
     if (!result.ok) {
       this.say(result.reason ?? "That special draft cannot be bought.");
       this.render();
@@ -1925,7 +1927,7 @@ export class App {
   // resolve it with the same choose and skip. The toast names the
   // guarantee so the banked draft reads in the ledger line.
   rollSpecialDraftAction(kind: SpecialDraftKind, category: Category): void {
-    const result = useSpecialDraft(this.state, kind, category);
+    const result = this.gameAction("useSpecialDraft", () => useSpecialDraft(this.state, kind, category));
     if (!result.ok) {
       this.say(result.reason ?? "That special draft cannot be rolled.");
       this.render();
@@ -2012,7 +2014,7 @@ export class App {
     const swap = deployedAt(this.state, detail.pos) !== undefined;
     if (
       this.act(
-        placeModule(this.state, id, detail.pos),
+        this.gameAction("placeModule", () => placeModule(this.state, id, detail.pos)),
         swap ? `${META[module.type].name} swapped in — the displaced module waits in the tray.` : `${META[module.type].name} placed at ${cellNoteOf(detail.pos)}.`,
       )
     ) {
@@ -2028,7 +2030,7 @@ export class App {
     const detail = this.ui.detail;
     if (!detail || this.state.mode !== "upgrade") return;
     if (!this.state.world.weapons.some((w) => w.id === id && w.pos === null) && !this.state.world.columns.some((c) => c.id === id && c.pos === null)) return;
-    if (this.act(placeWorldOccupant(this.state, id, detail.pos), `${this.worldOccupantName(id)} placed at ${cellNoteOf(detail.pos)}.`)) {
+    if (this.act(this.gameAction("placeWorldOccupant", () => placeWorldOccupant(this.state, id, detail.pos)), `${this.worldOccupantName(id)} placed at ${cellNoteOf(detail.pos)}.`)) {
       focusDetailFace(this.ui.detail!.face);
     }
   }
@@ -2241,7 +2243,7 @@ export class App {
       // The arm persists across buys: sweep several cells, then back out
       // yourself via the banner's Cancel (or Esc). act() re-renders each
       // time, so the banner hint and hex prices step to the next scaler rung.
-      this.act(buyCell(state, pos), "Cell bought.");
+      this.act(this.gameAction("buyCell", () => buyCell(state, pos)), "Cell bought.");
       return;
     }
     if (ui.placing) {
@@ -2273,18 +2275,18 @@ export class App {
   // preferring one carrying the placed voice.
   private placeAndStrum(module: ModuleInstance, pos: Hex): void {
     const before = this.activeInstancesOf(displayedRates(this.state, flowLive(this.state)));
-    if (this.act(placeModule(this.state, module.id, pos), `${META[module.type].name} placed.`)) {
+    if (this.act(this.gameAction("placeModule", () => placeModule(this.state, module.id, pos)), `${META[module.type].name} placed.`)) {
       this.ui.placing = null;
       this.strumFormedChords(before, module.id);
     }
   }
 
   returnToInventory(id: string): void {
-    this.act(returnModule(this.state, id), "Returned to inventory.");
+    this.act(this.gameAction("returnModule", () => returnModule(this.state, id)), "Returned to inventory.");
   }
 
   addNote(text: string): void {
-    const result = writeNote(this.state, text, Date.now());
+    const result = this.gameAction("writeNote", () => writeNote(this.state, text, Date.now()));
     if (result.ok) {
       this.say("Noted.");
       this.save();
@@ -2301,7 +2303,7 @@ export class App {
     success: string,
     onSuccess?: () => void,
   ): void {
-    const result = run();
+    const result = this.gameAction(success, run);
     if (result.ok) {
       onSuccess?.();
       this.say(success);
@@ -2348,7 +2350,7 @@ export class App {
       this.render();
       return;
     }
-    const result = addPracticeLog(this.state, habit.id, minutes, Date.now());
+    const result = this.gameAction("addPracticeLog", () => addPracticeLog(this.state, habit.id, minutes, Date.now()));
     if (result.ok) {
       this.ui.focusForm = null;
       const goalNote =
@@ -2385,7 +2387,7 @@ export class App {
   // ── The habit editor's goal and color (issue #445) ──────────────────────
 
   createGoalAction(habitId: string, minutes: number, schedule: "once" | "daily" | "weekly"): void {
-    const result = createGoal(this.state, { habitId, minutes, schedule, now: Date.now() });
+    const result = this.gameAction("createGoal", () => createGoal(this.state, { habitId, minutes, schedule, now: Date.now() }));
     if (result.ok) {
       this.ui.focusForm = null;
       this.save();
@@ -2397,7 +2399,7 @@ export class App {
   }
 
   editGoalAction(goalId: string, minutes: number, schedule: "once" | "daily" | "weekly"): void {
-    const result = editGoal(this.state, goalId, { minutes, schedule }, Date.now());
+    const result = this.gameAction("editGoal", () => editGoal(this.state, goalId, { minutes, schedule }, Date.now()));
     if (result.ok) {
       this.ui.focusForm = null;
       this.save();
@@ -2409,7 +2411,7 @@ export class App {
   }
 
   deleteGoalAction(id: string): void {
-    const result = deleteGoal(this.state, id);
+    const result = this.gameAction("deleteGoal", () => deleteGoal(this.state, id));
     this.say(result.ok ? "Goal removed." : result.reason ?? "Could not remove the goal.");
     if (result.ok) {
       if (this.ui.focusForm === "goal-edit") this.ui.focusForm = null;
@@ -2421,7 +2423,7 @@ export class App {
   // The migration choice's landing: one carried-over row kept, its pending
   // siblings retired to history.
   retainGoalChoiceAction(id: string): void {
-    const result = retainGoalChoice(this.state, id);
+    const result = this.gameAction("retainGoalChoice", () => retainGoalChoice(this.state, id));
     this.say(result.ok ? "Goal kept." : result.reason ?? "Could not keep the goal.");
     if (result.ok) this.save();
     this.render();
@@ -2430,7 +2432,7 @@ export class App {
   // The habit's palette pick: identity alone, and every goal read inherits
   // it.
   setHabitColorAction(habitId: string, color: HabitColor): void {
-    const result = setHabitColor(this.state, habitId, color);
+    const result = this.gameAction("setHabitColor", () => setHabitColor(this.state, habitId, color));
     if (result.ok) this.save();
     else this.say(result.reason ?? "Could not set the color.");
     this.render();
@@ -2462,7 +2464,7 @@ export class App {
     const offer = this.state.bankedRolls.find((o) => o.id === offerId);
     const candidate = offer?.candidates.find((c) => c.id === candidateId);
     if (!candidate) return;
-    const result = chooseRoll(this.state, offerId, candidateId);
+    const result = this.gameAction("chooseRoll", () => chooseRoll(this.state, offerId, candidateId));
     if (!result.ok) {
       this.say(result.reason ?? "That roll cannot be taken.");
       this.render();
@@ -2517,7 +2519,7 @@ export class App {
   // the pool recalculated. When exit is pending, the session ends straight
   // after the settle, so the report precedes the summary.
   resolveHonesty(outcome: HonestyOutcome): void {
-    const resolution = resolveHonestyReport(this.state, outcome);
+    const resolution = this.gameAction("resolveHonestyReport", () => resolveHonestyReport(this.state, outcome));
     if (!resolution.ok) {
       this.say(resolution.reason ?? "The report cannot settle right now.");
       this.render();
@@ -2549,11 +2551,11 @@ export class App {
   // beforeunload, dismissal), so an unseen summary's half-entered
   // reflection survives a reload alongside the summary itself.
   recordReflectionText(text: string): void {
-    recordSummaryReflection(this.state, { text });
+    this.gameAction("recordSummaryReflection", () => recordSummaryReflection(this.state, { text }));
   }
 
   recordReflectionSlider(slider: number): void {
-    recordSummaryReflection(this.state, { slider });
+    this.gameAction("recordSummaryReflection", () => recordSummaryReflection(this.state, { slider }));
   }
 
   // The loud summary's dismissal (§5.7, §8): the post-session choice that
@@ -2562,7 +2564,7 @@ export class App {
   // same thing: the reflection recorded as its fields were touched, or
   // absent. No distinct skip state exists.
   dismissSummary(): void {
-    dismissSessionSummary(this.state);
+    this.gameAction("dismissSessionSummary", () => dismissSessionSummary(this.state));
     this.ui.modal = null;
     this.say("Session banked.");
     this.save();
@@ -2573,7 +2575,7 @@ export class App {
   // The opening arc's one pop-up (§8): dismissal is once, ever — the flag
   // persists, so the card never re-fires, this session or any later one.
   dismissArcCard(): void {
-    const result = dismissArcCardAction(this.state);
+    const result = this.gameAction("dismissArcCardAction", () => dismissArcCardAction(this.state));
     if (!result.ok) return;
     this.save();
     this.render();
@@ -3144,11 +3146,19 @@ export class App {
   // on the run's state — real prerequisites, real mode restrictions, the
   // engine's own outcome — recorded verbatim, saved into the isolated
   // store on success, and rendered either way.
+  // Visual gestures and experiment commands share recording and engine outcomes.
+  private gameAction<T extends { ok: boolean; reason?: string }>(label: string, perform: () => T): T {
+    const result = perform();
+    if (this.devScenarioId) {
+      this.recordIntervention(label, result);
+      this.refreshScenarioNote();
+    }
+    return result;
+  }
+
   private devGameAction(label: string, perform: () => ActionResult): ActionResult {
     this.requireExperiment();
-    const result = perform();
-    this.recordIntervention(label, result);
-    this.refreshScenarioNote();
+    const result = this.gameAction(label, perform);
     if (result.ok) this.save();
     this.render();
     return result;
@@ -3169,6 +3179,51 @@ export class App {
 
   devActionEndSession(): ActionResult {
     return this.devGameAction("End the session", () => endSession(this.state, Date.now()));
+  }
+
+  devAction(name: string, args: unknown[]): ActionResult {
+    const command = Object.hasOwn(GAME_COMMANDS, name) ? GAME_COMMANDS[name] : undefined;
+    if (!command) throw new Error(`Unknown game action "${name}" — use actions to list the declared catalog.`);
+    return this.devGameAction(`${name} ${JSON.stringify(args)}`, () => command.run(this.state, args));
+  }
+
+  devActionPause(): ActionResult {
+    return this.devGameAction("Pause", () => pauseSession(this.state));
+  }
+
+  devActionResume(): ActionResult {
+    return this.devGameAction("Resume", () => resumeSession(this.state));
+  }
+
+  devActionHonesty(outcome: HonestyOutcome): ActionResult {
+    if (!["full", "planned", "missed"].includes(outcome)) throw new Error("honesty needs full, planned, or missed.");
+    return this.devGameAction(`Honesty ${outcome}`, () => resolveHonestyReport(this.state, outcome));
+  }
+
+  devActionWorldBuy(): ActionResult {
+    return this.devGameAction("Buy Charge Column", () => buyChargeColumn(this.state));
+  }
+
+  devActionWorldHone(type: WeaponType): ActionResult {
+    if (type !== "chargeBlade") throw new Error("world-hone needs chargeBlade.");
+    return this.devGameAction(`Hone ${type}`, () => buyHoneRank(this.state, type));
+  }
+
+  devActionWorldPlace(id: string, q: number, r: number): ActionResult {
+    this.requireCell(q, r);
+    return this.devGameAction(`Place World ${id} at ${q},${r}`, () => placeWorldOccupant(this.state, id, hex(q, r)));
+  }
+
+  devActionWorldRetrieve(id: string): ActionResult {
+    return this.devGameAction(`Retrieve World ${id}`, () => retrieveWorldOccupant(this.state, id));
+  }
+
+  devActionWorldPriority(id: string, keys: string[]): ActionResult {
+    return this.devGameAction(`World priority ${id}: ${keys.join(", ")}`, () => setWeaponTargetPriority(this.state, id, keys));
+  }
+
+  devActionEndBreather(): ActionResult {
+    return this.devGameAction("End breather", () => endBreatherAction(this.state));
   }
 
   devActionBreather(): ActionResult {
@@ -3250,7 +3305,17 @@ export class App {
     const [verb, ...args] = command.split(/\s+/);
     switch (verb) {
       case "help":
-        return "commands: scenarios · launch <id> · assert · inspect · run [k=v…] · start <min|open> · end · breather · advance <s> · buy <type> · cell <q> <r> · place <id> <q> <r> · levels <id> <n|max> · prestige · grant <nous|synth|world> · tuning";
+        return "commands: actions · action <name> [JSON argument array] · scenarios · launch <id> · assert · inspect · run [k=v…] · start <min|open> · end · pause · resume · honesty <full|planned|missed> · breather · end-breather · world-buy · world-hone <chargeBlade> · world-place <id> <q> <r> · world-retrieve <id> · world-priority <id> [keys…] · advance <s> · buy <type> · cell <q> <r> · place <id> <q> <r> · levels <id> <n|max> · prestige · grant <nous|synth|world> · tuning";
+      case "actions":
+        return Object.keys(GAME_COMMANDS).join(" · ");
+      case "action": {
+        const name = args[0];
+        if (!name) throw new Error("action needs a declared name and a JSON argument array — action buyCapacity []");
+        const raw = command.slice(command.indexOf(name) + name.length).trim();
+        const values: unknown = JSON.parse(raw || "[]");
+        if (!Array.isArray(values)) throw new Error("action arguments must be a JSON array.");
+        return this.terminalResult(this.devAction(name, values), `${name} applied.`);
+      }
       case "scenarios":
         return this.devScenarios().map((s) => `${s.id} — ${s.name}: ${s.situation}`).join(" · ");
       case "tuning":
@@ -3316,6 +3381,36 @@ export class App {
       case "end": {
         const result = this.devActionEndSession();
         return this.terminalResult(result, "session banked.");
+      }
+      case "pause":
+        return this.terminalResult(this.devActionPause(), "paused.");
+      case "resume":
+        return this.terminalResult(this.devActionResume(), "flow resumed.");
+      case "honesty": {
+        const outcome = args[0];
+        if (outcome !== "full" && outcome !== "planned" && outcome !== "missed") throw new Error("honesty needs full, planned, or missed.");
+        return this.terminalResult(this.devActionHonesty(outcome), "report settled.");
+      }
+      case "end-breather":
+        return this.terminalResult(this.devActionEndBreather(), "breather ended.");
+      case "world-buy":
+        return this.terminalResult(this.devActionWorldBuy(), "Charge Column purchased.");
+      case "world-hone": {
+        if (args[0] !== "chargeBlade") throw new Error("world-hone needs chargeBlade.");
+        return this.terminalResult(this.devActionWorldHone(args[0]), "weapon honed.");
+      }
+      case "world-place": {
+        const [id, q, r] = args;
+        if (!id || q === undefined || r === undefined) throw new Error("world-place needs id q r.");
+        return this.terminalResult(this.devActionWorldPlace(id, Number(q), Number(r)), "World occupant placed.");
+      }
+      case "world-retrieve": {
+        if (!args[0]) throw new Error("world-retrieve needs an occupant id.");
+        return this.terminalResult(this.devActionWorldRetrieve(args[0]), "World occupant retrieved.");
+      }
+      case "world-priority": {
+        if (!args[0]) throw new Error("world-priority needs a weapon id and ordered enemy keys.");
+        return this.terminalResult(this.devActionWorldPriority(args[0], args.slice(1)), "target priority set.");
       }
       case "breather": {
         const result = this.devActionBreather();
