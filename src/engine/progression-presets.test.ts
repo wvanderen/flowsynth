@@ -177,7 +177,14 @@ describe("scripted-run entry from a preset", () => {
       // runPlaythrough asserts its built candidate before walking, so a
       // run that started anywhere but the preset's situation would have
       // thrown; the run id names the preset it started from.
+      const initial = scenarioOf(id)!.build(recipe.schedule.startAt);
+      const lastEnd = Math.max(...initial.sessionRecords.map((session) => session.endedAt));
       const record = runPlaythrough(recipe);
+      expect(record.recipe.schedule.startAt).toBeGreaterThanOrEqual(lastEnd);
+      const added = record.state.sessionRecords.slice(initial.sessionRecords.length);
+      for (const session of added) expect(session.startedAt).toBeGreaterThanOrEqual(lastEnd);
+      expect(record.state.sessionRecords.slice(0, initial.sessionRecords.length)).toEqual(initial.sessionRecords);
+      if (id !== "approaching-prestige") expect(added.length).toBeGreaterThan(0);
       expect(record.runId).toMatch(new RegExp(`^${id}-s468-`));
       expect(record.recipe.scenarioId).toBe(id);
       expect(record.days).toBe(1);

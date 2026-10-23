@@ -2789,13 +2789,33 @@ export class App {
       : `${scenario.name} ✗`;
   }
 
-  devLaunchScenario(id: string, now: number = Date.now()): void {
+  private scenarioLaunch = 0;
+
+  devLaunchScenario(id: string, now: number = Date.now()): void | Promise<void> {
     if (!this.dev) return;
     const scenario = scenarioOf(id);
     if (!scenario) {
       this.say(`Dev: no scenario "${id}" — the suite offers ${SCENARIOS.map((s) => s.id).join(", ")}.`);
       return;
     }
+    const launch = ++this.scenarioLaunch;
+    if (scenario.prepare) {
+      this.devScenarioNote = `${scenario.name} — preparing`;
+      this.render();
+      return scenario.prepare().then(() => {
+        if (!this.released && launch === this.scenarioLaunch) this.installScenario(scenario, now);
+      }).catch((error: Error) => {
+        if (this.released || launch !== this.scenarioLaunch) return;
+        this.devScenarioNote = `${scenario.name} ✗ ${error.message}`;
+        this.say(`Dev scenario failed: ${error.message}`);
+        this.render();
+        throw error;
+      });
+    }
+    this.installScenario(scenario, now);
+  }
+
+  private installScenario(scenario: ScenarioDescriptor, now: number): void {
     let candidate: GameState;
     try {
       candidate = scenario.build(now);

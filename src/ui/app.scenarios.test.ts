@@ -181,12 +181,20 @@ describe("the launch command", () => {
   // through the same boundary with the same guarantees. This case carries
   // the walks — the first launches of this file pay the declared recipes'
   // cost, the memo makes every later launch a clone.
-  it("launching the progression presets installs each walked situation in an isolated save", { timeout: 240_000 }, () => {
+  it("launching the progression presets installs each walked situation in an isolated save", { timeout: 240_000 }, async () => {
     const t = Date.now();
     seedOrdinaryAndBoot(t);
     const ordinary = localStorage.getItem(STORAGE_KEY)!;
 
-    app.devLaunchScenario("approaching-prestige", t);
+    const before = app.state;
+    let installed = false;
+    const launch = Promise.resolve(app.devLaunchScenario("approaching-prestige", t)).then(() => { installed = true; });
+    expect(app.devScenarioNote).toContain("preparing");
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    expect(installed).toBe(false);
+    expect(app.state).toBe(before);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(ordinary);
+    await launch;
     expect(app.devScenarioId).toBe("approaching-prestige");
     expect(app.state.prestiges).toBe(0);
     expect(app.state.arete).toBe(0);
@@ -195,7 +203,7 @@ describe("the launch command", () => {
     expect(app.devScenarioNote).toContain("recipe checkpoint · isolated save");
     expect(localStorage.getItem(STORAGE_KEY)).toBe(ordinary);
 
-    app.devLaunchScenario("after-first-bank", t);
+    await app.devLaunchScenario("after-first-bank", t);
     expect(app.devScenarioId).toBe("after-first-bank");
     expect(app.state.prestiges).toBe(1);
     expect(app.state.arete).toBe(2);
@@ -204,7 +212,7 @@ describe("the launch command", () => {
     expect(app.devScenarioNote).toContain("earned Arete unspent");
     expect(app.devScenarioNote).toContain("recipe checkpoint · isolated save");
 
-    app.devLaunchScenario("world-enemy", t);
+    await app.devLaunchScenario("world-enemy", t);
     expect(app.devScenarioId).toBe("world-enemy");
     const living = Object.values(app.state.world.enemies).filter((enemy) => enemy.discovered && enemy.hp > 0);
     expect(living.length).toBeGreaterThanOrEqual(1);
@@ -227,11 +235,11 @@ describe("the launch command", () => {
     expect(revived.state.nous).toBe(500);
   });
 
-  it("repeating a progression launch rebuilds the walked setup without accumulating", { timeout: 240_000 }, () => {
+  it("repeating a progression launch rebuilds the walked setup without accumulating", { timeout: 240_000 }, async () => {
     const t = Date.now();
     app = boot(undefined, true);
     for (const id of ["fresh-start", "after-first-bank", "world-enemy"] as const) {
-      app.devLaunchScenario(id, t);
+      await app.devLaunchScenario(id, t);
       // The walked states already carry the recipe's own practice habit;
       // fresh start carries none.
       const lived = app.state.habits.length;
@@ -240,7 +248,7 @@ describe("the launch command", () => {
       addPracticeLog(app.state, app.state.habits[0]!.id, 10, t);
       expect(app.state.habits).toHaveLength(lived + 1);
 
-      app.devLaunchScenario(id, t);
+      await app.devLaunchScenario(id, t);
       expect(app.state).toEqual(scenarioOf(id)!.build(t));
       expect(app.devScenarioNote).toContain("✓");
       expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");
@@ -276,17 +284,17 @@ describe("the launch command", () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(ordinary);
   });
 
-  it("repeating a launch rebuilds the setup without accumulating, either scenario", () => {
+  it("repeating a launch rebuilds the setup without accumulating, either scenario", async () => {
     const t = Date.now();
     app = boot(undefined, true);
     for (const id of ["fresh-start", "focus"] as const) {
-      app.devLaunchScenario(id, t);
+      await app.devLaunchScenario(id, t);
       app.devNous();
       createHabit(app.state, "Sketching");
       addPracticeLog(app.state, app.state.habits[0]!.id, 10, t);
       expect(app.state.habits).toHaveLength(id === "focus" ? 2 : 1);
 
-      app.devLaunchScenario(id, t);
+      await app.devLaunchScenario(id, t);
       expect(app.state).toEqual(id === "focus" ? createFocusScenarioState(t) : createInitialState());
       expect(app.devScenarioNote).toContain("✓");
       expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");
@@ -320,6 +328,38 @@ describe("the launch command", () => {
     expect(fresh.state).toEqual(untouched);
     expect(fresh.devScenarioId).toBeNull();
     expect(fresh.devScenarioNote).toBeNull();
+  });
+
+  it("a newer selection survives a pending preparation and its late failure", async () => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("after-first-bank")!;
+    let reject!: (error: Error) => void;
+    const prepare = vi.spyOn(scenario as Required<typeof scenario>, "prepare").mockImplementation(() => new Promise<void>((_, fail) => { reject = fail; }));
+    try {
+      const pending = app.devLaunchScenario("after-first-bank");
+      app.devLaunchScenario("focus");
+      reject(new Error("stale preparation"));
+      await pending;
+      expect(app.devScenarioId).toBe("focus");
+      expect(app.devScenarioNote).toContain("Focus ✓");
+    } finally { prepare.mockRestore(); }
+  });
+
+  it("a newer selection survives a successful pending preparation", async () => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("after-first-bank")!;
+    let resolve!: () => void;
+    const prepare = vi.spyOn(scenario as Required<typeof scenario>, "prepare").mockImplementation(() => new Promise<void>((done) => { resolve = done; }));
+    const build = vi.spyOn(scenario, "build");
+    try {
+      const pending = app.devLaunchScenario("after-first-bank");
+      app.devLaunchScenario("fresh-start");
+      resolve();
+      await pending;
+      expect(build).not.toHaveBeenCalled();
+      expect(app.devScenarioId).toBe("fresh-start");
+      expect(app.state).toEqual(createInitialState());
+    } finally { prepare.mockRestore(); build.mockRestore(); }
   });
 
   it("is dev-gated: a normal instrument ignores the boundary", () => {
@@ -395,10 +435,10 @@ describe("the active scenario's assertion", () => {
     expect(() => app.devScenarioAssert(t)).toThrowError(/Fresh start: expected the first era/);
   });
 
-  it("asserts a walked preset by its own named facts, and relaunch restores it", { timeout: 240_000 }, () => {
+  it("asserts a walked preset by its own named facts, and relaunch restores it", { timeout: 240_000 }, async () => {
     const t = Date.now();
     app = boot(undefined, true);
-    app.devLaunchScenario("after-first-bank", t);
+    await app.devLaunchScenario("after-first-bank", t);
     expect(() => app.devScenarioAssert(t)).not.toThrow();
     expect(app.devScenarioNote).toContain("After first bank ✓");
 
@@ -409,7 +449,7 @@ describe("the active scenario's assertion", () => {
     expect(app.devScenarioNote).toContain("After first bank ✗");
     expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✗");
 
-    app.devLaunchScenario("after-first-bank", t);
+    await app.devLaunchScenario("after-first-bank", t);
     expect(app.state.arete).toBe(2);
     expect(() => app.devScenarioAssert(t)).not.toThrow();
     expect(app.devScenarioNote).toContain("After first bank ✓");
@@ -423,7 +463,7 @@ describe("the active scenario's assertion", () => {
 });
 
 describe("the dev panel's suite entry", () => {
-  it("drives the same launch command the app method is", () => {
+  it("drives the same launch command the app method is", async () => {
     app = boot(undefined, true);
     const select = document.getElementById("dev-scenario") as HTMLSelectElement;
     expect(select).not.toBeNull();
@@ -455,7 +495,7 @@ describe("the dev panel's suite entry", () => {
     // same launch command, the walked situation installed.
     relaunched.value = "after-first-bank";
     document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
-    expect(app.devScenarioId).toBe("after-first-bank");
+    await vi.waitFor(() => expect(app.devScenarioId).toBe("after-first-bank"));
     expect(app.state.arete).toBe(2);
     expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✓");
   });

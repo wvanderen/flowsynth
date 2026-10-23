@@ -30,7 +30,7 @@ import { createHabit, selectHabit } from "./habits";
 import { adjacent, hexDistance, sameHex } from "./hex";
 import { writeNote } from "./notes";
 import { SCENARIOS, scenarioOf } from "./scenarios";
-import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt } from "./world";
+import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt, hasActiveWorldEnemy } from "./world";
 import type { GameState, Hex, ModuleInstance, WeaponType } from "./types";
 
 // The reproducible playthrough runner (issues #468/#469, parent #465): a
@@ -345,7 +345,7 @@ export function checkpointRecipeOf(id: PlaythroughCheckpointId): PlaythroughReci
 // any spending, placement, or recovery bookkeeping touches the era, so
 // the stopped state is the decision itself, unplayed.
 function worldDecisionPending(state: GameState): boolean {
-  const living = Object.values(state.world.enemies).some((enemy) => enemy.discovered && enemy.hp > 0);
+  const living = hasActiveWorldEnemy(state);
   const waiting =
     state.world.weapons.some((weapon) => weapon.pos === null) ||
     state.world.columns.some((column) => column.pos === null);
@@ -1007,7 +1007,7 @@ function recoveryComplete(ctx: RunContext): boolean {
 // One planned session at its target, the breather the session minted, and
 // the honest stamps on both ends. Never walks past the target: the prompt
 // policy ends sessions at their plan — a readable, checkable rule.
-function runSession(ctx: RunContext, state: GameState, day: number, session: number): void {
+function* runSession(ctx: RunContext, state: GameState, day: number, session: number): Generator<void> {
   const target = ctx.schedule.sessionMinutes * 60;
   const startMs = sessionStartMs(ctx.schedule, day, session);
   ctx.elapsedMs = startMs;
@@ -1026,6 +1026,7 @@ function runSession(ctx: RunContext, state: GameState, day: number, session: num
   for (let step = 0; step < target / STEP_SECONDS; step++) {
     advance(state, STEP_SECONDS, ctx.rng);
     ctx.elapsedMs += STEP_SECONDS * 1000;
+    yield;
   }
   const ended = endSession(state, startMs + target * 1000);
   const recordLine = state.sessionRecords[state.sessionRecords.length - 1];
@@ -1118,7 +1119,7 @@ export function runPlaythrough(
   recipe: PlaythroughRecipe,
   source: PlaythroughSource = playthroughSource(),
 ): PlaythroughRecord {
-  return walkPlaythrough(recipe, null, source);
+  return finishWalk(walkPlaythrough(recipe, null, source));
 }
 
 // The checkpoint walk (issue #471): the same walk with one declared stop.
@@ -1131,7 +1132,13 @@ export function runPlaythroughCheckpoint(
   source: PlaythroughSource = playthroughSource(),
 ): PlaythroughRecord {
   const checkpoint = checkpointOf(checkpointId);
-  const record = walkPlaythrough(recipe, checkpointId, source);
+  const record = finishWalk(walkPlaythrough(recipe, checkpointId, source));
+  return assertCheckpointReached(record, checkpoint);
+}
+
+function assertCheckpointReached(record: PlaythroughRecord, checkpoint: PlaythroughCheckpoint): PlaythroughRecord {
+  const checkpointId = checkpoint.id;
+  const recipe = record.recipe;
   if (record.stop.kind !== "checkpoint") {
     throw new Error(
       `Playthrough checkpoint "${checkpointId}" was not reached within the ${recipe.budgetDays}-day budget — ` +
@@ -1141,15 +1148,27 @@ export function runPlaythroughCheckpoint(
   return record;
 }
 
-function walkPlaythrough(
+function finishWalk(walk: Generator<void, PlaythroughRecord>): PlaythroughRecord {
+  let next = walk.next();
+  while (!next.done) next = walk.next();
+  return next.value;
+}
+
+function* walkPlaythrough(
   recipe: PlaythroughRecipe,
   checkpoint: PlaythroughCheckpointId | null,
   source: PlaythroughSource,
-): PlaythroughRecord {
+): Generator<void, PlaythroughRecord> {
   validatePlaythroughRecipe(recipe);
   const scenario = scenarioOf(recipe.scenarioId)!;
   const state = scenario.build(recipe.schedule.startAt);
-  scenario.assert(state, recipe.schedule.startAt);
+  // A checkpoint carries real session history. Continue after its last
+  // session and declared breather rather than restarting at the recipe's
+  // original anchor; record the effective input so a rerun is reproducible.
+  const lastEnd = state.sessionRecords.reduce((latest, session) => Math.max(latest, session.endedAt), -Infinity);
+  const startAt = Math.max(recipe.schedule.startAt, lastEnd + recipe.schedule.breatherMinutes * 60_000);
+  recipe = { ...recipe, schedule: { ...recipe.schedule, startAt } };
+  scenario.assert(state, startAt);
   const policy = policyOf(recipe.policyId);
   const ctx: RunContext = {
     schedule: recipe.schedule,
@@ -1212,45 +1231,28 @@ function walkPlaythrough(
     }
     return null;
   };
+  const stopBetweenSessions = (): boolean => {
+    if (doorOpen()) {
+      haltAt("approaching-prestige");
+      return true;
+    }
+    if (tryPrestige(ctx, state) && !ctx.pushing) {
+      complete = true;
+      stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
+      return true;
+    }
+    const hit = checkpointAfterDoor();
+    if (!hit) return false;
+    haltAt(hit);
+    return true;
+  };
   day: for (let day = 0; day < recipe.budgetDays; day++) {
     days = day + 1;
     for (let session = 0; session < recipe.schedule.sessionsPerDay; session++) {
-      // The policy checks its door at every between-sessions moment —
-      // before the break's purchases, so a claim due (or a reached
-      // horizon) is never spent into levels a prestige would wipe. The
-      // prompt door is the prompt run's completion; a pushing bank is the
-      // demonstration's middle, never its end — the record follows the
-      // next era until both recovery measures carry their marks.
-      if (doorOpen()) {
-        haltAt("approaching-prestige");
-        break day;
-      }
-      if (tryPrestige(ctx, state) && !ctx.pushing) {
-        complete = true;
-        stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
-        break day;
-      }
-      const hit = checkpointAfterDoor();
-      if (hit) {
-        haltAt(hit);
-        break day;
-      }
+      if (stopBetweenSessions()) break day;
       manage(ctx, state);
-      runSession(ctx, state, day, session);
-      if (doorOpen()) {
-        haltAt("approaching-prestige");
-        break day;
-      }
-      if (tryPrestige(ctx, state) && !ctx.pushing) {
-        complete = true;
-        stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
-        break day;
-      }
-      const hitAfterSession = checkpointAfterDoor();
-      if (hitAfterSession) {
-        haltAt(hitAfterSession);
-        break day;
-      }
+      yield* runSession(ctx, state, day, session);
+      if (stopBetweenSessions()) break day;
       // The between-sessions settlement: both recovery measures read here
       // too, so a measure crossed during the session carries its mark at
       // this moment, never a day late.
@@ -1402,3 +1404,28 @@ export function playthroughCheckpointPreset(id: PlaythroughCheckpointId): Playth
   }
   return { checkpoint, recipe, record: memo.record, state: structuredClone(memo.record.state) };
 }
+
+
+// The browser consumes the same walk cooperatively. A short slice keeps
+// input/paint available even on the long-session checkpoints; synchronous
+// engine callers still drain exactly the same generator without timers.
+export async function preparePlaythroughCheckpoint(id: PlaythroughCheckpointId): Promise<void> {
+  const source = playthroughSource();
+  if (checkpointMemo.get(id)?.source === source.engineSource) return;
+  const key = `${source.engineSource}:${id}`;
+  const pending = checkpointPreparation.get(key);
+  if (pending) return pending;
+  const preparation = (async () => {
+    const walk = walkPlaythrough(checkpointRecipeOf(id), id, source);
+    let next: IteratorResult<void, PlaythroughRecord>;
+    do {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      const deadline = performance.now() + 8;
+      do { next = walk.next(); } while (!next.done && performance.now() < deadline);
+    } while (!next.done);
+    checkpointMemo.set(id, { source: source.engineSource, record: assertCheckpointReached(next.value, checkpointOf(id)) });
+  })();
+  checkpointPreparation.set(key, preparation);
+  try { await preparation; } finally { checkpointPreparation.delete(key); }
+}
+const checkpointPreparation = new Map<string, Promise<void>>();

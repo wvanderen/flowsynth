@@ -82,6 +82,13 @@ stop — and folds the checkpoint into the run identity. The re-passes at
 The failed launch behaved correctly at the boundary: the ✗ line named
 the drift and the previous install stayed standing.
 
+## Review correction: retry budget
+
+The historical pass below exceeded the three-attempt total for each operation:
+five snapshot attempts and four resize attempts. Opening/reloading a tab did
+not reset that budget. This was a workflow violation, not additional evidence;
+the unavailable outcomes stand. Subsequent passes stop within the total budget.
+
 ## Unavailable checks
 
 - **Desktop screenshots** — unavailable: `preview_snapshot` timed out

@@ -1,7 +1,9 @@
+import { hasActiveWorldEnemy } from "./world";
 import { BALANCE } from "./constants";
 import { assertFocusScenario, createFocusScenarioState, focusScenarioSummary } from "./focus-scenario";
 import {
   playthroughCheckpointPreset,
+  preparePlaythroughCheckpoint,
   APPROACHING_PRESTIGE_RECIPE,
   PUSHING_CHECKPOINT_RECIPE,
   type PlaythroughCheckpointId,
@@ -42,6 +44,8 @@ export interface ScenarioDescriptor {
   readonly recipe?: PlaythroughRecipe;
   // The intended state, rebuilt from nothing every call.
   build(now: number): GameState;
+  // Optional cold preparation; the application awaits it before building.
+  prepare?(): Promise<void>;
   // The intended setup restated as checks, failing with a named reason.
   assert(state: GameState, now: number): void;
   // The ✓ readout's headline figures.
@@ -108,6 +112,7 @@ const APPROACHING_PRESTIGE: ScenarioDescriptor = {
   get recipe() {
     return APPROACHING_PRESTIGE_RECIPE;
   },
+  prepare: () => preparePlaythroughCheckpoint("approaching-prestige"),
   build: () => playthroughCheckpointPreset("approaching-prestige").state,
   assert: (state) => assertApproachingPrestige(state),
   summary: () => checkpointSummary("approaching-prestige"),
@@ -121,6 +126,7 @@ const AFTER_FIRST_BANK: ScenarioDescriptor = {
   get recipe() {
     return PUSHING_CHECKPOINT_RECIPE;
   },
+  prepare: () => preparePlaythroughCheckpoint("after-first-bank"),
   build: () => playthroughCheckpointPreset("after-first-bank").state,
   assert: (state) => assertAfterFirstBank(state, PUSHING_CHECKPOINT_RECIPE.claimTarget),
   summary: () => checkpointSummary("after-first-bank"),
@@ -134,6 +140,7 @@ const WORLD_ENEMY: ScenarioDescriptor = {
   get recipe() {
     return PUSHING_CHECKPOINT_RECIPE;
   },
+  prepare: () => preparePlaythroughCheckpoint("world-enemy-active"),
   build: () => playthroughCheckpointPreset("world-enemy-active").state,
   assert: (state) => assertWorldEnemy(state),
   summary: () => checkpointSummary("world-enemy-active"),
@@ -230,8 +237,7 @@ function assertWorldEnemy(state: GameState): void {
   const fail = failFor("World enemy");
   if (state.mode !== "upgrade") fail(`expected upgrade mode — found ${state.mode}.`);
   if (state.prestiges !== 1) fail(`expected the era after the first prestige — found ${state.prestiges}.`);
-  const living = Object.values(state.world.enemies).filter((enemy) => enemy.discovered && enemy.hp > 0);
-  if (living.length === 0) fail("expected a discovered enemy still alive — the World has no active fight.");
+  if (!hasActiveWorldEnemy(state)) fail("expected a discovered enemy still alive — the World has no active fight.");
   if (!state.world.weapons.some((weapon) => weapon.pos === null)) {
     fail("expected a weapon waiting in the tray — the placement decision is unplayed.");
   }
