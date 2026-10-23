@@ -17,6 +17,11 @@ source verified (`provenance.json` beside this README). The health check
 (`tools/evidence-healthcheck.mjs`) confirmed server provenance OK while
 classifying the snapshot stall.
 
+The review round after this pass changed only a test file
+(`be17f8d`: `src/ui/app.workflow.test.ts` assertion additions; the diff
+from the captured commit `194eeb7` touches no served UI source), so the
+captures' provenance stands; no recapture is owed for it.
+
 ## What ran on the verified checkout (in-page, `?dev=1`)
 
 The whole workflow thread of `src/ui/app.workflow.test.ts`, live:
@@ -96,9 +101,9 @@ Second pass (fresh tab, re-preflighted): identical thread, execution id
   verified-checkout captures: `docs/evidence/scenario-suite-2026-10-22/`
   (05, 06), `docs/evidence/issue-472/phone-terminal.png`, and
   `docs/evidence/run-artifacts-473/` (phone captures with measured
-  44 px floors), plus the phone suites
-  (`src/ui/app.phone.test.ts`, the scenario-entry touch cases in
-  `app.scenarios.test.ts`).
+  44 px floors), plus the phone suites (`src/ui/app.phone.test.ts` and
+  the dev console's phone-layout checks recorded in
+  `docs/evidence/dev-controls-audit-2026-10-22/`).
 - **Visibility confirmation** — the harness reported `visible: false`
   across both tabs throughout, including after activation; per the
   doctrine this is recorded unavailable, with capture readiness
