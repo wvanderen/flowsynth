@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-23T15:03:28.815Z",
+  "url": "http://localhost:5173",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-92d21477",
+  "branch": "fix/pr481-review-findings",
+  "commit": "f644fd5b33ed5605c4ce60d808abb75d4396bc9a",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}

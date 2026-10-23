@@ -34,40 +34,45 @@ import { SCENARIOS, scenarioOf } from "./scenarios";
 import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt, hasActiveWorldEnemy } from "./world";
 import type { GameState, Hex, ModuleInstance, ModuleType, WeaponType } from "./types";
 
-// The reproducible playthrough runner (issues #468/#469, parent #465): a
-// recipe declares every behavior-affecting input — starting scenario, seed,
-// player policy, practice schedule, time budget, claim target, calendar
-// anchor, and the still empty override set — and the runner walks it through
-// the real engine actions on a real session schedule: two 25-minute daily
-// sessions, a five-minute breather, one practice habit with a daily goal,
-// and honest overnight gaps where upgrade mode produces and credits
-// nothing. The prompt policy prestiges at the first between-sessions moment
-// the horizon is reached; the first-eligibility claim banks zero Arete
-// under the frontier curve, and that zero stands rather than being topped
-// up. The pushing policy shares the prompt policy's every purchase rule and
-// the same schedule, but never prestiges at the first eligibility: it
-// pushes until the pending claim reaches its configured target, then
-// banks, and its record follows the next era through earned-Arete
-// spending, World placement and purchases, and the two recovery measures —
-// regaining the first era's pre-reset production and reaching prestige
-// eligibility again, each timed on both clocks. The same walk carries the
-// progression checkpoints (issue #471): declared between-sessions stops —
-// the door approaching, the first earned bank, the World's living fight —
-// whose halted state is the progression presets' ground, reached by the
-// walk rather than built by hand. Nothing here grants
-// resources; an exhausted budget is an explicit incomplete result with the
-// last milestone, the bottleneck, and the declined actions' reasons — and
-// a missing recovery measure is an explicit unreached mark, never a
-// fabricated one. The session loop's prior art is the calibration walk
-// (#262) — its seeded rng and frontier/preview patterns are reused, its
-// compressed fictional time is not: schedule and day accounting are this
-// module's own, and the calibration run remains the economy-only kind this
-// record's kind line distinguishes itself from.
+// The reproducible playthrough runner (issues #468/#469/#472, parent
+// #465): a recipe declares every behavior-affecting input — starting
+// scenario, seed, player policy, practice schedule, time budget, claim
+// target, calendar anchor, and the declared tuning overrides — and the
+// runner walks it through the real engine actions on a real session
+// schedule: two 25-minute daily sessions, a five-minute breather, one
+// practice habit with a daily goal, and honest overnight gaps where
+// upgrade mode produces and credits nothing. The prompt policy prestiges
+// at the first between-sessions moment the horizon is reached; the
+// first-eligibility claim banks zero Arete under the frontier curve, and
+// that zero stands rather than being topped up. The pushing policy shares
+// the prompt policy's every purchase rule and the same schedule, but never
+// prestiges at the first eligibility: it pushes until the pending claim
+// reaches its configured target, then banks, and its record follows the
+// next era through earned-Arete spending, World placement and purchases,
+// and the two recovery measures — regaining the first era's pre-reset
+// production and reaching prestige eligibility again, each timed on both
+// clocks. The same walk carries the progression checkpoints (issue #471):
+// declared between-sessions stops — the door approaching, the first earned
+// bank, the World's living fight — whose halted state is the progression
+// presets' ground, reached by the walk rather than built by hand. Overrides
+// (issue #472) are declared, validated tuning values — magnitudes only,
+// never new mechanics — confined to the walk's own candidate state; the
+// same declarations serve the terminal command and the visual controls.
+// Nothing here grants resources; an exhausted budget is an explicit
+// incomplete result with the last milestone, the bottleneck, and the
+// declined actions' reasons — and a missing recovery measure is an
+// explicit unreached mark, never a fabricated one. The session loop's
+// prior art is the calibration walk (#262) — its seeded rng and
+// frontier/preview patterns are reused, its compressed fictional time is
+// not: schedule and day accounting are this module's own, and the
+// calibration run remains the economy-only kind this record's kind line
+// distinguishes itself from.
 
 // The runner's own version: a behavior-affecting change here is a source
 // change, and a rerun against different source identifies separately
-// (story 36's foundation).
-export const PLAYTHROUGH_RUNNER_VERSION = 7;
+// (story 36's foundation). The declared override set (issue #472) rides
+// the recipe, so this bump records the walk's new inputs.
+export const PLAYTHROUGH_RUNNER_VERSION = 8;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -123,6 +128,45 @@ function policyOf(id: string): PlaythroughPolicy {
   return PLAYTHROUGH_POLICIES.find((policy) => policy.id === id) ?? PROMPT_POLICY;
 }
 
+// ── The declared tuning overrides (issue #472, parent stories 31–32) ──
+
+// One tunable magnitude: what it names, what it does, the range a recipe
+// may declare, and the shipped default a blank carries. Magnitudes only —
+// no new mechanic definitions, no arbitrary code; the walk applies each
+// through the engine's own parameterized seam, and every other reader of
+// the constant keeps the shipped value.
+export interface PlaythroughTuningParam {
+  readonly key: string;
+  readonly name: string;
+  readonly description: string;
+  readonly min: number;
+  readonly max: number;
+  readonly default: number;
+}
+
+export const PLAYTHROUGH_TUNING: readonly PlaythroughTuningParam[] = [
+  {
+    key: "openingGrant",
+    name: "Opening grant",
+    description: "The ν grant each era start pays — the run's first moment on a fresh start, and every prestige reset.",
+    min: 0,
+    max: 120,
+    default: BALANCE.openingGrant,
+  },
+  {
+    key: "claimBase",
+    name: "Frontier claim base",
+    description: "The Arete the frontier claim curve pays at the World's 1T entry depth — the pushing bank's floor.",
+    min: 1,
+    max: 36,
+    default: BALANCE.world.claimBase,
+  },
+];
+
+function tuningParamOf(key: string): PlaythroughTuningParam | null {
+  return PLAYTHROUGH_TUNING.find((param) => param.key === key) ?? null;
+}
+
 // The practice schedule: the session rhythm, the one practice habit and
 // its daily goal, and the calendar anchor. Days are the host's local
 // calendar — the engine's own goal-occurrence rule — so the anchor is a
@@ -156,9 +200,11 @@ export interface PlaythroughRecipe {
   // The simulated time budget in days: an unsuccessful policy terminates
   // here with an explicit incomplete result (story 21).
   readonly budgetDays: number;
-  // Declared and empty until a ticket supports overrides; any key present
-  // is rejected by name so an ineffective experiment cannot look run.
-  readonly overrides: Record<string, never>;
+  // The declared tuning overrides (issue #472): validated magnitudes from
+  // the declared catalog, confined to this run's own candidate state —
+  // never the live state, the save, or any other reader of the constant.
+  // Empty carries the shipped tuning.
+  readonly overrides: Record<string, number>;
 }
 
 // The default recipe: two 25-minute daily flow sessions with a
@@ -193,13 +239,14 @@ export interface PlaythroughRecipeInput {
   claimTarget?: number;
   schedule?: Partial<PlaythroughSchedule>;
   budgetDays?: number;
+  overrides?: Record<string, number>;
 }
 
 // The composition seam the app command uses: the default recipe patched by
 // an explicit input, validated with named failures. Unknown input keys are
 // rejected — an unsupported request never quietly runs a default.
 export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): PlaythroughRecipe {
-  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays"]);
+  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays", "overrides"]);
   for (const key of Object.keys(input)) {
     if (!known.has(key)) throw new Error(`Playthrough recipe: unsupported input "${key}".`);
   }
@@ -211,6 +258,7 @@ export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): Pl
     ...(input.policyId !== undefined ? { policyId: input.policyId } : {}),
     ...(input.claimTarget !== undefined ? { claimTarget: input.claimTarget } : {}),
     ...(input.budgetDays !== undefined ? { budgetDays: input.budgetDays } : {}),
+    ...(input.overrides !== undefined ? { overrides: input.overrides } : {}),
     schedule: { ...base.schedule, ...(input.schedule ?? {}) },
   };
   return validatePlaythroughRecipe(recipe);
@@ -220,8 +268,22 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
   const fail = (why: string): never => {
     throw new Error(`Playthrough recipe: ${why}`);
   };
-  for (const key of Object.keys(recipe.overrides)) {
-    fail(`override "${key}" is not supported yet — the recipe carries no overrides.`);
+  // The overrides first, so a run with a bad tuning input is refused
+  // before anything else is read — an unsupported, invalid, or
+  // inapplicable override never looks run (stories 31–32).
+  for (const [key, value] of Object.entries(recipe.overrides)) {
+    const param = tuningParamOf(key);
+    if (param === null) {
+      fail(`override "${key}" is not supported — the suite offers ${PLAYTHROUGH_TUNING.map((p) => p.key).join(", ")}.`);
+      // fail throws; the continue narrows param for the checks below.
+      continue;
+    }
+    if (!Number.isInteger(value) || value < param.min || value > param.max) {
+      fail(`override "${key}" must be a whole number ${param.min}–${param.max} — found ${value}.`);
+    }
+  }
+  if (recipe.overrides.claimBase !== undefined && recipe.policyId === PROMPT_POLICY.id) {
+    fail('override "claimBase" is inapplicable — the prompt policy banks at the first horizon crossing, where the frontier curve has not opened yet.');
   }
   if (!scenarioOf(recipe.scenarioId)) {
     fail(`no scenario "${recipe.scenarioId}" — the suite offers ${SCENARIOS.map((s) => s.id).join(", ")}.`);
@@ -576,6 +638,10 @@ interface RunContext {
   schedule: PlaythroughSchedule;
   claimTarget: number;
   pushing: boolean;
+  // The declared overrides (issue #472): the run's own tuning, read
+  // nowhere else — the candidate state carries them, nothing shared does.
+  openingGrant: number | undefined;
+  claimBase: number | undefined;
   rng: () => number;
   events: PlaythroughEvent[];
   trajectory: PlaythroughTrajectoryPoint[];
@@ -1195,7 +1261,7 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
   // This run measures the era immediately following its first bank.
   if (ctx.claims.length > 0) return false;
   if (ctx.pushing) {
-    if (pendingClaimOf(state) < ctx.claimTarget) return false;
+    if (pendingClaimOf(state, ctx.claimBase) < ctx.claimTarget) return false;
   } else if (!horizonReached(state)) {
     return false;
   }
@@ -1207,7 +1273,10 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
     ctx.prestigeCredited = ctx.credited;
   }
   const before = state.arete;
-  const result = prestige(state);
+  const result = prestige(state, {
+    ...(ctx.openingGrant !== undefined ? { openingGrant: ctx.openingGrant } : {}),
+    ...(ctx.claimBase !== undefined ? { claimBase: ctx.claimBase } : {}),
+  });
   const claim = state.arete - before;
   ctx.claims.push(claim);
   record(ctx, {
@@ -1278,11 +1347,22 @@ function* walkPlaythrough(
   recipe = { ...recipe, schedule: { ...recipe.schedule, startAt } };
   validatePlaythroughRecipe(recipe);
   scenario.assert(state, startAt);
+  // The declared overrides apply to this run's candidate only, after the
+  // scenario's own assertion has verified the baseline it grew from
+  // (issue #472): a run that starts at the shipped opening — the
+  // scenario's own origin classification — pays the declared grant at its
+  // first moment; every later era start pays it through the prestige
+  // action's seam.
+  if (recipe.overrides.openingGrant !== undefined && scenario.origin === "initial state") {
+    state.nous = recipe.overrides.openingGrant;
+  }
   const policy = policyOf(recipe.policyId);
   const ctx: RunContext = {
     schedule: recipe.schedule,
     claimTarget: recipe.claimTarget,
     pushing: policy.id === PUSHING_POLICY.id,
+    openingGrant: recipe.overrides.openingGrant,
+    claimBase: recipe.overrides.claimBase,
     rng: seededRng(recipe.seed),
     events: [],
     trajectory: [],
@@ -1456,6 +1536,11 @@ export function playthroughNote(record: PlaythroughRecord): string {
   ];
   const spent = spendingNote(record.areteSpent);
   if (spent) parts.push(spent);
+  // A tuned run names its overrides beside the baseline recipe's figures,
+  // so an altered run cannot masquerade as shipped-tuning evidence
+  // (issue #472).
+  const tuned = Object.entries(record.recipe.overrides).map(([key, value]) => `${key}=${value}`);
+  if (tuned.length > 0) parts.push(`tuned ${tuned.join(", ")}`);
   if (record.recovery) parts.push(recoveryNote(record.recovery));
   if (record.stop.kind === "checkpoint") parts.push(record.stop.reason);
   else if (record.complete) parts.push(record.stop.reason);

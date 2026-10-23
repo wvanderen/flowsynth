@@ -21,9 +21,12 @@ export const OPENING_GATED_ROWS: number[] = [0, 1];
 
 // The opening grant (ADR-0022): a nous grant that affords — but no longer
 // exactly equals — the pre-placed synthesizer's first upgrade. Everything
-// else is earned through play.
-export function openingGrant(): number {
-  return BALANCE.openingGrant;
+// else is earned through play. The optional declared figure is the
+// playtesting recipe's tuning override (issue #472): an isolated run pays
+// its declared grant at each era start; ordinary play always reads the
+// shipped constant.
+export function openingGrant(declared?: number): number {
+  return declared ?? BALANCE.openingGrant;
 }
 
 export function createInitialState(): GameState {

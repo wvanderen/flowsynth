@@ -4091,7 +4091,9 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
   // controls; the note line carries the launch's ✓/✗ readout. The
   // playthrough row (issue #468) gains the policy select and the
   // pending-claim target (#469): the pushing policy's stopping rule, in
-  // whole Arete — blank means the declared default.
+  // whole Arete — blank means the declared default. The tuning inputs and
+  // the terminal row (#472) carry the declared overrides and the command
+  // line — the same composition the agent command takes.
   const mountControls = !panel.querySelector("#dev-scenario");
   if (mountControls) {
     const scenarioOptions = app
@@ -4108,6 +4110,13 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
           `<option value="${escapeHtml(policy.id)}">${escapeHtml(policy.name)}</option>`,
       )
       .join("");
+    const tuningOptions = app
+      .devTuning()
+      .map(
+        (param) =>
+          `<label class="dev-tuning-label">${escapeHtml(param.name)}<input id="dev-tuning-${escapeHtml(param.key)}" type="number" min="${param.min}" max="${param.max}" step="1" inputmode="numeric" aria-label="Run override — ${escapeHtml(param.name)}: ${escapeHtml(param.description)}" placeholder="default ${param.default}" /></label>`,
+      )
+      .join("");
     panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>
       <span>DEV</span>
       <select id="dev-scenario" aria-label="Playtesting scenario">${scenarioOptions}</select>
@@ -4116,7 +4125,9 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       <input id="dev-playthrough-seed" type="number" min="0" step="1" inputmode="numeric" aria-label="Playthrough seed" placeholder="seed" />
       <input id="dev-playthrough-budget" type="number" min="1" max="366" step="1" inputmode="numeric" aria-label="Playthrough budget in days" placeholder="days" />
       <input id="dev-playthrough-target" type="number" min="1" max="36" step="1" inputmode="numeric" aria-label="Pushing pending-claim target in Arete" placeholder="claim ≥" />
+      ${tuningOptions}
       <button data-dev="playthrough">Run playthrough</button>
+      <input id="dev-terminal" type="text" aria-label="Dev terminal command — enter runs it, help lists commands" placeholder="help" autocomplete="off" autocapitalize="off" spellcheck="false" />
       <button data-dev="60">+1m</button>
       <button data-dev="600">+10m</button>
       <button data-dev="target">→ target</button>
@@ -4125,6 +4136,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       <button data-dev="worldera">World era</button>
       <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>
       <button data-dev="curves">${app.devCurvesOpen ? "close curves" : "curves"}</button>
+      <div class="dev-terminal-log" id="dev-terminal-log" aria-live="polite" aria-label="Dev terminal output"></div>
       <span class="dev-note" id="dev-scenario-note"></span>
       <span class="dev-note" id="dev-playthrough-note"></span>`;
   }
@@ -4156,6 +4168,22 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
     resultNote.textContent = app.devPlaythroughNote;
     resultNote.hidden = !app.devPlaythroughNote;
   }
+  // The terminal's scrollback (#472): the last lines the dispatcher
+  // logged, input, ✓, and ✗ alike — set as text (state-derived), oldest
+  // first, kept scrolled to the newest. Rendered every pass, like the
+  // notes it sits between.
+  const terminalLog = byId("dev-terminal-log");
+  if (terminalLog) {
+    terminalLog.replaceChildren(
+      ...app.devTerminalLog.map((entry) => {
+        const row = document.createElement("div");
+        row.className = `dev-terminal-line dev-terminal-${entry.kind}`;
+        row.textContent = entry.line;
+        return row;
+      }),
+    );
+    terminalLog.scrollTop = terminalLog.scrollHeight;
+  }
   if (!mountControls) return;
   // The grip (ADR-0050): a pointer-capture drag — the press records the
   // panel's offset inside the stage, the moves carry it clamped within,
@@ -4175,6 +4203,18 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       event.preventDefault();
     });
   }
+  // The terminal's input line (#472): Enter runs the command through the
+  // app's one dispatcher — the same parser agent access drives — and the
+  // input clears for the next line.
+  const terminal = byId("dev-terminal") as HTMLInputElement | null;
+  if (terminal) {
+    app.listen(terminal, "keydown", (event) => {
+      if ((event as KeyboardEvent).key !== "Enter") return;
+      const value = terminal.value;
+      terminal.value = "";
+      app.devTerminalRun(value);
+    });
+  }
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     app.listen(button, "click", () => {
       const key = button.getAttribute("data-dev")!;
@@ -4190,7 +4230,8 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       } else if (key === "playthrough") {
         // The run composes from the panel's own selections: the scenario
         // and policy selects name the starting state and the player; the
-        // claim target arms the pushing rule; blank inputs mean the
+        // claim target arms the pushing rule; the declared tuning inputs
+        // carry the run's overrides (#472); blank inputs mean the
         // declared defaults. The same composition the agent command takes.
         const select = byId("dev-scenario") as HTMLSelectElement | null;
         const policy = byId("dev-playthrough-policy") as HTMLSelectElement | null;
@@ -4200,12 +4241,18 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
         const seed = seedField?.value.trim() ? Number(seedField.value) : undefined;
         const budgetDays = budgetField?.value.trim() ? Number(budgetField.value) : undefined;
         const claimTarget = targetField?.value.trim() ? Number(targetField.value) : undefined;
+        const overrides: Record<string, number> = {};
+        for (const param of app.devTuning()) {
+          const field = byId(`dev-tuning-${param.key}`) as HTMLInputElement | null;
+          if (field?.value.trim()) overrides[param.key] = Number(field.value);
+        }
         app.devRunPlaythrough({
           ...(select ? { scenarioId: select.value } : {}),
           ...(policy ? { policyId: policy.value } : {}),
           ...(seed !== undefined ? { seed } : {}),
           ...(budgetDays !== undefined ? { budgetDays } : {}),
           ...(claimTarget !== undefined ? { claimTarget } : {}),
+          ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
         });
       } else if (key === "board") app.devToggleBoard();
       else if (key === "curves") app.devToggleCurves();

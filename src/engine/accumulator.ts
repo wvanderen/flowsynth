@@ -56,10 +56,14 @@ export function horizonReached(state: GameState): boolean {
 // and the no-refund re-derivation (#425's second blocker) had not landed —
 // no shipped default claims recoverability. The curve is increasing with
 // diminishing marginal reward; fractionally valued, always.
-export function frontierEntitlement(eraEarned: number): number {
+// The curve's optional claimBase (issue #472): the playtesting recipe's
+// declared override — an isolated run's curve carries its own base while
+// ordinary play and every other reader keep the shipped constant. The
+// slope and entry depth stay the curve's own.
+export function frontierEntitlement(eraEarned: number, claimBase: number = BALANCE.world.claimBase): number {
   if (eraEarned < BALANCE.world.entryNous) return 0;
   const depth = Math.log10(eraEarned / BALANCE.world.entryNous);
-  return BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * depth;
+  return claimBase + BALANCE.world.claimDepthSlope * depth;
 }
 
 // The pending claim (issue #425): the positive difference between the
@@ -72,14 +76,14 @@ export function frontierEntitlement(eraEarned: number): number {
 // previously reached depth leaves at most the sub-unit fraction pending —
 // it banks nothing. This figure reads only on the prestige door and its
 // confirm; no board-wide or ledger claim figure exists.
-export function pendingClaimOf(state: GameState): number {
-  return Math.max(0, frontierEntitlement(state.eraEarned) - state.world.frontier);
+export function pendingClaimOf(state: GameState, claimBase?: number): number {
+  return Math.max(0, frontierEntitlement(state.eraEarned, claimBase) - state.world.frontier);
 }
 
 // The bankable claim: whole Arete, floored from the pending figure at the
 // moment of banking. The frontier then advances by exactly this whole step
 // — the invariant that makes arbitrary prestige splittings telescope to
 // the single-climb total (world.test.ts re-derives it within 1e-10).
-export function bankableClaimOf(state: GameState): number {
-  return Math.floor(pendingClaimOf(state));
+export function bankableClaimOf(state: GameState, claimBase?: number): number {
+  return Math.floor(pendingClaimOf(state, claimBase));
 }
