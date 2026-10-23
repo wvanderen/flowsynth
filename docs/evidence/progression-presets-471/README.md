@@ -13,12 +13,14 @@ pipeline could not capture the tab — the same failure class the #468 and
 
 ## What is verified
 
-- **Provenance** — the capture preflight accepted the served checkout
-  twice: at `80a9bee` (before the checkpoint-terminal fix) and, after the
-  fix commit, at `394df43` — served worktree, commit, and clean source
-  verified each time (`provenance.json` beside this README records the
-  final acceptance at `394df43` on `http://localhost:5173`). The dev
-  server ran per [visual evidence](../../agents/visual-evidence.md).
+- **Provenance** — the capture preflight accepted the served checkout at
+  the reviewed source revision `cd6aa6c` — served worktree, commit, and
+  clean source verified (`provenance.json` beside this README records the
+  acceptance on `http://localhost:5173`). An earlier pass at `80a9bee`
+  caught a real defect (below), re-passed at `394df43`, and the final
+  pass ran at `cd6aa6c` after the review-tightening commit; every launch
+  line and read below is from that final pass. The dev server ran per
+  [visual evidence](../../agents/visual-evidence.md).
 - **Page health** — the tab answered `preview_evaluate` calls instantly
   throughout; `requestAnimationFrame` present, `document.hidden === false`,
   live viewport read 1280×800 on demand. The failure was confined to the
@@ -34,15 +36,17 @@ pipeline could not capture the tab — the same failure class the #468 and
   carry no recipe and keep their prior origins.
 - **Launches through the panel's select + Launch control (in-page runs)** —
   each preset installed in an isolated save and printed its ✓ line:
-  - `Approaching prestige ✓ day 9 of the declared walk · fresh-start-s468-7599a40d · an established board with the first prestige door open (#471) · recipe checkpoint · isolated save` — board facts: 18 completed sessions, 16 placed modules, 0 prestiges, 0 Arete, upgrade mode.
-  - `After first bank ✓ day 9 of the declared walk · fresh-start-s468-f5712c33 · immediately after the first prestige, its earned Arete unspent (#471) · recipe checkpoint · isolated save` — board facts: 1 prestige, 2 Arete unspent, era-earned 0, frontier 2, Catalog entry unowned, the starter Charge Blade waiting in the tray.
-  - `World enemy ✓ day 15 of the declared walk · fresh-start-s468-3f6f27cf · a living discovered enemy with the placement decision unplayed (#471) · recipe checkpoint · isolated save` — board facts: w0 discovered and alive (hp 12), the blade unplaced, the Catalog entry owned, a Charge Column placed, the earned bank honestly empty.
+  - `Approaching prestige ✓ day 9 of the declared walk · fresh-start-s468-49148f42 · an established board with the first prestige door open (#471) · recipe checkpoint · isolated save` — board facts: 18 completed sessions, 16 placed modules, 0 prestiges, 0 Arete, upgrade mode.
+  - `After first bank ✓ day 9 of the declared walk · fresh-start-s468-c8a5884c · immediately after the first prestige, its earned Arete unspent (#471) · recipe checkpoint · isolated save` — board facts: 1 prestige, 2 Arete unspent, era-earned 0, frontier 2, Catalog entry unowned, the starter Charge Blade waiting in the tray.
+  - `World enemy ✓ day 15 of the declared walk · fresh-start-s468-fb950248 · a living discovered enemy with the placement decision unplayed (#471) · recipe checkpoint · isolated save` — board facts: w0 discovered and alive (hp 12), the blade unplaced, the Catalog entry owned, a Charge Column placed, the earned bank honestly empty.
   - Each launch's situation re-confirmed through `devScenarioAssert()`
     (returned clean all three times) — the assertion call ran in the same
     pass, so no unconfirmed setup passed silently.
-- **Ordinary-save preservation (in-page reads, two page loads)** — with a
-  preset installed, an explicit `save()` and a `beforeunload` write left
-  the ordinary slot byte-identical both times; the walks never reached it.
+- **Ordinary-save preservation (in-page reads, every page load)** — with
+  a preset installed, an explicit `save()` and a `beforeunload` write
+  left the ordinary slot byte-identical; the walks never reached it, and
+  the final pass re-checked the bytes after every launch and the
+  scripted run.
 - **Reinstall non-accumulation (in-page read)** — two back-to-back
   relaunches of `after-first-bank` produced byte-identical state JSON —
   the memoized walk hands out clones, so nothing accumulates.
@@ -52,10 +56,10 @@ pipeline could not capture the tab — the same failure class the #468 and
   world-enemy, focus.` and the installed setup stayed standing.
 - **Scripted-run entry (in-page run)** —
   `devRunPlaythrough({ scenarioId: "after-first-bank", budgetDays: 1 })`
-  returned run id `after-first-bank-s468-e0ce7159` from the walked bank
-  state (1 prestige), its note line showing the run's honest World leg
-  (`the chargeBlade — no free World cell beside a living discovered
-  enemy`); the live state and the ordinary save were untouched.
+  returned run id `after-first-bank-s468-b01802fa` from the walked bank
+  state (1 prestige); the live state and the ordinary save were
+  untouched. The engine suite starts declared runs from all three
+  presets (`progression-presets.test.ts`).
 - **Reload drops the scenario (in-page read)** — a plain reload booted
   without the dev panel; the suite select is absent on a normal
   instrument (the automated suite pins the boot-back-to-ordinary case).
@@ -73,10 +77,10 @@ rediscovery and production-regain thresholds finish neck and neck, and
 cross-engine float variance flipped their order, letting the pushing
 run's recovery stop steal the walk's end. The fix (`394df43`) gives a
 checkpoint walk its own declared terminal — it rides past the recovery
-stop — and folds the checkpoint into the run identity. The re-pass at
-`394df43` installed `world-enemy` cleanly (day 15, above). The failed
-launch behaved correctly at the boundary: the ✗ line named the drift and
-the previous install stayed standing.
+stop — and folds the checkpoint into the run identity. The re-passes at
+`394df43` and `cd6aa6c` installed `world-enemy` cleanly (day 15, above).
+The failed launch behaved correctly at the boundary: the ✗ line named
+the drift and the previous install stayed standing.
 
 ## Unavailable checks
 
@@ -180,5 +184,18 @@ names cite assertions that would fail if the behavior regressed.
    case (5), the launch-isolation cases (6), and the reinstall case
    (7) now cover a walked preset alongside fresh-start and Focus.
 
-Review corrections: none recorded yet — see the pull request's
-Verification section for the final mapping at review time.
+Review corrections: the two-axis review pass asked for the scripted-run
+entry to be exercised from every preset (done —
+`progression-presets.test.ts` now starts declared runs from all three),
+the memo comment to state the read-only record convention it actually
+follows (done), the walked summary's first-read cost to be named where
+the walk lives (done), and the walk loop's redundant checkpoint ternary
+to collapse (done) — all in the review-tightening commit `cd6aa6c`, and
+the whole in-page pass above was re-run at that revision. Declined with
+reasons: extracting the duplicated loop block (the two sites mirror the
+walk's pre-existing prestige-door structure; the explicit walk is the
+module's core narrative), a shared living-enemy predicate (two engine
+sites of a two-condition read), a descriptor factory (the catalog reads
+as explicit descriptors by the repo's own style), and renaming
+`world-enemy`/`world-enemy-active` (the ids name different things — the
+preset situation and the walk stop).
