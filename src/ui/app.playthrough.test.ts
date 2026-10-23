@@ -660,14 +660,18 @@ describe("historical snapshots and inspection", () => {
     expect(marked.has("session")).toBe(true);
     expect(marked.has("unlock")).toBe(true);
     // Only successful events carry markers; the declined attempt and the
-    // gestures the plot doesn't name stay decisions-list lines.
+    // gestures the plot doesn't name stay decisions-list lines. World
+    // buys are purchases; a World placement is a gesture, not one.
     for (const event of record.events) {
       if (!event.ok) expect(playthroughEventMarker(event)).toBeNull();
       if (event.kind === "placement" || event.kind === "upgrade") expect(playthroughEventMarker(event)).toBeNull();
+      if (event.label.startsWith("Placed")) expect(playthroughEventMarker(event)).toBeNull();
     }
-    // The four classes' own rules, on the engine's classifier.
+    // The classes' own rules, on the engine's classifier.
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "prestige", label: "Prestige 1", ok: true, snapshot: 0 })).toBe("prestige");
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "breather", label: "Breather — 300s of the 300s allowance", ok: true, snapshot: 0 })).toBe("breather");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "world", label: "World Column", ok: true, snapshot: 0 })).toBe("purchase");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "world", label: "Placed a Charge Column at 1,0", ok: true, snapshot: 0 })).toBeNull();
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Poly Expander 3 — 1.0ν/s → 1.2ν/s", ok: true, snapshot: 0 })).toBe("purchase");
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Feat unlocked — time-in-the-seat", ok: true, snapshot: 0 })).toBe("unlock");
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Recovery — next prestige eligibility reached", ok: true, snapshot: 0 })).toBeNull();

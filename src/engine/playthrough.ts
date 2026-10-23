@@ -357,7 +357,10 @@ export interface PlaythroughTrajectoryPoint {
 // deep-frozen, so historical inspection cannot mutate the run and no
 // interpolated or mismatched board can pass as a recorded one. Samples of
 // the trajectory and the moments the action record stamps share this one
-// store; historical selection alone picks which snapshot is inspected.
+// store; historical selection alone picks which snapshot is inspected. A
+// stamp's actions take no simulated time, so every event of one stamp
+// resolves to that stamp's one closing state — the exact recorded board
+// at the moment they all carry, never a neighboring break's.
 export interface PlaythroughSnapshot {
   // Simulated elapsed seconds since the anchor — the plotted x.
   readonly elapsed: number;
@@ -377,7 +380,8 @@ export type PlaythroughMarker = "purchase" | "unlock" | "session" | "breather" |
 
 export function playthroughEventMarker(event: PlaythroughEvent): PlaythroughMarker | null {
   if (!event.ok) return null;
-  if (event.kind === "purchase" || event.kind === "arete" || event.kind === "world") return "purchase";
+  if (event.kind === "purchase" || event.kind === "arete") return "purchase";
+  if (event.kind === "world") return event.label.startsWith("Placed") ? null : "purchase";
   if (event.kind === "roll") return "unlock";
   if (event.kind === "milestone") {
     if (event.label.startsWith("Poly Expander")) return "purchase";
@@ -544,13 +548,17 @@ function deepFreeze<T>(value: T): T {
 // reads, then frozen. Every event opened since the last snapshot binds
 // here — an event's board is the exact state at its own simulated stamp,
 // never an interpolation or a neighboring break's board.
-function snap(ctx: RunContext, state: GameState): number {
+function previewClone(state: GameState): GameState {
   const clone = structuredClone(state);
   syncRates(clone, false);
+  return clone;
+}
+
+function snap(ctx: RunContext, state: GameState): number {
   const snapshot: PlaythroughSnapshot = {
     elapsed: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000),
     credited: Math.round(ctx.credited),
-    state: deepFreeze(clone),
+    state: deepFreeze(previewClone(state)),
   };
   ctx.snapshots.push(snapshot);
   const index = ctx.snapshots.length - 1;
@@ -1216,15 +1224,6 @@ export function runPlaythrough(
           productionRegained: ctx.productionRegained,
           eligibilityReached: ctx.eligibilityReached,
         };
-  // Defensive binding: every leg ends at a snapshot, so nothing should
-  // still be open here — but an event can never resolve to nothing.
-  if (ctx.openEvents.length > 0 && ctx.snapshots.length > 0) {
-    const last = ctx.snapshots.length - 1;
-    for (const open of ctx.openEvents) {
-      ctx.events[open] = { ...ctx.events[open]!, snapshot: last };
-    }
-    ctx.openEvents = [];
-  }
   return {
     kind: "representative",
     runId: playthroughRunId(recipe, source),
@@ -1341,16 +1340,15 @@ export interface PlaythroughInspection {
 // one working clone per (record, index), memoized.
 const inspections = new WeakMap<PlaythroughRecord, Map<number, PlaythroughInspection>>();
 
-export function playthroughInspection(record: PlaythroughRecord, index: number): PlaythroughInspection {
-  const hit = inspections.get(record)?.get(index);
+export function playthroughInspection(run: PlaythroughRecord, index: number): PlaythroughInspection {
+  const hit = inspections.get(run)?.get(index);
   if (hit) return hit;
-  const snapshot = record.snapshots[index];
+  const snapshot = run.snapshots[index];
   if (!snapshot) {
-    throw new Error(`Playthrough inspection: no recorded snapshot ${index} — the run carries ${record.snapshots.length}.`);
+    throw new Error(`Playthrough inspection: no recorded snapshot ${index} — the run carries ${run.snapshots.length}.`);
   }
   const state = snapshot.state;
-  const working = structuredClone(state);
-  const rates = syncRates(working, false);
+  const rates = syncRates(previewClone(state), false);
   const voices: PlaythroughBoardVoice[] = state.modules
     .filter((module) => module.pos !== null)
     .sort((a, b) => a.pos!.r - b.pos!.r || a.pos!.q - b.pos!.q || a.id.localeCompare(b.id))
@@ -1364,8 +1362,8 @@ export function playthroughInspection(record: PlaythroughRecord, index: number):
     index,
     elapsed: snapshot.elapsed,
     credited: snapshot.credited,
-    point: record.trajectory.find((point) => point.snapshot === index) ?? null,
-    events: record.events.filter((event) => event.snapshot === index),
+    point: run.trajectory.find((point) => point.snapshot === index) ?? null,
+    events: run.events.filter((event) => event.snapshot === index),
     rate: rates.rate,
     balances: {
       nous: wholeNous(state),
@@ -1379,10 +1377,10 @@ export function playthroughInspection(record: PlaythroughRecord, index: number):
     },
     voices,
   };
-  let memo = inspections.get(record);
+  let memo = inspections.get(run);
   if (!memo) {
     memo = new Map();
-    inspections.set(record, memo);
+    inspections.set(run, memo);
   }
   memo.set(index, inspection);
   return inspection;

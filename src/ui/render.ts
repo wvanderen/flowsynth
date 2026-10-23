@@ -4353,14 +4353,14 @@ function renderDevBoard(app: App): void {
     const [q, r] = button.getAttribute("data-devcell")!.split(",").map(Number);
     app.listen(button, "click", () => app.devBoardMoveTo(q!, r!));
   });
-    panel.querySelectorAll<HTMLButtonElement>("[data-devboard]").forEach((button) => {
-      const key = button.getAttribute("data-devboard")!;
-      if (key === "close") app.listen(button, "click", () => app.devToggleBoard());
-      else if (key === "reset") app.listen(button, "click", () => app.devBoardReset());
-      else if (key === "stress") app.listen(button, "click", () => app.devBoardStress());
-      else if (key === "power-up") app.listen(button, "click", () => app.devBoardPower(1));
-      else if (key === "power-down") app.listen(button, "click", () => app.devBoardPower(-1));
-    });
+  panel.querySelectorAll<HTMLButtonElement>("[data-devboard]").forEach((button) => {
+    const key = button.getAttribute("data-devboard")!;
+    if (key === "close") app.listen(button, "click", () => app.devToggleBoard());
+    else if (key === "reset") app.listen(button, "click", () => app.devBoardReset());
+    else if (key === "stress") app.listen(button, "click", () => app.devBoardStress());
+    else if (key === "power-up") app.listen(button, "click", () => app.devBoardPower(1));
+    else if (key === "power-down") app.listen(button, "click", () => app.devBoardPower(-1));
+  });
 }
 
 /* ── Dev resource curves (#470) ───────────────────── */
@@ -4527,7 +4527,10 @@ function renderDevCurves(app: App): void {
   const selected = app.devInspected !== null && app.devInspected < record.snapshots.length ? app.devInspected : null;
   const selectedSnapshot = selected !== null ? record.snapshots[selected] : null;
   const selectionLine = selectedSnapshot
-    ? `<line class="dev-curves-sel" x1="${px(axis === "elapsed" ? selectedSnapshot.elapsed : selectedSnapshot.credited).toFixed(1)}" y1="${CURVES_TOP}" x2="${px(axis === "elapsed" ? selectedSnapshot.elapsed : selectedSnapshot.credited).toFixed(1)}" y2="${CURVES_STRIP_BOTTOM}"/>`
+    ? (() => {
+        const x = px(axis === "elapsed" ? selectedSnapshot.elapsed : selectedSnapshot.credited).toFixed(1);
+        return `<line class="dev-curves-sel" x1="${x}" y1="${CURVES_TOP}" x2="${x}" y2="${CURVES_STRIP_BOTTOM}"/>`;
+      })()
     : "";
 
   const grid = [0.25, 0.5, 0.75]

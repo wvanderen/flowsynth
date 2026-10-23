@@ -60,6 +60,19 @@ pipeline could not capture the tab — the same failure class the #468 and
 - **Suite** — `npm run check` and the full `npm test` pass at the
   captured source (95 files, 1,910 tests).
 
+## Criterion-to-evidence mapping
+
+Each acceptance criterion from the issue beside its named verification.
+
+| Criterion (issue #470) | Verification | Class |
+| --- | --- | --- |
+| Plot balances and rates against simulated elapsed time, distinguish credited practice, mark purchases, unlocks, session boundaries, prestige | "records a frozen snapshot for every plotted sample and every event's exact moment" + "classifies curve markers, and declined attempts and unlisted actions plot none" (`src/ui/app.playthrough.test.ts`); the plotted series, both clocks (axis toggle), and the five marker classes read off the live panel (composition reads above) | automated + manual evidence |
+| Snapshots consistent with plotted samples and action events; no interpolated or mismatched board as an exact recorded state | the same snapshot test: every event's snapshot stamp equals the event's stamp, every sample resolves to its exact recorded state whose recomputed rate equals the plotted figure; deep-frozen states | automated |
+| Selection reveals matching board/state and recent decisions through the visual workspace and shared commands; read-only; cannot mutate the active run | "selection reveals the matching board, state, and recent decisions through the shared command" and "inspection never mutates the active run, the save, or the recorded state" (`src/ui/app.playthrough.test.ts`); the panel's selection wiring through the DOM path (circle, hairline, stepping) read in-page (above). "Recent" reads as the decisions stamped at the selected moment — the action record's own granularity | automated + manual evidence |
+| The action record sole owner of decision reasons; historical selection sole owner of the inspected board/state; no second explanation store | the inspection's events are the record's own event objects filtered by stamp (asserted equal in the selection test); the selection is the one `devInspected` field and the inspected board is the record's own snapshot — no copy or second store exists | automated |
+| Verify selection/state correspondence, numerical trajectory outcomes, non-mutation at the shared application boundary; desktop/phone/keyboard/touch/non-color/reduced-motion evidence | correspondence, trajectory numbers, and non-mutation: the three snapshot/inspection tests above, driven through `app.devRunPlaythrough`/`app.devInspectPlaythrough`. Keyboard walk, touch floors, non-color dash/glyph distinctions, reduced-motion probe: in-page reads (above). Desktop and phone captures: **unavailable** (recorded below) | automated + manual evidence, captures unavailable |
+| Cover parent stories 27–29 and the historical portions of 18, 26, 30, 38; no historical resume/fork | 27/28: the plot, markers, and selection tests; 29: the read-only tests; 18: decisions with reasons asserted since #468 and revealed per moment here; 26: both clocks per sample ("reports both clocks per sample, and the axes switch"); 30: the shared commands (`devInspectPlaythrough`, `devStepCurves`, `devSetCurvesAxis`) are the panel's own calls; 38: phone layout **unavailable** in this pass (below). No resume/fork exists — nothing in the diff writes historical state back into a run | automated, phone partial |
+
 ## What is unavailable
 
 **Desktop and phone captures: unavailable — the preview screenshot
