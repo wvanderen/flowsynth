@@ -67,8 +67,10 @@ import { SCENARIOS, scenarioOf, type ScenarioDescriptor } from "../engine/scenar
 import {
   composePlaythroughRecipe,
   defaultPlaythroughRecipe,
+  PLAYTHROUGH_POLICIES,
   playthroughNote,
   runPlaythrough,
+  type PlaythroughPolicy,
   type PlaythroughRecipe,
   type PlaythroughRecipeInput,
   type PlaythroughRecord,
@@ -2863,6 +2865,12 @@ export class App {
     return defaultPlaythroughRecipe();
   }
 
+  // The declared policies: the same descriptors the select offers and the
+  // recipe validates against — one catalog, every reader.
+  devPlaythroughPolicies(): readonly PlaythroughPolicy[] {
+    return PLAYTHROUGH_POLICIES;
+  }
+
   devRunPlaythrough(input: PlaythroughRecipeInput = {}): PlaythroughRecord {
     if (!this.dev) {
       throw new Error("The playthrough commands are development commands.");
@@ -2880,7 +2888,7 @@ export class App {
     this.devPlaythroughNote = playthroughNote(record);
     this.say(
       record.complete
-        ? `Dev: playthrough ${record.runId} complete — ${record.days} days, ${Math.round(record.creditedSeconds / 60)}m credited, prestige banked ${record.claims[0] ?? 0} Arete.`
+        ? `Dev: playthrough ${record.runId} complete — ${record.days} days, ${Math.round(record.creditedSeconds / 60)}m credited, claims ${record.claims.join(", ") || "none"} Arete.`
         : `Dev: playthrough ${record.runId} incomplete after ${record.days} days — see the dev panel.`,
     );
     this.render();

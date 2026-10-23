@@ -1,4 +1,4 @@
-import { horizonReached } from "./accumulator";
+import { horizonReached, pendingClaimOf } from "./accumulator";
 import { advance, advanceBreather } from "./advance";
 import {
   buyCapacity,
@@ -15,6 +15,7 @@ import {
   endBreather,
   endSession,
   placeModule,
+  placeWorldOccupant,
   prestige,
   startBreather,
   startSession,
@@ -22,45 +23,58 @@ import {
 } from "./actions";
 import type { ActionResult } from "./actions";
 import { frontier, seededRng } from "./capacity-calibration";
-import { CATEGORY_OF, isOscillatorType, SAVE_VERSION, SHELF_TYPES } from "./constants";
-import { syncRates, wholeNous } from "./economy";
+import { BALANCE, CATEGORY_OF, isOscillatorType, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
+import { affordableLevels, syncRates, wholeNous, levelsCost } from "./economy";
 import { activeGoalOf, createGoal, rollGoalOccurrences } from "./goals";
 import { createHabit, selectHabit } from "./habits";
-import { sameHex } from "./hex";
+import { adjacent, hexDistance, sameHex } from "./hex";
 import { writeNote } from "./notes";
 import { SCENARIOS, scenarioOf } from "./scenarios";
-import type { GameState, Hex } from "./types";
+import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt } from "./world";
+import type { GameState, Hex, ModuleInstance, WeaponType } from "./types";
 
-// The reproducible playthrough runner (issue #468, parent #465): a recipe
-// declares every behavior-affecting input — starting scenario, seed, player
-// policy, practice schedule, time budget, calendar anchor, and the still
-// empty override set — and the runner walks it through the real engine
-// actions on a real session schedule: two 25-minute daily sessions, a
-// five-minute breather, one practice habit with a daily goal, and honest
-// overnight gaps where upgrade mode produces and credits nothing. The
-// prompt policy prestiges at the first between-sessions moment the horizon
-// is reached; the first-eligibility claim banks zero Arete under the
-// frontier curve, and that zero stands rather than being topped up.
-// Nothing here grants resources; an exhausted budget is an explicit
-// incomplete result with the last milestone, the bottleneck, and the
-// declined actions' reasons. The session loop's prior art is the
-// calibration walk (#262) — its seeded rng and frontier/preview patterns
-// are reused, its compressed fictional time is not: schedule and day
-// accounting are this module's own, and the calibration run remains the
-// economy-only kind this record's kind line distinguishes itself from.
+// The reproducible playthrough runner (issues #468/#469, parent #465): a
+// recipe declares every behavior-affecting input — starting scenario, seed,
+// player policy, practice schedule, time budget, claim target, calendar
+// anchor, and the still empty override set — and the runner walks it through
+// the real engine actions on a real session schedule: two 25-minute daily
+// sessions, a five-minute breather, one practice habit with a daily goal,
+// and honest overnight gaps where upgrade mode produces and credits
+// nothing. The prompt policy prestiges at the first between-sessions moment
+// the horizon is reached; the first-eligibility claim banks zero Arete
+// under the frontier curve, and that zero stands rather than being topped
+// up. The pushing policy shares the prompt policy's every purchase rule and
+// the same schedule, but never prestiges at the first eligibility: it
+// pushes until the pending claim reaches its configured target, then
+// banks, and its record follows the next era through earned-Arete
+// spending, World placement and purchases, and the two recovery measures —
+// regaining the first era's pre-reset production and reaching prestige
+// eligibility again, each timed on both clocks. Nothing here grants
+// resources; an exhausted budget is an explicit incomplete result with the
+// last milestone, the bottleneck, and the declined actions' reasons — and
+// a missing recovery measure is an explicit unreached mark, never a
+// fabricated one. The session loop's prior art is the calibration walk
+// (#262) — its seeded rng and frontier/preview patterns are reused, its
+// compressed fictional time is not: schedule and day accounting are this
+// module's own, and the calibration run remains the economy-only kind this
+// record's kind line distinguishes itself from.
 
 // The runner's own version: a behavior-affecting change here is a source
 // change, and a rerun against different source identifies separately
 // (story 36's foundation).
-export const PLAYTHROUGH_RUNNER_VERSION = 2;
+export const PLAYTHROUGH_RUNNER_VERSION = 3;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
 const STEP_SECONDS = 60;
 const NOTE_TEXT = "keep the shoulders down and the wrist loose through the scale run";
+// The level-sweep gesture size — five levels per real action, the prompt
+// policy's pinned rule.
+const GESTURE_LEVELS = 5;
 
-// The player policies. "prompt" is this ticket's readable baseline; the
-// pushing policy joins on the same schedule later (story 16).
+// The player policies. "prompt" is the readable baseline; "pushing" shares
+// its every purchase rule and the same schedule but holds the door for its
+// claim target (story 16's push-versus-reset pair).
 export interface PlaythroughPolicy {
   readonly id: string;
   readonly name: string;
@@ -85,7 +99,24 @@ export const PROMPT_POLICY: PlaythroughPolicy = {
   ],
 };
 
-export const PLAYTHROUGH_POLICIES: readonly PlaythroughPolicy[] = [PROMPT_POLICY];
+export const PUSHING_POLICY: PlaythroughPolicy = {
+  id: "pushing",
+  name: "Pushing",
+  rules: [
+    "Buys exactly what the prompt policy buys, by the same rules, on the same schedule.",
+    "Never prestiges at the first eligibility: it pushes until the pending claim reaches its configured target, then banks that claim.",
+    "Once the World is entered — a starter weapon granted, a claimed frontier, or a discovered enemy — it pays the Catalog entry first, then Charge Columns while affordable, then Hone ranks cheapest-first while affordable.",
+    "Each weapon deploys beside the fight: an owned cell next to a living discovered enemy, preferring a cell that also touches a placed Column, nearest the enemy first; while no enemy lives, the weapon waits in the tray.",
+    "Each Column deploys on the charge line: an owned cell next to a deployed generator, preferring a cell that also touches a placed weapon.",
+    "Ends every session at its planned target and writes a practice note.",
+  ],
+};
+
+export const PLAYTHROUGH_POLICIES: readonly PlaythroughPolicy[] = [PROMPT_POLICY, PUSHING_POLICY];
+
+function policyOf(id: string): PlaythroughPolicy {
+  return PLAYTHROUGH_POLICIES.find((policy) => policy.id === id) ?? PROMPT_POLICY;
+}
 
 // The practice schedule: the session rhythm, the one practice habit and
 // its daily goal, and the calendar anchor. Days are the host's local
@@ -111,6 +142,11 @@ export interface PlaythroughRecipe {
   readonly scenarioId: string;
   readonly seed: number;
   readonly policyId: string;
+  // The pushing policy's stopping rule (story 19): the pending Arete claim
+  // it pushes for before banking — a whole figure above the zero the first
+  // eligibility banks. The prompt policy never reads it; it prestiges at
+  // the first eligibility whatever the target says.
+  readonly claimTarget: number;
   readonly schedule: PlaythroughSchedule;
   // The simulated time budget in days: an unsuccessful policy terminates
   // here with an explicit incomplete result (story 21).
@@ -122,12 +158,15 @@ export interface PlaythroughRecipe {
 
 // The default recipe: two 25-minute daily flow sessions with a
 // five-minute breather on one practice — the fixture baseline, not a
-// typical-player claim (#465's implementation decisions).
+// typical-player claim (#465's implementation decisions). The claim target
+// defaults to 2 — the first positive claim the frontier curve pays, at the
+// World's 1T entry depth.
 export function defaultPlaythroughRecipe(): PlaythroughRecipe {
   return {
     scenarioId: "fresh-start",
     seed: 468,
     policyId: PROMPT_POLICY.id,
+    claimTarget: 2,
     schedule: {
       sessionsPerDay: 2,
       sessionMinutes: 25,
@@ -146,6 +185,7 @@ export interface PlaythroughRecipeInput {
   scenarioId?: string;
   seed?: number;
   policyId?: string;
+  claimTarget?: number;
   schedule?: Partial<PlaythroughSchedule>;
   budgetDays?: number;
 }
@@ -154,7 +194,7 @@ export interface PlaythroughRecipeInput {
 // an explicit input, validated with named failures. Unknown input keys are
 // rejected — an unsupported request never quietly runs a default.
 export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): PlaythroughRecipe {
-  const known = new Set(["scenarioId", "seed", "policyId", "schedule", "budgetDays"]);
+  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays"]);
   for (const key of Object.keys(input)) {
     if (!known.has(key)) throw new Error(`Playthrough recipe: unsupported input "${key}".`);
   }
@@ -164,6 +204,7 @@ export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): Pl
     ...(input.scenarioId !== undefined ? { scenarioId: input.scenarioId } : {}),
     ...(input.seed !== undefined ? { seed: input.seed } : {}),
     ...(input.policyId !== undefined ? { policyId: input.policyId } : {}),
+    ...(input.claimTarget !== undefined ? { claimTarget: input.claimTarget } : {}),
     ...(input.budgetDays !== undefined ? { budgetDays: input.budgetDays } : {}),
     schedule: { ...base.schedule, ...(input.schedule ?? {}) },
   };
@@ -182,6 +223,9 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
   }
   if (!PLAYTHROUGH_POLICIES.some((policy) => policy.id === recipe.policyId)) {
     fail(`no policy "${recipe.policyId}" — the suite offers ${PLAYTHROUGH_POLICIES.map((p) => p.id).join(", ")}.`);
+  }
+  if (!Number.isInteger(recipe.claimTarget) || recipe.claimTarget < 1 || recipe.claimTarget > 36) {
+    fail(`claimTarget must be a whole number 1–36 — found ${recipe.claimTarget}.`);
   }
   if (!Number.isInteger(recipe.seed) || recipe.seed < 0 || recipe.seed > 0xffffffff) {
     fail(`seed must be a whole number 0–4294967295 — found ${recipe.seed}.`);
@@ -300,6 +344,41 @@ export interface PlaythroughTrajectoryPoint {
   readonly arete: number;
 }
 
+// One recovery mark (story 25): the both-clocks cost of a next-era
+// milestone, measured from the prestige moment — simulated elapsed seconds
+// and credited practice seconds. Null is the explicit unreached mark (a
+// slower recovery is valid evidence; a missing milestone is never
+// fabricated).
+export interface PlaythroughRecoveryMark {
+  readonly elapsed: number;
+  readonly credited: number;
+}
+
+// The next era's recovery ledger (stories 24–25): the production the
+// reset erased, and both recovery measures against it. Null until the
+// run's first prestige — a run that never banks never recovers.
+export interface PlaythroughRecovery {
+  // Whole-board ν/s immediately before the first prestige.
+  readonly preResetRate: number;
+  // When the next era's board first produced at least that rate again.
+  readonly productionRegained: PlaythroughRecoveryMark | null;
+  // When the next era first reached prestige eligibility again.
+  readonly eligibilityReached: PlaythroughRecoveryMark | null;
+}
+
+// The run's Arete spending ledger (story 24): what the earned claims paid
+// for — the Catalog entry (0 or 1), the capacity offerings' discounts and
+// ceiling unlocks, Charge Column copies, and Hone ranks across weapon
+// types. Purchases ride the engine's own action gates; the ledger records
+// what landed.
+export interface PlaythroughAreteSpent {
+  readonly entry: number;
+  readonly discounts: number;
+  readonly ceilings: number;
+  readonly columns: number;
+  readonly hone: Record<WeaponType, number>;
+}
+
 // The result. The kind line is the honest one: this walk rode the real
 // session schedule, practice accounting, and engine actions — it is not
 // the economy-only simulation the calibration runner performs (story 13).
@@ -310,10 +389,18 @@ export interface PlaythroughRecord {
   readonly source: PlaythroughSource;
   readonly policy: { readonly id: string; readonly name: string };
   readonly complete: boolean;
-  readonly stop: { readonly kind: "prestige" | "budget"; readonly reason: string };
+  // "prestige" is the prompt door; "recovered" is the pushing run's
+  // completed next-era demonstration — both recovery measures measured.
+  // "budget" is the explicit incomplete outcome (story 21).
+  readonly stop: { readonly kind: "prestige" | "recovered" | "budget"; readonly reason: string };
+  // The pushing policy's configured pending-claim target, carried beside
+  // the actual claims so intent and outcome stay distinguishable
+  // (stories 19–20).
+  readonly claimTarget: number;
   // Arete banked per prestige — the first-eligibility claim is zero by the
   // frontier curve, and the zero stands (#465's implementation decisions).
   readonly claims: readonly number[];
+  readonly areteSpent: PlaythroughAreteSpent;
   readonly days: number;
   readonly elapsedSeconds: number;
   readonly creditedSeconds: number;
@@ -329,18 +416,26 @@ export interface PlaythroughRecord {
   readonly trajectory: readonly PlaythroughTrajectoryPoint[];
   readonly achievements: readonly string[];
   readonly worldDiscoveries: readonly string[];
+  readonly worldDefeats: readonly string[];
+  // The next era's recovery ledger (stories 24–25): null until the run's
+  // first prestige, then the pre-reset rate and the two measures.
+  readonly recovery: PlaythroughRecovery | null;
   // The run's final state — the ground truth behind every figure.
   readonly state: GameState;
 }
 
 interface RunContext {
   schedule: PlaythroughSchedule;
+  claimTarget: number;
+  pushing: boolean;
   rng: () => number;
   events: PlaythroughEvent[];
   trajectory: PlaythroughTrajectoryPoint[];
   claims: number[];
+  areteSpent: { entry: number; discounts: number; ceilings: number; columns: number; hone: Record<WeaponType, number> };
   achievements: string[];
   discovered: string[];
+  defeated: string[];
   credited: number;
   breatherSeconds: number;
   sessionNous: number;
@@ -348,6 +443,14 @@ interface RunContext {
   elapsedMs: number;
   lastDecline: string | null;
   lastMilestone: string | null;
+  // The recovery ledger (stories 24–25): armed at the run's first prestige
+  // with the pre-reset rate, then settled at every between-sessions moment
+  // until both measures carry marks.
+  preResetRate: number | null;
+  prestigeElapsedMs: number;
+  prestigeCredited: number;
+  productionRegained: PlaythroughRecoveryMark | null;
+  eligibilityReached: PlaythroughRecoveryMark | null;
 }
 
 // Session k of a day starts after the k preceding sessions and their
@@ -392,7 +495,9 @@ function pushTrajectory(ctx: RunContext, state: GameState): void {
 }
 
 // The run's discovery diffs: achievements and World enemies found since
-// the last check, recorded as milestones (story 24's foundation).
+// the last check, recorded as milestones (story 24's foundation), plus
+// enemies defeated — the ×(1 + bonus) era bonus landing is the World
+// milestone the spending bought toward.
 function recordDiscoveries(ctx: RunContext, state: GameState): void {
   for (const id of Object.keys(state.achievements)) {
     if (!ctx.achievements.includes(id)) {
@@ -406,6 +511,15 @@ function recordDiscoveries(ctx: RunContext, state: GameState): void {
       record(ctx, {
         kind: "milestone",
         label: `World — enemy ${key} discovered`,
+        ok: true,
+        milestone: true,
+      });
+    }
+    if (enemy.discovered && enemyDefeated(state, key) && !ctx.defeated.includes(key)) {
+      ctx.defeated.push(key);
+      record(ctx, {
+        kind: "milestone",
+        label: `World — enemy ${key} defeated`,
         ok: true,
         milestone: true,
       });
@@ -540,36 +654,94 @@ function manage(ctx: RunContext, state: GameState): void {
   // Level gestures: five-level sweeps over the deployed voices, cheapest
   // first, while the bank covers the next gesture. The cap is a runaway
   // guard, not a tuning constant — levels grow priced beyond any bank
-  // long before it binds.
+  // long before it binds. The gesture walk is batched without changing
+  // what lands: the walk is simulated arithmetically against the same
+  // per-level prices and the same cheapest-first, roster-tie order — every
+  // partial gesture included — and each voice's total then rides one real
+  // action, charged in the walk's own order (every prefix fits the bank by
+  // construction). The closing refusal still rides the real action, so the
+  // final levels, the total spend, the aggregate event line, and the
+  // engine's own decline reason are exactly what the unbatched walk
+  // produces, at a fraction of the action-boundary syncs a long push's
+  // big banks would otherwise pay.
+  const gestureVoices = (): ModuleInstance[] =>
+    state.modules.filter((m) => m.pos !== null && m.type !== "spacer").sort((a, b) => a.level - b.level);
   let swept = 0;
-  for (let guard = 0; guard < 2000; guard++) {
-    const voice = state.modules
-      .filter((m) => m.pos !== null && m.type !== "spacer")
-      .sort((a, b) => a.level - b.level)[0];
-    if (!voice) break;
-    const result = upgradeModuleLevels(state, voice.id, 5);
-    if (!result.ok) {
-      record(ctx, { kind: "upgrade", label: `Levels on the ${voice.type}`, ...outcome(result) });
-      decline(ctx, `levels on the ${voice.type}`, result.reason ?? "declined");
-      break;
+  const voices = gestureVoices();
+  let bankRanDry = false;
+
+  if (voices.length > 0) {
+    let bank = wholeNous(state);
+    const levels = new Map<string, number>(voices.map((voice) => [voice.id, voice.level]));
+    const totals = new Map<string, number>();
+    // The walk re-sorts every gesture, so ties resolve in roster order —
+    // the stable sort's own tiebreak — never in the captured array's
+    // stale level order.
+    const rosterRank = new Map(state.modules.map((module, index) => [module.id, index]));
+    const picksCheapest = (a: ModuleInstance, b: ModuleInstance): boolean => {
+      const la = levels.get(a.id)!;
+      const lb = levels.get(b.id)!;
+      return la < lb || (la === lb && rosterRank.get(a.id)! < rosterRank.get(b.id)!);
+    };
+    for (let guard = 0; guard < 2000; guard++) {
+      let cheapest: ModuleInstance | null = null;
+      for (const voice of voices) {
+        if (cheapest === null || picksCheapest(voice, cheapest)) cheapest = voice;
+      }
+      if (!cheapest) break;
+      const from = levels.get(cheapest.id)!;
+      const affordable = affordableLevels(bank, from);
+      if (affordable < 1) {
+        bankRanDry = true;
+        break;
+      }
+      const bought = Math.min(GESTURE_LEVELS, affordable);
+      const spent = levelsCost(from, bought);
+      bank -= spent;
+      levels.set(cheapest.id, from + bought);
+      totals.set(cheapest.id, (totals.get(cheapest.id) ?? 0) + bought);
     }
-    const bought = result.bulk?.levels ?? 0;
-    swept += bought;
-    if (bought === 0) break;
+    for (const voice of voices) {
+      const total = totals.get(voice.id) ?? 0;
+      if (total <= 0) continue;
+      const result = upgradeModuleLevels(state, voice.id, total);
+      if (!result.ok) break;
+      swept += result.bulk?.levels ?? 0;
+    }
+  }
+  // The closing refusal, exactly where the unbatched walk takes it: the
+  // cheapest voice's next gesture rides the real action and records the
+  // engine's own reason. A guard-bound walk never took that call, so the
+  // batched one doesn't either.
+  if (bankRanDry) {
+    const resting = gestureVoices()[0];
+    if (resting) {
+      const result = upgradeModuleLevels(state, resting.id, GESTURE_LEVELS);
+      if (!result.ok) {
+        record(ctx, { kind: "upgrade", label: `Levels on the ${resting.type}`, ...outcome(result) });
+        decline(ctx, `levels on the ${resting.type}`, result.reason ?? "declined");
+      }
+    }
   }
   if (swept > 0) record(ctx, { kind: "upgrade", label: `Swept ${swept} levels`, ok: true });
 
   // The Arete offerings behind the Catalog entry (#262's playable path).
-  if (!state.catalogEntryOwned) {
+  // "When affordable" is the authored rule, read literally: a broke board
+  // attempts nothing, so a long claim-less push records no wall of
+  // declined nickels — the leg's first real refusal still lands with the
+  // engine's own reason.
+  if (!state.catalogEntryOwned && state.arete >= BALANCE.catalogEntryCost) {
     const result = buyCatalogEntry(state, ctx.rng);
+    if (result.ok) ctx.areteSpent.entry++;
     record(ctx, { kind: "arete", label: "Catalog entry", ...outcome(result) });
     if (!result.ok) decline(ctx, "catalog entry", result.reason ?? "declined");
-  } else {
-    for (const [label, attempt] of [
-      ["Chord Catalysts", () => buyCapacityDiscount(state)],
-      ["Expansion Bays", () => buyCapacityCeiling(state)],
+  } else if (state.catalogEntryOwned) {
+    for (const [label, kind, attempt] of [
+      ["Chord Catalysts", "discounts", () => buyCapacityDiscount(state)],
+      ["Expansion Bays", "ceilings", () => buyCapacityCeiling(state)],
     ] as const) {
       const result = attempt();
+      if (result.ok) ctx.areteSpent[kind]++;
       record(ctx, { kind: "arete", label: `Arete — ${label}`, ...outcome(result) });
       if (!result.ok) {
         decline(ctx, `arete ${label}`, result.reason ?? "declined");
@@ -578,12 +750,25 @@ function manage(ctx: RunContext, state: GameState): void {
     }
   }
 
-  // World purchases wait for a discovered enemy — the frontier's door —
-  // and never fire in a first era; the leg is the policy's readable
-  // World intent (story 24's foundation).
-  if (Object.values(state.world.enemies).some((enemy) => enemy.discovered)) {
+  // The World faces (story 24): purchases wait for the World's door — a
+  // starter weapon granted, a claimed frontier, or a discovered enemy —
+  // and an affordable price, the authored rule read literally. Prestige
+  // restores every enemy to undiscovered, so a discovered-only gate would
+  // idle the whole next era's spending while the claim's Arete sits in the
+  // bank; the door, once entered, stays entered. Then every occupant
+  // deploys through the real placement action: weapons beside the fight,
+  // Columns on the charge line. The placement leg keeps its readable
+  // preference order, never an optimizer.
+  const worldEntered = state.world.starterWeaponGranted || state.world.frontier > 0 ||
+    Object.values(state.world.enemies).some((enemy) => enemy.discovered);
+  if (worldEntered) {
     for (;;) {
+      if (state.arete < columnCost(state.world.columns.length)) {
+        decline(ctx, "World Column", "Not enough Arete.");
+        break;
+      }
       const result = buyChargeColumn(state);
+      if (result.ok) ctx.areteSpent.columns++;
       record(ctx, { kind: "world", label: "World Column", ...outcome(result) });
       if (!result.ok) {
         decline(ctx, "World Column", result.reason ?? "declined");
@@ -591,16 +776,140 @@ function manage(ctx: RunContext, state: GameState): void {
       }
     }
     for (const weapon of state.world.weapons) {
-      const result = buyHoneRank(state, weapon.type);
-      record(ctx, { kind: "world", label: `Hone rank — ${weapon.type}`, ...outcome(result) });
-      if (!result.ok) {
-        decline(ctx, `Hone rank ${weapon.type}`, result.reason ?? "declined");
-        break;
+      for (;;) {
+        const price = honeCostOf(state, weapon.type);
+        if (price === null || state.arete < price) {
+          decline(ctx, `Hone rank ${weapon.type}`, price === null ? "at its Hone ceiling" : "Not enough Arete.");
+          break;
+        }
+        const result = buyHoneRank(state, weapon.type);
+        if (result.ok) ctx.areteSpent.hone[weapon.type] = (ctx.areteSpent.hone[weapon.type] ?? 0) + 1;
+        record(ctx, { kind: "world", label: `Hone rank — ${weapon.type}`, ...outcome(result) });
+        if (!result.ok) {
+          decline(ctx, `Hone rank ${weapon.type}`, result.reason ?? "declined");
+          break;
+        }
       }
     }
+    placeWorldOccupants(ctx, state);
   }
   recordDiscoveries(ctx, state);
+  settleRecovery(ctx, state);
   pushTrajectory(ctx, state);
+}
+
+// The World placement leg (story 24): each weapon deploys beside the fight
+// — an owned cell adjacent to a living discovered enemy, preferring one
+// that also touches a placed Column, nearest the enemy first — and each
+// Column deploys on the charge line — an owned cell adjacent to a deployed
+// generator, preferring one beside a placed weapon. Readable preference
+// ranks, board order breaking ties; the engine's own placement action
+// gates every seat (enemy-reserved cells refuse, one occupant per cell).
+function placeWorldOccupants(ctx: RunContext, state: GameState): void {
+  const living = WORLD_ENEMIES.filter((def) => {
+    const live = state.world.enemies[def.key];
+    return live?.discovered === true && !enemyDefeated(state, def.key);
+  });
+  const distanceToFight = (pos: Hex): number =>
+    living.length > 0 ? Math.min(...living.map((def) => hexDistance(pos, def.pos))) : Number.POSITIVE_INFINITY;
+  const free = (): Hex[] =>
+    state.cells.filter((cell) => !enemyDefAt(cell) && !worldOccupantAt(state, cell));
+  // Rank keys compare lexicographically; lower is the earlier preference.
+  const rankLess = (a: readonly number[], b: readonly number[]): boolean => {
+    for (let i = 0; i < a.length; i++) {
+      if (a[i] !== b[i]) return a[i]! < b[i]!;
+    }
+    return false;
+  };
+  for (const weapon of state.world.weapons) {
+    if (weapon.pos !== null) continue;
+    // "Beside the fight" — while no enemy lives there is no seat to pick;
+    // the rule does nothing rather than decline anything.
+    if (living.length === 0) break;
+    let best: Hex | undefined;
+    let bestRank: readonly number[] | null = null;
+    for (const pos of free()) {
+      const touchesEnemy = living.some((def) => adjacent(pos, def.pos)) ? 0 : 1;
+      const touchesColumn = state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1;
+      const rank = [touchesEnemy, distanceToFight(pos), touchesColumn, pos.q, pos.r] as const;
+      if (!bestRank || rankLess(rank, bestRank)) {
+        bestRank = rank;
+        best = pos;
+      }
+    }
+    if (!best) {
+      record(ctx, { kind: "world", label: `${weapon.type} stayed in the tray`, ok: false, reason: "no free World cell" });
+      decline(ctx, `weapon ${weapon.type}`, "no free World cell");
+      break;
+    }
+    const result = placeWorldOccupant(state, weapon.id, best);
+    record(ctx, { kind: "world", label: `Deployed the ${weapon.type} at ${best.q},${best.r}`, ...outcome(result) });
+    if (!result.ok) {
+      decline(ctx, `weapon ${weapon.type}`, result.reason ?? "declined");
+      break;
+    }
+  }
+  for (const column of state.world.columns) {
+    if (column.pos !== null) continue;
+    let best: Hex | undefined;
+    let bestRank: readonly number[] | null = null;
+    for (const pos of free()) {
+      const chargesLine = state.modules.some((module) => module.pos !== null && CATEGORY_OF[module.type] === "generator" && adjacent(pos, module.pos)) ? 0 : 1;
+      const feedsWeapon = state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos)) ? 0 : 1;
+      const rank = [chargesLine, feedsWeapon, pos.q, pos.r] as const;
+      if (!bestRank || rankLess(rank, bestRank)) {
+        bestRank = rank;
+        best = pos;
+      }
+    }
+    if (!best) {
+      record(ctx, { kind: "world", label: "A Charge Column stayed in the tray", ok: false, reason: "no free World cell" });
+      decline(ctx, "Charge Column placement", "no free World cell");
+      break;
+    }
+    const result = placeWorldOccupant(state, column.id, best);
+    record(ctx, { kind: "world", label: `Placed a Charge Column at ${best.q},${best.r}`, ...outcome(result) });
+    if (!result.ok) {
+      decline(ctx, "Charge Column placement", result.reason ?? "declined");
+      break;
+    }
+  }
+}
+
+// The recovery settlement (stories 24–25): measured at every
+// between-sessions moment after the run's first prestige. Regaining
+// production compares the next era's whole-board rate against the rate the
+// reset erased; eligibility is the horizon crossing again. Both carry
+// their mark on both clocks, measured from the prestige moment; a measure
+// the budget outlives stays explicitly null.
+function settleRecovery(ctx: RunContext, state: GameState): void {
+  if (ctx.preResetRate === null) return;
+  const since = (): PlaythroughRecoveryMark => ({
+    elapsed: Math.max(0, Math.round((ctx.elapsedMs - ctx.prestigeElapsedMs) / 1000)),
+    credited: Math.max(0, Math.round(ctx.credited - ctx.prestigeCredited)),
+  });
+  if (ctx.productionRegained === null && syncRates(state, false).rate >= ctx.preResetRate) {
+    ctx.productionRegained = since();
+    record(ctx, {
+      kind: "milestone",
+      label: `Recovery — pre-reset production regained (${ctx.preResetRate.toFixed(2)}ν/s)`,
+      ok: true,
+      milestone: true,
+    });
+  }
+  if (ctx.eligibilityReached === null && horizonReached(state)) {
+    ctx.eligibilityReached = since();
+    record(ctx, {
+      kind: "milestone",
+      label: "Recovery — next prestige eligibility reached",
+      ok: true,
+      milestone: true,
+    });
+  }
+}
+
+function recoveryComplete(ctx: RunContext): boolean {
+  return ctx.productionRegained !== null && ctx.eligibilityReached !== null;
 }
 
 // One planned session at its target, the breather the session minted, and
@@ -677,11 +986,26 @@ function runSession(ctx: RunContext, state: GameState, day: number, session: num
   pushTrajectory(ctx, state);
 }
 
-// The prompt prestige check — the run's completion. The first-eligibility
-// claim is zero under the frontier curve (the horizon sits far below the
-// World's entry depth), and the zero banks honestly.
+// The prestige check — the prompt policy's completion and the pushing
+// policy's bank. The prompt door opens at the first between-sessions
+// moment the horizon is reached; the first-eligibility claim is zero under
+// the frontier curve, and the zero banks honestly. The pushing policy
+// holds that door: it prestiges only when the pending claim reaches its
+// configured target (story 19) — a depth the horizon has long been past —
+// and its first bank arms the next era's recovery ledger (stories 24–25).
 function tryPrestige(ctx: RunContext, state: GameState): boolean {
-  if (!horizonReached(state)) return false;
+  if (ctx.pushing) {
+    if (pendingClaimOf(state) < ctx.claimTarget) return false;
+  } else if (!horizonReached(state)) {
+    return false;
+  }
+  if (ctx.preResetRate === null) {
+    // The first prestige, either policy: capture the production the reset
+    // is about to erase, then arm the recovery measures against it.
+    ctx.preResetRate = syncRates(state, false).rate;
+    ctx.prestigeElapsedMs = ctx.elapsedMs;
+    ctx.prestigeCredited = ctx.credited;
+  }
   const before = state.arete;
   const result = prestige(state);
   const claim = state.arete - before;
@@ -704,14 +1028,19 @@ export function runPlaythrough(
   const scenario = scenarioOf(recipe.scenarioId)!;
   const state = scenario.build(recipe.schedule.startAt);
   scenario.assert(state, recipe.schedule.startAt);
+  const policy = policyOf(recipe.policyId);
   const ctx: RunContext = {
     schedule: recipe.schedule,
+    claimTarget: recipe.claimTarget,
+    pushing: policy.id === PUSHING_POLICY.id,
     rng: seededRng(recipe.seed),
     events: [],
     trajectory: [],
     claims: [],
+    areteSpent: { entry: 0, discounts: 0, ceilings: 0, columns: 0, hone: { chargeBlade: 0 } },
     achievements: [],
     discovered: [],
+    defeated: [],
     credited: 0,
     breatherSeconds: 0,
     sessionNous: 0,
@@ -719,33 +1048,60 @@ export function runPlaythrough(
     elapsedMs: recipe.schedule.startAt,
     lastDecline: null,
     lastMilestone: null,
+    preResetRate: null,
+    prestigeElapsedMs: 0,
+    prestigeCredited: 0,
+    productionRegained: null,
+    eligibilityReached: null,
   };
 
   let days = 0;
   let complete = false;
   let stop: PlaythroughRecord["stop"] = {
     kind: "budget",
-    reason: `The ${recipe.budgetDays}-day budget ended before the first prestige.`,
+    reason: ctx.pushing
+      ? `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the recovery behind it.`
+      : `The ${recipe.budgetDays}-day budget ended before the first prestige.`,
   };
   day: for (let day = 0; day < recipe.budgetDays; day++) {
     days = day + 1;
     for (let session = 0; session < recipe.schedule.sessionsPerDay; session++) {
-      // The prompt policy checks the door at every between-sessions moment
-      // — before the break's purchases, so a reached horizon is never
-      // spent into levels a prestige would wipe.
-      if (tryPrestige(ctx, state)) {
+      // The policy checks its door at every between-sessions moment —
+      // before the break's purchases, so a claim due (or a reached
+      // horizon) is never spent into levels a prestige would wipe. The
+      // prompt door is the prompt run's completion; a pushing bank is the
+      // demonstration's middle, never its end — the record follows the
+      // next era until both recovery measures carry their marks.
+      if (tryPrestige(ctx, state) && !ctx.pushing) {
         complete = true;
         stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
         break day;
       }
       manage(ctx, state);
       runSession(ctx, state, day, session);
-      if (tryPrestige(ctx, state)) {
+      if (tryPrestige(ctx, state) && !ctx.pushing) {
         complete = true;
         stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
         break day;
       }
+      // The between-sessions settlement: both recovery measures read here
+      // too, so a measure crossed during the session carries its mark at
+      // this moment, never a day late.
+      settleRecovery(ctx, state);
+      // The pushing run's completion (stories 24–25): both recovery
+      // measures measured — production regained and the door reached
+      // again. Whatever the figures say is the evidence; there is no
+      // pacing threshold to miss.
+      if (ctx.pushing && recoveryComplete(ctx)) {
+        complete = true;
+        stop = { kind: "recovered", reason: `Recovery measured at day ${days}.` };
+        break day;
+      }
     }
+  }
+  // A pushing run that banked but never recovered names that stop exactly.
+  if (!complete && ctx.pushing && ctx.claims.length > 0) {
+    stop = { kind: "budget", reason: `The ${days}-day budget ended inside the recovery era.` };
   }
   const lastSessionLabel = [...ctx.events].reverse().find((event) => event.kind === "session")?.label ?? null;
   const bottleneck = complete
@@ -753,15 +1109,25 @@ export function runPlaythrough(
     : ctx.lastDecline
       ? `${stop.reason} Last decline — ${ctx.lastDecline}.`
       : `${stop.reason} No action was declined — practice rate alone did not reach the horizon.`;
+  const recovery: PlaythroughRecovery | null =
+    ctx.preResetRate === null
+      ? null
+      : {
+          preResetRate: ctx.preResetRate,
+          productionRegained: ctx.productionRegained,
+          eligibilityReached: ctx.eligibilityReached,
+        };
   return {
     kind: "representative",
     runId: playthroughRunId(recipe, source),
     recipe,
     source,
-    policy: { id: PROMPT_POLICY.id, name: PROMPT_POLICY.name },
+    policy: { id: policy.id, name: policy.name },
     complete,
     stop,
+    claimTarget: recipe.claimTarget,
     claims: ctx.claims,
+    areteSpent: ctx.areteSpent,
     days,
     elapsedSeconds: Math.round((ctx.elapsedMs - recipe.schedule.startAt) / 1000),
     creditedSeconds: Math.round(ctx.credited),
@@ -773,22 +1139,49 @@ export function runPlaythrough(
     trajectory: ctx.trajectory,
     achievements: ctx.achievements,
     worldDiscoveries: ctx.discovered,
+    worldDefeats: ctx.defeated,
+    recovery,
     state,
   };
 }
 
 // The result's one-line read: the ✓/✗ shape the suite's notes carry, with
-// the figures that matter — both clocks, the claim, the identity, and on
-// an incomplete run the honest stop. Measurements and explicit outcomes
-// only; never a pacing verdict (story 37).
+// the figures that matter — both clocks, the claim against its target, the
+// spending, the recovery measures, the identity, and on an incomplete run
+// the honest stop. Measurements and explicit outcomes only; never a pacing
+// verdict (story 37).
 export function playthroughNote(record: PlaythroughRecord): string {
   const credited = Math.round(record.creditedSeconds / 60);
   const elapsed = Math.round(record.elapsedSeconds / 60);
-  const base =
+  const claims = record.claims.length > 0 ? record.claims.join(", ") : "none";
+  const target = record.policy.id === PUSHING_POLICY.id ? `/${record.claimTarget}` : "";
+  const parts = [
     `${record.policy.name} ${record.complete ? "✓" : "✗"} ` +
-    `${record.days}d · ${credited}m credited of ${elapsed}m elapsed · ` +
-    `claim ${record.claims.join(", ") || "none"} Arete · ` +
-    `seed ${record.recipe.seed} · ${record.recipe.scenarioId} · ${record.runId}`;
-  if (record.complete) return `${base} · ${record.stop.reason}`;
-  return `${base} · ${record.lastMilestone ?? "no milestone"} · ${record.bottleneck ?? record.stop.reason}`;
+      `${record.days}d · ${credited}m credited of ${elapsed}m elapsed · ` +
+      `claim ${claims}${target} Arete · ` +
+      `seed ${record.recipe.seed} · ${record.recipe.scenarioId} · ${record.runId}`,
+  ];
+  const spent = spendingNote(record.areteSpent);
+  if (spent) parts.push(spent);
+  if (record.recovery) parts.push(recoveryNote(record.recovery));
+  if (record.complete) parts.push(record.stop.reason);
+  else parts.push(`${record.lastMilestone ?? "no milestone"}`, `${record.bottleneck ?? record.stop.reason}`);
+  return parts.join(" · ");
+}
+
+function spendingNote(spent: PlaythroughAreteSpent): string {
+  const entries = [
+    spent.entry > 0 ? "Catalog entry" : null,
+    spent.discounts > 0 ? `${spent.discounts}× Chord Catalysts` : null,
+    spent.ceilings > 0 ? `${spent.ceilings}× Expansion Bays` : null,
+    spent.columns > 0 ? `${spent.columns}× Charge Column` : null,
+    ...Object.entries(spent.hone).filter(([, ranks]) => ranks > 0).map(([type, ranks]) => `${ranks}× Hone (${type})`),
+  ].filter((entry): entry is string => entry !== null);
+  return entries.length > 0 ? `spent ${entries.join(" + ")}` : "no Arete spent";
+}
+
+function recoveryNote(recovery: PlaythroughRecovery): string {
+  const mark = (value: PlaythroughRecoveryMark | null): string =>
+    value ? `${(value.elapsed / 86_400).toFixed(1)}d/${Math.round(value.credited / 60)}m` : "unreached";
+  return `recovery — rate ${mark(recovery.productionRegained)}, door ${mark(recovery.eligibilityReached)} (${recovery.preResetRate.toFixed(2)}ν/s pre-reset)`;
 }
