@@ -50,14 +50,14 @@ const PUSHING_SCHEDULE = { sessionsPerDay: 1, sessionMinutes: 600, breatherMinut
 // with the honest wall clock — presentation metadata, not run behavior.
 // The run's outcomes, trajectory, decisions, balances, and recorded
 // snapshots must match exactly.
-function comparable(record: PlaythroughRecord): Omit<PlaythroughRecord, "state"> & { state: unknown } {
+function comparable(record: PlaythroughRecord): Omit<PlaythroughRecord, "state" | "runId"> & { state: unknown } {
   const normalize = (raw: GameState): GameState => {
     const state = structuredClone(raw);
     state.achievements = Object.fromEntries(Object.keys(state.achievements).map((id) => [id, 0]));
     for (const discovery of Object.values(state.chordDiscovery)) discovery.firstFormedAt = 0;
     return state;
   };
-  const { state, ...rest } = record;
+  const { state, runId: _executionId, ...rest } = record;
   return {
     ...rest,
     snapshots: record.snapshots.map((snapshot) => ({ ...snapshot, state: normalize(snapshot.state) })),
@@ -112,7 +112,7 @@ describe("reproducibility", () => {
     app = boot(undefined, true);
     const first = app.devRunPlaythrough({ seed: 9, budgetDays: 2 });
     const second = app.devRunPlaythrough({ seed: 9, budgetDays: 2 });
-    expect(second.runId).toBe(first.runId);
+    expect(second.runId).not.toBe(first.runId);
     expect(comparable(second)).toEqual(comparable(first));
 
     const changed = app.devRunPlaythrough({ seed: 10, budgetDays: 2 });
@@ -472,7 +472,7 @@ describe("the pushing policy", () => {
     const input = { policyId: "pushing", claimTarget: 6, budgetDays: 2, schedule: PUSHING_SCHEDULE } as const;
     const first = app.devRunPlaythrough({ ...input });
     const second = app.devRunPlaythrough({ ...input });
-    expect(second.runId).toBe(first.runId);
+    expect(second.runId).not.toBe(first.runId);
     expect(comparable(second)).toEqual(comparable(first));
     const changed = app.devRunPlaythrough({ ...input, claimTarget: 8 });
     expect(changed.runId).not.toBe(first.runId);
@@ -566,7 +566,7 @@ describe("declared tuning overrides", () => {
     const input = { seed: 9, budgetDays: 2, overrides: { openingGrant: 100 } };
     const first = app.devRunPlaythrough({ ...input });
     const second = app.devRunPlaythrough({ ...input });
-    expect(second.runId).toBe(first.runId);
+    expect(second.runId).not.toBe(first.runId);
     expect(comparable(second)).toEqual(comparable(first));
     const changed = app.devRunPlaythrough({ ...input, overrides: { openingGrant: 101 } });
     expect(changed.runId).not.toBe(first.runId);
@@ -610,7 +610,7 @@ describe("the panel's visible wiring", () => {
     expect(note()).toContain("seed 9");
     expect(note()).toContain("1d");
     const agent = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
-    expect(agent.runId).toBe(clicked.runId);
+    expect(agent.runId).not.toBe(clicked.runId);
     expect(comparable(agent)).toEqual(comparable(clicked));
   });
 
@@ -640,7 +640,7 @@ describe("the panel's visible wiring", () => {
     expect(note()).toContain("Pushing ✗");
     expect(note()).toContain("claim none/5 Arete");
     const agent = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 5, seed: 9, budgetDays: 1 });
-    expect(agent.runId).toBe(clicked.runId);
+    expect(agent.runId).not.toBe(clicked.runId);
   });
 
   it("is a development command, refused outside dev mode", () => {
