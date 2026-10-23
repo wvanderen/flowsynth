@@ -9,10 +9,14 @@ from the verified checkout at the implementation commit.
 ## Provenance
 
 The capture preflight accepted `http://localhost:5173/` at commit
-`4b74b3c2` (this directory's `provenance.json` records it): served
-worktree, commit, and clean source all verified. The dev server for this
-worktree was launched with `npm run dev` per
-[visual evidence](../../agents/visual-evidence.md).
+`1f58f15` — the reviewed revision, including the review fixes (this
+directory's `provenance.json` records it): served worktree, commit, and
+clean source all verified. The dev server for this worktree was launched
+with `npm run dev` per
+[visual evidence](../../agents/visual-evidence.md). A first pass captured
+the same surfaces at the implementation commit `4b74b3c2`; the review
+fixes changed behavior behind the same pixels, so the pass was re-run at
+the final source commit and every capture above is from it.
 
 ## Captures
 
@@ -52,7 +56,7 @@ Read through tab evaluation at 1280×800 (`?dev=1`), all returning live:
 | Terminal inspection and game-action commands through the established application boundary; visual controls and agents use the same contracts, validation, outcomes, errors | `src/ui/app.terminal.test.ts` — "plays a session loop through the same commands agents call", "reads the installed run's figures…", and "runs the same tuned playthrough from the terminal, the panel inputs, and the agent command" (one dispatcher, identical run ids and errors); `desktop-terminal.png` shows the loop live | automated + manual |
 | Declared validated tuning parameters through terminal and visual recipe controls; overrides confined to isolated runs; unsupported/invalid/inapplicable rejected clearly | `src/ui/app.playthrough.test.ts` — "declares the tuning catalog…", "rejects unsupported, invalid, and inapplicable overrides by name…", "pays the declared opening grant…", "binds the declared claim base…", "never lets an override touch the live state or the ordinary save"; `desktop-tuning.png`, `desktop-invalid-override.png` | automated + manual |
 | Recipe single owner of initial tuning; interventions recorded; run marked modified; baseline not silently rewritten | `src/ui/app.terminal.test.ts` — "performs real engine actions, records their outcomes, and marks the run modified", "keeps the baseline recipe untouched and rebuilds clean on relaunch", "records the quick grants as interventions on a run, and never on the ordinary save"; the tuned record names its overrides (`playthroughNote` assertions in `app.playthrough.test.ts`) | automated |
-| Real action prerequisites and mode restrictions; clear command failures; ordinary-save contamination prevented | `src/ui/app.terminal.test.ts` — the session-clash, purchases-between-sessions, and horizon prerequisites asserted verbatim ("A session is already running.", "Purchases happen between sessions.", "The horizon is not reached yet."), the dev clock's flow-only rule, and the no-run refusal (`/ordinary save is not an experiment/`) with byte-identical localStorage | automated |
+| Real action prerequisites and mode restrictions; clear command failures; ordinary-save contamination prevented | `src/ui/app.terminal.test.ts` — the session-clash, purchases-between-sessions, and horizon prerequisites asserted verbatim ("A session is already running.", "Purchases happen between sessions.", "The horizon is not reached yet."), the dev clock's flow-only rule, and the no-run refusal (`/ordinary save is not an experiment/`) with byte-identical localStorage; "marks the run modified only by interventions that landed — refusals record without the mark" | automated |
 | Human/agent parity, valid and invalid overrides, intervention records, modified status, and isolation through the application fixture; desktop terminal/tuning capture and sensible phone entry/layout | All of the above run through the shared app fixture (`createAppFixture`); captures listed above; the phone layout probe recorded in "In-page demonstrations" | automated + manual |
 | Parent stories 30–33; tuning-configuration portions of 11 and 38 | Story 30: terminal/agent command parity cases. Story 31: terminal `run`, panel tuning inputs, and agent command produce the same run id. Story 32: the named rejection cases. Story 33: the intervention/modified cases. Story 11 (overrides): the recipe carries validated `overrides` and rides the run id ("reproduces a tuned run…"). Story 38 (entry/layout): `phone-terminal.png` and the phone layout probe | automated + manual |
 
