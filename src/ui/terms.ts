@@ -3,8 +3,10 @@
 // the glossary meaning — description prose never grows around it. The
 // meanings here are the glossary's own, distilled to the one-line ceiling.
 // The union keeps the map closed: only glossary terms may render hoverable.
-export type CatalogTerm = "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "goals" | "Habit class" | "Engineer" | "Next module roll" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card" | "World layer" | "Charge Blade" | "Charge Column" | "Enemy" | "Penalty" | "Era bonus" | "Reserved cell" | "Cleared" | "Unfed" | "Target priority" | "Hone" | "World tray" | "Claimed frontier" | "Pending claim";
+export type CatalogTerm = "Scrap" | "Prestige" | "Breather" | "Oscillator" | "Generator" | "Booster" | "Silent voice" | "Spacer" | "Forge" | "Charge conduit" | "RITUAL" | "merge tier" | "Harmonic capacity" | "memorized" | "Arete" | "Poly Expander" | "Expansion Bays" | "Chord Catalysts" | "Warp Beam" | "nous" | "charge" | "pitch" | "chords" | "module rolls" | "mutator rolls" | "goals" | "Habit class" | "Engineer" | "Next module roll" | "tree point" | "Respec" | "Preset" | "Governor" | "Reed" | "Punch card" | "World layer" | "Charge Blade" | "Charge Column" | "Enemy" | "Penalty" | "Era bonus" | "Reserved cell" | "Cleared" | "Unfed" | "Target priority" | "Hone" | "World tray" | "Claimed frontier" | "Pending claim";
 const CATALOG_TERMS: Record<CatalogTerm, string> = {
+  Scrap: "Recovered collection value spent in the Scrap catalog",
+  Prestige: "Ends the era and banks its pending Arete claim",
   Breather: "Timed post-flow break with profile-scaled production",
   Oscillator: "Pitched module contributing production",
   Generator: "Produces charge from practice",

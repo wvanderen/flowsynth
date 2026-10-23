@@ -63,7 +63,7 @@ import type { GameState, Hex, ModuleInstance, ModuleType, WeaponType } from "./t
 // The runner's own version: a behavior-affecting change here is a source
 // change, and a rerun against different source identifies separately
 // (story 36's foundation).
-export const PLAYTHROUGH_RUNNER_VERSION = 5;
+export const PLAYTHROUGH_RUNNER_VERSION = 6;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -1195,6 +1195,9 @@ export function runPlaythrough(
       // too, so a measure crossed during the session carries its mark at
       // this moment, never a day late.
       settleRecovery(ctx, state);
+      // Recovery may open events after runSession closed its final sample.
+      // Bind them now, before stopping or advancing to another stamp.
+      if (ctx.openEvents.length > 0) snap(ctx, state);
       // The pushing run's completion (stories 24–25): both recovery
       // measures measured — production regained and the door reached
       // again. Whatever the figures say is the evidence; there is no
@@ -1319,8 +1322,8 @@ export interface PlaythroughInspection {
   // The plotted sample behind this snapshot, when it is one — session
   // boundaries recorded between samples carry none.
   readonly point: PlaythroughTrajectoryPoint | null;
-  // The decisions recorded at this exact moment, the action record's own
-  // lines in their recorded order.
+  // The latest session and its preparation, through the selected moment.
+  // These are references to the action record, never copied explanations.
   readonly events: readonly PlaythroughEvent[];
   readonly rate: number;
   readonly balances: {
@@ -1334,6 +1337,8 @@ export interface PlaythroughInspection {
     readonly tray: number;
   };
   readonly voices: readonly PlaythroughBoardVoice[];
+  // The record's own frozen state: all board layers and tray contents.
+  readonly state: GameState;
 }
 
 // The assemblies are pure over an immutable record and a frozen snapshot —
@@ -1358,12 +1363,15 @@ export function playthroughInspection(run: PlaythroughRecord, index: number): Pl
       level: module.level,
       nuPerSecond: rates.contributions.get(module.id)?.value ?? null,
     }));
+  const sessions = run.events.filter((event) => event.kind === "session" && event.ok && event.snapshot <= index);
+  const previousSession = sessions.at(-2)?.snapshot ?? -1;
   const inspection: PlaythroughInspection = {
     index,
     elapsed: snapshot.elapsed,
     credited: snapshot.credited,
     point: run.trajectory.find((point) => point.snapshot === index) ?? null,
-    events: run.events.filter((event) => event.snapshot === index),
+    events: run.events.filter((event) => event.snapshot > previousSession && event.snapshot <= index),
+    state,
     rate: rates.rate,
     balances: {
       nous: wholeNous(state),

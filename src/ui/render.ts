@@ -1,3 +1,4 @@
+import { historicalBoardHtml } from "./historical-board";
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
 import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
@@ -4431,12 +4432,13 @@ function curvesTicks(max: number, axis: "elapsed" | "credited"): { at: number; l
 function renderDevCurves(app: App): void {
   let panel = byId("dev-curves");
   if (!app.dev || !app.devCurvesOpen) {
+    if (panel) closeTooltips(panel);
     panel?.remove();
     return;
   }
   if (!panel) {
     panel = document.createElement("div");
-    panel.className = "dev-curves";
+    panel.className = "dev-curves inst-panel";
     panel.id = "dev-curves";
     document.body.append(panel);
   }
@@ -4450,7 +4452,8 @@ function renderDevCurves(app: App): void {
     ? (["data-devcurve", "data-devcurveaxis"] as const).find((attr) => focused.hasAttribute(attr))
     : undefined;
   const focusValue = focusKey ? focused!.getAttribute(focusKey) : null;
-  const scrollTop = scrollTopOf(panel);
+  const scrollTop = panel.querySelector(".dev-curves-face")?.scrollTop ?? 0;
+  closeTooltips(panel);
 
   const head = `<div class="dev-board-head">
       <span>RESOURCE CURVES</span>
@@ -4458,7 +4461,7 @@ function renderDevCurves(app: App): void {
       <button data-devcurve="close" aria-label="Close resource curves">✕</button>
     </div>`;
   if (!record) {
-    panel.innerHTML = `${head}<div class="dev-curves-empty">no run yet — run a playthrough first</div>`;
+    panel.innerHTML = `<div class="inst-panel-face dev-curves-face">${head}<div class="dev-curves-empty">no run yet — run a playthrough first</div></div>`;
     panel.dataset.fp = fingerprint;
     panel.querySelector<HTMLButtonElement>('[data-devcurve="close"]')?.addEventListener("click", () => app.devToggleCurves());
     return;
@@ -4548,32 +4551,31 @@ function renderDevCurves(app: App): void {
 
   const legendKeys = CURVE_SERIES.map((series) => {
     const max = seriesMax.get(series.key)!;
-    return `<span class="dev-curves-key"><svg width="20" height="6" aria-hidden="true"><line x1="1" y1="3" x2="19" y2="3" stroke="${series.hue}" stroke-width="${series.width}"${series.dash ? ` stroke-dasharray="${series.dash}"` : ""}${series.dim ? ' opacity="0.75"' : ""}/></svg>${series.label}${max > 0 ? ` · max ${formatNumber(max)}` : " · 0"}</span>`;
+    const label = series.key === "nous" ? termTipHtml("nous") : series.key === "arete" ? termTipHtml("Arete", "arete") : series.key === "charge" ? `${termTipHtml("charge")}/s` : series.label;
+    return `<span class="dev-curves-key"><svg width="20" height="6" aria-hidden="true"><line x1="1" y1="3" x2="19" y2="3" stroke="${series.hue}" stroke-width="${series.width}"${series.dash ? ` stroke-dasharray="${series.dash}"` : ""}${series.dim ? ' opacity="0.75"' : ""}/></svg>${label}${max > 0 ? ` · max ${formatNumber(max)}` : " · 0"}</span>`;
   }).join("");
-  const legendMarks = `<span class="dev-curves-key">▲ purchases · ◆ unlocks · │ sessions · ┊ breathers · ╌ prestige</span>`;
+  const legendMarks = `<span class="dev-curves-key">▲ purchases · ◆ unlocks · │ sessions · ┊ ${termTipHtml("Breather", "breathers")} · ╌ ${termTipHtml("Prestige", "prestige")}</span>`;
 
   // The selection's read: the exact recorded state, its balances, its
   // board, and the decisions the action record stamped at its moment.
   let read = `<div class="dev-curves-read" role="status" aria-live="polite"><span class="dev-curves-none">no selection — pick a plotted point, a marker, or step ◀ ▶</span></div>`;
-  let voices = "";
+  let board = "";
   let decisions = "";
   if (selected !== null && selectedSnapshot) {
     const inspection = playthroughInspection(record, selected);
     const balances = inspection.balances;
+    board = historicalBoardHtml(inspection);
     read = `<div class="dev-curves-read" role="status" aria-live="polite">
       <div class="mono dev-curves-line1">${inspection.point ? "sample" : "boundary"} ${selected + 1}/${record.snapshots.length} · sim ${curvesStamp(inspection.elapsed)} · credited ${formatDuration(inspection.credited)} · ${formatNumber(inspection.rate)} ν/s</div>
-      <div class="mono dev-curves-line2">nous ${formatNumber(balances.nous)} · era ${formatNumber(balances.eraEarned)} · arete ${formatNumber(balances.arete)} · scrap ${formatNumber(balances.scrap)} · cells ${balances.cells} · tray ${balances.tray} · prestiges ${balances.prestiges} · sessions ${balances.sessions}</div>
+      <div class="mono dev-curves-line2">${termTipHtml("nous")} ${formatNumber(balances.nous)} · era ${formatNumber(balances.eraEarned)} · ${termTipHtml("Arete", "arete")} ${formatNumber(balances.arete)} · ${termTipHtml("Scrap", "scrap")} ${formatNumber(balances.scrap)} · cells ${balances.cells} · tray ${balances.tray} · ${termTipHtml("Prestige", "prestiges")} ${balances.prestiges} · sessions ${balances.sessions}</div>
     </div>`;
-    voices = inspection.voices
-      .map((voice) => `<div class="dev-curve-voice"><span class="dev-note">${escapeHtml(voice.note)}</span><span class="dev-type">${escapeHtml(META[voice.type].short)}</span><span class="dev-lvl">Lv. ${voice.level}</span><span class="dev-value mono">${voice.nuPerSecond === null ? "—" : `${formatNumber(voice.nuPerSecond)} ν/s`}</span></div>`)
-      .join("");
     decisions = inspection.events
-      .map((event) => `<div class="dev-curve-event${event.ok ? "" : " declined"}"><span class="dev-curve-ok">${event.ok ? "✓" : "✗"}</span>${escapeHtml(event.label)}${event.reason ? ` — ${escapeHtml(event.reason)}` : ""}</div>`)
+      .map((event) => `<div class="dev-curve-event${event.ok ? "" : " declined"}"><span class="dev-curve-ok">${event.ok ? "✓" : "✗"}</span><span class="dev-curve-stamp">${escapeHtml(curvesStamp(event.at))}</span>${escapeHtml(event.label)}${event.reason ? ` — ${escapeHtml(event.reason)}` : ""}</div>`)
       .join("");
     if (!decisions) decisions = `<div class="dev-curves-none">no decisions recorded at this moment</div>`;
   }
 
-  panel.innerHTML = `${head}
+  panel.innerHTML = `<div class="inst-panel-face dev-curves-face">${head}
     <div class="dev-curves-cap">
       <span>clock</span>
       <button data-devcurveaxis="elapsed" class="${axis === "elapsed" ? "on" : ""}" aria-pressed="${axis === "elapsed"}">elapsed</button>
@@ -4591,14 +4593,15 @@ function renderDevCurves(app: App): void {
     </div>
     <div class="dev-curves-legend">${legendKeys}${legendMarks}</div>
     ${read}
-    ${voices ? `<div class="dev-curves-voices">${voices}</div>` : ""}
-    ${decisions ? `<div class="dev-curves-events">${decisions}</div>` : ""}`;
+    ${decisions ? `<div class="dev-curves-events">${decisions}</div>` : ""}
+    ${board}</div>`;
   panel.dataset.fp = fingerprint;
   if (focusKey && focusValue !== null) {
     [...panel.querySelectorAll<HTMLElement>(`[${focusKey}]`)]
       .find((element) => element.getAttribute(focusKey) === focusValue)?.focus({ preventScroll: true });
   }
-  panel.scrollTop = scrollTop;
+  panel.querySelector(".dev-curves-face")!.scrollTop = scrollTop;
+  wireTooltips(panel, app.signal);
   panel.querySelectorAll<HTMLElement>("[data-devcurve]").forEach((element) => {
     const key = element.getAttribute("data-devcurve")!;
     if (key === "close") app.listen(element, "click", () => app.devToggleCurves());

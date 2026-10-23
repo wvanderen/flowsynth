@@ -3520,15 +3520,27 @@ body.hex-detail-open .upgrade-all {
   z-index: 41;
   width: min(640px, calc(100vw - 24px));
   max-height: calc(100vh - 24px);
+  overflow: hidden;
+}
+.dev-curves-face {
+  max-height: calc(100vh - 26px);
   overflow-y: auto;
-  background: var(--panel-veil);
-  border: 1px solid var(--line-strong);
-  border-radius: 0;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
+.dev-curves-face > * { flex-shrink: 0; }
+.dev-history-layer { border-top: 1px solid var(--line); padding-top: 6px; min-width: 0; }
+.dev-history-layer h3 { font: 11px var(--mono); margin: 0 0 4px; }
+.dev-history-scroll { overflow: auto; max-height: 400px; }
+.dev-history-scroll svg { display: block; color: var(--arete); }
+.dev-history-empty { fill: var(--panel-deep); stroke: var(--line); stroke-width: 1; }
+.dev-history-plate { fill: var(--panel-deep); stroke: var(--line-strong); stroke-width: 1; }
+.dev-history-note { fill: var(--ink); font: 11px var(--mono); }
+.dev-history-board { display: flex; flex-direction: column; gap: 8px; }
+.dev-curve-stamp { flex: 0 0 auto; color: var(--muted); }
+.dev-curves .term-trigger { font: inherit; }
 .dev-curves-empty { font: 10px var(--mono); color: var(--muted); }
 .dev-curves-cap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .dev-curves-cap > span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--muted); margin-right: 4px; }
@@ -3559,12 +3571,6 @@ body.hex-detail-open .upgrade-all {
 .dev-curves-line1 { font: 11px var(--mono); color: var(--ink); }
 .dev-curves-line2 { font: 10px var(--mono); color: var(--muted); }
 .dev-curves-none { font: 10px var(--mono); color: var(--muted); }
-.dev-curves-voices { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 2px; }
-.dev-curve-voice { display: flex; gap: 6px; align-items: baseline; font: 10px var(--mono); }
-.dev-curve-voice .dev-note { width: 34px; color: var(--muted); }
-.dev-curve-voice .dev-type { width: 38px; color: var(--muted); }
-.dev-curve-voice .dev-lvl { width: 34px; color: var(--muted); }
-.dev-curve-voice .dev-value { margin-left: auto; }
 .dev-curves-events { border-top: 1px solid var(--line); padding-top: 6px; display: flex; flex-direction: column; gap: 1px; max-height: 180px; overflow-y: auto; }
 .dev-curve-event { font: 9px var(--mono); color: var(--ink); display: flex; gap: 6px; }
 .dev-curve-event .dev-curve-ok { flex: 0 0 auto; }

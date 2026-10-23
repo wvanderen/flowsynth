@@ -600,10 +600,10 @@ describe("historical snapshots and inspection", () => {
     expect(inspection.balances.arete).toBe(point.arete);
     expect(inspection.balances.eraEarned).toBe(point.eraEarned);
     expect(inspection.balances.cells).toBe(record.snapshots[point.snapshot]!.state.cells.length);
-    // The recent decisions are the action record's own lines for this
-    // moment — no second explanation store.
-    expect(inspection.events).toEqual(record.events.filter((event) => event.snapshot === point.snapshot));
-    for (const event of inspection.events) expect(event.snapshot).toBe(point.snapshot);
+    // The shared command exposes the record's frozen state itself.
+    expect(inspection.state).toBe(record.snapshots[point.snapshot]!.state);
+    expect(inspection.events.every(event => event.snapshot <= point.snapshot)).toBe(true);
+    for (const event of inspection.events) expect(record.events).toContain(event);
     // The board reads: every deployed voice with its note, level, and
     // final ν/s on the same preview basis.
     expect(inspection.voices.length).toBeGreaterThan(0);
@@ -621,6 +621,109 @@ describe("historical snapshots and inspection", () => {
     // A bad index is a thrown, named error and moves nothing.
     expect(() => app.devInspectPlaythrough(record.snapshots.length)).toThrow(/no recorded snapshot/);
     expect(app.devInspected).toBe(boundary.snapshot);
+  });
+
+
+  it.each(["recovered", "budget"] as const)("binds recovery milestones at their own stamp before %s exit", (stop) => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      state.eraEarned = 1e12;
+      state.totalEarned = 1e12;
+      state.modules[0]!.level = 100;
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const prestige = actions.prestige;
+    vi.spyOn(actions, "prestige").mockImplementation(state => {
+      const result = prestige(state);
+      state.modules[0]!.level = stop === "recovered" ? 100 : 0;
+      return result;
+    });
+    const end = actions.endSession;
+    vi.spyOn(actions, "endSession").mockImplementation((state, now) => {
+      const result = end(state, now);
+      state.eraEarned = 1e12;
+      return result;
+    });
+    // Production recovery can occur during manage; eligibility is forced
+    // across the horizon during the final session, after that settlement.
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
+    expect(record.stop.kind).toBe(stop);
+    const eligibility = record.events.find(event => event.label === "Recovery — next prestige eligibility reached")!;
+    expect(eligibility).toBeDefined();
+    expect(eligibility.at).toBe(60);
+    expect(eligibility.snapshot).toBeGreaterThanOrEqual(0);
+    const inspection = app.devInspectPlaythrough(eligibility.snapshot)!;
+    expect(inspection.elapsed).toBe(eligibility.at);
+    expect(inspection.credited).toBe(eligibility.credited);
+    expect(inspection.state.eraEarned).toBe(1e12);
+    expect(inspection.events).toContain(eligibility);
+    for (const event of record.events) {
+      expect(event.snapshot).toBeGreaterThanOrEqual(0);
+      expect(record.snapshots[event.snapshot]!.elapsed).toBe(event.at);
+    }
+  });
+
+  it("keeps preparation decisions at a session boundary without future or stale sessions", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 2 });
+    const sessions = record.events.filter(event => event.kind === "session" && event.ok);
+    const second = sessions[1]!;
+    const first = sessions[0]!;
+    const secondRead = app.devInspectPlaythrough(second.snapshot)!;
+    const preparation = record.events.filter(event => event.snapshot > first.snapshot && event.snapshot < second.snapshot);
+    expect(preparation.some(event => ["shelf", "cell", "place", "upgrade"].includes(event.kind))).toBe(true);
+    expect(secondRead.events).toEqual(record.events.filter(event => event.snapshot > first.snapshot && event.snapshot <= second.snapshot));
+    for (const event of preparation) expect(secondRead.events).toContain(event);
+    expect(secondRead.events).not.toContain(first);
+    expect(secondRead.events).toContain(second);
+    expect(secondRead.events).not.toContain(sessions[2]);
+    const after = app.devInspectPlaythrough(second.snapshot + 1)!;
+    for (const event of preparation) expect(after.events).toContain(event);
+  });
+
+  it("draws the selected board layers and exposes the same frozen state without editing the live board", () => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      state.nous = 0;
+      state.mutatorSlots = [{ q: 0, r: 0 }];
+      state.mutators = [{ id: "historic-mutator", family: "power", rarity: "rare", pos: { q: 0, r: 0 } }];
+      state.world.columns = [{ id: "historic-column", pos: { q: 0, r: 0 } }];
+      state.world.weapons = [{ id: "historic-weapon", type: "chargeBlade", pos: { q: 0, r: 1 }, store: 12, cooldown: 0, targetPriority: ["w0"] }];
+      state.world.enemies.w0 = { discovered: true, hp: 123 };
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const liveBefore = JSON.stringify(app.state);
+    const saveBefore = localStorage.getItem(STORAGE_KEY);
+    const record = app.devRunPlaythrough({ budgetDays: 1, schedule: { sessionsPerDay: 1, sessionMinutes: 1 } });
+    app.devToggleCurves();
+    const inspection = app.devInspectPlaythrough(0)!;
+    expect(inspection.state).toBe(record.snapshots[0]!.state);
+    expect(Object.isFrozen(inspection.state.world.weapons[0])).toBe(true);
+    const board = document.querySelector(".dev-history-board")!;
+    expect([...board.querySelectorAll("h3")].map(h => h.querySelector("button")?.textContent ?? h.textContent)).toEqual(["Mutators", "Modules", "World"]);
+    expect(board.querySelector('[data-history-mutator="0,0"]')!.textContent).toContain("rare power mutator");
+    expect(board.querySelectorAll("[data-history-module]")).toHaveLength(inspection.state.cells.length);
+    expect(board.querySelector('[data-history-world="0,0"]')!.textContent).toContain("COLUMN");
+    expect(board.querySelector('[data-history-world="0,1"]')!.textContent).toContain("12");
+    expect(board.querySelector('[data-history-world="-1,0"]')!.textContent).toContain("HP 123");
+    expect(board.querySelectorAll("[data-buy], [data-cell], [data-world-cell]")).toHaveLength(0);
+    expect(JSON.stringify(app.state)).toBe(liveBefore);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saveBefore);
+    // The existing tooltip primitive supplies keyboard and touch access.
+    const term = document.querySelector<HTMLButtonElement>('.dev-curves-line2 [aria-label="nous — what it means"]')!;
+    term.focus();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(term.getAttribute("aria-expanded")).toBe("false");
+    term.click();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
   });
 
   it("inspection never mutates the active run, the save, or the recorded state", () => {
