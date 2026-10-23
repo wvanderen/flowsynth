@@ -72,7 +72,7 @@ import type { GameState, Hex, ModuleInstance, ModuleType, WeaponType } from "./t
 // change, and a rerun against different source identifies separately
 // (story 36's foundation). The declared override set (issue #472) rides
 // the recipe, so this bump records the walk's new inputs.
-export const PLAYTHROUGH_RUNNER_VERSION = 8;
+export const PLAYTHROUGH_RUNNER_VERSION = 9;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -516,6 +516,8 @@ export interface PlaythroughTrajectoryPoint {
 // resolves to that stamp's one closing state — the exact recorded board
 // at the moment they all carry, never a neighboring break's.
 export interface PlaythroughSnapshot {
+  readonly rate: number;
+  readonly voices: readonly PlaythroughBoardVoice[];
   // Simulated elapsed seconds since the anchor — the plotted x.
   readonly elapsed: number;
   readonly credited: number;
@@ -694,8 +696,10 @@ function record(
 
 // Deep-read-only (issue #470): every recorded state freezes whole, so a
 // stray write through inspection — human or agent — fails loudly instead
-// of rewriting evidence.
-function deepFreeze<T>(value: T): T {
+// of rewriting evidence. The run artifact (issue #473) gives its imported
+// copies the same treatment, so evidence that crossed a file boundary
+// keeps the guarantee.
+export function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === "object") {
     for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
     Object.freeze(value);
@@ -715,10 +719,18 @@ function previewClone(state: GameState): GameState {
 }
 
 function snap(ctx: RunContext, state: GameState): number {
+  const captured = previewClone(state);
+  const rates = syncRates(captured, false);
   const snapshot: PlaythroughSnapshot = {
+    rate: rates.rate,
+    voices: deepFreeze(captured.modules
+      .filter(module => module.pos !== null)
+      .sort((a, b) => a.pos!.r - b.pos!.r || a.pos!.q - b.pos!.q || a.id.localeCompare(b.id))
+      .map(module => ({ type: module.type, note: cellNoteOf(module.pos!), level: module.level,
+        nuPerSecond: rates.contributions.get(module.id)?.value ?? null }))),
     elapsed: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000),
     credited: Math.round(ctx.credited),
-    state: deepFreeze(previewClone(state)),
+    state: deepFreeze(captured),
   };
   ctx.snapshots.push(snapshot);
   const index = ctx.snapshots.length - 1;
@@ -1685,7 +1697,7 @@ export interface PlaythroughInspection {
 }
 
 // The assemblies are pure over an immutable record and a frozen snapshot —
-// one working clone per (record, index), memoized.
+// one read per (record, index), memoized.
 const inspections = new WeakMap<PlaythroughRecord, Map<number, PlaythroughInspection>>();
 
 export function playthroughInspection(run: PlaythroughRecord, index: number): PlaythroughInspection {
@@ -1696,16 +1708,6 @@ export function playthroughInspection(run: PlaythroughRecord, index: number): Pl
     throw new Error(`Playthrough inspection: no recorded snapshot ${index} — the run carries ${run.snapshots.length}.`);
   }
   const state = snapshot.state;
-  const rates = syncRates(previewClone(state), false);
-  const voices: PlaythroughBoardVoice[] = state.modules
-    .filter((module) => module.pos !== null)
-    .sort((a, b) => a.pos!.r - b.pos!.r || a.pos!.q - b.pos!.q || a.id.localeCompare(b.id))
-    .map((module) => ({
-      type: module.type,
-      note: cellNoteOf(module.pos!),
-      level: module.level,
-      nuPerSecond: rates.contributions.get(module.id)?.value ?? null,
-    }));
   const sessions = run.events.filter((event) => event.kind === "session" && event.ok && event.snapshot <= index);
   const previousSession = sessions.at(-2)?.snapshot ?? -1;
   const inspection: PlaythroughInspection = {
@@ -1715,7 +1717,7 @@ export function playthroughInspection(run: PlaythroughRecord, index: number): Pl
     point: run.trajectory.find((point) => point.snapshot === index) ?? null,
     events: run.events.filter((event) => event.snapshot > previousSession && event.snapshot <= index),
     state,
-    rate: rates.rate,
+    rate: snapshot.rate,
     balances: {
       nous: wholeNous(state),
       eraEarned: state.eraEarned,
@@ -1726,7 +1728,7 @@ export function playthroughInspection(run: PlaythroughRecord, index: number): Pl
       cells: state.cells.length,
       tray: state.modules.filter((module) => module.pos === null).length,
     },
-    voices,
+    voices: snapshot.voices,
   };
   let memo = inspections.get(run);
   if (!memo) {
@@ -1735,4 +1737,9 @@ export function playthroughInspection(run: PlaythroughRecord, index: number): Pl
   }
   memo.set(index, inspection);
   return inspection;
+}
+
+// Shared non-color completion mark for the library and terminal.
+export function playthroughStatusMark(record: PlaythroughRecord): string {
+  return record.stop.kind === "checkpoint" ? "◆" : record.complete ? "✓" : "✗";
 }

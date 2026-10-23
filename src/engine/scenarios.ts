@@ -8,6 +8,7 @@ import {
   PUSHING_CHECKPOINT_RECIPE,
   type PlaythroughCheckpointId,
   type PlaythroughRecipe,
+  type PlaythroughRecord,
 } from "./playthrough";
 import { horizonReached } from "./accumulator";
 import { createInitialState, openingGrant } from "./state";
@@ -42,6 +43,12 @@ export interface ScenarioDescriptor {
   // runner, and the recipe belongs to whoever asks. Absent on the initial
   // state and the constructed fixtures.
   readonly recipe?: PlaythroughRecipe;
+  // The walked record a checkpoint preset grew from (issue #473): the
+  // evidence walk — trajectory, decisions, snapshots — behind the
+  // installed state, so the suite's curves and the run artifact carry the
+  // preset's own provenance. Read lazily, beside the recipe; absent on
+  // the initial state and the constructed fixtures.
+  readonly walkedRecord?: () => PlaythroughRecord;
   // The intended state, rebuilt from nothing every call.
   build(now: number): GameState;
   // Optional cold preparation; the application awaits it before building.
@@ -112,6 +119,7 @@ const APPROACHING_PRESTIGE: ScenarioDescriptor = {
   get recipe() {
     return APPROACHING_PRESTIGE_RECIPE;
   },
+  walkedRecord: () => playthroughCheckpointPreset("approaching-prestige").record,
   prepare: () => preparePlaythroughCheckpoint("approaching-prestige"),
   build: () => playthroughCheckpointPreset("approaching-prestige").state,
   assert: (state) => assertApproachingPrestige(state),
@@ -126,6 +134,7 @@ const AFTER_FIRST_BANK: ScenarioDescriptor = {
   get recipe() {
     return PUSHING_CHECKPOINT_RECIPE;
   },
+  walkedRecord: () => playthroughCheckpointPreset("after-first-bank").record,
   prepare: () => preparePlaythroughCheckpoint("after-first-bank"),
   build: () => playthroughCheckpointPreset("after-first-bank").state,
   assert: (state) => assertAfterFirstBank(state, PUSHING_CHECKPOINT_RECIPE.claimTarget),
@@ -140,6 +149,7 @@ const WORLD_ENEMY: ScenarioDescriptor = {
   get recipe() {
     return PUSHING_CHECKPOINT_RECIPE;
   },
+  walkedRecord: () => playthroughCheckpointPreset("world-enemy-active").record,
   prepare: () => preparePlaythroughCheckpoint("world-enemy-active"),
   build: () => playthroughCheckpointPreset("world-enemy-active").state,
   assert: (state) => assertWorldEnemy(state),

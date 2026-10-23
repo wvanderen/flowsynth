@@ -1,0 +1,35 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-23T22:01:15.395Z",
+  "url": "http://localhost:5173",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-c849c6e5",
+  "branch": "t3/review-pull-request-482",
+  "commit": "e3cd88208cdfaab65e5e187d4e952cb582a822d6",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/run-artifacts-473/README.md",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/run-artifacts-473/review-fix-desktop.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/run-artifacts-473/review-fix-phone-curves.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/run-artifacts-473/review-fix-phone.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/run-artifacts-473/review-fix-provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

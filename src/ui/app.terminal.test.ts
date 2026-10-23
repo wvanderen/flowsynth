@@ -256,7 +256,10 @@ describe("human and agent parity", () => {
     const agent = app.devRunPlaythrough({ seed: 9, budgetDays: 1, overrides: { openingGrant: 100 } });
     const terminal = app.devTerminalRun("run seed=9 days=1 openingGrant=100");
     expect(terminal).toBe(app.devPlaythroughNote);
-    expect(app.devPlaythrough!.runId).toBe(agent.runId);
+    expect(app.devPlaythrough!.runId).not.toBe(agent.runId);
+    expect(app.devPlaythrough!.recipe).toEqual(agent.recipe);
+    expect(app.devPlaythrough!.source).toEqual(agent.source);
+    expect(app.devPlaythrough!.trajectory).toEqual(agent.trajectory);
 
     const seedField = document.getElementById("dev-playthrough-seed") as HTMLInputElement;
     const budgetField = document.getElementById("dev-playthrough-budget") as HTMLInputElement;
@@ -266,7 +269,10 @@ describe("human and agent parity", () => {
     openingField.value = "100";
     document.querySelector<HTMLButtonElement>('[data-dev="playthrough"]')!
       .dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.devPlaythrough!.runId).toBe(agent.runId);
+    expect(app.devPlaythrough!.runId).not.toBe(agent.runId);
+    expect(app.devPlaythrough!.recipe).toEqual(agent.recipe);
+    expect(app.devPlaythrough!.source).toEqual(agent.source);
+    expect(app.devPlaythrough!.trajectory).toEqual(agent.trajectory);
     expect(app.devPlaythroughNote).toContain("tuned openingGrant=100");
     // The invalid override reads the same ✗ through every door.
     openingField.value = "999";

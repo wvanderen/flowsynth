@@ -1,3 +1,4 @@
+import { playthroughStatusMark } from "../engine/playthrough";
 import { historicalBoardHtml } from "./historical-board";
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
@@ -16,7 +17,7 @@ import { baseTermOf, generatorProfileOf } from "../engine/profiles";
 import { catalogOpen, mergeCapIncreaseCost, rowUnlockCost, unlockedMergeCap, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
-import { playthroughEventMarker, playthroughInspection, type PlaythroughTrajectoryPoint } from "../engine/playthrough";
+import { playthroughEventMarker, playthroughInspection, playthroughSource, type PlaythroughTrajectoryPoint } from "../engine/playthrough";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { TILE_APPS, type FocusApp } from "../engine/apps";
 import { poolOutstanding } from "../engine/trust";
@@ -4127,6 +4128,10 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       <input id="dev-playthrough-target" type="number" min="1" max="36" step="1" inputmode="numeric" aria-label="Pushing pending-claim target in Arete" placeholder="claim ≥" />
       ${tuningOptions}
       <button data-dev="playthrough">Run playthrough</button>
+      <select id="dev-runs" aria-label="Recorded runs"></select>
+      <button data-dev="export-run" aria-label="Export the selected run as an artifact">Export</button>
+      <button data-dev="import-run" aria-label="Import a run artifact file">Import</button>
+      <input id="dev-import-file" type="file" accept="application/json,.json" style="display:none" />
       <input id="dev-terminal" type="text" aria-label="Dev terminal command — enter runs it, help lists commands" placeholder="help" autocomplete="off" autocapitalize="off" spellcheck="false" />
       <button data-dev="60">+1m</button>
       <button data-dev="600">+10m</button>
@@ -4167,6 +4172,33 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
   if (resultNote) {
     resultNote.textContent = app.devPlaythroughNote;
     resultNote.hidden = !app.devPlaythroughNote;
+  }
+  // The results library's select (issue #473): one option per recorded
+  // run, newest first, with its status marks inline — complete/incomplete
+  // (✓/✗), checkpoint halt (◆), imported, modified. Rebuilt only when the
+  // library or the selection changes, so the open picker keeps its place.
+  const runsSelect = byId("dev-runs") as HTMLSelectElement | null;
+  if (runsSelect) {
+    runsSelect.hidden = app.devResults.length === 0;
+    const signature = `${app.devResults
+      .map((result) => `${result.record.runId}:${result.imported ? "i" : ""}${result.modified ? "m" : ""}:${result.interventions.length}`)
+      .join(",")}|${app.devSelectedRunId ?? ""}`;
+    if (panel.dataset.runsSig !== signature) {
+      panel.dataset.runsSig = signature;
+      runsSelect.replaceChildren(
+        ...app.devResults.map((result) => {
+          const option = document.createElement("option");
+          option.value = result.record.runId;
+          const mark = playthroughStatusMark(result.record);
+          option.textContent =
+            `${result.record.runId} ${mark}` +
+            (result.imported ? " · imported" : "") +
+            (result.modified ? " · modified" : "");
+          return option;
+        }),
+      );
+      if (app.devSelectedRunId !== null) runsSelect.value = app.devSelectedRunId;
+    }
   }
   // The terminal's scrollback (#472): the last lines the dispatcher
   // logged, input, ✓, and ✗ alike — set as text (state-derived), oldest
@@ -4215,6 +4247,33 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       app.devTerminalRun(value);
     });
   }
+  // The artifact controls (issue #473): the runs select moves the library
+  // selection — viewing, never re-running — and export/import drive the
+  // same commands agent access calls. Export downloads the artifact file;
+  // import reads the chosen file's text. Named failures land in the
+  // standing ✗ readout either way.
+  const runsPicker = byId("dev-runs");
+  if (runsPicker) {
+    app.listen(runsPicker, "change", () => {
+      const value = (runsPicker as HTMLSelectElement).value;
+      if (value) app.devSelectRun(value);
+    });
+  }
+  const importFile = byId("dev-import-file") as HTMLInputElement | null;
+  if (importFile) {
+    app.listen(importFile, "change", async () => {
+      const fileItem = importFile.files?.[0];
+      if (!fileItem) return;
+      const text = await fileItem.text();
+      try {
+        app.devImportPlaythrough(text);
+      } catch {
+        // The named failure stands in the panel's note; the picker clears
+        // so choosing the same file again still fires a change.
+        importFile.value = "";
+      }
+    });
+  }
   panel.querySelectorAll<HTMLButtonElement>("[data-dev]").forEach((button) => {
     app.listen(button, "click", () => {
       const key = button.getAttribute("data-dev")!;
@@ -4254,6 +4313,23 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
           ...(claimTarget !== undefined ? { claimTarget } : {}),
           ...(Object.keys(overrides).length > 0 ? { overrides } : {}),
         });
+      } else if (key === "export-run") {
+        try {
+          const artifact = app.devExportPlaythrough();
+          const blob = new Blob([artifact], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = `flowsynth-run-${app.devSelectedRunId ?? "run"}.json`;
+          document.body.append(anchor);
+          anchor.click();
+          anchor.remove();
+          URL.revokeObjectURL(url);
+        } catch {
+          // The named failure stands in the panel's note.
+        }
+      } else if (key === "import-run") {
+        (byId("dev-import-file") as HTMLInputElement | null)?.click();
       } else if (key === "board") app.devToggleBoard();
       else if (key === "curves") app.devToggleCurves();
       else app.devAdvance(Number(key));
@@ -4492,7 +4568,14 @@ function renderDevCurves(app: App): void {
     document.body.append(panel);
   }
   const record = app.devPlaythrough;
-  const fingerprint = record ? `${record.runId}|${app.devInspected ?? "none"}|${app.devCurvesAxis}` : "empty";
+  // The viewed result's status (issue #473): imported and modified marks
+  // ride the panel, so old evidence never reads as a fresh walk and
+  // altered evidence never reads as baseline. Part of the fingerprint —
+  // a status change re-renders the head.
+  const result = record ? app.devResults.find((candidate) => candidate.record.runId === record.runId) : undefined;
+  const fingerprint = record
+    ? `${record.runId}|${result?.imported ? "i" : ""}${result?.modified ? "m" : ""}|${result?.interventions.length ?? 0}|${app.devInspected ?? "none"}|${app.devCurvesAxis}`
+    : "empty";
   if (panel.dataset.fp === fingerprint) return;
   // The rebuild keeps the stepping control's focus and the scroll, so a
   // keyboard walk ◀▶ and a scroll-and-pick both survive the re-render.
@@ -4504,11 +4587,26 @@ function renderDevCurves(app: App): void {
   const scrollTop = panel.querySelector(".dev-curves-face")?.scrollTop ?? 0;
   closeTooltips(panel);
 
+  // The provenance line (issue #473): where the viewed record came from
+  // and what produced it, with the current engine named beside a
+  // different carried source — an artifact from another checkout or an
+  // older engine keeps its own provenance, visibly, and is never
+  // re-executed or reinterpreted as a current result.
+  const currentSource = playthroughSource();
+  const provenance = record && result
+    ? [
+        result.imported ? "imported" : "walked here",
+        `save v${record.source.saveVersion} · runner v${record.source.runnerVersion} · engine ${record.source.engineSource}` +
+          (record.source.engineSource !== currentSource.engineSource ? ` ≠ current ${currentSource.engineSource}` : ""),
+        ...(result.modified ? [`modified — ${result.interventions.length} intervention${result.interventions.length === 1 ? "" : "s"}`] : []),
+      ].join(" · ")
+    : "";
+  const provLine = provenance ? `<div class="dev-curves-prov mono">${escapeHtml(provenance)}</div>` : "";
   const head = `<div class="dev-board-head">
       <span>RESOURCE CURVES</span>
       <span class="mono">${record ? escapeHtml(record.runId) : ""}</span>
       <button data-devcurve="close" aria-label="Close resource curves">✕</button>
-    </div>`;
+    </div>${provLine}`;
   if (!record) {
     panel.innerHTML = `<div class="inst-panel-face dev-curves-face">${head}<div class="dev-curves-empty">no run yet — run a playthrough first</div></div>`;
     panel.dataset.fp = fingerprint;
