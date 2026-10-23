@@ -1168,6 +1168,7 @@ function* walkPlaythrough(
   const lastEnd = state.sessionRecords.reduce((latest, session) => Math.max(latest, session.endedAt), -Infinity);
   const startAt = Math.max(recipe.schedule.startAt, lastEnd + recipe.schedule.breatherMinutes * 60_000);
   recipe = { ...recipe, schedule: { ...recipe.schedule, startAt } };
+  validatePlaythroughRecipe(recipe);
   scenario.assert(state, startAt);
   const policy = policyOf(recipe.policyId);
   const ctx: RunContext = {
@@ -1419,7 +1420,17 @@ export async function preparePlaythroughCheckpoint(id: PlaythroughCheckpointId):
     const walk = walkPlaythrough(checkpointRecipeOf(id), id, source);
     let next: IteratorResult<void, PlaythroughRecord>;
     do {
-      await new Promise<void>((resolve) => setTimeout(resolve, 0));
+      await new Promise<void>((resolve) => {
+        // Message tasks yield to input/paint without hidden-tab timer
+        // throttling turning a long walk into hours of preparation.
+        const channel = new MessageChannel();
+        channel.port1.onmessage = () => {
+          channel.port1.close();
+          channel.port2.close();
+          resolve();
+        };
+        channel.port2.postMessage(null);
+      });
       const deadline = performance.now() + 8;
       do { next = walk.next(); } while (!next.done && performance.now() < deadline);
     } while (!next.done);

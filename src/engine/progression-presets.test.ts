@@ -5,6 +5,7 @@ import {
   PUSHING_CHECKPOINT_RECIPE,
   composePlaythroughRecipe,
   playthroughCheckpointPreset,
+  preparePlaythroughCheckpoint,
   playthroughNote,
   runPlaythrough,
   runPlaythroughCheckpoint,
@@ -63,7 +64,8 @@ describe("the declared checkpoint recipes", () => {
 });
 
 describe("the walked presets", () => {
-  it("stops the approaching walk at the open door of the played first era", { timeout: 120_000 }, () => {
+  it("stops the approaching walk at the open door of the played first era", { timeout: 120_000 }, async () => {
+    await preparePlaythroughCheckpoint("approaching-prestige");
     const preset = playthroughCheckpointPreset("approaching-prestige");
     expect(preset.record.stop.kind).toBe("checkpoint");
     expect(preset.record.stop.reason).toContain("Approaching prestige reached at day 9");
@@ -79,7 +81,8 @@ describe("the walked presets", () => {
     scenarioOf("approaching-prestige")!.assert(state, 0);
   });
 
-  it("stops the pushing walk immediately after its first earned bank, before the spending", { timeout: 120_000 }, () => {
+  it("stops the pushing walk immediately after its first earned bank, before the spending", { timeout: 120_000 }, async () => {
+    await preparePlaythroughCheckpoint("after-first-bank");
     const preset = playthroughCheckpointPreset("after-first-bank");
     expect(preset.record.stop.kind).toBe("checkpoint");
     expect(preset.record.stop.reason).toContain("After first bank reached at day 10");
@@ -99,7 +102,8 @@ describe("the walked presets", () => {
     scenarioOf("after-first-bank")!.assert(state, 0);
   });
 
-  it("stops the pushing walk at the living fight with the placement unplayed", { timeout: 120_000 }, () => {
+  it("stops the pushing walk at the living fight with the placement unplayed", { timeout: 120_000 }, async () => {
+    await preparePlaythroughCheckpoint("world-enemy-active");
     const preset = playthroughCheckpointPreset("world-enemy-active");
     expect(preset.record.stop.kind).toBe("checkpoint");
     expect(preset.record.stop.reason).toContain("World enemy reached at day 15");
@@ -172,7 +176,7 @@ describe("the preset read's honesty", () => {
 describe("scripted-run entry from a preset", () => {
   it("starts declared runs from every checkpoint preset through the same composition seam", { timeout: 240_000 }, () => {
     for (const id of ["approaching-prestige", "after-first-bank", "world-enemy"] as const) {
-      const recipe = composePlaythroughRecipe({ scenarioId: id, budgetDays: 1 });
+      const recipe = composePlaythroughRecipe({ scenarioId: id, policyId: "pushing", claimTarget: 36, budgetDays: 1 });
       expect(recipe.scenarioId).toBe(id);
       // runPlaythrough asserts its built candidate before walking, so a
       // run that started anywhere but the preset's situation would have
@@ -184,7 +188,7 @@ describe("scripted-run entry from a preset", () => {
       const added = record.state.sessionRecords.slice(initial.sessionRecords.length);
       for (const session of added) expect(session.startedAt).toBeGreaterThanOrEqual(lastEnd);
       expect(record.state.sessionRecords.slice(0, initial.sessionRecords.length)).toEqual(initial.sessionRecords);
-      if (id !== "approaching-prestige") expect(added.length).toBeGreaterThan(0);
+      expect(added.length).toBeGreaterThan(0);
       expect(record.runId).toMatch(new RegExp(`^${id}-s468-`));
       expect(record.recipe.scenarioId).toBe(id);
       expect(record.days).toBe(1);
