@@ -62,7 +62,7 @@ import type { GameState, Hex, ModuleInstance, WeaponType } from "./types";
 // The runner's own version: a behavior-affecting change here is a source
 // change, and a rerun against different source identifies separately
 // (story 36's foundation).
-export const PLAYTHROUGH_RUNNER_VERSION = 3;
+export const PLAYTHROUGH_RUNNER_VERSION = 4;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -821,58 +821,56 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
     }
     return false;
   };
-  for (const weapon of state.world.weapons) {
-    if (weapon.pos !== null) continue;
-    // "Beside the fight" — while no enemy lives there is no seat to pick;
-    // the rule does nothing rather than decline anything.
-    if (living.length === 0) break;
+  // Both occupants share selection and action handling; each rule supplies
+  // eligible seats and its own readable preference ranks.
+  const deploy = (
+    id: string,
+    name: string,
+    candidates: Hex[],
+    rank: (pos: Hex) => readonly number[],
+    unavailable: string,
+  ): boolean => {
     let best: Hex | undefined;
-    let bestRank: readonly number[] | null = null;
-    for (const pos of free()) {
-      const touchesEnemy = living.some((def) => adjacent(pos, def.pos)) ? 0 : 1;
-      const touchesColumn = state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1;
-      const rank = [touchesEnemy, distanceToFight(pos), touchesColumn, pos.q, pos.r] as const;
-      if (!bestRank || rankLess(rank, bestRank)) {
-        bestRank = rank;
-        best = pos;
-      }
+    for (const pos of candidates) {
+      if (!best || rankLess(rank(pos), rank(best))) best = pos;
     }
     if (!best) {
-      record(ctx, { kind: "world", label: `${weapon.type} stayed in the tray`, ok: false, reason: "no free World cell" });
-      decline(ctx, `weapon ${weapon.type}`, "no free World cell");
-      break;
+      record(ctx, { kind: "world", label: `${name} stayed in the tray`, ok: false, reason: unavailable });
+      decline(ctx, name, unavailable);
+      return false;
     }
-    const result = placeWorldOccupant(state, weapon.id, best);
-    record(ctx, { kind: "world", label: `Deployed the ${weapon.type} at ${best.q},${best.r}`, ...outcome(result) });
-    if (!result.ok) {
-      decline(ctx, `weapon ${weapon.type}`, result.reason ?? "declined");
-      break;
-    }
+    const result = placeWorldOccupant(state, id, best);
+    record(ctx, { kind: "world", label: `Placed ${name} at ${best.q},${best.r}`, ...outcome(result) });
+    if (!result.ok) decline(ctx, name, result.reason ?? "declined");
+    return result.ok;
+  };
+  for (const weapon of state.world.weapons) {
+    if (weapon.pos !== null) continue;
+    if (!deploy(
+      weapon.id,
+      `the ${weapon.type}`,
+      free().filter((pos) => living.some((def) => adjacent(pos, def.pos))),
+      (pos) => [
+        distanceToFight(pos),
+        state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1,
+        pos.q, pos.r,
+      ],
+      "no free World cell beside a living discovered enemy",
+    )) break;
   }
   for (const column of state.world.columns) {
     if (column.pos !== null) continue;
-    let best: Hex | undefined;
-    let bestRank: readonly number[] | null = null;
-    for (const pos of free()) {
-      const chargesLine = state.modules.some((module) => module.pos !== null && CATEGORY_OF[module.type] === "generator" && adjacent(pos, module.pos)) ? 0 : 1;
-      const feedsWeapon = state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos)) ? 0 : 1;
-      const rank = [chargesLine, feedsWeapon, pos.q, pos.r] as const;
-      if (!bestRank || rankLess(rank, bestRank)) {
-        bestRank = rank;
-        best = pos;
-      }
-    }
-    if (!best) {
-      record(ctx, { kind: "world", label: "A Charge Column stayed in the tray", ok: false, reason: "no free World cell" });
-      decline(ctx, "Charge Column placement", "no free World cell");
-      break;
-    }
-    const result = placeWorldOccupant(state, column.id, best);
-    record(ctx, { kind: "world", label: `Placed a Charge Column at ${best.q},${best.r}`, ...outcome(result) });
-    if (!result.ok) {
-      decline(ctx, "Charge Column placement", result.reason ?? "declined");
-      break;
-    }
+    if (!deploy(
+      column.id,
+      "a Charge Column",
+      free().filter((pos) => state.modules.some((module) => module.pos !== null &&
+        CATEGORY_OF[module.type] === "generator" && adjacent(pos, module.pos))),
+      (pos) => [
+        state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos)) ? 0 : 1,
+        pos.q, pos.r,
+      ],
+      "no free World cell beside a deployed generator",
+    )) break;
   }
 }
 
@@ -994,6 +992,8 @@ function runSession(ctx: RunContext, state: GameState, day: number, session: num
 // configured target (story 19) — a depth the horizon has long been past —
 // and its first bank arms the next era's recovery ledger (stories 24–25).
 function tryPrestige(ctx: RunContext, state: GameState): boolean {
+  // This run measures the era immediately following its first bank.
+  if (ctx.claims.length > 0) return false;
   if (ctx.pushing) {
     if (pendingClaimOf(state) < ctx.claimTarget) return false;
   } else if (!horizonReached(state)) {

@@ -1,11 +1,14 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { playthroughRunId, type PlaythroughRecord } from "../engine/playthrough";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { CATEGORY_OF } from "../engine/constants";
 import { adjacent } from "../engine/hex";
 import { createAppFixture } from "./testing/app-fixture";
+import * as actions from "../engine/actions";
+import { scenarioOf } from "../engine/scenarios";
+import { createInitialState } from "../engine/state";
 import { STORAGE_KEY } from "../engine/save";
 
 // The playthrough's application-command fixtures (issues #468/#469,
@@ -29,7 +32,7 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-afterEach(() => fixture.release());
+afterEach(() => { fixture.release(); vi.restoreAllMocks(); });
 
 const note = (): string => document.getElementById("dev-playthrough-note")?.textContent ?? "";
 
@@ -283,6 +286,55 @@ describe("completion", () => {
 });
 
 describe("the pushing policy", () => {
+  it("never banks again while observing the first recovery era", () => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      state.eraEarned = 1e12;
+      state.totalEarned = 1e12;
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const prestige = actions.prestige;
+    const bank = vi.spyOn(actions, "prestige").mockImplementation((state) => {
+      const result = prestige(state);
+      // Force the next claim across the target immediately, so this case
+      // distinguishes observing recovery from repeatedly resetting it.
+      state.eraEarned = 1e12;
+      return result;
+    });
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
+    expect(bank).toHaveBeenCalledTimes(1);
+    expect(record.claims).toEqual([2]);
+    expect(record.state.prestiges).toBe(1);
+    expect(record.recovery!.eligibilityReached).toEqual({ elapsed: 0, credited: 0 });
+  });
+
+  it("keeps World occupants in the tray when no cell satisfies their adjacency rule", () => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      state.nous = 0;
+      state.modules = [];
+      state.cells = [{ q: 100, r: 100 }];
+      state.world.starterWeaponGranted = true;
+      state.world.enemies.w0!.discovered = true;
+      state.world.columns = [{ id: "column-test", pos: null }];
+      state.world.weapons = [{ id: "weapon-test", type: "chargeBlade", pos: null, store: 0, cooldown: 0, targetPriority: [] }];
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
+    expect(record.state.world.weapons[0]!.pos).toBeNull();
+    expect(record.state.world.columns[0]!.pos).toBeNull();
+    expect(record.events.some((event) => event.reason === "no free World cell beside a living discovered enemy")).toBe(true);
+    expect(record.events.some((event) => event.reason === "no free World cell beside a deployed generator")).toBe(true);
+  });
+
   it("pushes past the first eligibility, banks its claim, spends it, and measures both recovery marks", { timeout: 300_000 }, () => {
     app = boot(undefined, true);
     const before = app.state;
@@ -340,6 +392,8 @@ describe("the pushing policy", () => {
     // cannot exceed its simulated elapsed time.
     expect(record.recovery).not.toBeNull();
     const recovery = record.recovery!;
+    expect(recovery.productionRegained).toEqual({ elapsed: 11 * 86_400, credited: 11 * 600 * 60 });
+    expect(recovery.eligibilityReached).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
     expect(recovery.preResetRate).toBeGreaterThan(0);
     expect(recovery.eligibilityReached).not.toBeNull();
     expect(recovery.productionRegained).not.toBeNull();
