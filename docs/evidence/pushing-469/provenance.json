@@ -1,0 +1,19 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-23T00:56:43.907Z",
+  "url": "http://localhost:5173",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-07a1e343",
+  "branch": "t3/issue-469",
+  "commit": "606eb125ff735cac408137b85f3cdc6ab3db6d4b",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/pushing-469/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

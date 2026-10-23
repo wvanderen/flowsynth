@@ -4085,7 +4085,10 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
   // The playtesting suite's entry (issue #467): one scenario select over
   // the app's catalog — the same descriptors agent access reads — plus
   // one launch control. Selection and launch are ordinary square-cut
-  // controls; the note line carries the launch's ✓/✗ readout.
+  // controls; the note line carries the launch's ✓/✗ readout. The
+  // playthrough row (issue #468) gains the policy select and the
+  // pending-claim target (#469): the pushing policy's stopping rule, in
+  // whole Arete — blank means the declared default.
   const mountControls = !panel.querySelector("#dev-scenario");
   if (mountControls) {
     const scenarioOptions = app
@@ -4095,12 +4098,21 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
           `<option value="${escapeHtml(scenario.id)}" ${scenario.id === app.devScenarioId ? "selected" : ""}>${escapeHtml(scenario.name)}</option>`,
       )
       .join("");
+    const policyOptions = app
+      .devPlaythroughPolicies()
+      .map(
+        (policy) =>
+          `<option value="${escapeHtml(policy.id)}">${escapeHtml(policy.name)}</option>`,
+      )
+      .join("");
     panel.innerHTML = `<button class="dev-grip" id="dev-grip" aria-label="Drag to move the dev console" title="Drag to move">⠿</button>
       <span>DEV</span>
       <select id="dev-scenario" aria-label="Playtesting scenario">${scenarioOptions}</select>
       <button data-dev="scenario">Launch</button>
+      <select id="dev-playthrough-policy" aria-label="Playthrough policy">${policyOptions}</select>
       <input id="dev-playthrough-seed" type="number" min="0" step="1" inputmode="numeric" aria-label="Playthrough seed" placeholder="seed" />
       <input id="dev-playthrough-budget" type="number" min="1" max="366" step="1" inputmode="numeric" aria-label="Playthrough budget in days" placeholder="days" />
+      <input id="dev-playthrough-target" type="number" min="1" max="36" step="1" inputmode="numeric" aria-label="Pushing pending-claim target in Arete" placeholder="claim ≥" />
       <button data-dev="playthrough">Run playthrough</button>
       <button data-dev="60">+1m</button>
       <button data-dev="600">+10m</button>
@@ -4169,17 +4181,23 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
         if (select) app.devLaunchScenario(select.value);
       } else if (key === "playthrough") {
         // The run composes from the panel's own selections: the scenario
-        // select names the starting state; blank inputs mean the declared
-        // defaults. The same composition the agent command takes.
+        // and policy selects name the starting state and the player; the
+        // claim target arms the pushing rule; blank inputs mean the
+        // declared defaults. The same composition the agent command takes.
         const select = byId("dev-scenario") as HTMLSelectElement | null;
+        const policy = byId("dev-playthrough-policy") as HTMLSelectElement | null;
         const seedField = byId("dev-playthrough-seed") as HTMLInputElement | null;
         const budgetField = byId("dev-playthrough-budget") as HTMLInputElement | null;
+        const targetField = byId("dev-playthrough-target") as HTMLInputElement | null;
         const seed = seedField?.value.trim() ? Number(seedField.value) : undefined;
         const budgetDays = budgetField?.value.trim() ? Number(budgetField.value) : undefined;
+        const claimTarget = targetField?.value.trim() ? Number(targetField.value) : undefined;
         app.devRunPlaythrough({
           ...(select ? { scenarioId: select.value } : {}),
+          ...(policy ? { policyId: policy.value } : {}),
           ...(seed !== undefined ? { seed } : {}),
           ...(budgetDays !== undefined ? { budgetDays } : {}),
+          ...(claimTarget !== undefined ? { claimTarget } : {}),
         });
       } else if (key === "board") app.devToggleBoard();
       else app.devAdvance(Number(key));
