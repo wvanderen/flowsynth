@@ -1,0 +1,35 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-23T12:51:19.605Z",
+  "url": "http://localhost:5175",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0",
+  "branch": "fix/pr479-review",
+  "commit": "74f92ba0038b7f3ad1e87f84bb1f9bb3c9665c82",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/resource-curves-470-review-fixes/provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/review-479/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/review-479/desktop.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/review-479/phone.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/review-479/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

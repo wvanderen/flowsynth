@@ -1,15 +1,17 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
-import { playthroughRunId, type PlaythroughRecord } from "../engine/playthrough";
+import { playthroughEventMarker, playthroughRunId, type PlaythroughRecord } from "../engine/playthrough";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { CATEGORY_OF } from "../engine/constants";
 import { adjacent } from "../engine/hex";
+import { syncRates } from "../engine/economy";
 import { createAppFixture } from "./testing/app-fixture";
 import * as actions from "../engine/actions";
 import { scenarioOf } from "../engine/scenarios";
 import { createInitialState } from "../engine/state";
 import { STORAGE_KEY } from "../engine/save";
+import type { GameState } from "../engine/types";
 
 // The playthrough's application-command fixtures (issues #468/#469,
 // parent #465): small deterministic known-outcome runs driven through the
@@ -44,14 +46,21 @@ const PUSHING_SCHEDULE = { sessionsPerDay: 1, sessionMinutes: 600, breatherMinut
 // with the real-clock discovery stamps normalized to their identities. The
 // engine stamps action-boundary unlocks (feats, first chord formations)
 // with the honest wall clock — presentation metadata, not run behavior.
-// The run's outcomes, trajectory, decisions, and balances must match
-// exactly.
+// The run's outcomes, trajectory, decisions, balances, and recorded
+// snapshots must match exactly.
 function comparable(record: PlaythroughRecord): Omit<PlaythroughRecord, "state"> & { state: unknown } {
-  const state = structuredClone(record.state);
-  state.achievements = Object.fromEntries(Object.keys(state.achievements).map((id) => [id, 0]));
-  for (const discovery of Object.values(state.chordDiscovery)) discovery.firstFormedAt = 0;
-  const { state: _dropped, ...rest } = record;
-  return { ...rest, state };
+  const normalize = (raw: GameState): GameState => {
+    const state = structuredClone(raw);
+    state.achievements = Object.fromEntries(Object.keys(state.achievements).map((id) => [id, 0]));
+    for (const discovery of Object.values(state.chordDiscovery)) discovery.firstFormedAt = 0;
+    return state;
+  };
+  const { state, ...rest } = record;
+  return {
+    ...rest,
+    snapshots: record.snapshots.map((snapshot) => ({ ...snapshot, state: normalize(snapshot.state) })),
+    state: normalize(state),
+  };
 }
 
 describe("the declared recipe", () => {
@@ -534,5 +543,321 @@ describe("the panel's visible wiring", () => {
     app = boot(undefined, false);
     expect(() => app.devRunPlaythrough({ budgetDays: 1 })).toThrow(/development commands/);
     expect(document.getElementById("dev-playthrough-note")).toBeNull();
+  });
+});
+
+// The historical inspection boundary (issue #470, parent stories 26–29):
+// every plotted sample and stamped event backed by its exact recorded
+// state, the selection revealing board/state and recent decisions through
+// the shared command, and inspection that cannot mutate the active run.
+describe("historical snapshots and inspection", () => {
+  it("records a frozen snapshot for every plotted sample and every event's exact moment", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    expect(record.snapshots.length).toBeGreaterThanOrEqual(record.trajectory.length);
+    // Every plotted sample resolves to an exact recorded state carrying
+    // the sample's own stamps and figures — the plot never interpolates.
+    for (const point of record.trajectory) {
+      const snapshot = record.snapshots[point.snapshot]!;
+      expect(snapshot.elapsed).toBe(point.elapsed);
+      expect(snapshot.credited).toBe(point.credited);
+      expect(snapshot.state.eraEarned).toBe(point.eraEarned);
+      expect(snapshot.state.arete).toBe(point.arete);
+      expect(Math.floor(snapshot.state.nous)).toBe(point.nous);
+      // The recorded state reproduces the recorded rate: the same preview
+      // basis recomputed off the snapshot equals the plotted figure.
+      expect(syncRates(structuredClone(snapshot.state), false).rate).toBeCloseTo(point.rate, 9);
+    }
+    // Every decision binds the state as it stood at the decision's own
+    // simulated stamp — never a neighboring break's board.
+    for (const event of record.events) {
+      expect(event.snapshot).toBeGreaterThanOrEqual(0);
+      expect(event.snapshot).toBeLessThan(record.snapshots.length);
+      expect(record.snapshots[event.snapshot]!.elapsed).toBe(event.at);
+    }
+    // Recorded states are deep-frozen: read-only for human and agent alike.
+    const someSnapshot = record.snapshots[Math.floor(record.snapshots.length / 2)]!;
+    expect(Object.isFrozen(someSnapshot.state)).toBe(true);
+    expect(Object.isFrozen(someSnapshot.state.modules)).toBe(true);
+    expect(Object.isFrozen(someSnapshot.state.modules[0])).toBe(true);
+    expect(Object.isFrozen(someSnapshot.state.cells)).toBe(true);
+    expect(Object.isFrozen(someSnapshot.state.sessionRecords)).toBe(true);
+  });
+
+  it("selection reveals the matching board, state, and recent decisions through the shared command", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const point = record.trajectory[Math.floor(record.trajectory.length / 2)]!;
+    const inspection = app.devInspectPlaythrough(point.snapshot)!;
+    // The selection is the one owner of which snapshot is inspected, and
+    // the inspected figures are the plotted sample's own.
+    expect(app.devInspected).toBe(point.snapshot);
+    expect(inspection.index).toBe(point.snapshot);
+    expect(inspection.elapsed).toBe(point.elapsed);
+    expect(inspection.credited).toBe(point.credited);
+    expect(inspection.rate).toBeCloseTo(point.rate, 9);
+    expect(inspection.balances.nous).toBe(point.nous);
+    expect(inspection.balances.arete).toBe(point.arete);
+    expect(inspection.balances.eraEarned).toBe(point.eraEarned);
+    expect(inspection.balances.cells).toBe(record.snapshots[point.snapshot]!.state.cells.length);
+    // The shared command exposes the record's frozen state itself.
+    expect(inspection.state).toBe(record.snapshots[point.snapshot]!.state);
+    expect(inspection.events.every(event => event.snapshot <= point.snapshot)).toBe(true);
+    for (const event of inspection.events) expect(record.events).toContain(event);
+    // The board reads: every deployed voice with its note, level, and
+    // final ν/s on the same preview basis.
+    expect(inspection.voices.length).toBeGreaterThan(0);
+    const snapshotState = record.snapshots[point.snapshot]!.state;
+    expect(inspection.voices.length).toBe(snapshotState.modules.filter((m) => m.pos !== null).length);
+    expect(inspection.voices.every((voice) => voice.nuPerSecond === null || voice.nuPerSecond >= 0)).toBe(true);
+    // A session-boundary snapshot recorded between samples carries no
+    // plotted point, and says so.
+    const boundary = record.events.find((event) => event.kind === "session" && event.ok)!;
+    const boundaryInspection = app.devInspectPlaythrough(boundary.snapshot)!;
+    expect(record.trajectory.some((p) => p.snapshot === boundary.snapshot)).toBe(false);
+    expect(boundaryInspection.point).toBeNull();
+    expect(boundaryInspection.elapsed).toBe(boundary.at);
+    expect(boundaryInspection.events.length).toBeGreaterThan(0);
+    // A bad index is a thrown, named error and moves nothing.
+    expect(() => app.devInspectPlaythrough(record.snapshots.length)).toThrow(/no recorded snapshot/);
+    expect(app.devInspected).toBe(boundary.snapshot);
+  });
+
+
+  it.each(["recovered", "budget"] as const)("binds recovery milestones at their own stamp before %s exit", (stop) => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      state.eraEarned = 1e12;
+      state.totalEarned = 1e12;
+      state.modules[0]!.level = 100;
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const prestige = actions.prestige;
+    vi.spyOn(actions, "prestige").mockImplementation(state => {
+      const result = prestige(state);
+      state.modules[0]!.level = stop === "recovered" ? 100 : 0;
+      return result;
+    });
+    const end = actions.endSession;
+    vi.spyOn(actions, "endSession").mockImplementation((state, now) => {
+      const result = end(state, now);
+      state.eraEarned = 1e12;
+      return result;
+    });
+    // Production recovery can occur during manage; eligibility is forced
+    // across the horizon during the final session, after that settlement.
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
+    expect(record.stop.kind).toBe(stop);
+    const eligibility = record.events.find(event => event.label === "Recovery — next prestige eligibility reached")!;
+    expect(eligibility).toBeDefined();
+    expect(eligibility.at).toBe(60);
+    expect(eligibility.snapshot).toBeGreaterThanOrEqual(0);
+    const inspection = app.devInspectPlaythrough(eligibility.snapshot)!;
+    expect(inspection.elapsed).toBe(eligibility.at);
+    expect(inspection.credited).toBe(eligibility.credited);
+    expect(inspection.state.eraEarned).toBe(1e12);
+    expect(inspection.events).toContain(eligibility);
+    for (const event of record.events) {
+      expect(event.snapshot).toBeGreaterThanOrEqual(0);
+      expect(record.snapshots[event.snapshot]!.elapsed).toBe(event.at);
+    }
+  });
+
+  it("keeps preparation decisions at a session boundary without future or stale sessions", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 2 });
+    const sessions = record.events.filter(event => event.kind === "session" && event.ok);
+    const second = sessions[1]!;
+    const first = sessions[0]!;
+    const secondRead = app.devInspectPlaythrough(second.snapshot)!;
+    const preparation = record.events.filter(event => event.snapshot > first.snapshot && event.snapshot < second.snapshot);
+    expect(preparation.some(event => ["shelf", "cell", "place", "upgrade"].includes(event.kind))).toBe(true);
+    expect(secondRead.events).toEqual(record.events.filter(event => event.snapshot > first.snapshot && event.snapshot <= second.snapshot));
+    for (const event of preparation) expect(secondRead.events).toContain(event);
+    expect(secondRead.events).not.toContain(first);
+    expect(secondRead.events).toContain(second);
+    expect(secondRead.events).not.toContain(sessions[2]);
+    const after = app.devInspectPlaythrough(second.snapshot + 1)!;
+    for (const event of preparation) expect(after.events).toContain(event);
+  });
+
+  it("draws the selected board layers and exposes the same frozen state without editing the live board", () => {
+    app = boot(undefined, true);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      state.nous = 0;
+      state.mutatorSlots = [{ q: 0, r: 0 }];
+      state.mutators = [{ id: "historic-mutator", family: "power", rarity: "rare", pos: { q: 0, r: 0 } }];
+      state.world.columns = [{ id: "historic-column", pos: { q: 0, r: 0 } }];
+      state.world.weapons = [{ id: "historic-weapon", type: "chargeBlade", pos: { q: 0, r: 1 }, store: 12, cooldown: 0, targetPriority: ["w0"] }];
+      state.world.enemies.w0 = { discovered: true, hp: 123 };
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const liveBefore = JSON.stringify(app.state);
+    const saveBefore = localStorage.getItem(STORAGE_KEY);
+    const record = app.devRunPlaythrough({ budgetDays: 1, schedule: { sessionsPerDay: 1, sessionMinutes: 1 } });
+    app.devToggleCurves();
+    const inspection = app.devInspectPlaythrough(0)!;
+    expect(inspection.state).toBe(record.snapshots[0]!.state);
+    expect(Object.isFrozen(inspection.state.world.weapons[0])).toBe(true);
+    const board = document.querySelector(".dev-history-board")!;
+    expect([...board.querySelectorAll("h3")].map(h => h.querySelector("button")?.textContent ?? h.textContent)).toEqual(["Mutators", "Modules", "World"]);
+    expect(board.querySelector('[data-history-mutator="0,0"]')!.textContent).toContain("rare power mutator");
+    expect(board.querySelectorAll("[data-history-module]")).toHaveLength(inspection.state.cells.length);
+    expect(board.querySelector('[data-history-world="0,0"]')!.textContent).toContain("COLUMN");
+    expect(board.querySelector('[data-history-world="0,1"]')!.textContent).toContain("12");
+    expect(board.querySelector('[data-history-world="-1,0"]')!.textContent).toContain("HP 123");
+    expect(board.querySelectorAll("[data-buy], [data-cell], [data-world-cell]")).toHaveLength(0);
+    expect(JSON.stringify(app.state)).toBe(liveBefore);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saveBefore);
+    // The existing tooltip primitive supplies keyboard and touch access.
+    const term = document.querySelector<HTMLButtonElement>('.dev-curves-line2 [aria-label="nous — what it means"]')!;
+    term.focus();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(term.getAttribute("aria-expanded")).toBe("false");
+    term.click();
+    expect(term.getAttribute("aria-expanded")).toBe("true");
+  });
+
+  it("inspection never mutates the active run, the save, or the recorded state", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const before = app.state;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const beforeJson = JSON.stringify(app.state);
+    for (let index = 0; index < record.snapshots.length; index += 7) {
+      app.devInspectPlaythrough(index);
+    }
+    // The live run and its save are untouched by inspection.
+    expect(app.state).toBe(before);
+    expect(JSON.stringify(app.state)).toBe(beforeJson);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    // The recorded states refuse writes loudly — strict-mode assignment
+    // to a frozen state throws, so even an agent bug cannot rewrite
+    // evidence in place.
+    const snapshot = record.snapshots[0]!;
+    expect(() => {
+      (snapshot.state as { nous: number }).nous = 1234;
+    }).toThrow(TypeError);
+    expect(() => {
+      (snapshot.state.modules as unknown[]).push({});
+    }).toThrow(TypeError);
+    expect(snapshot.state.nous).not.toBe(1234);
+    // Clearing the selection is the same shared command at null.
+    expect(app.devInspectPlaythrough(null)).toBeNull();
+    expect(app.devInspected).toBeNull();
+  });
+
+  it("classifies curve markers, and declined attempts and unlisted actions plot none", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const marked = new Set(record.events.map((event) => playthroughEventMarker(event)).filter(Boolean));
+    expect(marked.has("purchase")).toBe(true);
+    expect(marked.has("session")).toBe(true);
+    expect(marked.has("unlock")).toBe(true);
+    // Only successful events carry markers; the declined attempt and the
+    // gestures the plot doesn't name stay decisions-list lines. World
+    // buys are purchases; a World placement is a gesture, not one.
+    for (const event of record.events) {
+      if (!event.ok) expect(playthroughEventMarker(event)).toBeNull();
+      if (event.kind === "placement" || event.kind === "upgrade") expect(playthroughEventMarker(event)).toBeNull();
+      if (event.label.startsWith("Placed")) expect(playthroughEventMarker(event)).toBeNull();
+    }
+    // The classes' own rules, on the engine's classifier.
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "prestige", label: "Prestige 1", ok: true, snapshot: 0 })).toBe("prestige");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "breather", label: "Breather — 300s of the 300s allowance", ok: true, snapshot: 0 })).toBe("breather");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "world", label: "World Column", ok: true, snapshot: 0 })).toBe("purchase");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "world", label: "Placed a Charge Column at 1,0", ok: true, snapshot: 0 })).toBeNull();
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Poly Expander 3 — 1.0ν/s → 1.2ν/s", ok: true, snapshot: 0 })).toBe("purchase");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Feat unlocked — time-in-the-seat", ok: true, snapshot: 0 })).toBe("unlock");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Recovery — next prestige eligibility reached", ok: true, snapshot: 0 })).toBeNull();
+  });
+
+  it("reports both clocks per sample, and the axes switch", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    // Simulated elapsed covers the day span; credited practice covers only
+    // the sessions — both recorded on every sample.
+    expect(record.trajectory[0]!.elapsed).toBe(0);
+    expect(record.trajectory.at(-1)!.elapsed).toBe(record.elapsedSeconds);
+    for (const point of record.trajectory) {
+      expect(point.credited).toBeLessThanOrEqual(point.elapsed);
+    }
+    expect(record.trajectory.at(-1)!.credited).toBe(record.creditedSeconds);
+    // The plot's clock is an app-level, agent-reachable setting.
+    expect(app.devCurvesAxis).toBe("elapsed");
+    app.devSetCurvesAxis("credited");
+    expect(app.devCurvesAxis).toBe("credited");
+    app.devSetCurvesAxis("credited");
+    expect(app.devCurvesAxis).toBe("credited");
+    app.devSetCurvesAxis("elapsed");
+    expect(app.devCurvesAxis).toBe("elapsed");
+  });
+});
+
+describe("the curves surface's visible wiring", () => {
+  it("opens empty, plots the run's samples, and selects from points, markers, and stepping", () => {
+    app = boot(undefined, true);
+    const toggle = document.querySelector<HTMLButtonElement>('[data-dev="curves"]')!;
+    expect(document.getElementById("dev-curves")).toBeNull();
+    toggle.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devCurvesOpen).toBe(true);
+    expect(document.getElementById("dev-curves")!.textContent).toContain("no run yet");
+    // The button's label carries the toggle state like the board's.
+    expect(toggle.textContent).toBe("close curves");
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const panel = document.getElementById("dev-curves")!;
+    expect(panel.textContent).toContain("RESOURCE CURVES");
+    expect(panel.querySelectorAll("circle.dev-curves-pt")).toHaveLength(record.trajectory.length);
+    expect(panel.textContent).toContain("no selection");
+    // A plotted point selects its exact snapshot; the read names it.
+    const point = record.trajectory[3]!;
+    panel.querySelectorAll<HTMLDivElement>("circle.dev-curves-pt")[3]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devInspected).toBe(point.snapshot);
+    expect(panel.textContent).toContain(`sample ${point.snapshot + 1}/${record.snapshots.length} · sim `);
+    // The marker glyphs select their events' snapshots (queried fresh —
+    // the point's selection rebuilt the panel).
+    document.getElementById("dev-curves")!.querySelector<SVGElement>(".dev-curves-mk-purchase")!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devInspected).toBe(record.events.find((event) => playthroughEventMarker(event) === "purchase")!.snapshot);
+    // ◀ ▶ step the selection and wrap at the ends. Each selection rebuilds
+    // the panel, so the stepping buttons are queried fresh per click.
+    app.devInspectPlaythrough(0);
+    document.getElementById("dev-curves")!.querySelector<HTMLButtonElement>('[data-devcurve="next"]')!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devInspected).toBe(1);
+    document.getElementById("dev-curves")!.querySelector<HTMLButtonElement>('[data-devcurve="prev"]')!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devInspected).toBe(0);
+    document.getElementById("dev-curves")!.querySelector<HTMLButtonElement>('[data-devcurve="prev"]')!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devInspected).toBe(record.snapshots.length - 1);
+    document.getElementById("dev-curves")!.querySelector<HTMLButtonElement>('[data-devcurve="next"]')!
+      .dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devInspected).toBe(0);
+    // The axis buttons switch the plot's clock.
+    const credited = document.getElementById("dev-curves")!.querySelector<HTMLButtonElement>('[data-devcurveaxis="credited"]')!;
+    credited.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.devCurvesAxis).toBe("credited");
+    expect(document.getElementById("dev-curves")!.querySelector('[data-devcurveaxis="credited"]')!.classList.contains("on")).toBe(true);
+    // A new run clears the stale selection with the record it pointed at.
+    app.devInspectPlaythrough(2);
+    app.devRunPlaythrough({ seed: 8, budgetDays: 1 });
+    expect(app.devInspected).toBeNull();
+  });
+
+  it("is a development surface, absent and refused outside dev mode", () => {
+    app = boot(undefined, false);
+    expect(() => app.devInspectPlaythrough(0)).toThrow(/development commands/);
+    expect(() => app.devToggleCurves()).not.toThrow();
+    expect(app.devCurvesOpen).toBe(false);
+    expect(document.getElementById("dev-curves")).toBeNull();
   });
 });
