@@ -14,10 +14,10 @@ pipeline could not capture the tab — the same failure class the #468 and
 ## What is verified
 
 - **Provenance** — the capture preflight accepted `http://localhost:5173/`
-  twice (at `b4cc3d8c` before the capture attempts and at `befaa09` after
-  the marker fix): served worktree, commit, and clean source all verified
-  (`provenance.json` beside this README, re-recorded at the later commit).
-  The dev server for this worktree was launched with `npm run dev` per
+  at each of `b4cc3d8c`, `befaa09`, and the final `85cc7c4` (the record
+  beside this README carries the last): served worktree, commit, and
+  clean source all verified. The dev server for this worktree was
+  launched with `npm run dev` per
   [visual evidence](../../agents/visual-evidence.md).
 - **Page health** — in-page probe on the verified URL (`?dev=1`), tab at
   1280×800: `requestAnimationFrame` served in 0.4 ms, zero long tasks over
@@ -57,8 +57,12 @@ pipeline could not capture the tab — the same failure class the #468 and
 - **Reduced motion** — the surface runs no animation or transition;
   `getAnimations()` on the open panel returned 0 and the stylesheet
   forces static presentation under `prefers-reduced-motion`.
-- **Suite** — `npm run check` and the full `npm test` pass at the
-  captured source (95 files, 1,910 tests).
+- **Suite** — `npm run check` and the full `npm test` pass at `85cc7c4`
+  (95 files, 1,910 tests). The composition reads above were taken at
+  `befaa09`; the review fixes after it (world placements plotting no
+  purchase marker, dedupe, docs) do not touch the demonstrated prompt
+  run's panel — the run carried no World placements — and the suite
+  re-ran green at the final commit.
 
 ## Criterion-to-evidence mapping
 
