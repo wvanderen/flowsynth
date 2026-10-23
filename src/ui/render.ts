@@ -1,3 +1,4 @@
+import { playthroughStatusMark } from "../engine/playthrough";
 import { historicalBoardHtml } from "./historical-board";
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
@@ -4188,7 +4189,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
         ...app.devResults.map((result) => {
           const option = document.createElement("option");
           option.value = result.record.runId;
-          const mark = result.record.stop.kind === "checkpoint" ? "◆" : result.record.complete ? "✓" : "✗";
+          const mark = playthroughStatusMark(result.record);
           option.textContent =
             `${result.record.runId} ${mark}` +
             (result.imported ? " · imported" : "") +

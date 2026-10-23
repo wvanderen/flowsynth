@@ -6,7 +6,7 @@ import {
   exportPlaythroughArtifact,
   importPlaythroughArtifact,
 } from "./playthrough-artifact";
-import { runPlaythrough } from "./playthrough";
+import { playthroughInspection, runPlaythrough } from "./playthrough";
 import type { PlaythroughRecord } from "./playthrough";
 
 // The run artifact's format seam (issue #473, parent stories 34–36): the
@@ -154,6 +154,42 @@ describe("the run artifact format", () => {
     expectReject(strip((a) => delete a.modified), "modified status is missing");
     expectReject(strip((a) => delete a.interventions), "intervention record is incomplete");
     expectReject(strip((a) => { a.runId = "another-run"; }), "does not match its record");
+  });
+
+  it("reads foreign historical rates and contributions exactly as recorded", () => {
+    const record = sampleRecord();
+    const snapshot = record.snapshots[0]!;
+    const carried = { ...record, source: { ...record.source, engineSource: "historical-engine" },
+      snapshots: [{ ...snapshot, rate: 123456, voices: snapshot.voices.map(voice => ({ ...voice, nuPerSecond: 654321 })) }, ...record.snapshots.slice(1)] };
+    const loaded = importPlaythroughArtifact(exportPlaythroughArtifact({ record: carried }));
+    expect(loaded.ok).toBe(true);
+    if (!loaded.ok) return;
+    const inspection = playthroughInspection(loaded.artifact.record, 0);
+    expect(inspection.rate).toBe(123456);
+    expect(inspection.voices).toEqual(carried.snapshots[0]!.voices);
+    expect(inspection.voices.length).toBeGreaterThan(0);
+  });
+
+  it("rejects malformed nested evidence before it can enter inspection", () => {
+    const text = exportPlaythroughArtifact({ record: sampleRecord() });
+    const mutations = [
+      (a: any) => { a.record.snapshots[0].state = {}; },
+      (a: any) => { a.record.snapshots[0].state.modules = [null]; },
+      (a: any) => { a.record.snapshots[0].voices = [{}]; },
+      (a: any) => { a.record.state.world = {}; },
+      (a: any) => { a.record.events = [{}]; },
+      (a: any) => { a.record.trajectory = [{ snapshot: 999999 }]; },
+      (a: any) => { a.record.recipe.schedule = {}; },
+      (a: any) => { a.record.stop.kind = "unknown"; },
+      (a: any) => { a.interventions = [{ at: 1, label: "bad" }]; },
+    ];
+    for (const mutate of mutations) {
+      const artifact = JSON.parse(text);
+      mutate(artifact);
+      const loaded = importPlaythroughArtifact(JSON.stringify(artifact));
+      expect(loaded.ok).toBe(false);
+      if (!loaded.ok) expect(loaded.error).toContain("malformed");
+    }
   });
 
   it("refuses to export without a recorded run", () => {

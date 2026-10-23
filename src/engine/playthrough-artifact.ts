@@ -1,3 +1,4 @@
+import { CATEGORY_OF } from "./constants";
 import { deepFreeze, type PlaythroughRecord } from "./playthrough";
 
 // The run artifact (issue #473, parent stories 34–36): the versioned file
@@ -19,7 +20,7 @@ import { deepFreeze, type PlaythroughRecord } from "./playthrough";
 // an artifact must carry bumps it; older versions read here after that
 // bump are rejected by name until a migration is authored — no silent
 // chain, ADR-0017's boundary pattern.
-export const PLAYTHROUGH_ARTIFACT_VERSION = 1;
+export const PLAYTHROUGH_ARTIFACT_VERSION = 2;
 
 // The format marker, distinct from the ordinary save's `app: "flowsynth"`:
 // a save pasted into the run importer is not an artifact, and an artifact
@@ -63,7 +64,69 @@ export interface PlaythroughArtifact {
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function finiteFields(value: Record<string, unknown>, fields: string[]): boolean {
+  return fields.every(key => typeof value[key] === "number" && Number.isFinite(value[key]));
+}
+const strings = (value: unknown): boolean => Array.isArray(value) && value.every(item => typeof item === "string");
+const hex = (value: unknown): boolean => isRecord(value) && finiteFields(value, ["q", "r"]);
+const positioned = (value: unknown): value is Record<string, unknown> =>
+  isRecord(value) && typeof value.id === "string" && (value.pos === null || hex(value.pos));
+
+// Validate the carried historical board's structure without loading a save,
+// applying defaults, or invoking current engine calculations.
+function historicalState(value: unknown): boolean {
+  if (!isRecord(value) || !finiteFields(value, ["nous", "eraEarned", "arete", "scrap", "prestiges", "sessionsCompleted"])) return false;
+  if (!Array.isArray(value.cells) || !value.cells.every(hex) ||
+      !Array.isArray(value.modules) || !value.modules.every(item => positioned(item) &&
+        typeof item.type === "string" && Object.hasOwn(CATEGORY_OF, item.type) && finiteFields(item, ["tier", "level", "invested", "reserve"]))) return false;
+  if (!Array.isArray(value.mutatorSlots) || !value.mutatorSlots.every(hex) ||
+      !Array.isArray(value.mutators) || !value.mutators.every(item => positioned(item) &&
+        ["power", "resonance", "charge"].includes(String(item.family)) && ["common", "uncommon", "rare"].includes(String(item.rarity)))) return false;
+  const world = value.world;
+  return isRecord(world) && isRecord(world.enemies) && Object.values(world.enemies).every(item =>
+    isRecord(item) && typeof item.discovered === "boolean" && finiteFields(item, ["hp"])) &&
+    Array.isArray(world.weapons) && world.weapons.every(item => positioned(item) &&
+      item.type === "chargeBlade" && finiteFields(item, ["store"])) &&
+    Array.isArray(world.columns) && world.columns.every(positioned);
+}
+
+function nestedRecordError(record: Record<string, unknown>): string | null {
+  const snapshots = record.snapshots as unknown[];
+  const index = (value: unknown): boolean => typeof value === "number" && Number.isInteger(value) && value >= 0 && value < snapshots.length;
+  if (snapshots.some(item => !isRecord(item) || !historicalState(item.state) || !finiteFields(item, ["rate"]) ||
+    !Array.isArray(item.voices) || !item.voices.every(voice => isRecord(voice) &&
+      typeof voice.type === "string" && Object.hasOwn(CATEGORY_OF, voice.type) && typeof voice.note === "string" &&
+      finiteFields(voice, ["level"]) && (voice.nuPerSecond === null || (typeof voice.nuPerSecond === "number" && Number.isFinite(voice.nuPerSecond)))))) return "historical snapshot";
+  if (!historicalState(record.state)) return "final state";
+  const kinds = ["roll", "purchase", "placement", "upgrade", "arete", "world", "session", "breather", "prestige", "milestone"];
+  if ((record.events as unknown[]).some(item => !isRecord(item) || !finiteFields(item, ["at", "credited"]) ||
+    !kinds.includes(String(item.kind)) || typeof item.label !== "string" || typeof item.ok !== "boolean" ||
+    (item.reason !== undefined && typeof item.reason !== "string") || !index(item.snapshot))) return "decision record";
+  if ((record.trajectory as unknown[]).some(item => !isRecord(item) || !finiteFields(item,
+    ["elapsed", "credited", "rate", "forgeRate", "eraEarned", "nous", "arete"]) || !index(item.snapshot))) return "trajectory";
+  const recipe = record.recipe as Record<string, unknown>;
+  const schedule = recipe.schedule;
+  if (!finiteFields(recipe, ["seed", "claimTarget", "budgetDays"]) || !isRecord(recipe.overrides) ||
+    !Object.values(recipe.overrides).every(item => typeof item === "number" && Number.isFinite(item)) ||
+    !isRecord(schedule) || !finiteFields(schedule, ["sessionsPerDay", "sessionMinutes", "breatherMinutes", "goalMinutes", "startAt"]) ||
+    typeof schedule.habitName !== "string" || typeof schedule.timeZone !== "string") return "recipe";
+  if (record.kind !== "representative" || !isRecord(record.policy) || typeof record.policy.id !== "string" || typeof record.policy.name !== "string" ||
+    !finiteFields(record, ["claimTarget", "days", "elapsedSeconds", "creditedSeconds", "breatherSeconds", "earnedNous"]) ||
+    !Array.isArray(record.claims) || !record.claims.every(item => typeof item === "number" && Number.isFinite(item)) ||
+    !strings(record.achievements) || !strings(record.worldDiscoveries) || !strings(record.worldDefeats) ||
+    ![record.lastMilestone, record.bottleneck].every(item => item === null || typeof item === "string")) return "run summary";
+  const spent = record.areteSpent;
+  if (!isRecord(spent) || !finiteFields(spent, ["entry", "discounts", "ceilings", "columns"]) || !isRecord(spent.hone) ||
+    !Object.values(spent.hone).every(item => typeof item === "number" && Number.isFinite(item))) return "Arete spending";
+  const recovery = record.recovery;
+  if (recovery !== null && (!isRecord(recovery) || !finiteFields(recovery, ["preResetRate"]) ||
+    ![recovery.productionRegained, recovery.eligibilityReached].every(item => item === null || (isRecord(item) && finiteFields(item, ["elapsed", "credited"]))))) return "recovery record";
+  const stop = record.stop as Record<string, unknown>;
+  if (!["prestige", "recovered", "budget", "checkpoint"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
+  return null;
 }
 
 // The export: the record as the run produced it plus the carried status,
@@ -178,6 +241,8 @@ export function importPlaythroughArtifact(text: string): PlaythroughArtifactLoad
   if (!isRecord(record.state)) {
     return { ok: false, error: "The artifact is malformed — its final state is missing." };
   }
+  const nestedError = nestedRecordError(record);
+  if (nestedError) return { ok: false, error: `The artifact is malformed — its ${nestedError} is incomplete.` };
   const modified = parsed.modified;
   if (typeof modified !== "boolean") {
     return { ok: false, error: "The artifact is malformed — its modified status is missing." };
@@ -185,7 +250,7 @@ export function importPlaythroughArtifact(text: string): PlaythroughArtifactLoad
   const interventions = parsed.interventions;
   if (
     !Array.isArray(interventions) ||
-    interventions.some((entry) => !isRecord(entry) || typeof entry.label !== "string" || !Number.isFinite(entry.at))
+    interventions.some((entry) => !isRecord(entry) || typeof entry.label !== "string" || !Number.isFinite(entry.at) || typeof entry.ok !== "boolean" || (entry.reason !== undefined && typeof entry.reason !== "string"))
   ) {
     return { ok: false, error: "The artifact is malformed — its intervention record is incomplete." };
   }
@@ -193,6 +258,7 @@ export function importPlaythroughArtifact(text: string): PlaythroughArtifactLoad
     deepFreeze(snapshot.state);
   }
   deepFreeze(record.state);
+  deepFreeze(record);
   return {
     ok: true,
     artifact: {

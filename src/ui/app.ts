@@ -70,6 +70,7 @@ import {
   defaultPlaythroughRecipe,
   playthroughInspection,
   playthroughNote,
+  playthroughStatusMark,
   PLAYTHROUGH_POLICIES,
   PLAYTHROUGH_TUNING,
   runPlaythrough,
@@ -2924,7 +2925,8 @@ export class App {
     // viewable in the curves and exportable as an artifact, and the
     // install links to it so interventions ride its entry. The rebuild
     // semantics reset the entry's status with the install.
-    const walked = scenario.walkedRecord?.() ?? null;
+    const baseline = scenario.walkedRecord?.() ?? null;
+    const walked = baseline ? { ...baseline, runId: `${baseline.runId}-${crypto.randomUUID()}` } : null;
     this.devRunOriginId = walked?.runId ?? null;
     if (walked) this.upsertRunResult({ record: walked, imported: false, modified: false, interventions: [] });
     this.state = candidate;
@@ -3002,7 +3004,8 @@ export class App {
   devCurvesOpen = false;
   devCurvesAxis: "elapsed" | "credited" = "elapsed";
 
-  // The library's one write shape: the entry replaces any same-identity
+  // The library's one write shape: reimport replaces the same execution
+  // identity; fresh executions get distinct IDs. The entry replaces any same-identity
   // copy, lands newest-first, and takes the selection — the standing
   // rule for a fresh walk, a preset install's walked record, and an
   // imported artifact alike. The inspected index means nothing across
@@ -3047,7 +3050,8 @@ export class App {
     }
     let record: PlaythroughRecord;
     try {
-      record = runPlaythrough(composePlaythroughRecipe(input));
+      const walked = runPlaythrough(composePlaythroughRecipe(input));
+      record = { ...walked, runId: `${walked.runId}-${crypto.randomUUID()}` };
     } catch (error) {
       this.devPlaythroughNote = `Playthrough ✗ ${(error as Error).message}`;
       this.say(`Dev playthrough failed: ${(error as Error).message}`);
@@ -3541,7 +3545,7 @@ export class App {
         return this.devResults
           .map((result) => {
             const marks = [
-              result.record.stop.kind === "checkpoint" ? "◆" : result.record.complete ? "✓" : "✗",
+              playthroughStatusMark(result.record),
               ...(result.imported ? ["imported"] : []),
               ...(result.modified ? [`modified(${result.interventions.length})`] : []),
             ];

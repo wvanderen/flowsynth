@@ -1120,11 +1120,21 @@ describe("the run artifact boundary", () => {
     expect(app.devSelectedRunId).toBe(first.runId);
     expect(app.devPlaythrough!.recipe.seed).toBe(9);
     expect(app.devPlaythroughNote).toBe(playthroughNote(first));
-    // The same recipe and source share one identity: the rerun refreshes
-    // its entry instead of duplicating it.
+    // Each execution preserves the earlier evidence, even for the same recipe/source.
     const rerun = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
-    expect(rerun.runId).toBe(first.runId);
-    expect(app.devResults).toHaveLength(2);
+    expect(rerun.runId).not.toBe(first.runId);
+    expect(app.devResults).toHaveLength(3);
+    expect(app.devResults.find(result => result.record.runId === first.runId)!.record).toBe(first);
+    const modifiedArtifact = JSON.parse(app.devExportPlaythrough());
+    modifiedArtifact.modified = true;
+    modifiedArtifact.interventions = [{ at: 1, label: "historical intervention", ok: true }];
+    app.devImportPlaythrough(JSON.stringify(modifiedArtifact));
+    const again = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
+    expect(again.runId).not.toBe(rerun.runId);
+    const preserved = app.devResults.find(result => result.record.runId === rerun.runId)!;
+    expect(preserved.imported).toBe(true);
+    expect(preserved.modified).toBe(true);
+    expect(preserved.interventions).toEqual(modifiedArtifact.interventions);
     // An artifact from another engine joins as carried: its own source
     // provenance stays, visibly different from the current engine, and
     // the run is never re-walked against it.
