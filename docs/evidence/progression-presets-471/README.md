@@ -206,3 +206,64 @@ sites of a two-condition read), a descriptor factory (the catalog reads
 as explicit descriptors by the repo's own style), and renaming
 `world-enemy`/`world-enemy-active` (the ids name different things — the
 preset situation and the walk stop).
+
+## Review fixes at `af809b4`
+
+The cold-launch UI freeze is fixed by consuming the same authoritative walk in
+short message-task slices. `devLaunchScenario` returns a promise for progression
+presets; agents await it. The standing note says `preparing`; a newer scenario
+selection or disposed application cannot be overwritten by late preparation.
+Prepared states remain memoized per source. Cold preparation still takes time;
+it no longer monopolizes the browser thread. The termination sequence now has
+one owner, and checkpoint detection/assertion share `hasActiveWorldEnemy`.
+
+Scripted continuation records an effective recipe anchor at or after the
+checkpoint's last completed session and its already-recorded breather (even when the continuation requests zero rest), with at least the newly declared rest. Historical
+session stamps are retained. The effective schedule is validated again (including
+calendar-day/DST fit) and participates in the run identity.
+
+Additional criterion mappings (supplement the six rows above):
+
+- Criteria 1, 4–5 / responsive entry and isolation: `app.scenarios.test.ts`,
+  “launching the progression presets installs each walked situation in an
+  isolated save”, now asserts a browser timer executes while a cold walk is
+  pending, the prior state stays installed, and the ordinary save is unchanged.
+- Criteria 4–5 / selection safety: “a newer selection survives a pending
+  preparation and its late failure” and “a newer selection survives a successful
+  pending preparation” assert late work cannot replace the newer choice.
+- Criteria 4, 6 / scripted continuation and actual time accounting:
+  `progression-presets.test.ts`, “starts declared runs from every checkpoint
+  preset through the same composition seam”, now uses a pushing policy and zero new breather so each
+  preset performs new practice, checks every added session starts after existing
+  history including its recorded breather, checks the effective recipe anchor, and preserves prior records.
+
+Verified-checkout in-page pass: the preflight accepted `af809b4` with clean source
+([record](review-fixes-provenance.json)). The cold first-bank launch immediately
+returned `After first bank — preparing`; 77 timer callbacks ran during the walk;
+the eventual named assertion passed and the ordinary save was byte-identical.
+The browser's current-engine walk reached this bank on day 9 (Node fixtures reach
+day 10); neither grants nor fabricated state were used. A subsequent pushing run
+reported latest existing session-plus-breather end `1768367400000`, effective anchor
+`1768367400000`, new session starts `1768367400000` and `1768368900000` (zero new breather), and
+`historyPreserved: true`.
+
+Visual checks remain unavailable. At the preceding correction commit `216b17b`,
+the verified desktop was 1280×800. Two snapshot attempts failed with the raw error
+`Preview snapshot failed: Preview automation snapshot timed out after 15000ms.`
+A `preview_status` read between attempts confirmed an available, loaded,
+dialog-free tab at the verified URL. The browser fallback returned
+`Browser is not available: chrome`; `cua.listBrowsers()` returned `[]`.
+No screenshots were produced, and no visual conformity to the pinned prototype
+is claimed. Phone 390×844 was requested twice total, with a status read before
+the retry; both live viewport reads stayed 1280×800 (the second at `b8290d7`).
+Desktop/phone compositions, keyboard/touch presentation, greyscale, and reduced
+motion remain unavailable. No further snapshot/resize retries were performed.
+
+Final checks for source revision `af809b4`: `npm run check` passed;
+`npx vitest run src/engine/progression-presets.test.ts src/ui/app.scenarios.test.ts --maxWorkers=2`
+passed (31 tests); `npm test -- --maxWorkers=2` passed all 96 files
+(1,918 passed, two existing skips), including both engine and UI projects.
+No additional UI-project rerun was performed. Earlier runs were stopped when
+source changes invalidated them; the interim continuation-test failure was a
+fixture that immediately prestiged instead of practicing, corrected by declaring
+the pushing policy. The final full run had no failed tests or unhandled errors.
