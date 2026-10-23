@@ -47,3 +47,11 @@ same-tab snapshots and live geometry reads succeed. A dedicated screen-reader,
 physical-touch, and reduced-motion emulation pass is unavailable; those are not
 claimed as verified. Keyboard Enter dispatch is covered by the existing terminal
 fixture case.
+
+## Check results
+
+`npm run check` passed. Targeted session/catalog/World/terminal checks passed
+(161 tests); after correcting the label token to the declared `--ink`, the
+theme/terminal checks passed (34 tests). The final `npm test` passed all
+97 files: 1,952 passed, 2 skipped. The initial full run correctly rejected
+the undeclared `--text` token; that source was corrected before the final pass.
