@@ -1,0 +1,23 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-23T12:52:41.253Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-f7b10c26",
+  "branch": null,
+  "commit": "af809b4c7c71c08be1e104f1323f2ba6eabe5306",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/progression-presets-471/README.md",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/progression-presets-471/review-fixes-provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

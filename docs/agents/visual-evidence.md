@@ -56,7 +56,13 @@ app.devScenarioAssert();        // re-confirms; throws a named failure if the se
 app.showFocusFace("plan");      // opens the Focus sheet on the PLAN face
 ```
 
-A pass prints the ✓ declaration line — figures, situation, origin, isolation — in the dev panel's note readout and returns from `devScenarioAssert()`; a failure throws a named `Focus scenario: …` (or `Fresh start: …`) reason and prints the ✗ line. Record both in the demonstration: the dev panel's line is visible in captures, and the assertion call belongs in the capture script so an unconfirmed setup cannot pass silently. The Focus goal anchors to the install day — relaunch when the capture spans local midnight.
+A pass prints the ✓ declaration line — figures, situation, origin, isolation — in the dev panel's note readout and returns from `devScenarioAssert()`; a failure throws a named `Focus scenario: …` (or `Fresh start: …`, or `After first bank: …`) reason and prints the ✗ line. Record both in the demonstration: the dev panel's line is visible in captures, and the assertion call belongs in the capture script so an unconfirmed setup cannot pass silently. The Focus goal anchors to the install day — relaunch when the capture spans local midnight.
+
+The progression presets (issue #471) are recipe checkpoints: the runner walks a declared playthrough recipe and stops at the declared moment, so their first launch in a page prepares the walk asynchronously (the earned bank and the World's fight can take tens of seconds). The standing note reads `preparing`, browser tasks keep running, and a newer selection wins over a late preparation. Agents await `app.devLaunchScenario(id)` before inspection; every prepared relaunch is a clone. The recipe rides each descriptor as the reachability evidence:
+
+- `"approaching-prestige"` — an established board with the first prestige door open (origin: recipe checkpoint).
+- `"after-first-bank"` — immediately after the first prestige, its earned 2-Arete claim unspent (origin: recipe checkpoint).
+- `"world-enemy"` — a living discovered enemy with the placement decision unplayed (origin: recipe checkpoint).
 
 ## 4. Capture desktop and phone against that same server
 

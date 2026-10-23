@@ -4184,7 +4184,9 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       else if (key === "worldera") app.devWorldEra();
       else if (key === "scenario") {
         const select = byId("dev-scenario") as HTMLSelectElement | null;
-        if (select) app.devLaunchScenario(select.value);
+        // The command reports named failures in the standing readout.
+        // Consume asynchronous rejection here; agent callers can await it.
+        if (select) void Promise.resolve(app.devLaunchScenario(select.value)).catch(() => {});
       } else if (key === "playthrough") {
         // The run composes from the panel's own selections: the scenario
         // and policy selects name the starting state and the player; the

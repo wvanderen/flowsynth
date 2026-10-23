@@ -326,3 +326,9 @@ export function advanceWorldCharge(state: GameState, snapshot: RateSnapshot, spa
     }
   }
 }
+
+
+// Shared definition for progression checkpoint detection and assertions.
+export function hasActiveWorldEnemy(state: GameState): boolean {
+  return Object.values(state.world.enemies).some((enemy) => enemy.discovered && enemy.hp > 0);
+}
