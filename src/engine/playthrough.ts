@@ -1203,11 +1203,14 @@ function walkPlaythrough(
   // The bank-and-World read (issue #471): evaluated right after the
   // prestige door's check at both between-sessions points, before any
   // spending or recovery bookkeeping touches the era — the first bank
-  // still unspent, or the World's decision still unplayed.
-  const stopAfterDoor = (): boolean => {
-    if (checkpoint === "after-first-bank") return ctx.claims.length === 1;
-    if (checkpoint === "world-enemy-active") return ctx.claims.length >= 1 && worldDecisionPending(state);
-    return false;
+  // still unspent, or the World's decision still unplayed. Returns the
+  // checkpoint whose moment is now, or null.
+  const checkpointAfterDoor = (): PlaythroughCheckpointId | null => {
+    if (checkpoint === "after-first-bank") return ctx.claims.length === 1 ? checkpoint : null;
+    if (checkpoint === "world-enemy-active") {
+      return ctx.claims.length >= 1 && worldDecisionPending(state) ? checkpoint : null;
+    }
+    return null;
   };
   day: for (let day = 0; day < recipe.budgetDays; day++) {
     days = day + 1;
@@ -1227,8 +1230,9 @@ function walkPlaythrough(
         stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
         break day;
       }
-      if (stopAfterDoor()) {
-        haltAt(checkpoint === "after-first-bank" ? "after-first-bank" : "world-enemy-active");
+      const hit = checkpointAfterDoor();
+      if (hit) {
+        haltAt(hit);
         break day;
       }
       manage(ctx, state);
@@ -1242,8 +1246,9 @@ function walkPlaythrough(
         stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
         break day;
       }
-      if (stopAfterDoor()) {
-        haltAt(checkpoint === "after-first-bank" ? "after-first-bank" : "world-enemy-active");
+      const hitAfterSession = checkpointAfterDoor();
+      if (hitAfterSession) {
+        haltAt(hitAfterSession);
         break day;
       }
       // The between-sessions settlement: both recovery measures read here
@@ -1380,9 +1385,10 @@ interface CheckpointMemoEntry {
 // function of the declared recipe and the engine — deterministic inputs,
 // no wall-clock reads — so the memo never lies, and a changed engine
 // fingerprint (hot reload included) walks again. Every read clones the
-// stopped state out, so the preset rebuilds from nothing on every launch,
-// installs cannot accumulate, and no consumer can reach the memoized
-// original.
+// stopped state out, so the preset rebuilds from nothing on every launch
+// and installs cannot accumulate. The record rides out as the read-only
+// provenance artifact it is — the same convention the run command's
+// result follows; the clone is what guards the install path.
 const checkpointMemo = new Map<PlaythroughCheckpointId, CheckpointMemoEntry>();
 
 export function playthroughCheckpointPreset(id: PlaythroughCheckpointId): PlaythroughCheckpointPreset {

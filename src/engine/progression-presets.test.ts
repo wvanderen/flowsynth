@@ -170,11 +170,23 @@ describe("the preset read's honesty", () => {
 });
 
 describe("scripted-run entry from a preset", () => {
-  it("starts a declared run from a checkpoint preset through the same composition seam", { timeout: 120_000 }, () => {
+  it("starts declared runs from every checkpoint preset through the same composition seam", { timeout: 240_000 }, () => {
+    for (const id of ["approaching-prestige", "after-first-bank", "world-enemy"] as const) {
+      const recipe = composePlaythroughRecipe({ scenarioId: id, budgetDays: 1 });
+      expect(recipe.scenarioId).toBe(id);
+      // runPlaythrough asserts its built candidate before walking, so a
+      // run that started anywhere but the preset's situation would have
+      // thrown; the run id names the preset it started from.
+      const record = runPlaythrough(recipe);
+      expect(record.runId).toMatch(new RegExp(`^${id}-s468-`));
+      expect(record.recipe.scenarioId).toBe(id);
+      expect(record.days).toBe(1);
+    }
+  });
+
+  it("starts a declared run from the first bank through the same composition seam", { timeout: 120_000 }, () => {
     const recipe = composePlaythroughRecipe({ scenarioId: "after-first-bank", budgetDays: 1 });
     expect(recipe.scenarioId).toBe("after-first-bank");
-    // runPlaythrough asserts its built candidate before walking, so a run
-    // that started anywhere but the bank state would have thrown.
     const record = runPlaythrough(recipe);
     // The run id names its starting preset; the walked state — the first
     // bank's situation — is the state the run started from.

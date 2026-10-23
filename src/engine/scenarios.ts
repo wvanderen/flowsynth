@@ -90,9 +90,11 @@ const FOCUS: ScenarioDescriptor = {
 // never say that. The recipe stays on the descriptor (read lazily — the
 // catalog and the runner initialize beside each other) as the
 // reachability evidence, and the summary names the walk's day and
-// identity. When the engine drifts from a checkpoint's intended
-// situation, the walk fails its build with a named reason instead of
-// installing a lookalike.
+// identity. The summary's first read in a page IS the walk (the memo
+// turns every later read into a clone): the walked day is the preset's
+// headline figure, so the readout's cost is the preset's own walk. When
+// the engine drifts from a checkpoint's intended situation, the walk
+// fails its build with a named reason instead of installing a lookalike.
 function checkpointSummary(id: PlaythroughCheckpointId): string {
   const preset = playthroughCheckpointPreset(id);
   return `day ${preset.record.days} of the declared walk · ${preset.record.runId}`;
