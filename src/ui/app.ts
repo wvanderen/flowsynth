@@ -67,9 +67,11 @@ import { SCENARIOS, scenarioOf, type ScenarioDescriptor } from "../engine/scenar
 import {
   composePlaythroughRecipe,
   defaultPlaythroughRecipe,
+  playthroughInspection,
   PLAYTHROUGH_POLICIES,
   playthroughNote,
   runPlaythrough,
+  type PlaythroughInspection,
   type PlaythroughPolicy,
   type PlaythroughRecipe,
   type PlaythroughRecipeInput,
@@ -2858,6 +2860,15 @@ export class App {
 
   devPlaythrough: PlaythroughRecord | null = null;
   devPlaythroughNote: string | null = null;
+  // The historical selection (issue #470): the one field owning which
+  // recorded snapshot is inspected. The inspected board/state is always
+  // the record's own frozen snapshot behind this index — never a copy on
+  // a second store — and inspection writes nothing but this selection.
+  devInspected: number | null = null;
+  // The curves surface (issue #470): open state and its x clock —
+  // simulated elapsed or credited practice, both recorded per sample.
+  devCurvesOpen = false;
+  devCurvesAxis: "elapsed" | "credited" = "elapsed";
 
   // The declared recipe: the default, so configuration reads what a run
   // would carry before running it.
@@ -2886,6 +2897,9 @@ export class App {
     }
     this.devPlaythrough = record;
     this.devPlaythroughNote = playthroughNote(record);
+    // A new run replaces the record: the old selection's indexes mean
+    // nothing on it, so the selection clears with the record it pointed at.
+    this.devInspected = null;
     this.say(
       record.complete
         ? `Dev: playthrough ${record.runId} complete — ${record.days} days, ${Math.round(record.creditedSeconds / 60)}m credited, claims ${record.claims.join(", ") || "none"} Arete.`
@@ -2893,6 +2907,54 @@ export class App {
     );
     this.render();
     return record;
+  }
+
+  // The historical inspection boundary (issue #470): one command set
+  // shared by the curves surface and agent access — the same selection,
+  // the same read-only recorded state either way. The selection is this
+  // one field; the inspected board/state is the record's own frozen
+  // snapshot behind it, assembled for reading by the engine's pure
+  // inspector. Nothing here touches the live state, the save, or the
+  // run: a snapshot clone reads, the original never does. A bad index is
+  // a thrown, named error.
+  devInspectPlaythrough(index: number | null): PlaythroughInspection | null {
+    if (!this.dev) {
+      throw new Error("The inspection commands are development commands.");
+    }
+    if (index === null || this.devPlaythrough === null) {
+      this.devInspected = null;
+      this.render();
+      return null;
+    }
+    const inspection = playthroughInspection(this.devPlaythrough, index);
+    this.devInspected = index;
+    this.render();
+    return inspection;
+  }
+
+  devToggleCurves(): void {
+    if (!this.dev) return;
+    this.devCurvesOpen = !this.devCurvesOpen;
+    this.render();
+  }
+
+  // The plot's clock: simulated elapsed or credited practice — the two
+  // recorded x values per sample, so schedule effects stay readable
+  // (story 26).
+  devSetCurvesAxis(axis: "elapsed" | "credited"): void {
+    if (!this.dev || this.devCurvesAxis === axis) return;
+    this.devCurvesAxis = axis;
+    this.render();
+  }
+
+  // The step control's shared walk (story 28): the previous/next recorded
+  // snapshot around the selection, wrapping at the ends — the same
+  // selection the plot's points and markers write.
+  devStepCurves(step: number): void {
+    if (!this.dev || this.devPlaythrough === null || this.devPlaythrough.snapshots.length === 0) return;
+    const count = this.devPlaythrough.snapshots.length;
+    const from = this.devInspected ?? (step > 0 ? -1 : 0);
+    this.devInspectPlaythrough(((from + step) % count + count) % count);
   }
 
   // The development allocation board (#257 hands-on): a deterministic

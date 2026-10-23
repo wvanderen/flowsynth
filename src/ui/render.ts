@@ -1,3 +1,4 @@
+import { historicalBoardHtml } from "./historical-board";
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
 import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
@@ -15,6 +16,7 @@ import { baseTermOf, generatorProfileOf } from "../engine/profiles";
 import { catalogOpen, mergeCapIncreaseCost, rowUnlockCost, unlockedMergeCap, unlockableRows } from "../engine/catalog";
 import { capacityCeiling, nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "../engine/capacity";
 import { formatClock, formatDuration } from "../engine/clock";
+import { playthroughEventMarker, playthroughInspection, type PlaythroughTrajectoryPoint } from "../engine/playthrough";
 import { cellNoteOf, noteNameOf, octaveRowOf, positionInRange } from "../engine/lattice";
 import { TILE_APPS, type FocusApp } from "../engine/apps";
 import { poolOutstanding } from "../engine/trust";
@@ -162,6 +164,7 @@ export function render(app: App): void {
     renderModal(app, live, projected);
     renderDev(app, devStage);
     renderDevBoard(app);
+    renderDevCurves(app);
   } finally {
     endLayoutPass();
   }
@@ -4121,6 +4124,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       <button data-dev="synth">+synth</button>
       <button data-dev="worldera">World era</button>
       <button data-dev="board">${app.devBoard ? "close board" : "board"}</button>
+      <button data-dev="curves">${app.devCurvesOpen ? "close curves" : "curves"}</button>
       <span class="dev-note" id="dev-scenario-note"></span>
       <span class="dev-note" id="dev-playthrough-note"></span>`;
   }
@@ -4134,6 +4138,8 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
   }
   const boardButton = panel.querySelector<HTMLButtonElement>('[data-dev="board"]');
   if (boardButton) boardButton.textContent = app.devBoard ? "close board" : "board";
+  const curvesButton = panel.querySelector<HTMLButtonElement>('[data-dev="curves"]');
+  if (curvesButton) curvesButton.textContent = app.devCurvesOpen ? "close curves" : "curves";
   // The scenario's assertion readout (#456, #467): the setup's ✓ line —
   // its figures, origin, and isolation — or the named ✗ failure, set as
   // text: the message is state-derived, so it never rides the template.
@@ -4200,6 +4206,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
           ...(claimTarget !== undefined ? { claimTarget } : {}),
         });
       } else if (key === "board") app.devToggleBoard();
+      else if (key === "curves") app.devToggleCurves();
       else app.devAdvance(Number(key));
     });
   });
@@ -4354,5 +4361,255 @@ function renderDevBoard(app: App): void {
     else if (key === "stress") app.listen(button, "click", () => app.devBoardStress());
     else if (key === "power-up") app.listen(button, "click", () => app.devBoardPower(1));
     else if (key === "power-down") app.listen(button, "click", () => app.devBoardPower(-1));
+  });
+}
+
+/* ── Dev resource curves (#470) ───────────────────── */
+
+// The resource-curve surface (issue #470, parent stories 26–29): the
+// record's trajectory plotted against simulated elapsed time or credited
+// practice, every plotted point and stamped event backed by its exact
+// recorded snapshot, and the selection's board, balances, and recent
+// decisions read out below. Per the instrument standards: one flat panel,
+// open divisions, compact readouts, square-cut controls, no prose — and
+// nothing animates, so reduced motion is the only motion. Series and
+// markers carry dash patterns and glyphs, never color alone.
+const CURVES_W = 600;
+const CURVES_H = 200;
+const CURVES_L = 40;
+const CURVES_R = 10;
+const CURVES_TOP = 8;
+const CURVES_BOTTOM = 134;
+const CURVES_STRIP_TOP = 142;
+const CURVES_STRIP_BOTTOM = 158;
+const CURVES_LABEL_Y = 176;
+
+interface CurveSeries {
+  readonly key: string;
+  readonly label: string;
+  readonly hue: string;
+  readonly dash: string;
+  readonly width: number;
+  readonly pick: (point: PlaythroughTrajectoryPoint) => number;
+  // The credited clock reads as a step: practice time accrues in whole
+  // credited sessions, never smoothly between them.
+  readonly step?: boolean;
+  readonly dim?: boolean;
+}
+
+const CURVE_SERIES: readonly CurveSeries[] = [
+  { key: "rate", label: "rate ν/s", hue: "var(--nous)", dash: "", width: 1.6, pick: (p) => p.rate },
+  { key: "nous", label: "nous", hue: "var(--nous)", dash: "5 3", width: 1, pick: (p) => p.nous },
+  { key: "era", label: "era ν", hue: "var(--ink)", dash: "1 2.6", width: 1, pick: (p) => p.eraEarned },
+  { key: "arete", label: "arete", hue: "var(--arete)", dash: "7 2 1.5 2", width: 1, pick: (p) => p.arete },
+  { key: "charge", label: "charge/s", hue: "var(--charge)", dash: "2 2", width: 1, pick: (p) => p.forgeRate },
+  { key: "credited", label: "credited", hue: "var(--switch)", dash: "", width: 2, pick: (p) => p.credited, step: true, dim: true },
+];
+
+function curvesStamp(seconds: number): string {
+  const days = Math.floor(seconds / 86_400);
+  const rest = seconds - days * 86_400;
+  return days > 0 ? `day ${days + 1} ${formatClock(rest)}` : formatClock(seconds);
+}
+
+function curvesTicks(max: number, axis: "elapsed" | "credited"): { at: number; label: string }[] {
+  if (max <= 0) return [];
+  if (axis === "elapsed" && max >= 2 * 86_400) {
+    const ticks = [{ at: 0, label: "d1" }];
+    for (let day = 1; day <= Math.floor(max / 86_400); day++) {
+      ticks.push({ at: day * 86_400, label: `d${day + 1}` });
+    }
+    return ticks;
+  }
+  const ticks: { at: number; label: string }[] = [];
+  for (let i = 0; i <= 4; i++) {
+    const at = Math.round((max / 4) * i);
+    ticks.push({ at, label: formatDuration(at) });
+  }
+  return ticks;
+}
+
+function renderDevCurves(app: App): void {
+  let panel = byId("dev-curves");
+  if (!app.dev || !app.devCurvesOpen) {
+    if (panel) closeTooltips(panel);
+    panel?.remove();
+    return;
+  }
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "dev-curves inst-panel";
+    panel.id = "dev-curves";
+    document.body.append(panel);
+  }
+  const record = app.devPlaythrough;
+  const fingerprint = record ? `${record.runId}|${app.devInspected ?? "none"}|${app.devCurvesAxis}` : "empty";
+  if (panel.dataset.fp === fingerprint) return;
+  // The rebuild keeps the stepping control's focus and the scroll, so a
+  // keyboard walk ◀▶ and a scroll-and-pick both survive the re-render.
+  const focused = document.activeElement;
+  const focusKey = focused instanceof HTMLElement && panel.contains(focused)
+    ? (["data-devcurve", "data-devcurveaxis"] as const).find((attr) => focused.hasAttribute(attr))
+    : undefined;
+  const focusValue = focusKey ? focused!.getAttribute(focusKey) : null;
+  const scrollTop = panel.querySelector(".dev-curves-face")?.scrollTop ?? 0;
+  closeTooltips(panel);
+
+  const head = `<div class="dev-board-head">
+      <span>RESOURCE CURVES</span>
+      <span class="mono">${record ? escapeHtml(record.runId) : ""}</span>
+      <button data-devcurve="close" aria-label="Close resource curves">✕</button>
+    </div>`;
+  if (!record) {
+    panel.innerHTML = `<div class="inst-panel-face dev-curves-face">${head}<div class="dev-curves-empty">no run yet — run a playthrough first</div></div>`;
+    panel.dataset.fp = fingerprint;
+    panel.querySelector<HTMLButtonElement>('[data-devcurve="close"]')?.addEventListener("click", () => app.devToggleCurves());
+    return;
+  }
+
+  const axis = app.devCurvesAxis;
+  const points = record.trajectory;
+  const maxX = Math.max(1, axis === "elapsed" ? record.elapsedSeconds : record.creditedSeconds);
+  const px = (value: number): number => CURVES_L + (Math.max(0, Math.min(value, maxX)) / maxX) * (CURVES_W - CURVES_L - CURVES_R);
+
+  // The series paths, each on its own 0..max scale; a series that never
+  // leaves zero reads as its legend's dash and no line.
+  const seriesMax = new Map(CURVE_SERIES.map((series) => [series.key, Math.max(0, ...points.map(series.pick))]));
+  const py = (value: number, max: number): number =>
+    CURVES_BOTTOM - (max > 0 ? Math.min(1, value / max) : 0) * (CURVES_BOTTOM - CURVES_TOP);
+  const paths = CURVE_SERIES.map((series) => {
+    const max = seriesMax.get(series.key)!;
+    if (max <= 0) return "";
+    const coordinates = points.map((point) => ({ x: px(axis === "elapsed" ? point.elapsed : point.credited), y: py(series.pick(point), max) }));
+    let path = "";
+    coordinates.forEach((c, i) => {
+      if (i === 0) path = `M${c.x.toFixed(1)},${c.y.toFixed(1)}`;
+      else if (series.step) path += `H${c.x.toFixed(1)}V${c.y.toFixed(1)}`;
+      else path += `L${c.x.toFixed(1)},${c.y.toFixed(1)}`;
+    });
+    return `<path d="${path}" fill="none" stroke="${series.hue}" stroke-width="${series.width}"${series.dash ? ` stroke-dasharray="${series.dash}"` : ""}${series.dim ? ' opacity="0.75"' : ""} stroke-linecap="round" stroke-linejoin="round"/>`;
+  }).join("");
+
+  // The stamped events: purchases, unlocks, and breathers as strip glyphs
+  // and ticks; sessions and prestiges as full-height hairlines behind the
+  // curves. Each carries its exact recorded snapshot — clicking one
+  // inspects it, never a neighbor.
+  const MK = { purchase: "▲", unlock: "◆", breather: "┊" } as const;
+  let glyphs = "";
+  let hairlines = "";
+  for (const event of record.events) {
+    const marker = playthroughEventMarker(event);
+    if (!marker) continue;
+    const x = px(axis === "elapsed" ? event.at : event.credited).toFixed(1);
+    const title = `<title>${escapeHtml(event.label)}</title>`;
+    const hit = `data-devcurve="event" data-i="${event.snapshot}"`;
+    if (marker === "purchase" || marker === "unlock") {
+      glyphs += `<text class="dev-curves-mk dev-curves-mk-${marker}" ${hit} x="${x}" y="${(CURVES_STRIP_BOTTOM - 2).toFixed(1)}" stroke="transparent" stroke-width="5">${MK[marker]}${title}</text>`;
+    } else if (marker === "session") {
+      hairlines += `<line class="dev-curves-hair dev-curves-hair-session" ${hit} x1="${x}" y1="${CURVES_TOP}" x2="${x}" y2="${CURVES_BOTTOM}"><title>${escapeHtml(event.label)}</title></line>`
+        + `<line class="dev-curves-hit" ${hit} x1="${x}" y1="${CURVES_TOP}" x2="${x}" y2="${CURVES_BOTTOM}"/>`;
+    } else if (marker === "prestige") {
+      hairlines += `<line class="dev-curves-hair dev-curves-hair-prestige" ${hit} x1="${x}" y1="${CURVES_TOP}" x2="${x}" y2="${CURVES_STRIP_BOTTOM}"><title>${escapeHtml(event.label)}</title></line>`
+        + `<line class="dev-curves-hit" ${hit} x1="${x}" y1="${CURVES_TOP}" x2="${x}" y2="${CURVES_STRIP_BOTTOM}"/>`;
+    } else {
+      glyphs += `<line class="dev-curves-mk dev-curves-mk-breather" ${hit} x1="${x}" y1="${(CURVES_STRIP_TOP + 4).toFixed(1)}" x2="${x}" y2="${(CURVES_STRIP_BOTTOM - 2).toFixed(1)}" stroke="transparent" stroke-width="5">${title}</line>`;
+    }
+  }
+
+  // The sample points on the headline rate curve: every plotted sample is
+  // a pick target for its exact recorded state.
+  const rateMax = seriesMax.get("rate")!;
+  const circles = points
+    .map((point) => {
+      const x = px(axis === "elapsed" ? point.elapsed : point.credited).toFixed(1);
+      const y = (rateMax > 0 ? py(point.rate, rateMax) : CURVES_BOTTOM).toFixed(1);
+      return `<circle class="dev-curves-pt${app.devInspected === point.snapshot ? " sel" : ""}" data-devcurve="event" data-i="${point.snapshot}" cx="${x}" cy="${y}" r="2.6" stroke="transparent" stroke-width="5"><title>sample · ${curvesStamp(point.elapsed)} · credited ${formatDuration(point.credited)}</title></circle>`;
+    })
+    .join("");
+
+  const selected = app.devInspected !== null && app.devInspected < record.snapshots.length ? app.devInspected : null;
+  const selectedSnapshot = selected !== null ? record.snapshots[selected] : null;
+  const selectionLine = selectedSnapshot
+    ? (() => {
+        const x = px(axis === "elapsed" ? selectedSnapshot.elapsed : selectedSnapshot.credited).toFixed(1);
+        return `<line class="dev-curves-sel" x1="${x}" y1="${CURVES_TOP}" x2="${x}" y2="${CURVES_STRIP_BOTTOM}"/>`;
+      })()
+    : "";
+
+  const grid = [0.25, 0.5, 0.75]
+    .map((f) => {
+      const y = (CURVES_BOTTOM - f * (CURVES_BOTTOM - CURVES_TOP)).toFixed(1);
+      return `<line class="dev-curves-grid" x1="${CURVES_L}" y1="${y}" x2="${CURVES_W - CURVES_R}" y2="${y}"/>`;
+    })
+    .join("");
+  const ticks = curvesTicks(maxX, axis)
+    .map((tick) => {
+      const x = px(tick.at).toFixed(1);
+      return `<line class="dev-curves-grid" x1="${x}" y1="${CURVES_BOTTOM}" x2="${x}" y2="${CURVES_BOTTOM + 3}"/><text class="dev-curves-tick" x="${x}" y="${CURVES_LABEL_Y}" text-anchor="middle">${escapeHtml(tick.label)}</text>`;
+    })
+    .join("");
+
+  const legendKeys = CURVE_SERIES.map((series) => {
+    const max = seriesMax.get(series.key)!;
+    const label = series.key === "nous" ? termTipHtml("nous") : series.key === "arete" ? termTipHtml("Arete", "arete") : series.key === "charge" ? `${termTipHtml("charge")}/s` : series.label;
+    return `<span class="dev-curves-key"><svg width="20" height="6" aria-hidden="true"><line x1="1" y1="3" x2="19" y2="3" stroke="${series.hue}" stroke-width="${series.width}"${series.dash ? ` stroke-dasharray="${series.dash}"` : ""}${series.dim ? ' opacity="0.75"' : ""}/></svg>${label}${max > 0 ? ` · max ${formatNumber(max)}` : " · 0"}</span>`;
+  }).join("");
+  const legendMarks = `<span class="dev-curves-key">▲ purchases · ◆ unlocks · │ sessions · ┊ ${termTipHtml("Breather", "breathers")} · ╌ ${termTipHtml("Prestige", "prestige")}</span>`;
+
+  // The selection's read: the exact recorded state, its balances, its
+  // board, and the decisions the action record stamped at its moment.
+  let read = `<div class="dev-curves-read" role="status" aria-live="polite"><span class="dev-curves-none">no selection — pick a plotted point, a marker, or step ◀ ▶</span></div>`;
+  let board = "";
+  let decisions = "";
+  if (selected !== null && selectedSnapshot) {
+    const inspection = playthroughInspection(record, selected);
+    const balances = inspection.balances;
+    board = historicalBoardHtml(inspection);
+    read = `<div class="dev-curves-read" role="status" aria-live="polite">
+      <div class="mono dev-curves-line1">${inspection.point ? "sample" : "boundary"} ${selected + 1}/${record.snapshots.length} · sim ${curvesStamp(inspection.elapsed)} · credited ${formatDuration(inspection.credited)} · ${formatNumber(inspection.rate)} ν/s</div>
+      <div class="mono dev-curves-line2">${termTipHtml("nous")} ${formatNumber(balances.nous)} · era ${formatNumber(balances.eraEarned)} · ${termTipHtml("Arete", "arete")} ${formatNumber(balances.arete)} · ${termTipHtml("Scrap", "scrap")} ${formatNumber(balances.scrap)} · cells ${balances.cells} · tray ${balances.tray} · ${termTipHtml("Prestige", "prestiges")} ${balances.prestiges} · sessions ${balances.sessions}</div>
+    </div>`;
+    decisions = inspection.events
+      .map((event) => `<div class="dev-curve-event${event.ok ? "" : " declined"}"><span class="dev-curve-ok">${event.ok ? "✓" : "✗"}</span><span class="dev-curve-stamp">${escapeHtml(curvesStamp(event.at))}</span>${escapeHtml(event.label)}${event.reason ? ` — ${escapeHtml(event.reason)}` : ""}</div>`)
+      .join("");
+    if (!decisions) decisions = `<div class="dev-curves-none">no decisions recorded at this moment</div>`;
+  }
+
+  panel.innerHTML = `<div class="inst-panel-face dev-curves-face">${head}
+    <div class="dev-curves-cap">
+      <span>clock</span>
+      <button data-devcurveaxis="elapsed" class="${axis === "elapsed" ? "on" : ""}" aria-pressed="${axis === "elapsed"}">elapsed</button>
+      <button data-devcurveaxis="credited" class="${axis === "credited" ? "on" : ""}" aria-pressed="${axis === "credited"}">credited</button>
+      <button data-devcurve="prev" aria-label="Previous recorded state">◀</button>
+      <button data-devcurve="next" aria-label="Next recorded state">▶</button>
+    </div>
+    <div class="dev-curves-scroll">
+      <svg class="dev-curves-plot" viewBox="0 0 ${CURVES_W} ${CURVES_H}" width="${CURVES_W}" height="${CURVES_H}" role="img" aria-label="Resource balances and production rates over simulated ${axis === "elapsed" ? "elapsed" : "credited practice"} time, with purchase, unlock, session, breather, and prestige markers">
+        <line class="dev-curves-axis" x1="${CURVES_L}" y1="${CURVES_TOP}" x2="${CURVES_L}" y2="${CURVES_BOTTOM}"/>
+        <line class="dev-curves-axis" x1="${CURVES_L}" y1="${CURVES_BOTTOM}" x2="${CURVES_W - CURVES_R}" y2="${CURVES_BOTTOM}"/>
+        <line class="dev-curves-strip" x1="${CURVES_L}" y1="${CURVES_STRIP_TOP}" x2="${CURVES_W - CURVES_R}" y2="${CURVES_STRIP_TOP}"/>
+        ${grid}${ticks}${hairlines}${selectionLine}${paths}${circles}${glyphs}
+      </svg>
+    </div>
+    <div class="dev-curves-legend">${legendKeys}${legendMarks}</div>
+    ${read}
+    ${decisions ? `<div class="dev-curves-events">${decisions}</div>` : ""}
+    ${board}</div>`;
+  panel.dataset.fp = fingerprint;
+  if (focusKey && focusValue !== null) {
+    [...panel.querySelectorAll<HTMLElement>(`[${focusKey}]`)]
+      .find((element) => element.getAttribute(focusKey) === focusValue)?.focus({ preventScroll: true });
+  }
+  panel.querySelector(".dev-curves-face")!.scrollTop = scrollTop;
+  wireTooltips(panel, app.signal);
+  panel.querySelectorAll<HTMLElement>("[data-devcurve]").forEach((element) => {
+    const key = element.getAttribute("data-devcurve")!;
+    if (key === "close") app.listen(element, "click", () => app.devToggleCurves());
+    else if (key === "prev") app.listen(element, "click", () => app.devStepCurves(-1));
+    else if (key === "next") app.listen(element, "click", () => app.devStepCurves(1));
+    else if (key === "event") app.listen(element, "click", () => app.devInspectPlaythrough(Number(element.getAttribute("data-i"))));
+  });
+  panel.querySelectorAll<HTMLElement>("[data-devcurveaxis]").forEach((element) => {
+    app.listen(element, "click", () => app.devSetCurvesAxis(element.getAttribute("data-devcurveaxis") as "elapsed" | "credited"));
   });
 }

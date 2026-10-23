@@ -1,0 +1,950 @@
+
+> flowsynth@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.7 /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0
+
+stdout | src/engine/capacity-comparisons.test.ts > the complete-board comparisons (#262) > separates power shapes — concentrated stays viable, distributed competes
+
+power shapes (budget 25000):
+  concentrated   cap=1 rate=4.43 active=2 maxFactor=2.17 spent=19564 unspent=5436 rolls=10 certified=true
+  concentrated   cap=2 rate=7.75 active=4 maxFactor=3.80 spent=19564 unspent=5436 rolls=10 certified=true
+  concentrated   cap=3 rate=13.56 active=6 maxFactor=6.65 spent=19564 unspent=5436 rolls=10 certified=true
+  concentrated   cap=4 rate=13.56 active=6 maxFactor=6.65 spent=19564 unspent=5436 rolls=10 certified=true
+  concentrated   cap=5 rate=13.56 active=6 maxFactor=6.65 spent=19564 unspent=5436 rolls=10 certified=true
+  distributed    cap=1 rate=9.67 active=2 maxFactor=2.17 spent=17874 unspent=7126 rolls=10 certified=true
+  distributed    cap=2 rate=16.93 active=4 maxFactor=3.80 spent=17874 unspent=7126 rolls=10 certified=true
+  distributed    cap=3 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126 rolls=10 certified=true
+  distributed    cap=4 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126 rolls=10 certified=true
+  distributed    cap=5 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126 rolls=10 certified=true
+
+stdout | src/engine/capacity-comparisons.test.ts > the complete-board comparisons (#262) > orders formations — organized sevenths useful, chromatic cramming never dominant
+
+formations (budget 25000):
+  doubled triad  cap=1 rate=9.67 active=2 maxFactor=2.17 Q=1.240 spent=17874 unspent=7126 rolls=10 certified=true
+  doubled triad  cap=2 rate=16.93 active=4 maxFactor=3.80 Q=1.240 spent=17874 unspent=7126 rolls=10 certified=true
+  doubled triad  cap=3 rate=29.63 active=6 maxFactor=6.65 Q=1.240 spent=17874 unspent=7126 rolls=10 certified=true
+  doubled triad  cap=4 rate=29.63 active=6 maxFactor=6.65 Q=1.240 spent=17874 unspent=7126 rolls=10 certified=true
+  doubled triad  cap=5 rate=29.63 active=6 maxFactor=6.65 Q=1.240 spent=17874 unspent=7126 rolls=10 certified=true
+  doubled maj7   cap=1 rate=14.13 active=2 maxFactor=2.38 Q=1.160 spent=23712 unspent=1288 rolls=12 certified=true
+  doubled maj7   cap=2 rate=28.98 active=4 maxFactor=4.87 Q=1.160 spent=23712 unspent=1288 rolls=12 certified=true
+  doubled maj7   cap=3 rate=59.40 active=6 maxFactor=9.99 Q=1.160 spent=23712 unspent=1288 rolls=12 certified=true
+  doubled maj7   cap=4 rate=59.40 active=6 maxFactor=9.99 Q=1.160 spent=23712 unspent=1288 rolls=12 certified=true
+  doubled maj7   cap=5 rate=59.40 active=6 maxFactor=9.99 Q=1.160 spent=23712 unspent=1288 rolls=12 certified=true
+  chromatic hexad cap=1 rate=4.46 active=0 maxFactor=1.00 Q=0.500 spent=21234 unspent=3766 rolls=12 certified=true
+  chromatic hexad cap=2 rate=4.46 active=0 maxFactor=1.00 Q=0.500 spent=21234 unspent=3766 rolls=12 certified=true
+  chromatic hexad cap=3 rate=4.46 active=0 maxFactor=1.00 Q=0.500 spent=21234 unspent=3766 rolls=12 certified=true
+  chromatic hexad cap=4 rate=4.46 active=0 maxFactor=1.00 Q=0.500 spent=21234 unspent=3766 rolls=12 certified=true
+  chromatic hexad cap=5 rate=4.46 active=0 maxFactor=1.00 Q=0.500 spent=21234 unspent=3766 rolls=12 certified=true
+
+formations at late-progression budget 25000000:
+  doubled triad  cap=1 rate=1.490e+2 active=2 maxFactor=2.17 Q=1.240 spent=2.03e+7 unspent=4.72e+6 rolls=10 cells=0 certified=true
+  doubled triad  cap=2 rate=2.608e+2 active=4 maxFactor=3.80 Q=1.240 spent=2.03e+7 unspent=4.72e+6 rolls=10 cells=0 certified=true
+  doubled triad  cap=3 rate=4.565e+2 active=6 maxFactor=6.65 Q=1.240 spent=2.03e+7 unspent=4.72e+6 rolls=10 cells=0 certified=true
+  doubled triad  cap=4 rate=4.565e+2 active=6 maxFactor=6.65 Q=1.240 spent=2.03e+7 unspent=4.72e+6 rolls=10 cells=0 certified=true
+  doubled triad  cap=5 rate=4.565e+2 active=6 maxFactor=6.65 Q=1.240 spent=2.03e+7 unspent=4.72e+6 rolls=10 cells=0 certified=true
+  doubled maj7   cap=1 rate=1.815e+2 active=2 maxFactor=2.38 Q=1.160 spent=1.69e+7 unspent=8.10e+6 rolls=12 cells=0 certified=true
+  doubled maj7   cap=2 rate=3.720e+2 active=4 maxFactor=4.87 Q=1.160 spent=1.69e+7 unspent=8.10e+6 rolls=12 cells=0 certified=true
+  doubled maj7   cap=3 rate=7.627e+2 active=6 maxFactor=9.99 Q=1.160 spent=1.69e+7 unspent=8.10e+6 rolls=12 cells=0 certified=true
+  doubled maj7   cap=4 rate=7.627e+2 active=6 maxFactor=9.99 Q=1.160 spent=1.69e+7 unspent=8.10e+6 rolls=12 cells=0 certified=true
+  doubled maj7   cap=5 rate=7.627e+2 active=6 maxFactor=9.99 Q=1.160 spent=1.69e+7 unspent=8.10e+6 rolls=12 cells=0 certified=true
+  doubled dom7   cap=1 rate=1.406e+2 active=2 maxFactor=2.65 Q=1.360 spent=2.40e+7 unspent=9.60e+5 rolls=15 cells=17434360 certified=true
+  doubled dom7   cap=2 rate=2.741e+2 active=4 maxFactor=5.17 Q=1.360 spent=2.40e+7 unspent=9.60e+5 rolls=15 cells=17434360 certified=true
+  doubled dom7   cap=3 rate=5.344e+2 active=6 maxFactor=10.08 Q=1.360 spent=2.40e+7 unspent=9.60e+5 rolls=15 cells=17434360 certified=true
+  doubled dom7   cap=4 rate=5.344e+2 active=6 maxFactor=10.08 Q=1.360 spent=2.40e+7 unspent=9.60e+5 rolls=15 cells=17434360 certified=true
+  doubled dom7   cap=5 rate=5.344e+2 active=6 maxFactor=10.08 Q=1.360 spent=2.40e+7 unspent=9.60e+5 rolls=15 cells=17434360 certified=true
+  chromatic hexad cap=1 rate=6.869e+1 active=0 maxFactor=1.00 Q=0.500 spent=2.03e+7 unspent=4.71e+6 rolls=12 cells=0 certified=true
+  chromatic hexad cap=2 rate=6.869e+1 active=0 maxFactor=1.00 Q=0.500 spent=2.03e+7 unspent=4.71e+6 rolls=12 cells=0 certified=true
+  chromatic hexad cap=3 rate=6.869e+1 active=0 maxFactor=1.00 Q=0.500 spent=2.03e+7 unspent=4.71e+6 rolls=12 cells=0 certified=true
+  chromatic hexad cap=4 rate=6.869e+1 active=0 maxFactor=1.00 Q=0.500 spent=2.03e+7 unspent=4.71e+6 rolls=12 cells=0 certified=true
+  chromatic hexad cap=5 rate=6.869e+1 active=0 maxFactor=1.00 Q=0.500 spent=2.03e+7 unspent=4.71e+6 rolls=12 cells=0 certified=true
+
+stdout | src/engine/capacity-comparisons.test.ts > the complete-board comparisons (#262) > rewards duplicates as capacity rises — each rung opens an optimization opportunity
+
+duplicates (budget 25000):
+  doubled triad    cap=1 rate=9.67 active=2 maxFactor=2.17 spent=17874 unspent=7126
+  doubled triad    cap=2 rate=16.93 active=4 maxFactor=3.80 spent=17874 unspent=7126
+  doubled triad    cap=3 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126
+  doubled triad    cap=4 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126
+  doubled triad    cap=5 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126
+  wide hexatonic   cap=1 rate=5.14 active=1 maxFactor=1.23 spent=17874 unspent=7126
+  wide hexatonic   cap=2 rate=8.51 active=3 maxFactor=2.34 spent=17874 unspent=7126
+  wide hexatonic   cap=3 rate=14.83 active=6 maxFactor=4.44 spent=17874 unspent=7126
+  wide hexatonic   cap=4 rate=14.83 active=6 maxFactor=4.44 spent=17874 unspent=7126
+  wide hexatonic   cap=5 rate=14.83 active=6 maxFactor=4.44 spent=17874 unspent=7126
+
+stdout | src/engine/capacity-comparisons.test.ts > the complete-board comparisons (#262) > keeps silent voices sweetening, never dominating
+
+silent voices (budget 25000):
+  silent support   cap=1 rate=6.86 active=2 maxFactor=3.53 spent=17874 unspent=7126
+  silent support   cap=2 rate=16.95 active=4 maxFactor=10.07 spent=17874 unspent=7126
+  silent support   cap=3 rate=41.67 active=6 maxFactor=23.17 spent=17874 unspent=7126
+  silent support   cap=4 rate=41.67 active=6 maxFactor=23.17 spent=17874 unspent=7126
+  silent support   cap=5 rate=41.67 active=6 maxFactor=23.17 spent=17874 unspent=7126
+  all oscillators  cap=1 rate=9.67 active=2 maxFactor=2.17 spent=17874 unspent=7126
+  all oscillators  cap=2 rate=16.93 active=4 maxFactor=3.80 spent=17874 unspent=7126
+  all oscillators  cap=3 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126
+  all oscillators  cap=4 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126
+  all oscillators  cap=5 rate=29.63 active=6 maxFactor=6.65 spent=17874 unspent=7126
+
+stdout | src/engine/capacity-comparisons.test.ts > the complete-board comparisons (#262) > pays for charge and booster support at equal spend
+
+charge (budget 25000):
+  charge support   cap=1 rate=10.82 spent=18133 unspent=6867 rolls=10
+  charge support   cap=2 rate=18.94 spent=18133 unspent=6867 rolls=10
+  charge support   cap=3 rate=33.15 spent=18133 unspent=6867 rolls=10
+  charge support   cap=4 rate=33.15 spent=18133 unspent=6867 rolls=10
+  charge support   cap=5 rate=33.15 spent=18133 unspent=6867 rolls=10
+  levels instead   cap=1 rate=9.67 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=2 rate=16.93 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=3 rate=29.63 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=4 rate=29.63 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=5 rate=29.63 spent=17874 unspent=7126 rolls=10
+
+booster (budget 25000):
+  booster support  cap=1 rate=10.08 spent=18133 unspent=6867 rolls=10
+  booster support  cap=2 rate=17.63 spent=18133 unspent=6867 rolls=10
+  booster support  cap=3 rate=30.86 spent=18133 unspent=6867 rolls=10
+  booster support  cap=4 rate=30.86 spent=18133 unspent=6867 rolls=10
+  booster support  cap=5 rate=30.86 spent=18133 unspent=6867 rolls=10
+  levels instead   cap=1 rate=9.67 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=2 rate=16.93 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=3 rate=29.63 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=4 rate=29.63 spent=17874 unspent=7126 rolls=10
+  levels instead   cap=5 rate=29.63 spent=17874 unspent=7126 rolls=10
+
+stdout | src/engine/capacity-comparisons.test.ts > the complete-board comparisons (#262) > reads mutators on the same board — power and resonance both land
+
+mutators (budget 25000):
+  no mutator           cap=1 rate=9.67 maxFactor=2.170 mutatorArete=0
+  no mutator           cap=2 rate=16.93 maxFactor=3.797 mutatorArete=0
+  no mutator           cap=3 rate=29.63 maxFactor=6.646 mutatorArete=0
+  no mutator           cap=4 rate=29.63 maxFactor=6.646 mutatorArete=0
+  no mutator           cap=5 rate=29.63 maxFactor=6.646 mutatorArete=0
+  power mutator        cap=1 rate=11.29 maxFactor=2.170 mutatorArete=1
+  power mutator        cap=2 rate=19.75 maxFactor=3.797 mutatorArete=1
+  power mutator        cap=3 rate=34.56 maxFactor=6.646 mutatorArete=1
+  power mutator        cap=4 rate=34.56 maxFactor=6.646 mutatorArete=1
+  power mutator        cap=5 rate=34.56 maxFactor=6.646 mutatorArete=1
+  resonance mutator    cap=1 rate=11.29 maxFactor=4.340 mutatorArete=1
+  resonance mutator    cap=2 rate=19.75 maxFactor=7.595 mutatorArete=1
+  resonance mutator    cap=3 rate=34.56 maxFactor=13.291 mutatorArete=1
+  resonance mutator    cap=4 rate=34.56 maxFactor=13.291 mutatorArete=1
+  resonance mutator    cap=5 rate=34.56 maxFactor=13.291 mutatorArete=1
+
+stdout | src/engine/capacity-comparisons.test.ts > the complete-board comparisons (#262) > scales the merge tier without touching capacity
+
+tier (budget 25000):
+  tier-0           cap=1 rate=9.67 maxFactor=2.170 rolls=10
+  tier-0           cap=2 rate=16.93 maxFactor=3.797 rolls=10
+  tier-0           cap=3 rate=29.63 maxFactor=6.646 rolls=10
+  tier-0           cap=4 rate=29.63 maxFactor=6.646 rolls=10
+  tier-0           cap=5 rate=29.63 maxFactor=6.646 rolls=10
+  tier-1           cap=1 rate=14.51 maxFactor=2.170 rolls=10
+  tier-1           cap=2 rate=25.39 maxFactor=3.797 rolls=10
+  tier-1           cap=3 rate=44.44 maxFactor=6.646 rolls=10
+  tier-1           cap=4 rate=44.44 maxFactor=6.646 rolls=10
+  tier-1           cap=5 rate=44.44 maxFactor=6.646 rolls=10
+  tier-2           cap=1 rate=21.77 maxFactor=2.170 rolls=10
+  tier-2           cap=2 rate=38.09 maxFactor=3.797 rolls=10
+  tier-2           cap=3 rate=66.66 maxFactor=6.646 rolls=10
+  tier-2           cap=4 rate=66.66 maxFactor=6.646 rolls=10
+  tier-2           cap=5 rate=66.66 maxFactor=6.646 rolls=10
+
+ ✓ |engine| src/engine/capacity-comparisons.test.ts (9 tests) 234ms
+ ✓ |engine| src/engine/allocation.test.ts (13 tests) 82ms
+ ✓ |engine| tools/evidence-healthcheck.test.ts (25 tests) 1185ms
+ ✓ |engine| src/engine/breather-specialists.test.ts (13 tests) 42ms
+ ✓ |engine| src/engine/breather-tuning.test.ts (13 tests) 1134ms
+   ✓ the allocation across the breather boundary > bounds steady solves at one-second ticks  588ms
+ ✓ |engine| src/engine/world.test.ts (67 tests) 133ms
+ ✓ |engine| src/engine/temporal.test.ts (24 tests) 1271ms
+   ✓ the shared session clock (#372) > catches up a week away with an empty Pulsewell without losing time  1211ms
+ ✓ |engine| tools/evidence-preflight.test.ts (25 tests) 1811ms
+ ✓ |engine| src/engine/mutator.test.ts (38 tests) 33ms
+ ✓ |engine| src/engine/goals.test.ts (39 tests) 73ms
+fatal: not a git repository (or any of the parent directories): .git
+fatal: not a git repository (or any of the parent directories): .git
+ ✓ |engine| src/engine/placement-preview.test.ts (10 tests) 45ms
+fatal: not a git repository (or any of the parent directories): .git
+ ✓ |engine| tools/build-purity.test.ts (1 test) 2043ms
+   ✓ production build purity (issue #253) > dist carries no absolute local paths and no provenance endpoint  2042ms
+fatal: not a git repository (or any of the parent directories): .git
+ ✓ |engine| src/engine/achievements.test.ts (38 tests) 85ms
+ ✓ |engine| src/engine/save.test.ts (41 tests) 116ms
+ ✓ |engine| src/engine/allocation-memo.test.ts (9 tests) 40ms
+ ✓ |engine| src/engine/library.test.ts (20 tests) 35ms
+ ✓ |engine| src/engine/prestige.test.ts (11 tests) 25ms
+ ✓ |engine| src/engine/boosters.test.ts (15 tests) 48ms
+ ✓ |engine| src/engine/capacity.test.ts (22 tests) 95ms
+stderr | tools/dev-provenance.test.ts > dev provenance endpoint (issue #253) > answers GET on the exact route only
+Error:   Failed to scan for dependencies from entries:
+  /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/index.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/workbench.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/header-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/module-bloom-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/opening-arc-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/responsive-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/controls-sheet.prototype.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/focus-surfaces.prototype.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/instrument-standards.prototype.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/world-faces.prototype.html
+
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:4:7:
+[37m      4 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/mod[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:5:7:
+[37m      5 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/ope[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:6:7:
+[37m      6 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/res[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:7:7:
+[37m      7 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/co[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:8:7:
+[37m      8 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/fo[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:9:7:
+[37m      9 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/in[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:10:7:
+[37m      10 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/w[37m...
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14534:34
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14529:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    html:/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/index.html:1:7:
+[37m      1 │ import [32m"/src/main.ts"[37m
+        ╵        [32m~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14534:34
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14529:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    html:/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/workbench.html:1:7:
+[37m      1 │ import [32m"/src/ui/workbench/main.ts"[37m
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+    at failureErrorWithLog (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:926:25
+    at runOnEndCallbacks (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1307:45)
+    at buildResponseToResult (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:924:7)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:936:9
+    at new Promise (<anonymous>)
+    at requestCallbacks.on-end (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:935:54)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+
+ ✓ |engine| src/engine/arc.test.ts (15 tests) 24ms
+ ✓ |engine| src/engine/live-allocation.test.ts (18 tests) 70ms
+ ✓ |engine| src/engine/focus-scenario.test.ts (3 tests) 55ms
+ ✓ |engine| src/engine/breather.test.ts (18 tests) 78ms
+ ✓ |engine| src/engine/trust.test.ts (38 tests) 37ms
+ ✓ |engine| src/engine/generators.test.ts (15 tests) 51ms
+ ✓ |engine| src/engine/actions.test.ts (24 tests) 56ms
+ ✓ |engine| src/engine/bulk.test.ts (15 tests) 22ms
+ ✓ |engine| src/engine/chorus-sideband.test.ts (22 tests) 24ms
+stderr | tools/dev-provenance.test.ts > dev provenance endpoint (issue #253) > exposes uncommitted source, untracked files included (issue #454)
+Error:   Failed to scan for dependencies from entries:
+  /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/index.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/workbench.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/header-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/module-bloom-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/opening-arc-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/tools/responsive-proto.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/controls-sheet.prototype.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/focus-surfaces.prototype.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/instrument-standards.prototype.html
+/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/world-faces.prototype.html
+
+  [31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:8:7:
+[37m      8 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/fo[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:9:7:
+[37m      9 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/in[37m...
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14380:32
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14379:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    <stdin>:10:7:
+[37m      10 │ import [32m"/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/src/ui/w[37m...
+         ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14534:34
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14529:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    html:/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/index.html:1:7:
+[37m      1 │ import [32m"/src/main.ts"[37m
+        ╵        [32m~~~~~~~~~~~~~~[0m
+
+
+[31m✘ [41;31m[[41;97mERROR[41;31m][0m [1mThe server is being restarted or closed. Request is outdated[0m [1m[35m[plugin vite:dep-scan][0m
+
+    node_modules/esbuild/lib/main.js:1217:27:
+[37m      1217 │         let result = await [32m[37mcallback({
+           ╵                            [32m^[0m
+
+    at throwClosedServerError (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42185:15)
+    at EnvironmentPluginContainer.resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42364:9)
+    at resolveId (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14314:40)
+    at resolve (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14325:28)
+    at file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14534:34
+    at requestCallbacks.on-resolve (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1217:28)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+    at Socket.emit (node:events:519:28)
+
+  This error came from the "onResolve" callback registered here:
+
+    node_modules/esbuild/lib/main.js:1141:20:
+[37m      1141 │       let promise = [32m[37msetup({
+           ╵                     [32m^[0m
+
+    at setup (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14529:13)
+    at handlePlugins (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1141:21)
+    at buildOrContextImpl (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:854:5)
+    at Object.buildOrContext (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:680:5)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:68
+    at new Promise (<anonymous>)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:2035:27)
+    at Object.context (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1877:58)
+    at prepareEsbuildScanner (file:///Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:14266:24)
+
+  The plugin "vite:dep-scan" was triggered by this import
+
+    html:/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/workbench.html:1:7:
+[37m      1 │ import [32m"/src/ui/workbench/main.ts"[37m
+        ╵        [32m~~~~~~~~~~~~~~~~~~~~~~~~~~~[0m
+
+
+    at failureErrorWithLog (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1467:15)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:926:25
+    at runOnEndCallbacks (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:1307:45)
+    at buildResponseToResult (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:924:7)
+    at /Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:936:9
+    at new Promise (<anonymous>)
+    at requestCallbacks.on-end (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:935:54)
+    at handleRequest (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:628:17)
+    at handleIncomingPacket (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:653:7)
+    at Socket.readFromStdout (/Users/eggfam/.t3/worktrees/flowsynth/t3-8e7c25f0/node_modules/esbuild/lib/main.js:581:7)
+
+ ✓ |engine| tools/dev-provenance.test.ts (12 tests) 3174ms
+   ✓ source cleanliness (issue #454) > reads a committed tree as clean  315ms
+   ✓ source cleanliness (issue #454) > treats ignored files as absent, and a git-less root as unknown  426ms
+   ✓ dev provenance endpoint (issue #253) > serves the serving worktree's identity and commit  448ms
+   ✓ dev provenance endpoint (issue #253) > exposes uncommitted source, untracked files included (issue #454)  584ms
+ ✓ |engine| src/engine/merge-all.test.ts (13 tests) 24ms
+ ✓ |engine| src/engine/chargewindow.test.ts (18 tests) 61ms
+ ✓ |engine| src/engine/scrap.test.ts (13 tests) 12ms
+ ✓ |engine| src/engine/combine.test.ts (18 tests) 45ms
+ ✓ |engine| src/engine/profiles.test.ts (16 tests) 60ms
+ ✓ |engine| src/engine/records.test.ts (15 tests) 34ms
+ ✓ |engine| src/engine/exciter.test.ts (20 tests) 36ms
+ ✓ |engine| src/engine/chords.test.ts (41 tests) 29ms
+ ✓ |engine| src/engine/roster.test.ts (28 tests) 55ms
+ ✓ |engine| src/engine/catalog.test.ts (15 tests) 14ms
+ ✓ |engine| src/engine/formula.test.ts (14 tests) 68ms
+ ✓ |engine| src/engine/lattice.test.ts (12 tests) 26ms
+ ✓ |engine| src/engine/session.test.ts (9 tests) 19ms
+ ✓ |engine| src/engine/classes.test.ts (22 tests) 27ms
+ ✓ |engine| src/engine/draft.test.ts (14 tests) 12ms
+ ✓ |engine| src/engine/opening.test.ts (22 tests) 39ms
+ ✓ |engine| src/engine/builds.test.ts (9 tests) 18ms
+ ✓ |engine| src/engine/onboarding.test.ts (18 tests) 58ms
+ ✓ |engine| src/engine/merge-cap.test.ts (11 tests) 11ms
+ ✓ |engine| src/engine/habits.test.ts (12 tests) 15ms
+ ✓ |engine| src/engine/rolls.test.ts (6 tests) 9ms
+ ✓ |engine| src/engine/meters.test.ts (10 tests) 10ms
+ ✓ |engine| src/engine/special-draft.test.ts (15 tests) 17ms
+ ✓ |engine| src/engine/notes.test.ts (14 tests) 11ms
+ ✓ |engine| src/engine/apps.test.ts (2 tests) 6ms
+ ✓ |engine| src/engine/inventory.test.ts (3 tests) 6ms
+ ✓ |engine| src/engine/accumulator.test.ts (8 tests) 6ms
+ ✓ |ui| src/ui/app.board.test.ts (116 tests) 5346ms
+ ✓ |ui| src/ui/hexdetail.test.ts (61 tests) 2318ms
+ ✓ |ui| src/ui/app.session.test.ts (76 tests) 1950ms
+ ✓ |ui| src/ui/focus.test.ts (62 tests) 1833ms
+ ✓ |ui| src/ui/app.catalog.test.ts (43 tests) 1645ms
+ ✓ |ui| src/ui/app.test.ts (54 tests) 1439ms
+ ✓ |engine| src/engine/capacity-calibration.test.ts (3 tests | 2 skipped) 20221ms
+   ✓ the harmonic-capacity release calibration (#262) > paces the first era near twenty credited hours and the second provisionally near seventy percent  20220ms
+ ✓ |ui| src/ui/app.capacity.test.ts (35 tests) 1783ms
+ ✓ |ui| src/ui/app.phone.test.ts (42 tests) 1255ms
+ ✓ |ui| src/ui/workbench.test.ts (2 tests) 866ms
+   ✓ interactive workbench sessions never read, adopt, or overwrite the player's save  822ms
+ ✓ |ui| src/ui/world.test.ts (25 tests) 830ms
+ ✓ |ui| src/ui/hexflows.test.ts (23 tests) 628ms
+ ✓ |ui| src/ui/app.modal-focus.test.ts (22 tests) 556ms
+stdout | src/engine/allocation-stress.test.ts > the allocation stress ladder (#257) > prints the repeatable comparison table
+
+fixture                cap clusters  cands insts       ms  certified
+--------------------------------------------------------------------
+triads-6                 1        1     15     2     13.9  certified
+triads-6                 2        1     15     4      0.6  certified
+triads-6                 3        1     15     6      2.2  certified
+triads-6                 4        1     15     8      0.3  certified
+triads-6                 5        1     15    11      0.5  certified
+triads-12                1        2     30     4      1.4  certified
+triads-12                2        2     30     8      4.4  certified
+triads-12                3        2     30    12      0.7  certified
+triads-12                4        2     30    16      0.6  certified
+triads-12                5        2     30    22      1.0  certified
+triads-24                1        4     60     8      0.9  certified
+triads-24                2        4     60    16      1.3  certified
+triads-24                3        4     60    24      1.8  certified
+triads-24                4        4     60    32      0.9  certified
+triads-24                5        4     60    44      1.2  certified
+triads-48                1        8    120    16      1.5  certified
+triads-48                2        8    120    32      9.3  certified
+triads-48                3        8    120    48      1.6  certified
+triads-48                4        8    120    64      1.5  certified
+triads-48                5        8    120    88      8.1  certified
+triads-72                1       12    180    24      1.5  certified
+triads-72                2       12    180    48      7.0  certified
+triads-72                3       12    180    72      4.7  certified
+triads-72                4       12    180    96      1.6  certified
+triads-72                5       12    180   132      9.5  certified
+triads-72-unequal        1       12    180    24      1.2  certified
+triads-72-unequal        2       12    180    48      7.6  certified
+triads-72-unequal        3       12    180    72      1.7  certified
+triads-72-unequal        4       12    180    96      2.2  certified
+triads-72-unequal        5       12    180   132      1.8  certified
+chromatic-6              1        1     20     1      0.1  certified
+chromatic-6              2        1     20     3      0.1  certified
+chromatic-6              3        1     20     6      1.0  certified
+chromatic-6              4        1     20     8      0.2  certified
+chromatic-6              5        1     20    10      0.3  certified
+chromatic-12             1        1    120     2      4.2  certified
+chromatic-12             2        1    120     6      1.7  certified
+chromatic-12             3        1    120     9      7.7  certified
+chromatic-12             4        1    120    12      1.6  certified
+chromatic-12             5        1    120    15     68.0  certified
+chromatic-24             1        1   1164     5    600.5  INCUMBENT (budget)
+chromatic-24             2        1   1164    12    343.8  INCUMBENT (budget)
+chromatic-24             3        1   1164    19    306.5  INCUMBENT (budget)
+chromatic-24             4        1   1164    25    278.0  INCUMBENT (budget)
+chromatic-24             5        1   1164    33    275.0  INCUMBENT (budget)
+chromatic-48             1        1  13512     9   1036.7  INCUMBENT (budget)
+chromatic-48             2        1  13512    32    916.5  INCUMBENT (budget)
+chromatic-48             3        1  13512    45    703.5  INCUMBENT (budget)
+chromatic-48             4        1  13512    61    384.9  INCUMBENT (budget)
+chromatic-48             5        1  13512    76    380.9  INCUMBENT (budget)
+chromatic-72             1        1  60660    13   1216.2  INCUMBENT (budget)
+chromatic-72             2        1  60660    48   1209.7  INCUMBENT (budget)
+chromatic-72             3        1  60660    70   1163.8  INCUMBENT (budget)
+chromatic-72             4        1  60660    92   1403.4  INCUMBENT (budget)
+chromatic-72             5        1  60660   116   1692.9  INCUMBENT (budget)
+chromatic-72-unequal     1        1  60660    13   1188.2  INCUMBENT (budget)
+chromatic-72-unequal     2        1  60660    48   1109.1  INCUMBENT (budget)
+chromatic-72-unequal     3        1  60660    70   1369.5  INCUMBENT (budget)
+chromatic-72-unequal     4        1  60660    91   1511.2  INCUMBENT (budget)
+chromatic-72-unequal     5        1  60660   116   1546.7  INCUMBENT (budget)
+chromatic-72-silent      1        1  60660    13   1194.5  INCUMBENT (budget)
+chromatic-72-silent      2        1  60660    24    964.5  INCUMBENT (budget)
+chromatic-72-silent      3        1  60660    69   1126.0  INCUMBENT (budget)
+chromatic-72-silent      4        1  60660    91   1610.5  INCUMBENT (budget)
+chromatic-72-silent      5        1  60660   116   1469.4  INCUMBENT (budget)
+
+ ✓ |engine| src/engine/allocation-stress.test.ts (7 tests) 5549ms
+   ✓ the allocation stress ladder (#257) > matches a brute-force oracle on the small monolith at every capacity  5439ms
+ ✓ |ui| src/ui/app.playthrough.test.ts (34 tests) 156017ms
+   ✓ the pushing policy > pushes past the first eligibility, banks its claim, spends it, and measures both recovery marks  88233ms
+   ✓ the pushing policy > treats an unreached claim target as an explicit incomplete outcome, never a fabricated bank  6004ms
+   ✓ the pushing policy > reports a half-recovered era with the missing measure explicitly unreached  60171ms
+ ✓ |ui| src/ui/app.notes.test.ts (17 tests) 417ms
+ ✓ |ui| src/ui/app.scenarios.test.ts (16 tests) 429ms
+ ✓ |ui| src/ui/app.inventory.test.ts (16 tests) 421ms
+ ✓ |ui| src/ui/app.special-draft.test.ts (10 tests) 409ms
+ ✓ |ui| src/ui/app.lifecycle.test.ts (15 tests) 335ms
+ ✓ |ui| src/ui/app.scrap.test.ts (8 tests) 396ms
+ ✓ |ui| src/ui/forge.test.ts (10 tests) 276ms
+ ✓ |ui| src/ui/app.dev.test.ts (10 tests) 273ms
+ ✓ |ui| src/ui/profile.test.ts (13 tests) 245ms
+ ✓ |ui| src/ui/app.merge-cap.test.ts (6 tests) 244ms
+ ✓ |ui| src/ui/app.draft.test.ts (7 tests) 248ms
+ ✓ |ui| src/ui/instrument.test.ts (32 tests) 92ms
+ ✓ |ui| src/ui/app.savetriggers.test.ts (3 tests) 84ms
+ ✓ |ui| src/ui/library.test.ts (20 tests) 42ms
+ ✓ |ui| src/ui/ledger.test.ts (7 tests) 17ms
+ ✓ |ui| src/ui/svg.test.ts (3 tests) 8ms
+ ✓ |ui| src/ui/signals.test.ts (7 tests) 7ms
+ ✓ |ui| src/ui/face.test.ts (12 tests) 9ms
+ ✓ |ui| src/ui/theme.test.ts (17 tests) 9ms
+ ✓ |ui| src/ui/chordlayer.test.ts (20 tests) 6ms
+ ✓ |ui| src/ui/shared-save.test.ts (17 tests) 5ms
+ ✓ |ui| src/ui/icons.test.ts (1 test) 6ms
+ ✓ |ui| src/ui/format.test.ts (27 tests) 4ms
+ ✓ |ui| src/ui/leads.test.ts (6 tests) 4ms
+
+ Test Files  95 passed (95)
+      Tests  1914 passed | 2 skipped (1916)
+   Start at  07:51:42
+   Duration  193.29s (transform 3.77s, setup 0ms, collect 62.20s, tests 219.07s, environment 4.25s, prepare 4.49s)
+

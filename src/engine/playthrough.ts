@@ -28,10 +28,11 @@ import { affordableLevels, syncRates, wholeNous, levelsCost } from "./economy";
 import { activeGoalOf, createGoal, rollGoalOccurrences } from "./goals";
 import { createHabit, selectHabit } from "./habits";
 import { adjacent, hexDistance, sameHex } from "./hex";
+import { cellNoteOf } from "./lattice";
 import { writeNote } from "./notes";
 import { SCENARIOS, scenarioOf } from "./scenarios";
 import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt } from "./world";
-import type { GameState, Hex, ModuleInstance, WeaponType } from "./types";
+import type { GameState, Hex, ModuleInstance, ModuleType, WeaponType } from "./types";
 
 // The reproducible playthrough runner (issues #468/#469, parent #465): a
 // recipe declares every behavior-affecting input — starting scenario, seed,
@@ -62,7 +63,7 @@ import type { GameState, Hex, ModuleInstance, WeaponType } from "./types";
 // The runner's own version: a behavior-affecting change here is a source
 // change, and a rerun against different source identifies separately
 // (story 36's foundation).
-export const PLAYTHROUGH_RUNNER_VERSION = 4;
+export const PLAYTHROUGH_RUNNER_VERSION = 6;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -310,7 +311,10 @@ export function playthroughRunId(recipe: PlaythroughRecipe, source: PlaythroughS
 
 // One recorded decision (story 18): the simulated moment, the credited
 // practice so far, what was attempted, and the engine's own reason when it
-// declined. Milestones flag the run's meaningful steps.
+// declined. Milestones flag the run's meaningful steps. `snapshot` indexes
+// the record's snapshots — the exact recorded state at this decision's
+// simulated moment; the action record owns the reasons, never a copy of
+// the board.
 export interface PlaythroughEvent {
   // Simulated elapsed seconds since the anchor.
   readonly at: number;
@@ -330,10 +334,13 @@ export interface PlaythroughEvent {
   readonly ok: boolean;
   readonly reason?: string;
   readonly milestone?: boolean;
+  readonly snapshot: number;
 }
 
 // One sample of the run's shape: simulated elapsed against credited
 // practice, with the board's rates and balances at that moment (story 26).
+// `snapshot` indexes the exact recorded state behind the plotted point —
+// the plot never interpolates a board that was not sampled.
 export interface PlaythroughTrajectoryPoint {
   readonly elapsed: number;
   readonly credited: number;
@@ -342,6 +349,49 @@ export interface PlaythroughTrajectoryPoint {
   readonly eraEarned: number;
   readonly nous: number;
   readonly arete: number;
+  readonly snapshot: number;
+}
+
+// One exact recorded state (issue #470): the whole game state as it stood
+// at a simulated moment — cloned, rate-synced on the preview basis, and
+// deep-frozen, so historical inspection cannot mutate the run and no
+// interpolated or mismatched board can pass as a recorded one. Samples of
+// the trajectory and the moments the action record stamps share this one
+// store; historical selection alone picks which snapshot is inspected. A
+// stamp's actions take no simulated time, so every event of one stamp
+// resolves to that stamp's one closing state — the exact recorded board
+// at the moment they all carry, never a neighboring break's.
+export interface PlaythroughSnapshot {
+  // Simulated elapsed seconds since the anchor — the plotted x.
+  readonly elapsed: number;
+  readonly credited: number;
+  readonly state: GameState;
+}
+
+// The curve markers (story 27): every recorded event classifies into the
+// plotted marker classes or plots none. Purchases are the buys — shelf,
+// cells, the Arete and World offerings, the capacity rungs; unlocks are
+// the acquisitions and discoveries — roll acceptances, feats, World
+// finds; sessions plot as the full session boundary; breathers plot as
+// their own tick; prestige is the bank. Placement and upgrade gestures
+// and the pacing marks plot none: they stay lines of the decisions list.
+// Declined attempts plot none — their reasons live in the record.
+export type PlaythroughMarker = "purchase" | "unlock" | "session" | "breather" | "prestige";
+
+export function playthroughEventMarker(event: PlaythroughEvent): PlaythroughMarker | null {
+  if (!event.ok) return null;
+  if (event.kind === "purchase" || event.kind === "arete") return "purchase";
+  if (event.kind === "world") return event.label.startsWith("Placed") ? null : "purchase";
+  if (event.kind === "roll") return "unlock";
+  if (event.kind === "milestone") {
+    if (event.label.startsWith("Poly Expander")) return "purchase";
+    if (event.label.startsWith("Feat unlocked") || event.label.startsWith("World —")) return "unlock";
+    return null;
+  }
+  if (event.kind === "session") return "session";
+  if (event.kind === "breather") return "breather";
+  if (event.kind === "prestige") return "prestige";
+  return null;
 }
 
 // One recovery mark (story 25): the both-clocks cost of a next-era
@@ -414,6 +464,10 @@ export interface PlaythroughRecord {
   readonly bottleneck: string | null;
   readonly events: readonly PlaythroughEvent[];
   readonly trajectory: readonly PlaythroughTrajectoryPoint[];
+  // The exact recorded states (issue #470): one per plotted sample, one at
+  // every session boundary, one at every moment the action record stamps —
+  // every event's `snapshot` and every point's `snapshot` resolves here.
+  readonly snapshots: readonly PlaythroughSnapshot[];
   readonly achievements: readonly string[];
   readonly worldDiscoveries: readonly string[];
   readonly worldDefeats: readonly string[];
@@ -431,6 +485,11 @@ interface RunContext {
   rng: () => number;
   events: PlaythroughEvent[];
   trajectory: PlaythroughTrajectoryPoint[];
+  // The exact recorded states, and the events awaiting their binding: an
+  // event is stamped before the moment's snapshot is taken, so it opens
+  // here and the next snapshot closes it.
+  snapshots: PlaythroughSnapshot[];
+  openEvents: number[];
   claims: number[];
   areteSpent: { entry: number; discounts: number; ceilings: number; columns: number; hone: Record<WeaponType, number> };
   achievements: string[];
@@ -466,10 +525,48 @@ function sessionStartMs(schedule: PlaythroughSchedule, day: number, session: num
 
 function record(
   ctx: RunContext,
-  event: Omit<PlaythroughEvent, "at" | "credited"> & { ok: boolean; reason?: string },
+  event: Omit<PlaythroughEvent, "at" | "credited" | "snapshot"> & { ok: boolean; reason?: string },
 ): void {
-  ctx.events.push({ at: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000), credited: Math.round(ctx.credited), ...event });
+  ctx.events.push({ at: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000), credited: Math.round(ctx.credited), ...event, snapshot: -1 });
+  ctx.openEvents.push(ctx.events.length - 1);
   if (event.milestone && event.ok) ctx.lastMilestone = event.label;
+}
+
+// Deep-read-only (issue #470): every recorded state freezes whole, so a
+// stray write through inspection — human or agent — fails loudly instead
+// of rewriting evidence.
+function deepFreeze<T>(value: T): T {
+  if (value !== null && typeof value === "object") {
+    for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
+    Object.freeze(value);
+  }
+  return value;
+}
+
+// The moment's exact recorded state: cloned off the live walk (which keeps
+// moving), rate-synced on the same preview basis every plotted sample
+// reads, then frozen. Every event opened since the last snapshot binds
+// here — an event's board is the exact state at its own simulated stamp,
+// never an interpolation or a neighboring break's board.
+function previewClone(state: GameState): GameState {
+  const clone = structuredClone(state);
+  syncRates(clone, false);
+  return clone;
+}
+
+function snap(ctx: RunContext, state: GameState): number {
+  const snapshot: PlaythroughSnapshot = {
+    elapsed: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000),
+    credited: Math.round(ctx.credited),
+    state: deepFreeze(previewClone(state)),
+  };
+  ctx.snapshots.push(snapshot);
+  const index = ctx.snapshots.length - 1;
+  for (const open of ctx.openEvents) {
+    ctx.events[open] = { ...ctx.events[open]!, snapshot: index };
+  }
+  ctx.openEvents = [];
+  return index;
 }
 
 function decline(ctx: RunContext, label: string, reason: string): void {
@@ -491,6 +588,7 @@ function pushTrajectory(ctx: RunContext, state: GameState): void {
     eraEarned: state.eraEarned,
     nous: wholeNous(state),
     arete: state.arete,
+    snapshot: snap(ctx, state),
   });
 }
 
@@ -926,6 +1024,10 @@ function runSession(ctx: RunContext, state: GameState, day: number, session: num
   if (!started.ok) {
     record(ctx, { kind: "session", label: `Session ${state.sessionIndex + 1}`, ...outcome(started) });
     decline(ctx, "session start", started.reason ?? "declined");
+    // The refused attempt is its own recorded moment: the stamp moved, so
+    // the event binds a snapshot of the untouched state at its own stamp,
+    // never the previous break's.
+    snap(ctx, state);
     return;
   }
   writeNote(state, NOTE_TEXT, startMs);
@@ -944,6 +1046,9 @@ function runSession(ctx: RunContext, state: GameState, day: number, session: num
     ...outcome(ended),
   });
   if (!ended.ok) decline(ctx, "session end", ended.reason ?? "declined");
+  // The session's own boundary stamp: the end event binds the state as the
+  // session banked it, before the breather moves the clock on.
+  snap(ctx, state);
 
   // The breather the session minted, bounded by the declared schedule —
   // the engine's allowance is the real mechanic, and the recipe never
@@ -1036,6 +1141,8 @@ export function runPlaythrough(
     rng: seededRng(recipe.seed),
     events: [],
     trajectory: [],
+    snapshots: [],
+    openEvents: [],
     claims: [],
     areteSpent: { entry: 0, discounts: 0, ceilings: 0, columns: 0, hone: { chargeBlade: 0 } },
     achievements: [],
@@ -1088,6 +1195,9 @@ export function runPlaythrough(
       // too, so a measure crossed during the session carries its mark at
       // this moment, never a day late.
       settleRecovery(ctx, state);
+      // Recovery may open events after runSession closed its final sample.
+      // Bind them now, before stopping or advancing to another stamp.
+      if (ctx.openEvents.length > 0) snap(ctx, state);
       // The pushing run's completion (stories 24–25): both recovery
       // measures measured — production regained and the door reached
       // again. Whatever the figures say is the evidence; there is no
@@ -1137,6 +1247,7 @@ export function runPlaythrough(
     bottleneck,
     events: ctx.events,
     trajectory: ctx.trajectory,
+    snapshots: ctx.snapshots,
     achievements: ctx.achievements,
     worldDiscoveries: ctx.discovered,
     worldDefeats: ctx.defeated,
@@ -1184,4 +1295,101 @@ function recoveryNote(recovery: PlaythroughRecovery): string {
   const mark = (value: PlaythroughRecoveryMark | null): string =>
     value ? `${(value.elapsed / 86_400).toFixed(1)}d/${Math.round(value.credited / 60)}m` : "unreached";
   return `recovery — rate ${mark(recovery.productionRegained)}, door ${mark(recovery.eligibilityReached)} (${recovery.preResetRate.toFixed(2)}ν/s pre-reset)`;
+}
+
+// The historical inspection read (issue #470, stories 28–30): one
+// recorded snapshot assembled for reading — the plotted sample it carries
+// (when it is one), the decisions the action record stamped at its moment,
+// and the board as it stood. Everything derives from the record: the
+// action record stays the sole owner of decision reasons, the selection
+// stays the sole owner of which snapshot is inspected, and nothing here is
+// a second explanation store. The recorded state itself is frozen — the
+// board's figures are read off it, the per-voice production off an
+// identical working clone at the same preview basis every sample reads.
+export interface PlaythroughBoardVoice {
+  readonly type: ModuleType;
+  readonly note: string;
+  readonly level: number;
+  // Final ν/s on the preview basis; null for the voices that produce none
+  // (silent voices, spacers).
+  readonly nuPerSecond: number | null;
+}
+
+export interface PlaythroughInspection {
+  readonly index: number;
+  readonly elapsed: number;
+  readonly credited: number;
+  // The plotted sample behind this snapshot, when it is one — session
+  // boundaries recorded between samples carry none.
+  readonly point: PlaythroughTrajectoryPoint | null;
+  // The latest session and its preparation, through the selected moment.
+  // These are references to the action record, never copied explanations.
+  readonly events: readonly PlaythroughEvent[];
+  readonly rate: number;
+  readonly balances: {
+    readonly nous: number;
+    readonly eraEarned: number;
+    readonly arete: number;
+    readonly scrap: number;
+    readonly prestiges: number;
+    readonly sessions: number;
+    readonly cells: number;
+    readonly tray: number;
+  };
+  readonly voices: readonly PlaythroughBoardVoice[];
+  // The record's own frozen state: all board layers and tray contents.
+  readonly state: GameState;
+}
+
+// The assemblies are pure over an immutable record and a frozen snapshot —
+// one working clone per (record, index), memoized.
+const inspections = new WeakMap<PlaythroughRecord, Map<number, PlaythroughInspection>>();
+
+export function playthroughInspection(run: PlaythroughRecord, index: number): PlaythroughInspection {
+  const hit = inspections.get(run)?.get(index);
+  if (hit) return hit;
+  const snapshot = run.snapshots[index];
+  if (!snapshot) {
+    throw new Error(`Playthrough inspection: no recorded snapshot ${index} — the run carries ${run.snapshots.length}.`);
+  }
+  const state = snapshot.state;
+  const rates = syncRates(previewClone(state), false);
+  const voices: PlaythroughBoardVoice[] = state.modules
+    .filter((module) => module.pos !== null)
+    .sort((a, b) => a.pos!.r - b.pos!.r || a.pos!.q - b.pos!.q || a.id.localeCompare(b.id))
+    .map((module) => ({
+      type: module.type,
+      note: cellNoteOf(module.pos!),
+      level: module.level,
+      nuPerSecond: rates.contributions.get(module.id)?.value ?? null,
+    }));
+  const sessions = run.events.filter((event) => event.kind === "session" && event.ok && event.snapshot <= index);
+  const previousSession = sessions.at(-2)?.snapshot ?? -1;
+  const inspection: PlaythroughInspection = {
+    index,
+    elapsed: snapshot.elapsed,
+    credited: snapshot.credited,
+    point: run.trajectory.find((point) => point.snapshot === index) ?? null,
+    events: run.events.filter((event) => event.snapshot > previousSession && event.snapshot <= index),
+    state,
+    rate: rates.rate,
+    balances: {
+      nous: wholeNous(state),
+      eraEarned: state.eraEarned,
+      arete: state.arete,
+      scrap: state.scrap,
+      prestiges: state.prestiges,
+      sessions: state.sessionsCompleted,
+      cells: state.cells.length,
+      tray: state.modules.filter((module) => module.pos === null).length,
+    },
+    voices,
+  };
+  let memo = inspections.get(run);
+  if (!memo) {
+    memo = new Map();
+    inspections.set(run, memo);
+  }
+  memo.set(index, inspection);
+  return inspection;
 }
