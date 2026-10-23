@@ -387,10 +387,16 @@ export function playthroughSource(): PlaythroughSource {
 }
 
 // Stable identity: the same recipe and source share one run id; a changed
-// input or source changes it. A plain FNV-1a keeps the identity free of
-// wall-clock stamps and platform hash variance.
-export function playthroughRunId(recipe: PlaythroughRecipe, source: PlaythroughSource): string {
-  const text = JSON.stringify({ recipe, source });
+// input or source changes it. A checkpoint walk carries its declared stop
+// in the identity too — the same recipe walked to a different terminal is
+// a different record. A plain FNV-1a keeps the identity free of wall-clock
+// stamps and platform hash variance.
+export function playthroughRunId(
+  recipe: PlaythroughRecipe,
+  source: PlaythroughSource,
+  checkpoint: PlaythroughCheckpointId | null = null,
+): string {
+  const text = JSON.stringify({ recipe, source, ...(checkpoint ? { checkpoint } : {}) });
   return `${recipe.scenarioId}-s${recipe.seed}-${fingerprint(text)}`;
 }
 
@@ -1247,8 +1253,11 @@ function walkPlaythrough(
       // The pushing run's completion (stories 24–25): both recovery
       // measures measured — production regained and the door reached
       // again. Whatever the figures say is the evidence; there is no
-      // pacing threshold to miss.
-      if (ctx.pushing && recoveryComplete(ctx)) {
+      // pacing threshold to miss. A checkpoint walk has its own declared
+      // terminal (issue #471): it rides past this stop so a recovery
+      // milestone that lands before its situation — the two thresholds
+      // can finish neck and neck — never steals the walk's end.
+      if (ctx.pushing && checkpoint === null && recoveryComplete(ctx)) {
         complete = true;
         stop = { kind: "recovered", reason: `Recovery measured at day ${days}.` };
         break day;
@@ -1279,7 +1288,7 @@ function walkPlaythrough(
         };
   return {
     kind: "representative",
-    runId: playthroughRunId(recipe, source),
+    runId: playthroughRunId(recipe, source, checkpoint),
     recipe,
     source,
     policy: { id: policy.id, name: policy.name },
