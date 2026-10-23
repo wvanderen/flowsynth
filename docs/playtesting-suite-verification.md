@@ -62,8 +62,8 @@ cases:
    intervention → historical curve/board inspection → export/import
    through human and agent entry points on the verified checkout.* —
    Automated: workflow cases 1–2 above. Manual: the browser evidence
-   pass below (desktop and phone) runs the same thread on the verified
-   checkout.
+   pass below runs the same thread live on the verified checkout
+   (in-page; the captures themselves are recorded unavailable there).
 2. *Include the representative pushing/earned-spending/recovery/World
    path and prompt-policy zero-claim behavior; show honest incomplete
    outcomes where milestones are unreachable rather than tuning gameplay
@@ -93,8 +93,12 @@ cases:
    required source-provenance preflight, applicable keyboard/touch
    disclosures, non-color states, and reduced-motion evidence under the
    instrument standards. Mark unavailable checks explicitly.* — The
-   evidence pass below (`docs/evidence/final-workflow-474/`), with its
-   unavailable checks named there.
+   evidence pass below (`docs/evidence/final-workflow-474/`): preflight
+   ACCEPT at the offered commit, the workflow's interactions and
+   keyboard/touch/non-color/reduced-motion reads in-page; desktop and
+   phone captures and the phone viewport are marked unavailable there
+   with the raw failures, and the pixel compositions stand on the prior
+   slices' captures.
 6. *Follow repository final-revision dependency setup, targeted
    verification, typecheck, and full-suite rules without redundant
    unchanged-revision runs.* — Recorded in "Final checks" below.
@@ -239,25 +243,28 @@ case). Nothing in the later tickets widened or repaired that surface.
 
 ## Browser evidence (#474)
 
-`docs/evidence/final-workflow-474/` — captured from the verified
-checkout (preflight record beside the captures), desktop 1280×800 and
-phone 390×844, running the whole workflow thread: suite entry launch,
-configured pushing run's honest ✗ note, terminal interventions with the
-modified mark, curves with a selected sample and its read-only board,
-and the export/import receipts. Keyboard/touch disclosure, non-color
-states, and reduced-motion findings — and the checks unavailable in this
-harness — are recorded in that README. Prior slices' verified-checkout
-evidence remains beside their tickets (`dev-controls-audit-2026-10-22`,
-`scenario-suite-2026-10-22`, `issue-472`, `run-artifacts-473`, and the
-partially-unavailable passes recorded honestly in `playthrough-468`,
-`pushing-469`, `resource-curves-470` + its review fixes,
-`progression-presets-471`).
+`docs/evidence/final-workflow-474/` — the whole workflow thread ran live
+on the verified checkout (preflight ACCEPT, clean source at the offered
+commit), twice, with the panel's composition, the honest incomplete run
+note, the intervention record, the curves provenance line, and the
+export/import receipts read in-page; keyboard disclosure, touch floors,
+non-color states, and reduced motion read there too. Desktop and phone
+captures and the phone viewport are **unavailable** in that pass — the
+preview screenshot pipeline stalled on every attempt and the 390×844
+resize never landed (both budgets spent and recorded in that README) —
+so the pixel-level compositions stand on the prior slices'
+verified-checkout captures (`scenario-suite-2026-10-22`, `issue-472`,
+`run-artifacts-473`, `dev-controls-audit-2026-10-22`) beside the
+honestly-recorded partial passes (`playthrough-468`, `pushing-469`,
+`resource-curves-470` + its review fixes, `progression-presets-471`).
 
 ## Final checks
 
-Recorded at the offered revision in the delivery PR's Verification
-section: dependency install before the first check, targeted runs while
-iterating the new file, one `npm run check`, and one full `npm test` at
-the final revision (the UI project included; no separate UI pass).
-Evidence-only commits after the verified source commit retain that
-provenance per `docs/agents/checks.md`.
+Dependency install before the first check; targeted runs while iterating
+the new file (`npx vitest run src/ui/app.workflow.test.ts`, `npm run
+check` after each edit). At the offered source revision (`194eeb7`): one
+`npm run check` — clean — and one full `npm test` — 99 files, 1,976
+passed, 2 skipped, no failures — the UI project included, no separate UI
+pass. The later commits carry only this record and the evidence
+artifacts; per `docs/agents/checks.md` they retain that provenance and
+owe no further run.
