@@ -3419,7 +3419,7 @@ body.hex-detail-open .upgrade-all {
 .dev-terminal-log:empty { display: none; }
 .dev-terminal-line { white-space: pre-wrap; word-break: break-word; }
 .dev-terminal-input { color: var(--muted); }
-.dev-terminal-error { color: var(--danger, var(--ink)); }
+.dev-terminal-error { color: var(--danger); }
 /* The scenario's assertion readout (#456, #467): one plain mono line on
    its own row — the ✓ summary with its origin and isolation, or the
    named ✗ failure, never color alone. */

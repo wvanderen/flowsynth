@@ -121,6 +121,19 @@ describe("game actions and interventions", () => {
     expect(app.devScenarioModified).toBe(true);
   });
 
+  it("marks the run modified only by interventions that landed — refusals record without the mark", () => {
+    app = boot(undefined, true);
+    void app.devLaunchScenario("fresh-start");
+    // The prestige refusal is recorded with the engine's own reason, but
+    // nothing changed — the run still reads as baseline evidence.
+    const refused = app.devActionPrestige();
+    expect(refused.ok).toBe(false);
+    expect(refused.reason).toBe("The horizon is not reached yet.");
+    expect(app.devInterventions).toHaveLength(1);
+    expect(app.devScenarioModified).toBe(false);
+    expect(scenarioNote()).not.toContain("modified");
+  });
+
   it("keeps the baseline recipe untouched and rebuilds clean on relaunch", () => {
     app = boot(undefined, true);
     void app.devLaunchScenario("fresh-start");

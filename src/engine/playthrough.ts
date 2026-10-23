@@ -275,6 +275,7 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
     const param = tuningParamOf(key);
     if (param === null) {
       fail(`override "${key}" is not supported — the suite offers ${PLAYTHROUGH_TUNING.map((p) => p.key).join(", ")}.`);
+      // fail throws; the continue narrows param for the checks below.
       continue;
     }
     if (!Number.isInteger(value) || value < param.min || value > param.max) {
@@ -1348,9 +1349,11 @@ function* walkPlaythrough(
   scenario.assert(state, startAt);
   // The declared overrides apply to this run's candidate only, after the
   // scenario's own assertion has verified the baseline it grew from
-  // (issue #472): the fresh start's first moment pays the declared grant;
-  // every later era start pays it through the prestige action's seam.
-  if (recipe.overrides.openingGrant !== undefined && recipe.scenarioId === "fresh-start") {
+  // (issue #472): a run that starts at the shipped opening — the
+  // scenario's own origin classification — pays the declared grant at its
+  // first moment; every later era start pays it through the prestige
+  // action's seam.
+  if (recipe.overrides.openingGrant !== undefined && scenario.origin === "initial state") {
     state.nous = recipe.overrides.openingGrant;
   }
   const policy = policyOf(recipe.policyId);

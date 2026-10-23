@@ -223,6 +223,11 @@ export interface DevTerminalLine {
   readonly kind: "input" | "ok" | "error";
 }
 
+// The dev clock's one real restriction, shared by the panel buttons and
+// the experiment boundary's advance command (#472): it rides flow, where
+// the engine credits practice.
+const DEV_CLOCK_FLOW_REASON = "Dev clock only works during flow.";
+
 export type DetailFace = "modules" | "world";
 
 // The Focus sheet's on-demand forms (ADR-0050, issue #275): add and log on
@@ -2692,7 +2697,7 @@ export class App {
   // entries refuse through this guard so their message can never drift.
   private devClockReady(): boolean {
     if (this.state.mode === "flow") return true;
-    this.say("Dev clock only works during flow.");
+    this.say(DEV_CLOCK_FLOW_REASON);
     return false;
   }
 
@@ -3069,15 +3074,16 @@ export class App {
   }
 
   // The one recording shape behind every mutation of the installed run,
-  // the quick grants included: the engine's own ok/reason verbatim, the
-  // modified mark, and the note's suffix refreshed.
+  // the quick grants included: the engine's own ok/reason verbatim, and
+  // the modified mark — earned only by a change that landed, so a run
+  // every refusal touched still reads as baseline evidence.
   private recordIntervention(label: string, result: { ok: boolean; reason?: string }): void {
     this.devInterventions = [...this.devInterventions, {
       at: Date.now(),
       label,
       ...(result.ok ? { ok: true } as const : { ok: false, ...(result.reason !== undefined ? { reason: result.reason } : {}) }),
     }];
-    this.devScenarioModified = true;
+    if (result.ok) this.devScenarioModified = true;
   }
 
   // The quick grants and the dev clock record only when a run is
@@ -3148,11 +3154,13 @@ export class App {
     return result;
   }
 
+  // The actions validate their own argument shapes first — a malformed
+  // command fails on shape whatever the run state — then ride the shared
+  // executor, whose first act is the experiment gate.
   devActionStartSession(minutes: number | null): ActionResult {
     if (minutes !== null && (!Number.isInteger(minutes) || minutes < 1 || minutes > 600)) {
       throw new Error("minutes must be a whole number 1–600, or null for an open session.");
     }
-    this.requireExperiment();
     return this.devGameAction(
       minutes === null ? "Start an open session" : `Start a ${minutes}-minute session`,
       () => startSession(this.state, minutes === null ? null : minutes * 60, Date.now()),
@@ -3171,11 +3179,8 @@ export class App {
     if (!Number.isFinite(seconds) || seconds <= 0 || seconds > 172_800) {
       throw new Error("seconds must be a positive number up to 172800 (two days).");
     }
-    this.requireExperiment();
-    // The dev clock's one real restriction, the panel buttons' own rule:
-    // it rides flow, where the engine credits practice.
     return this.devGameAction(`Dev clock +${Math.round(seconds)}s`, () => {
-      if (this.state.mode !== "flow") return { ok: false, reason: "Dev clock only works during flow." };
+      if (this.state.mode !== "flow") return { ok: false, reason: DEV_CLOCK_FLOW_REASON };
       advance(this.state, seconds);
       return { ok: true };
     });
@@ -3185,15 +3190,17 @@ export class App {
     return this.devGameAction(`Buy the ${type} shelf offer`, () => buyShelfModule(this.state, type));
   }
 
-  devActionBuyCell(q: number, r: number): ActionResult {
+  private requireCell(q: number, r: number): void {
     if (!Number.isInteger(q) || !Number.isInteger(r)) throw new Error("cell coordinates must be whole numbers.");
-    this.requireExperiment();
+  }
+
+  devActionBuyCell(q: number, r: number): ActionResult {
+    this.requireCell(q, r);
     return this.devGameAction(`Buy the cell at ${q},${r}`, () => buyCell(this.state, hex(q, r)));
   }
 
   devActionPlace(moduleId: string, q: number, r: number): ActionResult {
-    if (!Number.isInteger(q) || !Number.isInteger(r)) throw new Error("cell coordinates must be whole numbers.");
-    this.requireExperiment();
+    this.requireCell(q, r);
     return this.devGameAction(`Place ${moduleId} at ${q},${r}`, () => placeModule(this.state, moduleId, hex(q, r)));
   }
 
@@ -3201,7 +3208,6 @@ export class App {
     if (levels !== "max" && (!Number.isInteger(levels) || levels < 1)) {
       throw new Error("levels must be a whole number ≥ 1, or \"max\".");
     }
-    this.requireExperiment();
     return this.devGameAction(
       levels === "max" ? `Upgrade ${moduleId} to max` : `Upgrade ${moduleId} by ${levels}`,
       () => upgradeModuleLevels(this.state, moduleId, levels),
@@ -3282,6 +3288,7 @@ export class App {
       case "run": {
         const input: PlaythroughRecipeInput = {};
         const overrides: Record<string, number> = {};
+        const tuningKeys = this.devTuning().map((param) => param.key);
         for (const arg of args) {
           const eq = arg.indexOf("=");
           if (eq < 0) throw new Error(`run reads key=value pairs — found "${arg}".`);
@@ -3293,8 +3300,8 @@ export class App {
           else if (key === "seed") input.seed = value;
           else if (key === "days") input.budgetDays = value;
           else if (key === "claim") input.claimTarget = value;
-          else if (key === "openingGrant" || key === "claimBase") overrides[key] = value;
-          else throw new Error(`run does not read "${key}" — scenario, policy, seed, days, claim, openingGrant, claimBase.`);
+          else if (tuningKeys.includes(key)) overrides[key] = value;
+          else throw new Error(`run does not read "${key}" — scenario, policy, seed, days, claim, ${tuningKeys.join(", ")}.`);
         }
         if (Object.keys(overrides).length > 0) input.overrides = overrides;
         return playthroughNote(this.devRunPlaythrough(input));
