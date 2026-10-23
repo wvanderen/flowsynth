@@ -1,31 +1,14 @@
 {
   "app": "flowsynth",
   "check": "capture-preflight",
-  "acceptedAt": "2026-10-23T14:57:35.470Z",
+  "acceptedAt": "2026-10-23T15:03:28.815Z",
   "url": "http://localhost:5173",
   "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-92d21477",
   "branch": "fix/pr481-review-findings",
-  "commit": "02412866c21c2b1b182d19b4d262753ee0e83638",
+  "commit": "f644fd5b33ed5605c4ce60d808abb75d4396bc9a",
   "source": {
     "clean": true,
     "changes": [],
-    "evidence": [
-      {
-        "path": "docs/evidence/pr-481-review/README.md",
-        "state": "??"
-      },
-      {
-        "path": "docs/evidence/pr-481-review/desktop.png",
-        "state": "??"
-      },
-      {
-        "path": "docs/evidence/pr-481-review/phone.png",
-        "state": "??"
-      },
-      {
-        "path": "docs/evidence/pr-481-review/provenance.json",
-        "state": "??"
-      }
-    ]
+    "evidence": []
   }
 }

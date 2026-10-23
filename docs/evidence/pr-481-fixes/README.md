@@ -1,6 +1,6 @@
 # PR #481 review fixes
 
-Source revision `0241286`; `npm run dev` served this worktree at
+Source revision `f644fd5`; `npm run dev` served this worktree at
 `http://localhost:5173/?dev=1`. The capture preflight accepted clean source
 and wrote `provenance.json` before capture.
 
