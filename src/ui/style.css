@@ -3576,6 +3576,10 @@ body.hex-detail-open .upgrade-all {
 .dev-curve-stamp { flex: 0 0 auto; color: var(--muted); }
 .dev-curves .term-trigger { font: inherit; }
 .dev-curves-empty { font: 10px var(--mono); color: var(--muted); }
+/* The provenance line (issue #473): where the viewed record came from and
+   what produced it — imported/modified marks and the carried engine
+   source, muted like the legend it sits under. */
+.dev-curves-prov { font: 9px var(--mono); color: var(--muted); border-bottom: 1px solid var(--line); padding-bottom: 6px; }
 .dev-curves-cap { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
 .dev-curves-cap > span { font: 9px var(--mono); letter-spacing: 0.1em; color: var(--muted); margin-right: 4px; }
 .dev-curves-cap button { min-width: 44px; min-height: 44px; padding: 3px 8px; font: 11px var(--mono); }

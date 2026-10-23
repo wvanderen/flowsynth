@@ -80,6 +80,12 @@ import {
   type PlaythroughRecord,
   type PlaythroughTuningParam,
 } from "../engine/playthrough";
+import {
+  artifactNote,
+  exportPlaythroughArtifact,
+  importPlaythroughArtifact,
+  type PlaythroughArtifact,
+} from "../engine/playthrough-artifact";
 import { BALANCE } from "../engine/constants";
 import type { FocusApp } from "../engine/apps";
 import { writeNote } from "../engine/notes";
@@ -188,6 +194,21 @@ export interface DevIntervention {
   readonly label: string;
   readonly ok: boolean;
   readonly reason?: string;
+}
+
+// One entry of the playtesting results library (issue #473, parent
+// stories 34–36): a recorded run — walked here, installed as a
+// checkpoint preset's own record, or imported from an artifact — with
+// the intervention/modified status its evidence carries. The library
+// keeps prior results for viewing; a rerun against a changed recipe or
+// source lands as a separately identified entry, and an imported
+// artifact keeps its own provenance rather than being re-executed or
+// reinterpreted as a current result.
+export interface DevRunResult {
+  readonly record: PlaythroughRecord;
+  readonly imported: boolean;
+  readonly modified: boolean;
+  readonly interventions: readonly DevIntervention[];
 }
 
 // The live inspection read (issue #472, story 30): the installed run's
@@ -2898,6 +2919,14 @@ export class App {
     // mark — prior interventions must not contaminate the new evidence.
     this.devInterventions = [];
     this.devScenarioModified = false;
+    // A checkpoint preset's walked record joins the results library
+    // (issue #473): the evidence walk behind the installed state is
+    // viewable in the curves and exportable as an artifact, and the
+    // install links to it so interventions ride its entry. The rebuild
+    // semantics reset the entry's status with the install.
+    const walked = scenario.walkedRecord?.() ?? null;
+    this.devRunOriginId = walked?.runId ?? null;
+    if (walked) this.upsertRunResult({ record: walked, imported: false, modified: false, interventions: [] });
     this.state = candidate;
     this.lastWall = null;
     this.exitPending = false;
@@ -2940,8 +2969,29 @@ export class App {
   // The result stands in the panel's note — measurements and explicit
   // outcomes, never a pacing verdict (story 37).
 
-  devPlaythrough: PlaythroughRecord | null = null;
+  // The results library (issue #473): every recorded run this session
+  // holds, newest first. Rerunning a recipe lands as its own entry — the
+  // same recipe and source share one identity and refresh in place,
+  // anything different is separately identified — and prior results stay
+  // viewable with their original provenance. The library is light
+  // furniture: the artifact is the persisted form, and nothing here ever
+  // meets the ordinary save.
+  devResults: readonly DevRunResult[] = [];
+  private devRunSelection: string | null = null;
+  // The installed checkpoint preset's walked record (issue #473): the
+  // runId an intervention on the installed run reports against, so the
+  // linked library entry carries the modified mark and the interventions.
+  private devRunOriginId: string | null = null;
   devPlaythroughNote: string | null = null;
+  // The selected run's record: what the curves surface reads and what
+  // export serializes. Selection owns which recorded evidence is viewed;
+  // it never re-executes anything.
+  get devPlaythrough(): PlaythroughRecord | null {
+    return this.devResults.find((result) => result.record.runId === this.devRunSelection)?.record ?? null;
+  }
+  get devSelectedRunId(): string | null {
+    return this.devRunSelection;
+  }
   // The historical selection (issue #470): the one field owning which
   // recorded snapshot is inspected. The inspected board/state is always
   // the record's own frozen snapshot behind this index — never a copy on
@@ -2951,6 +3001,33 @@ export class App {
   // simulated elapsed or credited practice, both recorded per sample.
   devCurvesOpen = false;
   devCurvesAxis: "elapsed" | "credited" = "elapsed";
+
+  // The library's one write shape: the entry replaces any same-identity
+  // copy, lands newest-first, and takes the selection — the standing
+  // rule for a fresh walk, a preset install's walked record, and an
+  // imported artifact alike. The inspected index means nothing across
+  // records, so it clears.
+  private upsertRunResult(result: DevRunResult): void {
+    this.devResults = [result, ...this.devResults.filter((existing) => existing.record.runId !== result.record.runId)];
+    this.devRunSelection = result.record.runId;
+    this.devInspected = null;
+  }
+
+  // The selected run's standing readout: the run's own note, plus the
+  // provenance marks an imported or modified entry carries — old evidence
+  // never masquerades as a fresh walk or a baseline run.
+  private describeSelectedRun(): void {
+    const record = this.devPlaythrough;
+    const result = this.devResults.find((candidate) => candidate.record.runId === this.devRunSelection);
+    if (!record || !result) {
+      this.devPlaythroughNote = null;
+      return;
+    }
+    const status = result.modified
+      ? ` · modified — ${result.interventions.length} intervention${result.interventions.length === 1 ? "" : "s"}`
+      : "";
+    this.devPlaythroughNote = `${result.imported ? "Imported · " : ""}${playthroughNote(record)}${status}`;
+  }
 
   // The declared recipe: the default, so configuration reads what a run
   // would carry before running it.
@@ -2977,11 +3054,12 @@ export class App {
       this.render();
       throw error;
     }
-    this.devPlaythrough = record;
+    // The result joins the library and takes the selection (issue #473):
+    // a rerun against a changed recipe or source is a separately
+    // identified entry, and the old result stays viewable with its own
+    // provenance.
+    this.upsertRunResult({ record, imported: false, modified: false, interventions: [] });
     this.devPlaythroughNote = playthroughNote(record);
-    // A new run replaces the record: the old selection's indexes mean
-    // nothing on it, so the selection clears with the record it pointed at.
-    this.devInspected = null;
     this.say(
       record.complete
         ? `Dev: playthrough ${record.runId} complete — ${record.days} days, ${Math.round(record.creditedSeconds / 60)}m credited, claims ${record.claims.join(", ") || "none"} Arete.`
@@ -3039,6 +3117,79 @@ export class App {
     this.devInspectPlaythrough(((from + step) % count + count) % count);
   }
 
+  // ── The artifact boundary (issue #473, parent stories 34–36) ────────
+  // Export, import, and library selection, shared by the dev panel's
+  // controls, the terminal, and agent access — the same contracts,
+  // validation, outcomes, and errors either way. The artifact owns
+  // persisted provenance and results: nothing here reads or writes the
+  // ordinary save, and the two formats stay strangers — an artifact is
+  // not a save, a save is not an artifact. Importing never re-executes:
+  // an imported record's curves, boards, and reasons read exactly as
+  // carried, its source provenance naming whatever engine produced it.
+
+  // The library's selection: viewing another result moves the standing
+  // selection and the readout — never a re-run, never a reinterpretation.
+  devSelectRun(runId: string): void {
+    if (!this.dev) {
+      throw new Error("The run commands are development commands.");
+    }
+    if (!this.devResults.some((result) => result.record.runId === runId)) {
+      throw new Error(`No recorded run "${runId}" — use runs to list the library.`);
+    }
+    this.devRunSelection = runId;
+    this.devInspected = null;
+    this.describeSelectedRun();
+    this.render();
+  }
+
+  // The export command (story 34): the selected run whole — recipe,
+  // source provenance, trajectory, decision reasons, intervention and
+  // modified status, exact snapshots, complete and incomplete runs alike
+  // — as one versioned artifact string.
+  devExportPlaythrough(): string {
+    if (!this.dev) {
+      throw new Error("The artifact commands are development commands.");
+    }
+    const result = this.devResults.find((candidate) => candidate.record.runId === this.devRunSelection);
+    if (!result) {
+      throw new Error("Run artifact: export needs a recorded run — run or import one first.");
+    }
+    return exportPlaythroughArtifact({
+      record: result.record,
+      modified: result.modified,
+      interventions: result.interventions,
+    });
+  }
+
+  // The import command (story 35): one artifact string joins the library
+  // exactly as carried — its provenance, its modified mark, its
+  // interventions, its complete or incomplete stop — and takes the
+  // selection, so recorded evidence reopens without the original browser
+  // or checkout. Malformed payloads and unsupported versions are named
+  // ✗ failures, never silently interpreted.
+  devImportPlaythrough(text: string): PlaythroughArtifact {
+    if (!this.dev) {
+      throw new Error("The artifact commands are development commands.");
+    }
+    const load = importPlaythroughArtifact(text);
+    if (!load.ok) {
+      this.devPlaythroughNote = `Import ✗ ${load.error}`;
+      this.say(`Dev artifact import failed: ${load.error}`);
+      this.render();
+      throw new Error(load.error);
+    }
+    this.upsertRunResult({
+      record: load.artifact.record,
+      imported: true,
+      modified: load.artifact.modified,
+      interventions: load.artifact.interventions,
+    });
+    this.describeSelectedRun();
+    this.say(`Dev: artifact imported — ${load.artifact.runId}.`);
+    this.render();
+    return load.artifact;
+  }
+
   // ── The experiment boundary (issue #472, parent stories 30–33) ──────
   // Terminal inspection and game-action commands on the installed run,
   // shared by the panel's controls, the panel's terminal, and agent
@@ -3080,12 +3231,26 @@ export class App {
   // the modified mark — earned only by a change that landed, so a run
   // every refusal touched still reads as baseline evidence.
   private recordIntervention(label: string, result: { ok: boolean; reason?: string }): void {
-    this.devInterventions = [...this.devInterventions, {
+    const intervention: DevIntervention = {
       at: Date.now(),
       label,
       ...(result.ok ? { ok: true } as const : { ok: false, ...(result.reason !== undefined ? { reason: result.reason } : {}) }),
-    }];
+    };
+    this.devInterventions = [...this.devInterventions, intervention];
     if (result.ok) this.devScenarioModified = true;
+    // The same intervention rides the installed checkpoint preset's
+    // walked record's library entry (issue #473), so the curves view and
+    // the exported artifact carry the modified mark and the interventions
+    // verbatim — altered evidence never reads as baseline.
+    if (this.devRunOriginId !== null) {
+      const runId = this.devRunOriginId;
+      this.devResults = this.devResults.map((candidate) =>
+        candidate.record.runId === runId
+          ? { ...candidate, modified: candidate.modified || result.ok, interventions: [...candidate.interventions, intervention] }
+          : candidate,
+      );
+      if (runId === this.devRunSelection) this.describeSelectedRun();
+    }
   }
 
   // The quick grants and the dev clock record only when a run is
@@ -3305,7 +3470,7 @@ export class App {
     const [verb, ...args] = command.split(/\s+/);
     switch (verb) {
       case "help":
-        return "commands: actions · action <name> [JSON argument array] · scenarios · launch <id> · assert · inspect · run [k=v…] · start <min|open> · end · pause · resume · honesty <full|planned|missed> · breather · end-breather · world-buy · world-hone <chargeBlade> · world-place <id> <q> <r> · world-retrieve <id> · world-priority <id> [keys…] · advance <s> · buy <type> · cell <q> <r> · place <id> <q> <r> · levels <id> <n|max> · prestige · grant <nous|synth|world> · tuning";
+        return "commands: actions · action <name> [JSON argument array] · scenarios · launch <id> · assert · inspect · run [k=v…] · runs · select <runId> · export · import <artifact JSON> · start <min|open> · end · pause · resume · honesty <full|planned|missed> · breather · end-breather · world-buy · world-hone <chargeBlade> · world-place <id> <q> <r> · world-retrieve <id> · world-priority <id> [keys…] · advance <s> · buy <type> · cell <q> <r> · place <id> <q> <r> · levels <id> <n|max> · prestige · grant <nous|synth|world> · tuning";
       case "actions":
         return Object.keys(GAME_COMMANDS).join(" · ");
       case "action": {
@@ -3370,6 +3535,37 @@ export class App {
         }
         if (Object.keys(overrides).length > 0) input.overrides = overrides;
         return playthroughNote(this.devRunPlaythrough(input));
+      }
+      case "runs": {
+        if (this.devResults.length === 0) return "no recorded runs — run a playthrough or import an artifact.";
+        return this.devResults
+          .map((result) => {
+            const marks = [
+              result.record.stop.kind === "checkpoint" ? "◆" : result.record.complete ? "✓" : "✗",
+              ...(result.imported ? ["imported"] : []),
+              ...(result.modified ? [`modified(${result.interventions.length})`] : []),
+            ];
+            return `${result.record.runId} ${marks.join(" ")}`;
+          })
+          .join(" · ");
+      }
+      case "select": {
+        const [runId] = args;
+        if (!runId) throw new Error("select needs a recorded run id — try `runs`.");
+        this.devSelectRun(runId);
+        return this.devPlaythroughNote ?? `selected ${runId}.`;
+      }
+      case "export": {
+        const artifact = this.devExportPlaythrough();
+        const { runId } = JSON.parse(artifact) as { runId: string };
+        return `✓ exported ${runId} — ${artifact.length} bytes of artifact JSON; agents read it with devExportPlaythrough().`;
+      }
+      case "import": {
+        const marker = command.indexOf(" ");
+        const raw = marker >= 0 ? command.slice(marker + 1).trim() : "";
+        if (!raw) throw new Error("import needs an artifact JSON string — paste the whole artifact after the verb.");
+        const artifact = this.devImportPlaythrough(raw);
+        return `✓ imported — ${artifactNote(artifact)}.`;
       }
       case "start": {
         const [first] = args;

@@ -1,7 +1,8 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
-import { playthroughEventMarker, playthroughRunId, type PlaythroughRecord } from "../engine/playthrough";
+import { playthroughEventMarker, playthroughRunId, playthroughNote, type PlaythroughRecord } from "../engine/playthrough";
+import { exportPlaythroughArtifact } from "../engine/playthrough-artifact";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { CATEGORY_OF } from "../engine/constants";
 import { adjacent } from "../engine/hex";
@@ -962,5 +963,263 @@ describe("the curves surface's visible wiring", () => {
     expect(() => app.devToggleCurves()).not.toThrow();
     expect(app.devCurvesOpen).toBe(false);
     expect(document.getElementById("dev-curves")).toBeNull();
+  });
+});
+
+// The artifact boundary (issue #473, parent stories 34–36): export,
+// import, and the results library through the same commands the dev
+// panel's controls, the terminal, and agent access share. The artifact is
+// the persisted form of provenance and results — the ordinary save is
+// never read or written here — and importing reopens recorded evidence
+// without the original browser, session, or checkout, never re-executing
+// or reinterpreting it.
+describe("the run artifact boundary", () => {
+  it("exports the selected run whole and imports it back exactly as carried", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const text = app.devExportPlaythrough();
+    const artifact = JSON.parse(text) as Record<string, unknown>;
+    expect(artifact.format).toBe("flowsynth-playthrough");
+    expect(artifact.version).toBe(1);
+    expect(artifact.runId).toBe(record.runId);
+    // The import joins the library as carried, takes the selection, and
+    // marks itself: old evidence never reads as a fresh walk.
+    const loaded = app.devImportPlaythrough(text);
+    expect(loaded.runId).toBe(record.runId);
+    expect(app.devSelectedRunId).toBe(record.runId);
+    expect(app.devResults).toHaveLength(1);
+    expect(app.devResults[0]!.imported).toBe(true);
+    expect(app.devResults[0]!.modified).toBe(false);
+    expect(comparable(app.devPlaythrough!)).toEqual(comparable(record));
+    expect(app.devPlaythroughNote).toContain("Imported · ");
+    expect(app.devPlaythroughNote).toContain(record.runId);
+  });
+
+  it("reopens an imported run's inspection after the original session is gone", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const index = record.trajectory[2]!.snapshot;
+    const original = app.devInspectPlaythrough(index)!;
+    const artifact = app.devExportPlaythrough();
+    app.dispose();
+    // A fresh browser: empty library, no walked records, nothing shared
+    // but the artifact text.
+    const fresh = boot(undefined, true);
+    expect(fresh.devResults).toHaveLength(0);
+    fresh.devImportPlaythrough(artifact);
+    const reopened = fresh.devInspectPlaythrough(index)!;
+    expect(reopened.balances).toEqual(original.balances);
+    expect(reopened.rate).toBe(original.rate);
+    expect(reopened.voices).toEqual(original.voices);
+    expect(reopened.events.map((event) => event.label)).toEqual(original.events.map((event) => event.label));
+    // Nothing re-executes: the library holds exactly the imported record.
+    expect(fresh.devResults).toHaveLength(1);
+    expect(fresh.devResults[0]!.record.events).toEqual(record.events);
+    // The curves surface reads the imported run with its provenance named.
+    fresh.devToggleCurves();
+    const panel = document.getElementById("dev-curves")!;
+    expect(panel.textContent).toContain(record.runId);
+    expect(panel.querySelector(".dev-curves-prov")!.textContent).toContain("imported");
+  });
+
+  it("rejects malformed and unsupported artifacts by name and imports nothing", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const before = app.devResults.length;
+    const refuse = (text: string, fragment: RegExp): void => {
+      expect(() => app.devImportPlaythrough(text)).toThrow(fragment);
+    };
+    // Not JSON, an ordinary save, and a newer format version each name
+    // their refusal; the library and selection stay untouched.
+    refuse("not json at all", /not valid JSON/);
+    refuse('{"app":"flowsynth","version":14,"savedAt":0,"state":{}}', /not a FlowSynth run artifact/);
+    const newer = JSON.parse(app.devExportPlaythrough()) as Record<string, unknown>;
+    newer.version = 99;
+    refuse(JSON.stringify(newer), /Artifact version 99 is newer than this build supports \(1\)/);
+    expect(app.devResults).toHaveLength(before);
+    expect(app.devSelectedRunId).toBe(record.runId);
+    expect(app.devPlaythroughNote).toContain("Import ✗");
+  });
+
+  it("keeps imported evidence read-only and unchanged by inspection", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const text = app.devExportPlaythrough();
+    const fresh = boot(undefined, true);
+    fresh.devImportPlaythrough(text);
+    // The imported recorded states freeze whole, like a fresh walk's: a
+    // stray write through inspection fails loudly instead of rewriting
+    // evidence.
+    const imported = fresh.devResults[0]!.record;
+    expect(() => {
+      (imported.snapshots[0]!.state as { mode: string }).mode = "flow";
+    }).toThrow();
+    const first = fresh.devInspectPlaythrough(0)!;
+    const second = fresh.devInspectPlaythrough(0)!;
+    expect(second.balances).toEqual(first.balances);
+    expect(comparable(imported)).toEqual(comparable(record));
+  });
+
+  it("preserves an incomplete run's status and bottleneck through the artifact", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    expect(record.complete).toBe(false);
+    expect(record.stop.kind).toBe("budget");
+    const artifact = app.devExportPlaythrough();
+    const fresh = boot(undefined, true);
+    fresh.devImportPlaythrough(artifact);
+    const reopened = fresh.devPlaythrough!;
+    expect(reopened.complete).toBe(false);
+    expect(reopened.stop).toEqual(record.stop);
+    expect(reopened.bottleneck).toBe(record.bottleneck);
+    expect(fresh.devPlaythroughNote).toContain("✗");
+  });
+
+  it("carries a modified preset install's interventions and mark through export and import", { timeout: 240_000 }, async () => {
+    app = boot(undefined, true);
+    await app.devLaunchScenario("approaching-prestige", Date.UTC(2026, 0, 20, 9));
+    // The install brings its own walked record: the evidence the preset
+    // grew from, selected and clean.
+    const walked = app.devPlaythrough!;
+    expect(app.devScenarioId).toBe("approaching-prestige");
+    expect(app.devResults.map((result) => result.record.runId)).toEqual([walked.runId]);
+    expect(app.devResults[0]!.modified).toBe(false);
+    // One intervention on the installed run marks it and rides its
+    // record's library entry.
+    app.devNous();
+    expect(app.devScenarioModified).toBe(true);
+    expect(app.devResults[0]!.modified).toBe(true);
+    expect(app.devResults[0]!.interventions).toHaveLength(1);
+    expect(app.devResults[0]!.interventions[0]!.label).toContain("grant");
+    const artifact = app.devExportPlaythrough();
+    expect(JSON.parse(artifact).modified).toBe(true);
+    // Across the boundary the status survives verbatim: the imported
+    // evidence reads modified and re-exports with the same interventions.
+    app.dispose();
+    const fresh = boot(undefined, true);
+    fresh.devImportPlaythrough(artifact);
+    expect(fresh.devResults[0]!.modified).toBe(true);
+    expect(fresh.devResults[0]!.interventions).toHaveLength(1);
+    expect(fresh.devPlaythroughNote).toContain("modified — 1 intervention");
+    fresh.devToggleCurves();
+    expect(document.getElementById("dev-curves")!.querySelector(".dev-curves-prov")!.textContent).toContain("modified — 1 intervention");
+    const reexported = JSON.parse(fresh.devExportPlaythrough()) as Record<string, unknown>;
+    expect(reexported.modified).toBe(true);
+    expect(reexported.interventions).toEqual(JSON.parse(artifact).interventions);
+  });
+
+  it("keeps reruns separately identified and each result's own provenance", () => {
+    app = boot(undefined, true);
+    const first = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
+    const second = app.devRunPlaythrough({ seed: 10, budgetDays: 1 });
+    expect(first.runId).not.toBe(second.runId);
+    expect(app.devResults.map((result) => result.record.runId)).toEqual([second.runId, first.runId]);
+    // Viewing the older result moves the selection only — its provenance
+    // stands as recorded, and nothing re-executes.
+    app.devSelectRun(first.runId);
+    expect(app.devSelectedRunId).toBe(first.runId);
+    expect(app.devPlaythrough!.recipe.seed).toBe(9);
+    expect(app.devPlaythroughNote).toBe(playthroughNote(first));
+    // The same recipe and source share one identity: the rerun refreshes
+    // its entry instead of duplicating it.
+    const rerun = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
+    expect(rerun.runId).toBe(first.runId);
+    expect(app.devResults).toHaveLength(2);
+    // An artifact from another engine joins as carried: its own source
+    // provenance stays, visibly different from the current engine, and
+    // the run is never re-walked against it.
+    const foreign = exportPlaythroughArtifact({
+      record: { ...rerun, source: { ...rerun.source, engineSource: "older-engine" } },
+    });
+    app.devImportPlaythrough(foreign);
+    const imported = app.devResults.find((result) => result.record.runId === rerun.runId)!;
+    expect(imported.imported).toBe(true);
+    expect(imported.record.source.engineSource).toBe("older-engine");
+    expect(imported.record.events).toEqual(rerun.events);
+    app.devToggleCurves();
+    expect(document.getElementById("dev-curves")!.querySelector(".dev-curves-prov")!.textContent).toContain("≠ current");
+  });
+
+  it("never touches the ordinary save on export, import, or selection", () => {
+    app = boot(undefined, true);
+    const before = localStorage.getItem(STORAGE_KEY);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const artifact = app.devExportPlaythrough();
+    app.devImportPlaythrough(artifact);
+    app.devSelectRun(record.runId);
+    app.devExportPlaythrough();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(before);
+    // The formats stay strangers both ways: the save importer refuses an
+    // artifact by name, and the artifact importer refused the save above.
+    const failed = app.importText(artifact);
+    expect(failed).toBe(false);
+    expect(app.ui.importError).toContain("not a FlowSynth save");
+  });
+
+  it("wires the visible controls to the same commands", async () => {
+    app = boot(undefined, true);
+    const first = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
+    const second = app.devRunPlaythrough({ seed: 10, budgetDays: 1 });
+    // The library select lists every recorded run newest-first with its
+    // marks, and changing it drives the same selection command.
+    const select = document.getElementById("dev-runs") as HTMLSelectElement;
+    expect(select.hidden).toBe(false);
+    expect(select.options).toHaveLength(2);
+    expect(select.value).toBe(second.runId);
+    select.value = first.runId;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    expect(app.devSelectedRunId).toBe(first.runId);
+    // Export downloads the selected run's artifact file — the same JSON
+    // the command returns.
+    const createObjectURL = vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test" as URL);
+    const revokeObjectURL = vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    document.querySelector<HTMLButtonElement>('[data-dev="export-run"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0]![0] as Blob;
+    // The downloaded artifact is the selected run's — the export stamp is
+    // the one field that legitimately differs call to call.
+    const downloaded = JSON.parse(await blob.text()) as Record<string, unknown>;
+    const standing = JSON.parse(app.devExportPlaythrough()) as Record<string, unknown>;
+    delete downloaded.exportedAt;
+    delete standing.exportedAt;
+    expect(downloaded).toEqual(standing);
+    expect(anchorClick).toHaveBeenCalledTimes(1);
+    // Import reads the chosen file through the same command.
+    const input = document.getElementById("dev-import-file") as HTMLInputElement;
+    const file = new File([app.devExportPlaythrough()], "run.json", { type: "application/json" });
+    Object.defineProperty(input, "files", {
+      configurable: true,
+      value: { 0: file, length: 1, item: (index: number) => (index === 0 ? file : null) },
+    });
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(app.devResults[0]!.imported).toBe(true);
+    expect(app.devSelectedRunId).toBe(first.runId);
+  });
+
+  it("serves the same artifact commands through the terminal", () => {
+    app = boot(undefined, true);
+    const record = app.devRunPlaythrough({ seed: 9, budgetDays: 1 });
+    expect(app.devTerminalRun("runs")).toContain(record.runId);
+    expect(app.devTerminalRun("export")).toContain(record.runId);
+    const other = app.devRunPlaythrough({ seed: 10, budgetDays: 1 });
+    expect(app.devTerminalRun(`select ${record.runId}`)).toContain(record.runId);
+    expect(app.devSelectedRunId).toBe(record.runId);
+    const artifact = app.devExportPlaythrough();
+    expect(app.devTerminalRun(`import ${artifact}`)).toContain(record.runId);
+    expect(app.devResults[0]!.imported).toBe(true);
+    // Named failures land as ✗ lines, and help lists the commands.
+    expect(app.devTerminalRun("import { nope")).toMatch(/^✗/);
+    expect(app.devTerminalRun("select missing")).toMatch(/^✗/);
+    expect(app.devTerminalRun("help")).toContain("import");
+  });
+
+  it("is a development boundary, refused outside dev mode", () => {
+    app = boot(undefined, false);
+    expect(() => app.devExportPlaythrough()).toThrow(/development commands/);
+    expect(() => app.devImportPlaythrough("{}")).toThrow(/development commands/);
+    expect(() => app.devSelectRun("x")).toThrow(/development commands/);
   });
 });

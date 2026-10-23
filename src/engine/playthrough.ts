@@ -694,8 +694,10 @@ function record(
 
 // Deep-read-only (issue #470): every recorded state freezes whole, so a
 // stray write through inspection — human or agent — fails loudly instead
-// of rewriting evidence.
-function deepFreeze<T>(value: T): T {
+// of rewriting evidence. The run artifact (issue #473) gives its imported
+// copies the same treatment, so evidence that crossed a file boundary
+// keeps the guarantee.
+export function deepFreeze<T>(value: T): T {
   if (value !== null && typeof value === "object") {
     for (const child of Object.values(value as Record<string, unknown>)) deepFreeze(child);
     Object.freeze(value);
