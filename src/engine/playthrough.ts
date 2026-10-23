@@ -366,14 +366,14 @@ export interface PlaythroughSnapshot {
 }
 
 // The curve markers (story 27): every recorded event classifies into the
-// four plotted marker classes or plots none. Purchases are the buys —
-// shelf, cells, the Arete and World offerings, the capacity rungs; unlocks
-// are the acquisitions and discoveries — roll acceptances, feats, World
-// finds; session boundaries are the sessions and their breathers; prestige
-// is the bank. Placement and upgrade gestures and the pacing marks plot
-// none: they stay lines of the decisions list. Declined attempts plot
-// none — their reasons live in the record.
-export type PlaythroughMarker = "purchase" | "unlock" | "session" | "prestige";
+// plotted marker classes or plots none. Purchases are the buys — shelf,
+// cells, the Arete and World offerings, the capacity rungs; unlocks are
+// the acquisitions and discoveries — roll acceptances, feats, World
+// finds; sessions plot as the full session boundary; breathers plot as
+// their own tick; prestige is the bank. Placement and upgrade gestures
+// and the pacing marks plot none: they stay lines of the decisions list.
+// Declined attempts plot none — their reasons live in the record.
+export type PlaythroughMarker = "purchase" | "unlock" | "session" | "breather" | "prestige";
 
 export function playthroughEventMarker(event: PlaythroughEvent): PlaythroughMarker | null {
   if (!event.ok) return null;
@@ -384,7 +384,8 @@ export function playthroughEventMarker(event: PlaythroughEvent): PlaythroughMark
     if (event.label.startsWith("Feat unlocked") || event.label.startsWith("World —")) return "unlock";
     return null;
   }
-  if (event.kind === "session" || event.kind === "breather") return "session";
+  if (event.kind === "session") return "session";
+  if (event.kind === "breather") return "breather";
   if (event.kind === "prestige") return "prestige";
   return null;
 }

@@ -667,6 +667,7 @@ describe("historical snapshots and inspection", () => {
     }
     // The four classes' own rules, on the engine's classifier.
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "prestige", label: "Prestige 1", ok: true, snapshot: 0 })).toBe("prestige");
+    expect(playthroughEventMarker({ at: 0, credited: 0, kind: "breather", label: "Breather — 300s of the 300s allowance", ok: true, snapshot: 0 })).toBe("breather");
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Poly Expander 3 — 1.0ν/s → 1.2ν/s", ok: true, snapshot: 0 })).toBe("purchase");
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Feat unlocked — time-in-the-seat", ok: true, snapshot: 0 })).toBe("unlock");
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "milestone", label: "Recovery — next prestige eligibility reached", ok: true, snapshot: 0 })).toBeNull();
