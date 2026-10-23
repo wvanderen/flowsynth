@@ -86,11 +86,12 @@ Second pass (fresh tab, re-preflighted): identical thread, execution id
   15000 ms on every attempt. First pass: 3 attempts (the third after a
   `preview_status` read) on tab 2 — budget exhausted per
   [visual evidence](../../agents/visual-evidence.md) §5. One bounded
-  fresh-tab restart (the documented recovery): full teardown, new tab,
+  fresh-tab restart beyond the documented retry budget: full teardown, new tab,
   preflight re-ACCEPTed (same record), workflow re-seeded and verified
   in-page — then 3 more snapshot attempts, each after a status read
   showing the tab available, loaded, dialog-free, on the verified URL.
-  Budget exhausted; recorded, not retried further. `preview_evaluate`,
+  Those additional three attempts exceeded §5's three-attempt total; a
+  fresh tab does not reset the budget. No further attempts ran. `preview_evaluate`,
   `preview_resize` (1280×800), the provenance endpoint, and the health
   check stayed healthy throughout — the page was not the cause.
 - **Phone 390×844 pass: unavailable.** `preview_resize` returned the
@@ -106,8 +107,11 @@ Second pass (fresh tab, re-preflighted): identical thread, execution id
   `docs/evidence/dev-controls-audit-2026-10-22/`).
 - **Visibility confirmation** — the harness reported `visible: false`
   across both tabs throughout, including after activation; per the
-  doctrine this is recorded unavailable, with capture readiness
-  established by the status observables and the in-page reads above.
+  doctrine visibility confirmation and capture readiness are both
+  unavailable. With unreliable visibility, §5 requires a successful
+  same-tab snapshot in addition to ready status observables; none
+  succeeded. The independently completed in-page demonstrations above
+  do not establish capture readiness.
 - **Greyscale pass** — unavailable (no emulation in this harness); the
   non-color semantics above are the DOM-level checks, not a greyscale
   visual pass.
