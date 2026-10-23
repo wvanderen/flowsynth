@@ -87,6 +87,9 @@ describe("the whole workflow through both entry points", () => {
     // outcomes, a distinct execution identity.
     const agentRun = app.devRunPlaythrough({ scenarioId: "fresh-start", policyId: "pushing", claimTarget: 2, seed: 468, budgetDays: 1 });
     expect(agentRun.runId).not.toBe(panelRun.runId);
+    // The kind line that distinguishes a representative playthrough from
+    // the economy-only calibration walk rides every record.
+    expect(agentRun.kind).toBe("representative");
     expect(agentRun.recipe).toEqual(panelRun.recipe);
     expect(agentRun.source).toEqual(panelRun.source);
     expect(agentRun.trajectory).toEqual(panelRun.trajectory);
@@ -273,6 +276,16 @@ describe("the walked preset rides the same workflow", () => {
     expect(continuation.state.sessionRecords.length).toBeGreaterThan(walked.state.sessionRecords.length);
     expect(continuation.state.prestiges).toBe(0);
     expect(fresh.devResults).toHaveLength(3);
+    // The status marks are one shared glyph set everywhere: the completed
+    // prompt continuation reads ✓, the incomplete pushing continuation ✗,
+    // and the walked checkpoint ◆ in the same library listing
+    // (playthroughStatusMark through the visible select and the terminal).
+    expect([...(document.getElementById("dev-runs") as HTMLSelectElement).options].map((option) => option.textContent)).toEqual([
+      `${continuation.runId} ✗`,
+      `${promptContinuation.runId} ✓`,
+      `${walked.runId} ◆ · imported · modified`,
+    ]);
+    expect(fresh.devTerminalRun("runs")).toContain(`${walked.runId} ◆ imported modified(1)`);
     const carried = fresh.devResults.find((result) => result.record.runId === walked.runId)!;
     expect(carried.record.events).toEqual(walked.events);
     expect(carried.modified).toBe(true);
