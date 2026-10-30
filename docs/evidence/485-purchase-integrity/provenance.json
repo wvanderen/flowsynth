@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-30T18:50:03.548Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-d49cc6a1",
+  "branch": "t3/issue-485",
+  "commit": "73234e6e608af9901ae7a30398e4752312dc294f",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}
