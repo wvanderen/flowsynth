@@ -4,6 +4,13 @@ Captured from the verified checkout per `provenance.json` (commit `73234e6`,
 clean source) on 2026-10-30, both viewports, through the real purchase
 controls on the fresh-start scenario's isolated save.
 
+Provenance note: the review-fix commit that followed (`git diff
+73234e6..HEAD -- src/ui/render.ts src/ui/hexdetail.ts`) touches only
+corrupt-module rendering paths and the unpriceable-roster quote basis —
+none of the flows captured here (finite refusal, nonfinite-bank refusal,
+recovery) changed; the refusal copy, status surface, and controls are
+identical at the capture commit and at HEAD.
+
 ## What the captures show
 
 The purchase-integrity refusal rides the existing failure surface: the

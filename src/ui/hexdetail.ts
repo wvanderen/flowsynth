@@ -30,7 +30,7 @@ import { tierPowerOf } from "../engine/module-strength";
 // Editing lives in upgrade mode only: during flow the same cross-section
 // opens read-only, its readouts live, its controls gone — the click still
 // answers the lock.
-import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, levelCost, levelsCost, wholeNous } from "../engine/economy";
+import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, isPriceableLevel, levelCost, levelsCost, wholeNous } from "../engine/economy";
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
@@ -456,6 +456,10 @@ function detailBuyHtml(app: App, module: ModuleInstance): string {
   // is doing — purchases preview what the module makes while charged.
   const snapshot = displayedRates(state, true);
   const benefit = benefitOf(app, module, snapshot, 1, BALANCE.rarityPower[typeRarityOf(module.type)]);
+  // Purchase integrity (issue #485): a level the ladder cannot price
+  // quotes no buy column — the action would refuse it, so the detail
+  // never meets the pricing curve with a corrupted level.
+  if (!benefit || !isPriceableLevel(module.level)) return "";
   const maxLevels = affordableLevels(wholeNous(state), module.level);
   const want = ui.bulkCount === "max" ? maxLevels : ui.bulkCount;
   const bulkCost = levelsCost(module.level, want);

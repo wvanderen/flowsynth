@@ -2,7 +2,7 @@ import { playthroughStatusMark } from "../engine/playthrough";
 import { historicalBoardHtml } from "./historical-board";
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
-import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, isPriceableLevel, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
@@ -1951,6 +1951,10 @@ const FACE_BUY_POINTS = "-25,46 25,46 7,58 -7,58";
 // bloom's dial share the zero-state labels and the shortfall-leading
 // tooltips, so the two surfaces can never drift apart.
 function faceBuyHtml(app: App, module: ModuleInstance): string {
+  // Purchase integrity (issue #485): a level the ladder cannot price
+  // wears no buy button — the action would refuse it, so the face quotes
+  // nothing and the pricing curve is never met with a corrupted level.
+  if (!isPriceableLevel(module.level)) return "";
   const max = app.ui.faceMax;
   const bank = wholeNous(app.state);
   const levels = max ? affordableLevels(bank, module.level) : 1;
@@ -2042,11 +2046,18 @@ function renderUpgradeAll(app: App): void {
   if (host.dataset.renderKey === key) return;
   host.dataset.renderKey = key;
   const bank = wholeNous(state);
-  const cheapest = Math.min(...eligible.map((m) => levelCost(m.level)));
-  const zeroSuffix = bank < cheapest ? ` — buys 0: need ${formatInt(cheapest - bank)} ν more` : "";
+  // The quote's basis (issue #485): the +N chips quote the full-N cost
+  // over the modules the ladder can price at a finite cost — the same
+  // roster the purchase plan can ever touch. A corrupted or
+  // past-the-ceiling level never meets the BigInt curve here, and its
+  // unbuyable price never enters a quoted total.
+  const priced = eligible.filter((m) => isPriceableLevel(m.level));
+  const pricedCosts = priced.map((m) => levelCost(m.level));
+  const cheapest = pricedCosts.length > 0 ? Math.min(...pricedCosts) : 0;
+  const zeroSuffix = pricedCosts.length > 0 && bank < cheapest ? ` — buys 0: need ${formatInt(cheapest - bank)} ν more` : "";
   const chips = SWEEP_STEPS.map((n) => {
-    const total = eligible.reduce((sum, m) => sum + levelsCost(m.level, n), 0);
-    return `<button class="sweep-chip" data-sweep="${n}" title="+${n} on all ${eligible.length} modules · ${formatNumber(total)} ν (buys cheapest-first if broke)${zeroSuffix}">+${n}</button>`;
+    const total = priced.reduce((sum, m) => sum + levelsCost(m.level, n), 0);
+    return `<button class="sweep-chip" data-sweep="${n}" title="+${n} on all ${priced.length} modules · ${formatNumber(total)} ν (buys cheapest-first if broke)${zeroSuffix}">+${n}</button>`;
   }).join("");
   const max = upgradeAllPreview(state, "max");
   host.innerHTML = `

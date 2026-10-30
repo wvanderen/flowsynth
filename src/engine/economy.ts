@@ -137,12 +137,12 @@ const AFFORDABLE_LEVEL_CAP = 500;
 // refusal the ceiling already means.
 export const MAX_PRICED_LEVEL = 4096;
 
-export function priceableLevelOf(level: number): boolean {
+export function isPriceableLevel(level: number): boolean {
   return Number.isInteger(level) && level >= 0 && level <= MAX_PRICED_LEVEL;
 }
 
 export function affordableLevels(nous: number, fromLevel: number): number {
-  if (!Number.isFinite(nous) || !priceableLevelOf(fromLevel)) return 0;
+  if (!Number.isFinite(nous) || !isPriceableLevel(fromLevel)) return 0;
   let count = 0;
   let spent = 0;
   while (count < AFFORDABLE_LEVEL_CAP) {
