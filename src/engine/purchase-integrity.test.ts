@@ -148,6 +148,27 @@ describe("unrepresentable prices grant no levels (issue #485)", () => {
 });
 
 describe("cumulative spend past the finite range commits nothing (issue #485)", () => {
+  it.each([2, "max"] as const)("a %s-level operation refuses whole when only its later step overflows", (want) => {
+    const state = fresh();
+    const module = state.modules[0]!;
+    module.level = 1503;
+    const firstCost = levelCost(module.level);
+    const secondCost = levelCost(module.level + 1);
+    module.invested = FULL_BANK - firstCost - secondCost / 2;
+    state.nous = levelsCost(module.level, 2);
+    expect(Number.isFinite(state.nous)).toBe(true);
+    expect(Number.isFinite(module.invested + firstCost)).toBe(true);
+    expect(module.invested + state.nous).toBe(Infinity);
+    const single = structuredClone(state);
+    expect(upgradeModule(single, module.id).ok).toBe(true);
+    expect(upgradeModule(single, module.id)).toMatchObject({ ok: false, reason: UNSAFE });
+    const before = snapshot(state);
+    expect(upgradeModuleLevels(state, module.id, want)).toMatchObject({ ok: false, reason: UNSAFE });
+    expect(snapshot(state)).toBe(before);
+    expect(upgradeAll(state, want)).toMatchObject({ ok: false, reason: UNSAFE });
+    expect(snapshot(state)).toBe(before);
+  });
+
   it("a bulk ladder whose ledger would overflow after earlier affordable steps refuses whole", () => {
     const s = fresh();
     const synth = s.modules[0]!;

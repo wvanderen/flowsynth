@@ -2051,7 +2051,7 @@ function renderUpgradeAll(app: App): void {
   // roster the purchase plan can ever touch. A corrupted or
   // past-the-ceiling level never meets the BigInt curve here, and its
   // unbuyable price never enters a quoted total.
-  const priced = eligible.filter((m) => isPriceableLevel(m.level));
+  const priced = eligible.filter((module) => isPriceableLevel(module.level) && Number.isFinite(levelCost(module.level)));
   const pricedCosts = priced.map((m) => levelCost(m.level));
   const cheapest = pricedCosts.length > 0 ? Math.min(...pricedCosts) : 0;
   const zeroSuffix = pricedCosts.length > 0 && bank < cheapest ? ` — buys 0: need ${formatInt(cheapest - bank)} ν more` : "";

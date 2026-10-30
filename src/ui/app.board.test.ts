@@ -2091,12 +2091,12 @@ describe("the bulk upgrade controls (#195)", () => {
     expect(chip.title).toContain(formatNumber(levelsCost(0, 5)));
   });
 
-  it("the cluster's quotes survive an unpriceable module and match the plan (#485)", () => {
+  it.each([Number.NaN, 1506])("the cluster's quotes survive an unpriceable level %s and match the plan (#485)", (level) => {
     // A corrupted level cannot meet the pricing curve: the full-N quote
     // covers only what the ladder can price — the roster the plan can
     // ever touch — and the chip still buys the rest.
     const corrupted = give(app.state, "additive", hex(1, 0), 0);
-    corrupted.level = Number.NaN;
+    corrupted.level = level;
     app.state.nous = levelsCost(0, 1);
     app.render();
     const chip = document.querySelector<HTMLButtonElement>('#upgrade-all [data-sweep="1"]')!;
@@ -2104,7 +2104,7 @@ describe("the bulk upgrade controls (#195)", () => {
     expect(chip.title).toContain(formatNumber(levelCost(0)));
     chip.click();
     expect(app.state.modules[0]!.level).toBe(1);
-    expect(Number.isNaN(corrupted.level)).toBe(true);
+    expect(Object.is(corrupted.level, level)).toBe(true);
   });
 
   it("zero reads zero on the face: the shortfall leads, the label says +0 (ADR-0045, #233)", () => {
