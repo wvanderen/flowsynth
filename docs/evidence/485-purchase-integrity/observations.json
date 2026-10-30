@@ -1,0 +1,56 @@
+[
+  {
+    "viewport": "desktop",
+    "ready": {
+      "width": 1280,
+      "height": 800,
+      "reducedMotion": true,
+      "scenario": "Fresh start ✓ 12ν grant · one synth · upgrade mode · the shipped opening board · initial state · isolated save"
+    },
+    "refusal": {
+      "status": "The purchase cannot be charged safely, so nothing was bought.",
+      "level": 0,
+      "invested": 0,
+      "bankIsNaN": true,
+      "focused": true
+    },
+    "recovery": {
+      "level": 1,
+      "bank": 990
+    },
+    "quote": "+1 on all 1 modules · 10 ν (buys cheapest-first if broke)",
+    "boundary": {
+      "level": 1,
+      "ceiling": 1506,
+      "bank": 0
+    },
+    "detailBuyPresent": true
+  },
+  {
+    "viewport": "phone",
+    "ready": {
+      "width": 390,
+      "height": 844,
+      "reducedMotion": true,
+      "scenario": "Fresh start ✓ 12ν grant · one synth · upgrade mode · the shipped opening board · initial state · isolated save"
+    },
+    "refusal": {
+      "status": "The purchase cannot be charged safely, so nothing was bought.",
+      "level": 0,
+      "invested": 0,
+      "bankIsNaN": true,
+      "focused": true
+    },
+    "recovery": {
+      "level": 1,
+      "bank": 990
+    },
+    "quote": "+1 on all 1 modules · 10 ν (buys cheapest-first if broke)",
+    "boundary": {
+      "level": 1,
+      "ceiling": 1506,
+      "bank": 0
+    },
+    "detailBuyPresent": true
+  }
+]

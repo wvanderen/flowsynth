@@ -1,14 +1,79 @@
 {
   "app": "flowsynth",
   "check": "capture-preflight",
-  "acceptedAt": "2026-10-30T18:50:03.548Z",
+  "acceptedAt": "2026-10-30T21:03:10.733Z",
   "url": "http://localhost:5173/",
-  "worktree": "/Users/eggfam/.t3/worktrees/flowsynth/t3-d49cc6a1",
-  "branch": "t3/issue-485",
-  "commit": "73234e6e608af9901ae7a30398e4752312dc294f",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-607b1f1b",
+  "branch": "t3/review-issue-485",
+  "commit": "e78cebebe9cf3b7e5811a5c26b27bd4ad2f58ff5",
   "source": {
     "clean": true,
     "changes": [],
-    "evidence": []
+    "evidence": [
+      {
+        "path": "docs/evidence/485-purchase-integrity/README.md",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/desktop-nonfinite-balance.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/desktop-recovery.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/desktop-refusal.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/phone-recovery.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/phone-refusal.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/provenance.json",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/capture.mjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/desktop-boundary-purchase.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/desktop-boundary-quote.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/desktop-detail.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/observations.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/phone-boundary-purchase.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/phone-boundary-quote.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/phone-detail.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/485-purchase-integrity/phone-nonfinite-balance.png",
+        "state": "??"
+      }
+    ]
   }
 }
