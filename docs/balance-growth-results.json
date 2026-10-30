@@ -1,0 +1,632 @@
+{
+  "model": "fixed acquired rig, uniform levels, saturated charge, immediate reinvestment; not a 100-hour progression validation",
+  "costBase": 1.6,
+  "responseCandidate": {
+    "bounded": "1 + 3L/(L+20)",
+    "linear": "1 + 0.1L"
+  },
+  "rows": [
+    {
+      "rig": "independent-sine",
+      "curve": "shipped",
+      "modules": 1,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 13.099380401777248,
+          "log10Rate": 0.8846549166164772,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 100,
+          "idealizedHours": 129915933758.62498,
+          "log10Rate": 7.219154600426462,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 500,
+          "idealizedHours": 1.2278832143796612e+61,
+          "log10Rate": 38.89165301947638,
+          "nextWaitRatio": 1.3333333333333377
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 3.6184732515727853e+123,
+          "log10Rate": 78.48227604328879,
+          "nextWaitRatio": 1.3333333333333188
+        }
+      ]
+    },
+    {
+      "rig": "independent-sine",
+      "curve": "chorus-bounded",
+      "modules": 1,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 13.099380401777248,
+          "log10Rate": 0.8846549166164772,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 100,
+          "idealizedHours": 129915933758.62498,
+          "log10Rate": 7.219154600426462,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 500,
+          "idealizedHours": 1.2278832143796612e+61,
+          "log10Rate": 38.89165301947638,
+          "nextWaitRatio": 1.3333333333333377
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 3.6184732515727853e+123,
+          "log10Rate": 78.48227604328879,
+          "nextWaitRatio": 1.3333333333333188
+        }
+      ]
+    },
+    {
+      "rig": "independent-sine",
+      "curve": "responses-linear",
+      "modules": 1,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 13.099380401777248,
+          "log10Rate": 0.8846549166164772,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 100,
+          "idealizedHours": 129915933758.62498,
+          "log10Rate": 7.219154600426462,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 500,
+          "idealizedHours": 1.2278832143796612e+61,
+          "log10Rate": 38.89165301947638,
+          "nextWaitRatio": 1.3333333333333377
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 3.6184732515727853e+123,
+          "log10Rate": 78.48227604328879,
+          "nextWaitRatio": 1.3333333333333188
+        }
+      ]
+    },
+    {
+      "rig": "independent-sine",
+      "curve": "responses-bounded",
+      "modules": 1,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 13.099380401777248,
+          "log10Rate": 0.8846549166164772,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 100,
+          "idealizedHours": 129915933758.62498,
+          "log10Rate": 7.219154600426462,
+          "nextWaitRatio": 1.333333333333333
+        },
+        {
+          "level": 500,
+          "idealizedHours": 1.2278832143796612e+61,
+          "log10Rate": 38.89165301947638,
+          "nextWaitRatio": 1.3333333333333377
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 3.6184732515727853e+123,
+          "log10Rate": 78.48227604328879,
+          "nextWaitRatio": 1.3333333333333188
+        }
+      ]
+    },
+    {
+      "rig": "chorus-five-chords",
+      "curve": "shipped",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.0005352732421853912,
+          "log10Rate": 12.118038232187828,
+          "nextWaitRatio": 0.39301197587306097
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.0005352733686438819,
+          "log10Rate": 59.56491735688894,
+          "nextWaitRatio": 0.4191486293583897
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.0005352733686438819,
+          "log10Rate": 288.2415522794715,
+          "nextWaitRatio": 0.43272976937454716
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.0005352733686438819,
+          "log10Rate": 571.5701919640605,
+          "nextWaitRatio": 0.4347712520544997
+        }
+      ]
+    },
+    {
+      "rig": "chorus-five-chords",
+      "curve": "chorus-bounded",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.0036558698645185795,
+          "log10Rate": 5.400104851576194,
+          "nextWaitRatio": 1.1431913477058144
+        },
+        {
+          "level": 100,
+          "idealizedHours": 27670.90523259695,
+          "log10Rate": 14.454944757137557,
+          "nextWaitRatio": 1.2753712789103928
+        },
+        {
+          "level": 500,
+          "idealizedHours": 1.1157654154611977e+51,
+          "log10Rate": 49.427702867715716,
+          "nextWaitRatio": 1.3203884476049814
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 1.0683711054777304e+112,
+          "log10Rate": 90.49787864916789,
+          "nextWaitRatio": 1.326765201616515
+        }
+      ]
+    },
+    {
+      "rig": "chorus-five-chords",
+      "curve": "responses-linear",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.0032389784188604784,
+          "log10Rate": 5.6558674638131015,
+          "nextWaitRatio": 1.0699347286675793
+        },
+        {
+          "level": 100,
+          "idealizedHours": 280.298126948745,
+          "log10Rate": 16.53576890102874,
+          "nextWaitRatio": 1.2285340280486956
+        },
+        {
+          "level": 500,
+          "idealizedHours": 8.799109062659512e+45,
+          "log10Rate": 54.548142002464495,
+          "nextWaitRatio": 1.3079799749236103
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 2.9629502257992446e+105,
+          "log10Rate": 97.06354517276897,
+          "nextWaitRatio": 1.3203341323095692
+        }
+      ]
+    },
+    {
+      "rig": "chorus-five-chords",
+      "curve": "responses-bounded",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.0036558698645185795,
+          "log10Rate": 5.400104851576194,
+          "nextWaitRatio": 1.1431913477058144
+        },
+        {
+          "level": 100,
+          "idealizedHours": 27670.90523259695,
+          "log10Rate": 14.454944757137557,
+          "nextWaitRatio": 1.2753712789103928
+        },
+        {
+          "level": 500,
+          "idealizedHours": 1.1157654154611977e+51,
+          "log10Rate": 49.427702867715716,
+          "nextWaitRatio": 1.3203884476049814
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 1.0683711054777304e+112,
+          "log10Rate": 90.49787864916789,
+          "nextWaitRatio": 1.326765201616515
+        }
+      ]
+    },
+    {
+      "rig": "exciter-tail",
+      "curve": "shipped",
+      "modules": 2,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.4949146021036295,
+          "log10Rate": 3.5622805384562484,
+          "nextWaitRatio": 0.9490262856815868
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.8389873459262273,
+          "log10Rate": 21.788670461370856,
+          "nextWaitRatio": 0.9467455621319363
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.8433696195830543,
+          "log10Rate": 112.94335230683677,
+          "nextWaitRatio": 0.9467455621301737
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.8433696195844177,
+          "log10Rate": 226.88670461367354,
+          "nextWaitRatio": 0.9467455621302276
+        }
+      ]
+    },
+    {
+      "rig": "exciter-tail",
+      "curve": "chorus-bounded",
+      "modules": 2,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.4949146021036295,
+          "log10Rate": 3.5622805384562484,
+          "nextWaitRatio": 0.9490262856815868
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.8389873459262273,
+          "log10Rate": 21.788670461370856,
+          "nextWaitRatio": 0.9467455621319363
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.8433696195830543,
+          "log10Rate": 112.94335230683677,
+          "nextWaitRatio": 0.9467455621301737
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.8433696195844177,
+          "log10Rate": 226.88670461367354,
+          "nextWaitRatio": 0.9467455621302276
+        }
+      ]
+    },
+    {
+      "rig": "exciter-tail",
+      "curve": "responses-linear",
+      "modules": 2,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 3.384076978851208,
+          "log10Rate": 1.977837050472754,
+          "nextWaitRatio": 1.2066365007541475
+        },
+        {
+          "level": 100,
+          "idealizedHours": 20145054.702489328,
+          "log10Rate": 11.508278582990513,
+          "nextWaitRatio": 1.2213740458015279
+        },
+        {
+          "level": 500,
+          "idealizedHours": 5.623652215958075e+42,
+          "log10Rate": 57.69595202301917,
+          "nextWaitRatio": 1.2284513979429188
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 3.5286370088955597e+87,
+          "log10Rate": 114.95618953154195,
+          "nextWaitRatio": 1.2295754681788247
+        }
+      ]
+    },
+    {
+      "rig": "exciter-tail",
+      "curve": "responses-bounded",
+      "modules": 2,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 3.5573383567717802,
+          "log10Rate": 1.932079559912079,
+          "nextWaitRatio": 1.2208436724565759
+        },
+        {
+          "level": 100,
+          "idealizedHours": 45790929.12936286,
+          "log10Rate": 11.13469792017792,
+          "nextWaitRatio": 1.2298452298452298
+        },
+        {
+          "level": 500,
+          "idealizedHours": 5.014593328298492e+43,
+          "log10Rate": 56.74139423626517,
+          "nextWaitRatio": 1.2307229124932033
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 6.0859753677957064e+88,
+          "log10Rate": 113.71722475924115,
+          "nextWaitRatio": 1.2307572956901212
+        }
+      ]
+    },
+    {
+      "rig": "exciter-sideband-five-chords",
+      "curve": "shipped",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.000024960468494114357,
+          "log10Rate": 15.408029337719295,
+          "nextWaitRatio": 0.2970057121177931
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.000024960468550121335,
+          "log10Rate": 72.4608876186923,
+          "nextWaitRatio": 0.3180088801401064
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.000024960468550121335,
+          "log10Rate": 349.1090436430182,
+          "nextWaitRatio": 0.3283129175544144
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.000024960468550121335,
+          "log10Rate": 692.4020847041642,
+          "nextWaitRatio": 0.3298617944338799
+        }
+      ]
+    },
+    {
+      "rig": "exciter-sideband-five-chords",
+      "curve": "chorus-bounded",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.000024960468494114357,
+          "log10Rate": 15.408029337719295,
+          "nextWaitRatio": 0.2970057121177931
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.000024960468550121335,
+          "log10Rate": 72.4608876186923,
+          "nextWaitRatio": 0.3180088801401064
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.000024960468550121335,
+          "log10Rate": 349.1090436430182,
+          "nextWaitRatio": 0.3283129175544144
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.000024960468550121335,
+          "log10Rate": 692.4020847041642,
+          "nextWaitRatio": 0.3298617944338799
+        }
+      ]
+    },
+    {
+      "rig": "exciter-sideband-five-chords",
+      "curve": "responses-linear",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.00009113218810011962,
+          "log10Rate": 7.588933524140695,
+          "nextWaitRatio": 0.9955457351531799
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.014197706477570212,
+          "log10Rate": 21.072803497063873,
+          "nextWaitRatio": 1.1369341648643487
+        },
+        {
+          "level": 500,
+          "idealizedHours": 6.185108345706788e+27,
+          "log10Rate": 72.87282998828114,
+          "nextWaitRatio": 1.2075759826664878
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 8.935409685156218e+69,
+          "log10Rate": 132.74971597245826,
+          "nextWaitRatio": 1.2188267535007347
+        }
+      ]
+    },
+    {
+      "rig": "exciter-sideband-five-chords",
+      "curve": "responses-bounded",
+      "modules": 3,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.00009331943281356018,
+          "log10Rate": 7.3716050552353,
+          "nextWaitRatio": 1.0535721410572867
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.7415046378163526,
+          "log10Rate": 19.223679248522075,
+          "nextWaitRatio": 1.1771103115025967
+        },
+        {
+          "level": 500,
+          "idealizedHours": 3.4250158821435936e+32,
+          "log10Rate": 68.10633803513853,
+          "nextWaitRatio": 1.2188123665283956
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 1.3520345017091705e+76,
+          "log10Rate": 126.55826576654727,
+          "nextWaitRatio": 1.2247043482102062
+        }
+      ]
+    },
+    {
+      "rig": "combined-support",
+      "curve": "shipped",
+      "modules": 5,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.000008611160916800724,
+          "log10Rate": 17.444445410003254,
+          "nextWaitRatio": 0.2569179322225195
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.00000861116091761267,
+          "log10Rate": 80.40040413282556,
+          "nextWaitRatio": 0.26550755464535475
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.00000861116091761267,
+          "log10Rate": 388.6996666701347,
+          "nextWaitRatio": 0.2735940980421175
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.00000861116091761267,
+          "log10Rate": 771.583330751789,
+          "nextWaitRatio": 0.2748848286948813
+        }
+      ]
+    },
+    {
+      "rig": "combined-support",
+      "curve": "chorus-bounded",
+      "modules": 5,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.000009309006049761829,
+          "log10Rate": 17.016906680327555,
+          "nextWaitRatio": 0.2503099853522682
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.000009309006051915508,
+          "log10Rate": 80.37901222871405,
+          "nextWaitRatio": 0.26500740065220724
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.000009309006051915508,
+          "log10Rate": 388.6996666668306,
+          "nextWaitRatio": 0.27359409796202455
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.000009309006051915508,
+          "log10Rate": 771.583330751789,
+          "nextWaitRatio": 0.2748848286948813
+        }
+      ]
+    },
+    {
+      "rig": "combined-support",
+      "curve": "responses-linear",
+      "modules": 5,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.000017709167559334683,
+          "log10Rate": 9.729463730374027,
+          "nextWaitRatio": 0.8192438622992712
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.000017901526686604052,
+          "log10Rate": 29.752954160265535,
+          "nextWaitRatio": 0.9453603368124839
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.000017901689179948275,
+          "log10Rate": 113.31616608118036,
+          "nextWaitRatio": 1.0061903968100636
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.000017903654561153663,
+          "log10Rate": 212.7972498024396,
+          "nextWaitRatio": 1.015656564554159
+        }
+      ]
+    },
+    {
+      "rig": "combined-support",
+      "curve": "responses-bounded",
+      "modules": 5,
+      "milestones": [
+        {
+          "level": 20,
+          "idealizedHours": 0.00001654598049687064,
+          "log10Rate": 9.47370111813714,
+          "nextWaitRatio": 0.874252995407556
+        },
+        {
+          "level": 100,
+          "idealizedHours": 0.00001714587138769267,
+          "log10Rate": 27.73384320577565,
+          "nextWaitRatio": 0.9802659490000175
+        },
+        {
+          "level": 500,
+          "idealizedHours": 0.000017732220639777217,
+          "log10Rate": 108.31456999701484,
+          "nextWaitRatio": 1.0156446007579907
+        },
+        {
+          "level": 1000,
+          "idealizedHours": 0.003950027244320385,
+          "log10Rate": 206.36062516266918,
+          "nextWaitRatio": 1.0205786415259241
+        }
+      ]
+    }
+  ],
+  "boundedWorstExponentialBase": 1.56,
+  "authoredChordResponse": 2
+}
