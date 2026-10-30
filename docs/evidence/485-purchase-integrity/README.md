@@ -3,7 +3,7 @@
 Recaptured on 2026-10-30 from the verified checkout in `provenance.json`:
 source commit `e78cebebe9cf3b7e5811a5c26b27bd4ad2f58ff5`, clean source, after
 all purchase-control changes. Desktop is 1280×800; phone is 390×844. Later
-commits in this pass contain evidence only, not application source.
+commits in this pass change only evidence or test setup, not application source.
 
 ## Reproduce
 
