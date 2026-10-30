@@ -2,7 +2,7 @@ import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REF
 import { bankableClaimOf, frontierEntitlement, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
-import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, levelCost, levelsCost, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
+import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, isPriceableLevel, levelCost, levelsCost, modulePower, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
 import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "./world";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
@@ -23,6 +23,13 @@ import type { Category, GameState, Hex, ModuleInstance, MutatorInstance, Rarity,
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
 // Arete acts outside upgrade mode (ADR-0044).
 const ARETE_MODE_LOCK = "Arete is spent between sessions.";
+
+// The purchase integrity refusal (issue #485), one wording everywhere: a
+// purchase whose budget, price, or result cannot be charged in finite
+// whole nous commits nothing — integrity takes priority over a permissive
+// purchase. It rides the existing failure surface; no new warning of its
+// own.
+const UNSAFE_PURCHASE = "The purchase cannot be charged safely, so nothing was bought.";
 
 export interface ActionResult {
   ok: boolean;
@@ -377,18 +384,52 @@ export function upgradeModule(state: GameState, id: string): ActionResult {
 // that cannot cover its full ladder still buys what the bank covers and
 // reports the shortfall through the bulk payload. Zero affordable levels
 // refuses and touches nothing.
+// Purchase integrity (issue #485): every figure the charge reads is
+// validated before anything is written — a nonfinite bank affords
+// nothing, a nonfinite or fractional request is not a ladder count, an
+// unpriceable level never meets the BigInt curve, and a charge or result
+// that would leave the finite range (the ceiling price past level 1505,
+// a cumulative ledger overflowing after earlier affordable steps, a
+// power the level cannot represent) commits nothing at all.
 export function upgradeModuleLevels(state: GameState, id: string, want: number | "max"): ActionResult {
   const module = findModule(state, id);
   if (!module) return fail("Module not found.");
   if (state.mode !== "upgrade") return fail("Upgrades happen between sessions.");
-  const budget = affordableLevels(wholeNous(state), module.level);
+  const bank = wholeNous(state);
+  if (!Number.isFinite(bank)) return fail(UNSAFE_PURCHASE);
+  if (!validLadderRequest(want)) return fail(UNSAFE_PURCHASE);
+  if (!isPriceableLevel(module.level)) return fail(UNSAFE_PURCHASE);
+  const budget = affordableLevels(bank, module.level);
   const bought = want === "max" ? budget : Math.min(want, budget);
-  if (bought < 1) return fail("Not enough whole nous for even one level.");
+  if (bought < 1) {
+    return fail(Number.isFinite(levelCost(module.level)) ? "Not enough whole nous for even one level." : UNSAFE_PURCHASE);
+  }
   const spent = levelsCost(module.level, bought);
+  if (!Number.isFinite(spent) || !purchaseStaysRepresentable(module, bought, spent)) return fail(UNSAFE_PURCHASE);
   state.nous -= spent;
   module.invested += spent;
   module.level += bought;
   return { ok: true, bulk: { levels: bought, modules: 1, spent }, unlocked: checkUnlocks(state) };
+}
+
+// Whether buying `count` levels for `spent` would leave the economy
+// representable (issue #485): the module's power — the rate figure the
+// new level feeds — and its invested ledger, the cumulative spend, must
+// both stay finite. Read on the would-be values before anything is
+// written, so the refusal is atomic by construction.
+function purchaseStaysRepresentable(module: ModuleInstance, count: number, spent: number): boolean {
+  return (
+    Number.isFinite(modulePower({ ...module, level: module.level + count })) &&
+    Number.isFinite(module.invested + spent)
+  );
+}
+
+// The ladder request's shape (issue #485): a level count is a whole,
+// non-negative number — "max" or nothing else counts. `Number.isInteger`
+// already excludes NaN and the infinities, so a nonfinite request refuses
+// here instead of reaching the arithmetic.
+function validLadderRequest(want: number | "max"): boolean {
+  return want === "max" || (Number.isInteger(want) && want >= 0);
 }
 
 // The spacer is silent wire (#193): its level buys nothing, so every bulk
@@ -403,8 +444,10 @@ export const levelable = (module: ModuleInstance): boolean => module.type !== "s
 // expensive veterans unbuyable. Equal next costs fall to the older module
 // (first in the roster), as the approved prototype read them. The plan is
 // pure, so the apply below charges exactly what was counted.
+const sweepEligible = (module: ModuleInstance): boolean => levelable(module) && isPriceableLevel(module.level);
+
 function sweepPlan(state: GameState, want: number | "max"): Map<string, number> {
-  const eligible = state.modules.filter(levelable);
+  const eligible = state.modules.filter(sweepEligible);
   const plan = new Map<string, number>();
   const bank = wholeNous(state);
   let remaining = bank;
@@ -446,12 +489,29 @@ function sweepPlan(state: GameState, want: number | "max"): Map<string, number> 
 // over every levelable module — deployed and tray alike (tray modules wear
 // no face of their own, so this is their only bulk path) — with spacers
 // excluded everywhere. Partial by design like the per-module ladder.
+// Purchase integrity (issue #485): the same gate the single ladder reads,
+// applied to the whole plan before anything is written — a nonfinite bank
+// or an invalid request sweeps nothing, a charge that overflows the
+// finite range commits no partial purchase, and a plan that would leave
+// any touched module's power or cumulative ledger unrepresentable refuses
+// whole, so the sweep never lands half-applied. The charge is validated
+// against the bank too: the plan's walk budgets by decrement, while the
+// total re-sums per module, and at the float ceiling those groupings can
+// disagree by an ulp — integrity takes the refusal there.
 export function upgradeAll(state: GameState, want: number | "max"): ActionResult {
   if (state.mode !== "upgrade") return fail("Upgrades happen between sessions.");
   if (!state.modules.some(levelable)) return fail("Nothing to upgrade.");
+  const bank = wholeNous(state);
+  if (!Number.isFinite(bank)) return fail(UNSAFE_PURCHASE);
+  if (!validLadderRequest(want)) return fail(UNSAFE_PURCHASE);
   const plan = sweepPlan(state, want);
-  if (plan.size === 0) return fail("Not enough whole nous for even one level.");
+  if (plan.size === 0) return fail(sweepRefusalReason(state));
   const bulk = planTotal(state, plan);
+  if (!Number.isFinite(bulk.spent) || bulk.spent > bank) return fail(UNSAFE_PURCHASE);
+  for (const [id, count] of plan) {
+    const module = findModule(state, id)!;
+    if (!purchaseStaysRepresentable(module, count, levelsCost(module.level, count))) return fail(UNSAFE_PURCHASE);
+  }
   for (const [id, count] of plan) {
     const module = findModule(state, id)!;
     module.invested += levelsCost(module.level, count);
@@ -459,6 +519,15 @@ export function upgradeAll(state: GameState, want: number | "max"): ActionResult
   }
   state.nous -= bulk.spent;
   return { ok: true, bulk, unlocked: checkUnlocks(state) };
+}
+
+// The empty plan's honest refusal (issue #485): a shortfall when the bank
+// prices the cheapest next level short, the integrity refusal when no
+// eligible next level carries a finite price at all — a bigger bank would
+// not help there.
+function sweepRefusalReason(state: GameState): string {
+  const priced = state.modules.some((module) => sweepEligible(module) && Number.isFinite(levelCost(module.level)));
+  return priced ? "Not enough whole nous for even one level." : UNSAFE_PURCHASE;
 }
 
 // The sweep's shape without touching state (issue #195): the cluster's

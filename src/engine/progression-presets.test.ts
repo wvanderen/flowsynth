@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 import {
   APPROACHING_PRESTIGE_RECIPE,
   PLAYTHROUGH_CHECKPOINTS,
@@ -23,10 +23,16 @@ import { horizonReached } from "./accumulator";
 // the scripted-run entry — the engine half of the shared boundary.
 //
 // Walk costs are the honesty price of recipe-generated states: the
-// approaching door rides the baseline schedule (~0.2s), the earned bank
+// approaching door rides the baseline schedule, the earned bank
 // and the World's fight push past the 1T entry depth on the declared
-// long-session schedule (~40s and ~65s). The memo makes every later read
+// long-session schedule. The memo makes every later read
 // in this file a clone, not a walk.
+
+beforeAll(async () => {
+  for (const checkpoint of PLAYTHROUGH_CHECKPOINTS) {
+    await preparePlaythroughCheckpoint(checkpoint.id);
+  }
+}, PLAYTHROUGH_CHECKPOINTS.length * 240_000);
 
 describe("the declared checkpoint recipes", () => {
   it("carries the baseline walk for the approaching door and the pushing walk past the 1T entry", () => {
@@ -64,8 +70,7 @@ describe("the declared checkpoint recipes", () => {
 });
 
 describe("the walked presets", () => {
-  it("stops the approaching walk at the open door of the played first era", { timeout: 120_000 }, async () => {
-    await preparePlaythroughCheckpoint("approaching-prestige");
+  it("stops the approaching walk at the open door of the played first era", () => {
     const preset = playthroughCheckpointPreset("approaching-prestige");
     expect(preset.record.stop.kind).toBe("checkpoint");
     expect(preset.record.stop.reason).toContain("Approaching prestige reached at day 9");
@@ -81,8 +86,7 @@ describe("the walked presets", () => {
     scenarioOf("approaching-prestige")!.assert(state, 0);
   });
 
-  it("stops the pushing walk immediately after its first earned bank, before the spending", { timeout: 120_000 }, async () => {
-    await preparePlaythroughCheckpoint("after-first-bank");
+  it("stops the pushing walk immediately after its first earned bank, before the spending", () => {
     const preset = playthroughCheckpointPreset("after-first-bank");
     expect(preset.record.stop.kind).toBe("checkpoint");
     expect(preset.record.stop.reason).toContain("After first bank reached at day 10");
@@ -102,8 +106,7 @@ describe("the walked presets", () => {
     scenarioOf("after-first-bank")!.assert(state, 0);
   });
 
-  it("stops the pushing walk at the living fight with the placement unplayed", { timeout: 120_000 }, async () => {
-    await preparePlaythroughCheckpoint("world-enemy-active");
+  it("stops the pushing walk at the living fight with the placement unplayed", () => {
     const preset = playthroughCheckpointPreset("world-enemy-active");
     expect(preset.record.stop.kind).toBe("checkpoint");
     expect(preset.record.stop.reason).toContain("World enemy reached at day 15");
@@ -150,7 +153,7 @@ describe("the walked presets", () => {
 });
 
 describe("the preset read's honesty", () => {
-  it("rebuilds the same stopped state from nothing on every read — no accumulation", { timeout: 120_000 }, () => {
+  it("rebuilds the same stopped state from nothing on every read — no accumulation", () => {
     const first = playthroughCheckpointPreset("after-first-bank");
     const second = playthroughCheckpointPreset("after-first-bank");
     // Equal situations, independent states: a launch mutation can never

@@ -120,14 +120,34 @@ export function levelsCost(fromLevel: number, count: number): number {
 // reading of the ladder. The growth curve outgrows any finite budget, so
 // the count is naturally bounded; the cap only keeps a pathological bank
 // from spinning the loop.
+// Purchase integrity (issue #485): a nonfinite budget affords nothing,
+// and the count stops before the first level the curve cannot price —
+// the ceiling reads Infinity from level 1506 under the authored
+// coefficients, and an infinite price is never affordable, not even
+// against an infinite balance. An unpriceable level (a corrupted module
+// level that would crash the BigInt curve) affords nothing too; the
+// purchase actions refuse it as integrity, and this seam simply never
+// counts a level it cannot price.
 const AFFORDABLE_LEVEL_CAP = 500;
 
+// The highest level the ladder will price (issue #485): whole, finite,
+// non-negative, and far under any BigInt blowup while still above the
+// curve's own representable ceiling — past it the price is Infinity and
+// the purchase refuses, so the bound only ever converts a crash into the
+// refusal the ceiling already means.
+export const MAX_PRICED_LEVEL = 4096;
+
+export function isPriceableLevel(level: number): boolean {
+  return Number.isInteger(level) && level >= 0 && level <= MAX_PRICED_LEVEL;
+}
+
 export function affordableLevels(nous: number, fromLevel: number): number {
+  if (!Number.isFinite(nous) || !isPriceableLevel(fromLevel)) return 0;
   let count = 0;
   let spent = 0;
   while (count < AFFORDABLE_LEVEL_CAP) {
     const next = levelCost(fromLevel + count);
-    if (spent + next > nous) break;
+    if (!Number.isFinite(next) || spent + next > nous) break;
     spent += next;
     count++;
   }
