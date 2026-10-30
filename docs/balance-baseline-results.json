@@ -1,0 +1,161 @@
+{
+  "model": "real-engine fresh-start pushing policy, four credited hours (25-minute schedule rounds to 4.167); shipped tuning only",
+  "rows": [
+    {
+      "recipe": {
+        "scenarioId": "fresh-start",
+        "seed": 42,
+        "policyId": "pushing",
+        "claimTarget": 2,
+        "schedule": {
+          "sessionsPerDay": 2,
+          "sessionMinutes": 25,
+          "breatherMinutes": 5,
+          "habitName": "Practice",
+          "goalMinutes": 25,
+          "startAt": 1767603600000,
+          "timeZone": "America/Chicago"
+        },
+        "budgetDays": 5,
+        "overrides": {}
+      },
+      "source": {
+        "game": "flowsynth",
+        "saveVersion": 12,
+        "runnerVersion": 9,
+        "engineSource": "c90dceff"
+      },
+      "runId": "fresh-start-s42-bd22f8bb",
+      "stop": {
+        "kind": "budget",
+        "reason": "The 5-day budget ended before the 2-Arete claim or the recovery behind it."
+      },
+      "creditedHours": 4.166666666666667,
+      "breatherHours": 0.8333333333333334,
+      "earnedNous": 183691.64343181084,
+      "pendingClaim": 0,
+      "claims": [],
+      "lastMilestone": "Feat unlocked — keeping-time",
+      "worldDiscoveries": [],
+      "worldDefeats": [],
+      "maxModuleLevel": 14
+    },
+    {
+      "recipe": {
+        "scenarioId": "fresh-start",
+        "seed": 42,
+        "policyId": "pushing",
+        "claimTarget": 2,
+        "schedule": {
+          "sessionsPerDay": 2,
+          "sessionMinutes": 60,
+          "breatherMinutes": 5,
+          "habitName": "Practice",
+          "goalMinutes": 25,
+          "startAt": 1767603600000,
+          "timeZone": "America/Chicago"
+        },
+        "budgetDays": 2,
+        "overrides": {}
+      },
+      "source": {
+        "game": "flowsynth",
+        "saveVersion": 12,
+        "runnerVersion": 9,
+        "engineSource": "c90dceff"
+      },
+      "runId": "fresh-start-s42-0216e237",
+      "stop": {
+        "kind": "budget",
+        "reason": "The 2-day budget ended before the 2-Arete claim or the recovery behind it."
+      },
+      "creditedHours": 4,
+      "breatherHours": 0.3333333333333333,
+      "earnedNous": 10237.438471106596,
+      "pendingClaim": 0,
+      "claims": [],
+      "lastMilestone": "Feat unlocked — time-in-the-seat",
+      "worldDiscoveries": [],
+      "worldDefeats": [],
+      "maxModuleLevel": 5
+    },
+    {
+      "recipe": {
+        "scenarioId": "fresh-start",
+        "seed": 468,
+        "policyId": "pushing",
+        "claimTarget": 2,
+        "schedule": {
+          "sessionsPerDay": 2,
+          "sessionMinutes": 25,
+          "breatherMinutes": 5,
+          "habitName": "Practice",
+          "goalMinutes": 25,
+          "startAt": 1767603600000,
+          "timeZone": "America/Chicago"
+        },
+        "budgetDays": 5,
+        "overrides": {}
+      },
+      "source": {
+        "game": "flowsynth",
+        "saveVersion": 12,
+        "runnerVersion": 9,
+        "engineSource": "c90dceff"
+      },
+      "runId": "fresh-start-s468-de5dbe03",
+      "stop": {
+        "kind": "budget",
+        "reason": "The 5-day budget ended before the 2-Arete claim or the recovery behind it."
+      },
+      "creditedHours": 4.166666666666667,
+      "breatherHours": 0.8333333333333334,
+      "earnedNous": 279311.3945212008,
+      "pendingClaim": 0,
+      "claims": [],
+      "lastMilestone": "Feat unlocked — keeping-time",
+      "worldDiscoveries": [],
+      "worldDefeats": [],
+      "maxModuleLevel": 14
+    },
+    {
+      "recipe": {
+        "scenarioId": "fresh-start",
+        "seed": 468,
+        "policyId": "pushing",
+        "claimTarget": 2,
+        "schedule": {
+          "sessionsPerDay": 2,
+          "sessionMinutes": 60,
+          "breatherMinutes": 5,
+          "habitName": "Practice",
+          "goalMinutes": 25,
+          "startAt": 1767603600000,
+          "timeZone": "America/Chicago"
+        },
+        "budgetDays": 2,
+        "overrides": {}
+      },
+      "source": {
+        "game": "flowsynth",
+        "saveVersion": 12,
+        "runnerVersion": 9,
+        "engineSource": "c90dceff"
+      },
+      "runId": "fresh-start-s468-de9eefdf",
+      "stop": {
+        "kind": "budget",
+        "reason": "The 2-day budget ended before the 2-Arete claim or the recovery behind it."
+      },
+      "creditedHours": 4,
+      "breatherHours": 0.3333333333333333,
+      "earnedNous": 29290.144492107458,
+      "pendingClaim": 0,
+      "claims": [],
+      "lastMilestone": "Feat unlocked — power-chord",
+      "worldDiscoveries": [],
+      "worldDefeats": [],
+      "maxModuleLevel": 6
+    }
+  ]
+}
