@@ -18,9 +18,15 @@
     },
     "advanceRefusal": {
       "fault": "the produced ν/s",
-      "status": "The board's figures outran the instrument's range — the refused moments left nothing behind.",
+      "status": "The board's figures outran the instrument's range — the refused update left nothing behind.",
       "nous": 0,
       "elapsed": 0
+    },
+    "honestyRefusal": {
+      "status": "The provisional nous cannot bank safely, so nothing was credited.",
+      "pool": 3600,
+      "credited": 0,
+      "bucketUnrepresentable": true
     },
     "recovery": {
       "fault": null,
@@ -47,9 +53,15 @@
     },
     "advanceRefusal": {
       "fault": "the produced ν/s",
-      "status": "The board's figures outran the instrument's range — the refused moments left nothing behind.",
+      "status": "The board's figures outran the instrument's range — the refused update left nothing behind.",
       "nous": 0,
       "elapsed": 0
+    },
+    "honestyRefusal": {
+      "status": "The provisional nous cannot bank safely, so nothing was credited.",
+      "pool": 3600,
+      "credited": 0,
+      "bucketUnrepresentable": true
     },
     "recovery": {
       "fault": null,

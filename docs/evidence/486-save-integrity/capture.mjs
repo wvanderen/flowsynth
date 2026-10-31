@@ -96,19 +96,18 @@ try {
       const app = window.__flowsynth;
       app.state.session.accounting.poolSeconds = 3600;
       app.state.session.accounting.bucketNous = Number.POSITIVE_INFINITY;
-      const resolution = app.resolveHonesty("full");
+      app.resolveHonesty("full");
       return {
-        ok: resolution.ok,
         status: document.querySelector("#status").textContent,
         pool: app.state.session.accounting.poolSeconds,
         credited: app.state.session.accounting.creditedSeconds,
-        bucket: app.state.session.accounting.bucketNous,
+        bucketUnrepresentable: !Number.isFinite(app.state.session.accounting.bucketNous),
       };
     });
-    assert.equal(honestyRefusal.ok, false);
     assert.equal(honestyRefusal.status, HONESTY_REFUSED);
     assert.equal(honestyRefusal.pool, 3600);
     assert.equal(honestyRefusal.credited, 0);
+    assert.equal(honestyRefusal.bucketUnrepresentable, true); // dropped by no answer — waiting, unbanked
     await page.screenshot({ path: new URL(`${name}-honesty-refusal.png`, output).pathname });
 
     // The recovery read: the board back inside the range, the next update

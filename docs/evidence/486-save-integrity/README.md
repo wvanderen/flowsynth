@@ -1,11 +1,12 @@
 # #486 — save integrity: the failure path's copy, refusals, and recovery
 
-Captured on 2026-10-30 from the verified checkout in `provenance.json`:
-source commit `d7627a91425c2ae85db433fa75a48a43081b6a6f`, clean source, after
-all save-integrity changes. Desktop is 1280×800; phone is 390×844. The
-capture script drives the real settings door for export, the dev clock for
-the live update, and installs the fresh-start scenario on an isolated
-in-memory save — the player's persistent save is never read or written.
+Captured on 2026-10-31 from the verified checkout in `provenance.json`:
+source commit `fa993fa`, clean source, after all save-integrity changes
+including the review round's retention and copy fixes. Desktop is
+1280×800; phone is 390×844. The capture script drives the real settings
+door for export, the dev clock for the live update, the honesty report's
+answer, and installs the fresh-start scenario on an isolated in-memory
+save — the player's persistent save is never read or written.
 
 ## Reproduce
 
@@ -33,6 +34,7 @@ Every row has a `desktop-` and a `phone-` PNG.
 | `save-failure.png` | A NaN bank on the isolated save; `app.save()` refuses (JSON would write null) and the ledger reads `— ν` — the figure that refused is what stands. |
 | `export-refusal.png` | Settings → Export save with the unrepresentable state: the modal's lead reads `These figures exceed what a save can hold — nothing was exported.`, with the technical path beneath; the textarea and download button are absent. |
 | `advance-refusal.png` | A live session whose board rate left the range (the synth at Lv. 5000): `devAdvance(60)` refuses the span — the clock stays 00:00, the balance 0 ν, the rate `— ν/s`. The refused update left nothing behind, visible on the face. |
+| `honesty-refusal.png` | The honesty report's answer against an unrepresentable bucket: the settlement refuses whole — the header's session line reads `1 h 0 min provisional · — ν` (the pool stays outstanding), no minute credited. |
 | `recovery.png` | The board back at Lv. 4: the next update banks (12.44 ν) and the dev clock's own line stands — the refusal streak ended. The subsequent save succeeds. |
 
 The three failure lines report through the existing `#status` live region
@@ -42,7 +44,8 @@ from screenshots of a screen-reader-only region:
 
 - `Saving failed — your last valid save stands untouched.`
 - `These figures exceed what a save can hold — nothing was exported.` (modal lead)
-- `The board's figures outran the instrument's range — the refused moments left nothing behind.`
+- `The board's figures outran the instrument's range — the refused update left nothing behind.`
+- `The provisional nous cannot bank safely, so nothing was credited.`
 
 None claims a recovery happened.
 
