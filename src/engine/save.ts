@@ -19,8 +19,36 @@ export interface LoadResult {
   error?: string;
 }
 
+// The serialization refusal (issue #486): JSON.stringify silently writes
+// null for a nonfinite number — the exact corruption the parent save
+// carried. A save whose figures cannot land on disk refuses instead, and
+// the path it names is the first figure that refused.
+export class SaveRefusedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SaveRefusedError";
+  }
+}
+
+function assertSerializable(value: unknown, path: string): void {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new SaveRefusedError(`The save refuses to write "${path}" — its figure is not a finite number.`);
+    }
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach((item, index) => assertSerializable(item, `${path}[${index}]`));
+    return;
+  }
+  if (isRecord(value)) {
+    for (const [key, item] of Object.entries(value)) assertSerializable(item, `${path}.${key}`);
+  }
+}
+
 export function serialize(state: GameState, savedAt: number = Date.now()): string {
   const file: SaveFile = { app: "flowsynth", version: SAVE_VERSION, savedAt, state };
+  assertSerializable(file, "save");
   return JSON.stringify(file, null, 2);
 }
 
@@ -501,3 +529,8 @@ function migrateV11ToV12(merged: GameState): void {
 }
 
 export const STORAGE_KEY = "flowsynth.save.v1";
+
+// The original save's slot (issue #486): the exact stored or imported
+// bytes, retained before anything can replace them — the foundation the
+// future migration and recovery reads.
+export const ORIGINAL_SAVE_KEY = "flowsynth.save.original.v1";

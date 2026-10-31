@@ -1,4 +1,5 @@
 import { CATEGORY_OF, EPS } from "./constants";
+import { NumericFault, requireFinite } from "./numeric";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { chargeDelivered, emittedStrength, maxChordFactorOf, deployed, sessionClockOf, syncRates } from "./economy";
@@ -21,11 +22,16 @@ export type AdvanceSink = "live" | "provisional";
 // The one production-credit seam (ADR-0039): produced nous lands on the
 // balance, the lifetime truth, and the era's measure together — prestige
 // rebases only the era leg. Every nous-granting path reads this, never
-// three parallel increments that can drift.
+// three parallel increments that can drift. The landing checks itself:
+// an unrepresentable grant refuses before any of the three moves.
 export function earnNous(state: GameState, amount: number): void {
-  state.nous += amount;
-  state.totalEarned += amount;
-  state.eraEarned += amount;
+  requireFinite(amount, "the earned ν");
+  const nous = requireFinite(state.nous + amount, "the nous balance");
+  const totalEarned = requireFinite(state.totalEarned + amount, "the lifetime total");
+  const eraEarned = requireFinite(state.eraEarned + amount, "the era's measure");
+  state.nous = nous;
+  state.totalEarned = totalEarned;
+  state.eraEarned = eraEarned;
 }
 
 export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
@@ -36,6 +42,7 @@ export function sumResults(a: AdvanceResult, b: AdvanceResult): AdvanceResult {
     rollsForge: a.rollsForge + b.rollsForge,
     rollsMutator: a.rollsMutator + b.rollsMutator,
     goalsCompleted: a.goalsCompleted + b.goalsCompleted,
+    fault: a.fault ?? b.fault,
   };
 }
 
@@ -46,7 +53,7 @@ function boardBoundaries(state: GameState) {
   for (const module of deployed(state)) {
     if (CATEGORY_OF[module.type] !== "generator") continue;
     if (module.reserve > EPS) {
-      const strength = emittedStrength(state, module, true);
+      const strength = requireFinite(emittedStrength(state, module, true), "a generator's emission strength");
       liveGenerators.push({ module, strength });
       earliest = Math.min(earliest, module.reserve / strength);
     }
@@ -79,7 +86,7 @@ function advanceForge(state: GameState, snapshot: RateSnapshot, spanSeconds: num
 
 function drainReserves(liveGenerators: { module: ModuleInstance; strength: number }[], spanSeconds: number): void {
   for (const { module, strength } of liveGenerators) {
-    module.reserve = Math.max(0, module.reserve - strength * spanSeconds);
+    module.reserve = Math.max(0, requireFinite(module.reserve - strength * spanSeconds, "a generator's reserve"));
   }
 }
 
@@ -94,11 +101,12 @@ function discoverBoard(state: GameState, snapshot: RateSnapshot): void {
   syncChordDiscoveries(state, { chords: snapshot.allocation ? summaryTermsOf(snapshot.allocation) : snapshot.namedChords });
 }
 
-export function advance(
+// The advance walk proper: the span loop the guard below wraps.
+function walkFlow(
   state: GameState,
   seconds: number,
-  rng: Rng = Math.random,
-  sink: AdvanceSink = "live",
+  rng: Rng,
+  sink: AdvanceSink,
 ): AdvanceResult {
   let result: AdvanceResult = {
     nousEarned: 0,
@@ -165,25 +173,25 @@ export function advance(
     // the selected whole chords only, recomputed every step so charge,
     // upgrades, and placement reselections land. The retention hint rides
     // the state and is written back here.
-    const gained = snapshot.rate * spanSeconds;
+    const gained = requireFinite(snapshot.rate * spanSeconds, "the produced ν/s");
     // Supply earned during this span is available at its ending attack tick.
     advanceWorldCharge(state, snapshot, spanSeconds);
     if (sink === "provisional") {
       // Provisional nous never touches the balance: it waits in the bucket
       // for the honesty report to bank or drop it in one move (§2), and the
       // span's minutes join the pool behind it.
-      session.accounting.bucketNous += gained;
-      session.accounting.poolSeconds += spanSeconds;
+      session.accounting.bucketNous = requireFinite(session.accounting.bucketNous + gained, "the provisional bucket");
+      session.accounting.poolSeconds = requireFinite(session.accounting.poolSeconds + spanSeconds, "the provisional pool");
     } else {
       earnNous(state, gained);
     }
     spanResult.nousEarned += gained;
     advanceForge(state, snapshot, spanSeconds, rng, spanResult);
-    session.elapsed += spanSeconds;
+    session.elapsed = requireFinite(session.elapsed + spanSeconds, "the session clock");
     // The summary's headline and rate (§5.7) accrue with the session itself,
     // so pauses never count into either; provisional production stays out
     // until its bucket banks.
-    if (sink === "live") session.earned += gained;
+    if (sink === "live") session.earned = requireFinite(session.earned + gained, "the session's earned ν");
     // Each generator's reserve is a store of charge quantity of its own
     // (issue #371): a deployed generator — any named design —
     // spends reserve at its emission rate per flow second, elapsing even
@@ -242,7 +250,7 @@ export function advance(
 // session's, kept warm). The wall gap clamps at the remaining allowance —
 // the phase cannot overshoot its mint — and the caller ends it when the
 // clamp bites (trust.applyBreatherGap flags the completion).
-export function advanceBreather(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
+function walkBreather(state: GameState, seconds: number, rng: Rng): AdvanceResult {
   let result: AdvanceResult = {
     nousEarned: 0,
     rollsBanked: 0,
@@ -270,7 +278,7 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     const { liveGenerators, earliest } = boardBoundaries(state);
     const boundary = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
     const spanSeconds = boundary !== Infinity && boundary + EPS < seconds ? boundary : seconds;
-    const gained = snapshot.rate * spanSeconds;
+    const gained = requireFinite(snapshot.rate * spanSeconds, "the breather's produced ν/s");
     // Supply earned during this span is available at its ending attack tick.
     advanceWorldCharge(state, snapshot, spanSeconds);
     // Pre-trusted time banks straight onto the balance — the counter-image
@@ -278,7 +286,7 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     earnNous(state, gained);
     spanResult.nousEarned += gained;
     advanceForge(state, snapshot, spanSeconds, rng, spanResult);
-    breather.elapsed += spanSeconds;
+    breather.elapsed = requireFinite(breather.elapsed + spanSeconds, "the breather's clock");
     drainReserves(liveGenerators, spanSeconds);
     // No creditedSeconds, no habit, no goal, no flow meter: a breather
     // credits nothing (spec §6 — the honesty system governs practice
@@ -290,4 +298,46 @@ export function advanceBreather(state: GameState, seconds: number, rng: Rng = Ma
     seconds -= spanSeconds;
   }
   return result;
+}
+
+// The breather's advance under the same refusal wrapper (issue #486): a
+// pre-trusted phase cannot bank an unrepresentable figure either — the
+// failed span restores the phase it started with, and the refusal rides
+// the result.
+export function advanceBreather(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
+  return walkRefusingFault(state, structuredClone(state), () => walkBreather(state, seconds, rng));
+}
+
+// The refusal plumbing both walks share: the walk runs against the live
+// state, and a commit-point numeric fault — a rate, balance, reserve,
+// meter, or supply figure the doubles cannot hold — restores the snapshot
+// taken at entry, so the whole update commits or nothing does. The
+// refusal rides the result's fault detail: every caller (the boundary
+// walk, the honesty report, the dev clock, the scheduled playthrough)
+// reports it through plumbing that already exists, and the state left
+// behind is the last valid economy state, ready to save.
+export function emptyAdvanceResult(): AdvanceResult {
+  return {
+    nousEarned: 0, rollsBanked: 0, rollsFlow: 0,
+    rollsForge: 0, rollsMutator: 0, goalsCompleted: 0,
+  };
+}
+
+function walkRefusingFault(state: GameState, pristine: GameState, walk: () => AdvanceResult): AdvanceResult {
+  try {
+    return walk();
+  } catch (error) {
+    if (!(error instanceof NumericFault)) throw error;
+    Object.assign(state, pristine);
+    return { ...emptyAdvanceResult(), fault: error.detail };
+  }
+}
+
+export function advance(
+  state: GameState,
+  seconds: number,
+  rng: Rng = Math.random,
+  sink: AdvanceSink = "live",
+): AdvanceResult {
+  return walkRefusingFault(state, structuredClone(state), () => walkFlow(state, seconds, rng, sink));
 }

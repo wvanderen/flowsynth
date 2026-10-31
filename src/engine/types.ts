@@ -968,4 +968,9 @@ export interface AdvanceResult {
   // into the Mutator tray's own queue, counted beside the module rolls.
   rollsMutator: number;
   goalsCompleted: number;
+  // The numeric-fault refusal (issue #486): set when the update's
+  // arithmetic left the representable range and the whole update was
+  // restored — the state carries nothing from it. Absent on every valid
+  // update; the detail names the figure that refused.
+  fault?: string | undefined;
 }

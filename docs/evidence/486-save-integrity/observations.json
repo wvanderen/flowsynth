@@ -1,0 +1,112 @@
+[
+  {
+    "viewport": "desktop",
+    "ready": {
+      "width": 1280,
+      "height": 800,
+      "reducedMotion": true,
+      "scenario": "Fresh start ✓ 12ν grant · one synth · upgrade mode · the shipped opening board · initial state · isolated save"
+    },
+    "saveFailure": {
+      "status": "Saving failed — your last valid save stands untouched.",
+      "bank": null
+    },
+    "exportRefusal": {
+      "lead": "These figures exceed what a save can hold — nothing was exported.",
+      "textarea": false,
+      "download": false
+    },
+    "advanceRefusal": {
+      "fault": "the produced ν/s",
+      "status": "The board's figures outran the instrument's range — the refused update left nothing behind.",
+      "nous": 0,
+      "elapsed": 0
+    },
+    "honestyRefusal": {
+      "status": "The provisional nous cannot bank safely, so nothing was credited.",
+      "pool": 3600,
+      "credited": 0,
+      "bucketUnrepresentable": true
+    },
+    "recovery": {
+      "fault": null,
+      "status": "Dev clock +60s.",
+      "nous": 12.4416,
+      "savedNous": 12.4416
+    },
+    "importRefusal": {
+      "error": "The original save could not be retained. Nothing was imported.",
+      "nous": 12,
+      "modal": "import"
+    },
+    "finishRefusal": {
+      "status": "The generator charge cannot bank safely, so the session is still open.",
+      "mode": "flow",
+      "seconds": 60
+    },
+    "noteRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was written.",
+      "notes": 0
+    },
+    "logRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was logged.",
+      "logs": 1,
+      "seconds": 60
+    }
+  },
+  {
+    "viewport": "phone",
+    "ready": {
+      "width": 390,
+      "height": 844,
+      "reducedMotion": true,
+      "scenario": "Fresh start ✓ 12ν grant · one synth · upgrade mode · the shipped opening board · initial state · isolated save"
+    },
+    "saveFailure": {
+      "status": "Saving failed — your last valid save stands untouched.",
+      "bank": null
+    },
+    "exportRefusal": {
+      "lead": "These figures exceed what a save can hold — nothing was exported.",
+      "textarea": false,
+      "download": false
+    },
+    "advanceRefusal": {
+      "fault": "the produced ν/s",
+      "status": "The board's figures outran the instrument's range — the refused update left nothing behind.",
+      "nous": 0,
+      "elapsed": 0
+    },
+    "honestyRefusal": {
+      "status": "The provisional nous cannot bank safely, so nothing was credited.",
+      "pool": 3600,
+      "credited": 0,
+      "bucketUnrepresentable": true
+    },
+    "recovery": {
+      "fault": null,
+      "status": "Dev clock +60s.",
+      "nous": 12.4416,
+      "savedNous": 12.4416
+    },
+    "importRefusal": {
+      "error": "The original save could not be retained. Nothing was imported.",
+      "nous": 12,
+      "modal": "import"
+    },
+    "finishRefusal": {
+      "status": "The generator charge cannot bank safely, so the session is still open.",
+      "mode": "flow",
+      "seconds": 60
+    },
+    "noteRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was written.",
+      "notes": 0
+    },
+    "logRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was logged.",
+      "logs": 1,
+      "seconds": 60
+    }
+  }
+]

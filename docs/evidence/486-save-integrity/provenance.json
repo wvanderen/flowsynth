@@ -1,0 +1,71 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-10-31T12:26:16.148Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "t3/issue-486",
+  "commit": "15f7bdb5f72211721f6d9b2c026b97733dd11039",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/486-save-integrity/capture.mjs",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/desktop-honesty-refusal.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/desktop-recovery.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/observations.json",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/phone-recovery.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/provenance.json",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/desktop-finish-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/desktop-import-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/desktop-log-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/desktop-note-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/phone-finish-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/phone-import-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/phone-log-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/486-save-integrity/phone-note-refusal.png",
+        "state": "??"
+      }
+    ]
+  }
+}

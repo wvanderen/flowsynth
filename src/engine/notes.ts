@@ -1,4 +1,5 @@
 import { syncAchievements } from "./achievements";
+import { NumericFault } from "./numeric";
 import { creditNoteEarning } from "./reserves";
 import type { GameState } from "./types";
 
@@ -24,6 +25,20 @@ export function writeNote(state: GameState, text: string, now: number = 0): { ok
   const trimmed = text.trim();
   if (!trimmed) return { ok: false, reason: "Write something first." };
   const stored = trimmed.slice(0, 2000);
+  // The written-note fact's credit (ADR-0047, generalized by issue #371):
+  // the note banks the moment it is written — in flow or between sessions,
+  // tagged or not — crediting every owned generator at its own profile:
+  // character earning per stored character under the per-note cap, plus
+  // the creation bonus once for a note meeting the creation minimum.
+  // Notes are append-only, so there is no refund path and no edit or
+  // re-save that could re-award the creation bonus; a future delete never
+  // refunds.
+  try {
+    creditNoteEarning(state, stored);
+  } catch (error) {
+    if (!(error instanceof NumericFault)) throw error;
+    return { ok: false, reason: "The generator charge cannot bank safely, so nothing was written." };
+  }
   const live = state.session !== null;
   state.notes.push({
     id: `n${state.nextId++}`,
@@ -36,15 +51,6 @@ export function writeNote(state: GameState, text: string, now: number = 0): { ok
     habitId: live ? state.activeHabitId : null,
     at: now,
   });
-  // The written-note fact's credit (ADR-0047, generalized by issue #371):
-  // the note banks the moment it is written — in flow or between sessions,
-  // tagged or not — crediting every owned generator at its own profile:
-  // character earning per stored character under the per-note cap, plus
-  // the creation bonus once for a note meeting the creation minimum.
-  // Notes are append-only, so there is no refund path and no edit or
-  // re-save that could re-award the creation bonus; a future delete never
-  // refunds.
-  creditNoteEarning(state, stored);
   // The boundary check (ADR-0015): Marginalia and the note ladder unlock
   // here; a live session queues them into its summary row.
   syncAchievements(state);

@@ -1,4 +1,5 @@
 import { playthroughStatusMark } from "../engine/playthrough";
+import { SaveRefusedError } from "../engine/save";
 import { historicalBoardHtml } from "./historical-board";
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
@@ -3725,7 +3726,22 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
 }
 
 function renderExportModal(app: App, content: HTMLElement): void {
-  const text = app.exportText();
+  // The export refusal (issue #486): a state whose figures cannot land in
+  // a file refuses here, in the modal, without offering a download — and
+  // without claiming any recovery happened.
+  let text: string;
+  try {
+    text = app.exportText();
+  } catch (error) {
+    if (!(error instanceof SaveRefusedError)) throw error;
+    content.innerHTML = `
+      ${modalTop("EXPORT SAVE")}
+      <h2 id="modal-title">Take your progress with you.</h2>
+      <p class="lead">These figures exceed what a save can hold — nothing was exported.</p>
+      <p class="import-error">${error.message}</p>`;
+    wireClose(app);
+    return;
+  }
   content.innerHTML = `
     ${modalTop("EXPORT SAVE")}
     <h2 id="modal-title">Take your progress with you.</h2>
