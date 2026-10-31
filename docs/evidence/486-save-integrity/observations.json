@@ -1,0 +1,60 @@
+[
+  {
+    "viewport": "desktop",
+    "ready": {
+      "width": 1280,
+      "height": 800,
+      "reducedMotion": true,
+      "scenario": "Fresh start ✓ 12ν grant · one synth · upgrade mode · the shipped opening board · initial state · isolated save"
+    },
+    "saveFailure": {
+      "status": "Saving failed — your last valid save stands untouched.",
+      "bank": null
+    },
+    "exportRefusal": {
+      "lead": "These figures exceed what a save can hold — nothing was exported.",
+      "textarea": false,
+      "download": false
+    },
+    "advanceRefusal": {
+      "fault": "the produced ν/s",
+      "status": "The board's figures outran the instrument's range — the refused moments left nothing behind.",
+      "nous": 0,
+      "elapsed": 0
+    },
+    "recovery": {
+      "fault": null,
+      "status": "Dev clock +60s.",
+      "nous": 12.4416
+    }
+  },
+  {
+    "viewport": "phone",
+    "ready": {
+      "width": 390,
+      "height": 844,
+      "reducedMotion": true,
+      "scenario": "Fresh start ✓ 12ν grant · one synth · upgrade mode · the shipped opening board · initial state · isolated save"
+    },
+    "saveFailure": {
+      "status": "Saving failed — your last valid save stands untouched.",
+      "bank": null
+    },
+    "exportRefusal": {
+      "lead": "These figures exceed what a save can hold — nothing was exported.",
+      "textarea": false,
+      "download": false
+    },
+    "advanceRefusal": {
+      "fault": "the produced ν/s",
+      "status": "The board's figures outran the instrument's range — the refused moments left nothing behind.",
+      "nous": 0,
+      "elapsed": 0
+    },
+    "recovery": {
+      "fault": null,
+      "status": "Dev clock +60s.",
+      "nous": 12.4416
+    }
+  }
+]
