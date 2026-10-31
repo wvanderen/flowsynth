@@ -1,8 +1,8 @@
 # #486 — save integrity: the failure path's copy, refusals, and recovery
 
 Captured on 2026-10-31 from the verified checkout in `provenance.json`:
-source commit `fa993fa`, clean source, after all save-integrity changes
-including the review round's retention and copy fixes. Desktop is
+source commit `15f7bdb`, clean source, after the refusal-boundary review
+fixes for buffered practice, reserve earning, and mandatory backup retention. Desktop is
 1280×800; phone is 390×844. The capture script drives the real settings
 door for export, the dev clock for the live update, the honesty report's
 answer, and installs the fresh-start scenario on an isolated in-memory
@@ -35,9 +35,13 @@ Every row has a `desktop-` and a `phone-` PNG.
 | `export-refusal.png` | Settings → Export save with the unrepresentable state: the modal's lead reads `These figures exceed what a save can hold — nothing was exported.`, with the technical path beneath; the textarea and download button are absent. |
 | `advance-refusal.png` | A live session whose board rate left the range (the synth at Lv. 5000): `devAdvance(60)` refuses the span — the clock stays 00:00, the balance 0 ν, the rate `— ν/s`. The refused update left nothing behind, visible on the face. |
 | `honesty-refusal.png` | The honesty report's answer against an unrepresentable bucket: the settlement refuses whole — the header's session line reads `1 h 0 min provisional · — ν` (the pool stays outstanding), no minute credited. |
-| `recovery.png` | The board back at Lv. 4: the next update banks (12.44 ν) and the dev clock's own line stands — the refusal streak ended. The subsequent save succeeds. |
+| `recovery.png` | After explicitly rejecting the injected invalid provisional bucket, the board back at Lv. 4 banks 12.44 ν. A forced save succeeds and its stored balance equals the recovered balance (`savedNous` in observations). |
+| `import-refusal.png` | Backup storage rejects the imported original. The existing import modal reads `The original save could not be retained. Nothing was imported.`; the balance stays 12 ν and the modal remains open. Keyboard activation on desktop and touch activation on phone drive the settings/import/apply controls. |
+| `finish-refusal.png` | An overflowing tray generator refuses session finish; the session remains in flow with 60 credited seconds. The live region reports `The generator charge cannot bank safely, so the session is still open.` |
+| `note-refusal.png` | The same generator refuses note credit before the note is appended; the live region reports `The generator charge cannot bank safely, so nothing was written.` |
+| `log-refusal.png` | A mixed live/manual goal completion refuses overflowing reserve credit. The live minute and its existing practice row remain, and the failed manual entry adds nothing. The live region reports `The generator charge cannot bank safely, so nothing was logged.` |
 
-The three failure lines report through the existing `#status` live region
+Failure lines report through the existing `#status` live region
 (`role="status"`, `aria-live="polite"`, visually `sr-only`). Their exact
 texts after the actions are recorded in `observations.json`, not inferred
 from screenshots of a screen-reader-only region:
@@ -66,3 +70,13 @@ None claims a recovery happened.
   reads `— ν`, not a color change.
 - Unavailable: screen-reader speech output, color-vision simulation. The
   live region's text is DOM-verified in `observations.json` instead.
+
+## Review-fix coverage
+
+The capture assertions establish the visible import denial and DOM live-region
+copy for session finish, notes, and manual logs. Automated regression cases in
+`src/engine/save-integrity.test.ts` additionally pin exact state preservation,
+absence retry after save/reload, split-plan rollback, and successful valid
+operations after correcting the overflowing generator. Backup-denial and retry
+cases are in `src/ui/shared-save.test.ts` and `src/ui/app.savefailure.test.ts`.
+The PR Verification table is the single acceptance-criterion completion record.

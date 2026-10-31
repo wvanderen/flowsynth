@@ -31,7 +31,27 @@
     "recovery": {
       "fault": null,
       "status": "Dev clock +60s.",
-      "nous": 12.4416
+      "nous": 12.4416,
+      "savedNous": 12.4416
+    },
+    "importRefusal": {
+      "error": "The original save could not be retained. Nothing was imported.",
+      "nous": 12,
+      "modal": "import"
+    },
+    "finishRefusal": {
+      "status": "The generator charge cannot bank safely, so the session is still open.",
+      "mode": "flow",
+      "seconds": 60
+    },
+    "noteRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was written.",
+      "notes": 0
+    },
+    "logRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was logged.",
+      "logs": 1,
+      "seconds": 60
     }
   },
   {
@@ -66,7 +86,27 @@
     "recovery": {
       "fault": null,
       "status": "Dev clock +60s.",
-      "nous": 12.4416
+      "nous": 12.4416,
+      "savedNous": 12.4416
+    },
+    "importRefusal": {
+      "error": "The original save could not be retained. Nothing was imported.",
+      "nous": 12,
+      "modal": "import"
+    },
+    "finishRefusal": {
+      "status": "The generator charge cannot bank safely, so the session is still open.",
+      "mode": "flow",
+      "seconds": 60
+    },
+    "noteRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was written.",
+      "notes": 0
+    },
+    "logRefusal": {
+      "status": "The generator charge cannot bank safely, so nothing was logged.",
+      "logs": 1,
+      "seconds": 60
     }
   }
 ]

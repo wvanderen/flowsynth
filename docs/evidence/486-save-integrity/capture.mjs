@@ -114,16 +114,107 @@ try {
     // banks, and the dev clock's own line ends the refusal streak.
     const recovery = await page.evaluate(() => {
       const app = window.__flowsynth;
+      app.resolveHonesty("missed"); // discard the deliberately invalid bucket
       app.state.modules[0].level = 4;
       const result = app.devAdvance(60);
-      return { fault: result.fault ?? null, status: document.querySelector("#status").textContent, nous: app.state.nous };
+      app.save(Date.now(), true);
+      const stored = JSON.parse(app.sharedSave.storage.getItem("flowsynth.save.v1"));
+      return { fault: result.fault ?? null, status: document.querySelector("#status").textContent, nous: app.state.nous, savedNous: stored.state.nous };
     });
     assert.equal(recovery.fault, null);
     assert.equal(recovery.status, "Dev clock +60s.");
     assert.ok(recovery.nous > 0);
+    assert.equal(recovery.savedNous, recovery.nous);
     await page.screenshot({ path: new URL(`${name}-recovery.png`, output).pathname });
 
-    records.push({ viewport: name, ready, saveFailure, exportRefusal, advanceRefusal, honestyRefusal, recovery });
+    // Backup denial uses only the isolated scenario's private storage.
+    const importText = await page.evaluate(async () => {
+      const app = window.__flowsynth;
+      await app.devLaunchScenario("fresh-start");
+      const { serialize } = await import("/src/engine/save.ts");
+      const text = serialize({ ...app.state, nous: 999 }, Date.now());
+      const storage = app.sharedSave.storage;
+      const setItem = storage.setItem;
+      storage.setItem = (key, value) => {
+        if (key === "flowsynth.save.original.v1") throw new Error("quota exceeded");
+        setItem(key, value);
+      };
+      return text;
+    });
+    const activate = async (selector) => {
+      if (name === "phone") await page.locator(selector).tap();
+      else {
+        await page.locator(selector).focus();
+        await page.keyboard.press("Enter");
+      }
+    };
+    await activate("#console-settings");
+    await activate("#settings-import");
+    await page.locator("#import-text").fill(importText);
+    await activate("#import-apply");
+    const importRefusal = await page.evaluate(() => ({
+      error: document.querySelector(".import-error")?.textContent,
+      nous: window.__flowsynth.state.nous,
+      modal: window.__flowsynth.ui.modal,
+    }));
+    assert.equal(importRefusal.error, "The original save could not be retained. Nothing was imported.");
+    assert.equal(importRefusal.nous, 12);
+    assert.equal(importRefusal.modal, "import");
+    await page.screenshot({ path: new URL(`${name}-import-refusal.png`, output).pathname });
+    await page.keyboard.press("Escape");
+
+    const finishRefusal = await page.evaluate(async () => {
+      const app = window.__flowsynth;
+      await app.devLaunchScenario("fresh-start");
+      const { createModule } = await import("/src/engine/state.ts");
+      const { startSession } = await import("/src/engine/actions.ts");
+      const { advance } = await import("/src/engine/advance.ts");
+      startSession(app.state, null);
+      advance(app.state, 60);
+      const generator = createModule(app.state, "focusKeyed");
+      generator.level = 5000;
+      app.state.modules.push(generator);
+      app.endFlow();
+      return { status: document.querySelector("#status").textContent, mode: app.state.mode, seconds: app.state.session.accounting.creditedSeconds };
+    });
+    assert.equal(finishRefusal.status, "The generator charge cannot bank safely, so the session is still open.");
+    assert.equal(finishRefusal.mode, "flow");
+    assert.equal(finishRefusal.seconds, 60);
+    await page.screenshot({ path: new URL(`${name}-finish-refusal.png`, output).pathname });
+    const noteRefusal = await page.evaluate(() => {
+      const app = window.__flowsynth;
+      app.addNote("A note whose charge cannot bank.");
+      return { status: document.querySelector("#status").textContent, notes: app.state.notes.length };
+    });
+    assert.equal(noteRefusal.status, "The generator charge cannot bank safely, so nothing was written.");
+    assert.equal(noteRefusal.notes, 0);
+    await page.screenshot({ path: new URL(`${name}-note-refusal.png`, output).pathname });
+    const logRefusal = await page.evaluate(async () => {
+      const app = window.__flowsynth;
+      await app.devLaunchScenario("fresh-start");
+      const { createHabit, selectHabit } = await import("/src/engine/habits.ts");
+      const { createGoal } = await import("/src/engine/goals.ts");
+      const { createModule } = await import("/src/engine/state.ts");
+      const { startSession, endSession } = await import("/src/engine/actions.ts");
+      const { advance } = await import("/src/engine/advance.ts");
+      const habit = createHabit(app.state, "Piano").habit;
+      selectHabit(app.state, habit.id);
+      createGoal(app.state, { habitId: habit.id, minutes: 5, schedule: "once", now: Date.now() });
+      startSession(app.state, null, Date.now());
+      advance(app.state, 60);
+      endSession(app.state, Date.now());
+      const generator = createModule(app.state, "goalKeyed");
+      generator.level = 5000;
+      app.state.modules.push(generator);
+      app.logPracticeAction(4);
+      return { status: document.querySelector("#status").textContent, logs: app.state.practiceLog.length, seconds: app.state.habits[0].seconds };
+    });
+    assert.equal(logRefusal.status, "The generator charge cannot bank safely, so nothing was logged.");
+    assert.equal(logRefusal.logs, 1);
+    assert.equal(logRefusal.seconds, 60);
+    await page.screenshot({ path: new URL(`${name}-log-refusal.png`, output).pathname });
+
+    records.push({ viewport: name, ready, saveFailure, exportRefusal, advanceRefusal, honestyRefusal, recovery, importRefusal, finishRefusal, noteRefusal, logRefusal });
     await context.close();
   }
   await writeFile(new URL("observations.json", output), `${JSON.stringify(records, null, 2)}\n`);
