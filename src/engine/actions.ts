@@ -1205,7 +1205,7 @@ export function prestige(state: GameState, tuning: PrestigeTuning = {}): ActionR
   // refuses the reset whole instead of banking an unrepresentable Arete
   // figure that would serialize to null.
   const claim = bankableClaimOf(state, tuning.claimBase);
-  if (!Number.isFinite(claim)) return fail("The pending claim cannot be read from this era's ledger.");
+  if (!Number.isFinite(claim)) return fail("The pending claim cannot be read safely, so nothing was banked.");
   state.arete += claim;
   state.world.frontier += claim;
   // The starter grant (issue #425, priority 2): the first World-eligible

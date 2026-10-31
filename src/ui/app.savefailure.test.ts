@@ -58,7 +58,7 @@ describe("the save failure path (issue #486)", () => {
     owner.state.modules[0]!.level = 5000; // 1.2^5000 leaves the double range
     const result = owner.devAdvance(60);
     expect(result.fault).toBeTruthy();
-    expect(statusText()).toBe("The board's figures outran the instrument's range — the refused moments left nothing behind.");
+    expect(statusText()).toBe("The board's figures outran the instrument's range — the refused update left nothing behind.");
   });
 });
 

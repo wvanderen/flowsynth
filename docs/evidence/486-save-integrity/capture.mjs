@@ -18,7 +18,8 @@ const records = [];
 
 const SAVE_FAILED = "Saving failed — your last valid save stands untouched.";
 const EXPORT_REFUSED = "These figures exceed what a save can hold — nothing was exported.";
-const ADVANCE_REFUSED = "The board's figures outran the instrument's range — the refused moments left nothing behind.";
+const ADVANCE_REFUSED = "The board's figures outran the instrument's range — the refused update left nothing behind.";
+const HONESTY_REFUSED = "The provisional nous cannot bank safely, so nothing was credited.";
 
 try {
   for (const [name, width, height] of [["desktop", 1280, 800], ["phone", 390, 844]]) {
@@ -88,6 +89,28 @@ try {
     assert.equal(advanceRefusal.elapsed, 0);
     await page.screenshot({ path: new URL(`${name}-advance-refusal.png`, output).pathname });
 
+    // The honesty report's refusal: an unrepresentable bucket refuses the
+    // whole settlement before it credits a minute — the pool stays
+    // outstanding, and the live region says what refused.
+    const honestyRefusal = await page.evaluate(() => {
+      const app = window.__flowsynth;
+      app.state.session.accounting.poolSeconds = 3600;
+      app.state.session.accounting.bucketNous = Number.POSITIVE_INFINITY;
+      const resolution = app.resolveHonesty("full");
+      return {
+        ok: resolution.ok,
+        status: document.querySelector("#status").textContent,
+        pool: app.state.session.accounting.poolSeconds,
+        credited: app.state.session.accounting.creditedSeconds,
+        bucket: app.state.session.accounting.bucketNous,
+      };
+    });
+    assert.equal(honestyRefusal.ok, false);
+    assert.equal(honestyRefusal.status, HONESTY_REFUSED);
+    assert.equal(honestyRefusal.pool, 3600);
+    assert.equal(honestyRefusal.credited, 0);
+    await page.screenshot({ path: new URL(`${name}-honesty-refusal.png`, output).pathname });
+
     // The recovery read: the board back inside the range, the next update
     // banks, and the dev clock's own line ends the refusal streak.
     const recovery = await page.evaluate(() => {
@@ -101,7 +124,7 @@ try {
     assert.ok(recovery.nous > 0);
     await page.screenshot({ path: new URL(`${name}-recovery.png`, output).pathname });
 
-    records.push({ viewport: name, ready, saveFailure, exportRefusal, advanceRefusal, recovery });
+    records.push({ viewport: name, ready, saveFailure, exportRefusal, advanceRefusal, honestyRefusal, recovery });
     await context.close();
   }
   await writeFile(new URL("observations.json", output), `${JSON.stringify(records, null, 2)}\n`);

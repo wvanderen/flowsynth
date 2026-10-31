@@ -1,5 +1,5 @@
 import { GAME_COMMANDS } from "./game-commands";
-import { advance, earnNous } from "../engine/advance";
+import { advance, earnNous, emptyAdvanceResult } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
 import {
   buyCapacity,
@@ -1260,7 +1260,7 @@ export class App {
     if (result.fault) {
       if (!this.faultNotice) {
         this.faultNotice = true;
-        this.say("The board's figures outran the instrument's range — the refused moments left nothing behind.");
+        this.say("The board's figures outran the instrument's range — the refused update left nothing behind.");
       }
       return;
     }
@@ -2757,9 +2757,7 @@ export class App {
   }
 
   devAdvance(seconds: number): AdvanceResult {
-    if (!this.dev || !this.devClockReady()) {
-      return { nousEarned: 0, rollsBanked: 0, rollsFlow: 0, rollsForge: 0, rollsMutator: 0, goalsCompleted: 0 };
-    }
+    if (!this.dev || !this.devClockReady()) return emptyAdvanceResult();
     const result = advance(this.state, seconds);
     this.reportAdvance(result);
     // A refused update's line stands; the dev stamp never talks over it.

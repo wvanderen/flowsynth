@@ -189,9 +189,39 @@ describe("the original-bytes backup (issue #486)", () => {
     expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
   });
 
+  it("a later boot never overwrites the retained original with newer slot bytes", () => {
+    const storage = memoryStorage();
+    const first = serialize({ ...createInitialState(), nous: 123 }, 500);
+    storage.setItem(STORAGE_KEY, first);
+    const owner = new SharedSave(storage, () => 1000);
+    owner.load();
+    owner.incorporate(500);
+    owner.write({ ...createInitialState(), nous: 999 }, 1500);
+    // A new day's boot reads the newer save; the retained original is the
+    // lineage's first-seen bytes, not the newest slot's.
+    const owner2 = new SharedSave(storage, () => 2000);
+    expect(owner2.load()).not.toHaveProperty("error");
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(first);
+  });
+
+  it("a later boot never overwrites a retained corrupt original with the fresh state's bytes", () => {
+    const storage = memoryStorage();
+    const corrupt = JSON.stringify({ app: "flowsynth", version: 1, savedAt: 500, state: { nous: null } });
+    storage.setItem(STORAGE_KEY, corrupt);
+    const owner = new SharedSave(storage, () => 1000);
+    expect(owner.load()).toHaveProperty("error");
+    expect(owner.write(createInitialState(), 1000)).toBe("written"); // the fresh state replaces the rejected save
+    const owner2 = new SharedSave(storage, () => 2000);
+    expect(owner2.load()).not.toHaveProperty("error");
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(corrupt); // the corrupt original survives
+  });
+
   it("the retained slot takes an applied import's source bytes", () => {
     const storage = memoryStorage();
+    const first = serialize(createInitialState(), 500);
+    storage.setItem(STORAGE_KEY, first);
     const owner = new SharedSave(storage, () => 1000);
+    owner.load();
     const imported = serialize({ ...createInitialState(), nous: 9 }, 750);
     owner.parse(imported); // the parse the import applies
     owner.retain(imported);

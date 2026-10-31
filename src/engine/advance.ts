@@ -305,44 +305,39 @@ function walkBreather(state: GameState, seconds: number, rng: Rng): AdvanceResul
 // failed span restores the phase it started with, and the refusal rides
 // the result.
 export function advanceBreather(state: GameState, seconds: number, rng: Rng = Math.random): AdvanceResult {
-  const pristine = structuredClone(state);
-  try {
-    return walkBreather(state, seconds, rng);
-  } catch (error) {
-    if (!(error instanceof NumericFault)) throw error;
-    Object.assign(state, pristine);
-    return { ...emptyResult(), fault: error.detail };
-  }
+  return walkRefusingFault(state, structuredClone(state), () => walkBreather(state, seconds, rng));
 }
 
-// The refusal plumbing both walks share.
-function emptyResult(): AdvanceResult {
+// The refusal plumbing both walks share: the walk runs against the live
+// state, and a commit-point numeric fault — a rate, balance, reserve,
+// meter, or supply figure the doubles cannot hold — restores the snapshot
+// taken at entry, so the whole update commits or nothing does. The
+// refusal rides the result's fault detail: every caller (the boundary
+// walk, the honesty report, the dev clock, the scheduled playthrough)
+// reports it through plumbing that already exists, and the state left
+// behind is the last valid economy state, ready to save.
+export function emptyAdvanceResult(): AdvanceResult {
   return {
     nousEarned: 0, rollsBanked: 0, rollsFlow: 0,
     rollsForge: 0, rollsMutator: 0, goalsCompleted: 0,
   };
 }
 
-// The public advance (issue #486): the walk runs against the live state,
-// and a commit-point numeric fault — a rate, balance, reserve, meter, or
-// supply figure the doubles cannot hold — restores the snapshot taken at
-// entry, so the whole update commits or nothing does. The refusal rides
-// the result's fault detail: every caller (the boundary walk, the honesty
-// report, the dev clock, the scheduled playthrough) reports it through
-// plumbing that already exists, and the state left behind is the last
-// valid economy state, ready to save.
+function walkRefusingFault(state: GameState, pristine: GameState, walk: () => AdvanceResult): AdvanceResult {
+  try {
+    return walk();
+  } catch (error) {
+    if (!(error instanceof NumericFault)) throw error;
+    Object.assign(state, pristine);
+    return { ...emptyAdvanceResult(), fault: error.detail };
+  }
+}
+
 export function advance(
   state: GameState,
   seconds: number,
   rng: Rng = Math.random,
   sink: AdvanceSink = "live",
 ): AdvanceResult {
-  const pristine = structuredClone(state);
-  try {
-    return walkFlow(state, seconds, rng, sink);
-  } catch (error) {
-    if (!(error instanceof NumericFault)) throw error;
-    Object.assign(state, pristine);
-    return { ...emptyResult(), fault: error.detail };
-  }
+  return walkRefusingFault(state, structuredClone(state), () => walkFlow(state, seconds, rng, sink));
 }

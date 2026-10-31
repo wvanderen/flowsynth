@@ -52,11 +52,14 @@ export class SharedSave {
     try {
       const raw = this.storage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      // The original-bytes backup (issue #486): the slot's exact bytes are
+      // The original-bytes backup (issue #486): the first-seen bytes are
       // retained before anything — a later save, a future migration, a
-      // recovery reset — can replace them. A rejected save's bytes are
-      // retained too: the corrupt original is what a recovery reads.
-      this.retain(raw);
+      // recovery reset — can replace them, and no ordinary load or save
+      // overwrites the retained original again. A rejected save's bytes
+      // are retained too: the corrupt original is what a recovery reads.
+      // Only an applied import replaces the retained source — the player
+      // adopting a new lineage.
+      this.retainOnce(raw);
       const parsed = this.parse(raw);
       // A rejected file is ours to replace, even if its stamp is in the
       // future. Successful reads are incorporated when App adopts them.
@@ -67,12 +70,24 @@ export class SharedSave {
     }
   }
 
-  // The retained source of the currently adopted save (issue #486): the
-  // stored bytes at load, the pasted text at import. A failed retention
-  // (denied storage) degrades silently — the backup must never break the
-  // save it backs up.
+  // The applied import's adoption (issue #486): the imported text becomes
+  // the retained source, replacing the previous lineage's original. A
+  // failed retention (denied storage) degrades silently — the backup must
+  // never break the save it backs up.
   retain(raw: string): void {
     try {
+      this.storage.setItem(ORIGINAL_SAVE_KEY, raw);
+    } catch {
+      // The backup is best-effort by design.
+    }
+  }
+
+  // First-seen retention (issue #486): the original is written once per
+  // lineage and never overwritten by an ordinary load — the bytes a future
+  // migration or recovery reads are the original's, not the newest slot's.
+  private retainOnce(raw: string): void {
+    try {
+      if (this.storage.getItem(ORIGINAL_SAVE_KEY) !== null) return;
       this.storage.setItem(ORIGINAL_SAVE_KEY, raw);
     } catch {
       // The backup is best-effort by design.
