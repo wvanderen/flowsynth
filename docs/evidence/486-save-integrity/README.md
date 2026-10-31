@@ -80,3 +80,28 @@ absence retry after save/reload, split-plan rollback, and successful valid
 operations after correcting the overflowing generator. Backup-denial and retry
 cases are in `src/ui/shared-save.test.ts` and `src/ui/app.savefailure.test.ts`.
 The PR Verification table is the single acceptance-criterion completion record.
+
+## Checks for the refusal-boundary fixes
+
+At source `15f7bdb`, Node 22.23.4:
+
+- `npm run check` passed.
+- Targeted engine and persistence checks passed, including all 23 cases in
+  `src/engine/save-integrity.test.ts` and the backup-denial import case.
+- `npm test` completed all 63 engine files, then reported the UI
+  `app.playthrough.test.ts` case “pushes past the first eligibility, banks
+  its claim, spends it, and measures both recovery marks” timing out at
+  300,000 ms, plus `[vitest-worker]: Timeout calling "onTaskUpdate"`.
+  Its summary was incomplete: 63/103 files passed, one test failure, one
+  worker error. Remaining stuck workers were stopped after that summary.
+  These are the same timeout/RPC failure modes recorded before this fix;
+  this is not a green local full-suite result.
+- With that failed run leaving UI coverage unresolved, a separate
+  `npx vitest run --project ui --exclude src/ui/app.playthrough.test.ts --exclude src/ui/app.scenarios.test.ts`
+  passed all 38 remaining files. The two long simulation files remain a
+  local verification gap; they were not silently counted as passing.
+- GitHub Actions `check` passed on evidence head `660df84`:
+  https://github.com/wvanderen/flowsynth/actions/runs/41201319243/job/124537533534
+
+The PR Verification section is the acceptance-criterion completion record;
+these are the underlying run results and explicit local coverage limits.
