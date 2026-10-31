@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SAVE_VERSION } from "../engine/constants";
 import { serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY } from "../engine/save";
 import { createInitialState } from "../engine/state";
-import { SharedSave } from "./shared-save";
+import { SharedSave, memorySaveStorage } from "./shared-save";
 
 function memoryStorage() {
   const files = new Map<string, string>();
@@ -125,7 +125,7 @@ describe("shared-save ownership (ADR-0032)", () => {
     expect(owner.write(state)).toBe("refused");
   });
 
-  it("storage read failures are silent and still permit attempting a write", () => {
+  it("storage read failures prevent replacing an unreadable original", () => {
     let saved = "";
     const owner = new SharedSave({
       getItem: () => { throw new Error("denied read"); },
@@ -133,8 +133,8 @@ describe("shared-save ownership (ADR-0032)", () => {
     }, () => 1000);
     expect(owner.load()).toBeNull();
     expect(owner.isNewer()).toBe(false);
-    expect(owner.write(createInitialState())).toBe("written");
-    expect(JSON.parse(saved).savedAt).toBe(1000);
+    expect(owner.write(createInitialState())).toBe("failed");
+    expect(saved).toBe("");
   });
 
   it("failed writes do not claim a stamp or hide later external progress", () => {
@@ -226,5 +226,47 @@ describe("the original-bytes backup (issue #486)", () => {
     owner.parse(imported); // the parse the import applies
     owner.retain(imported);
     expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(imported);
+  });
+});
+
+describe("review regressions: retain before replacement (#486)", () => {
+  it.each([false, true])("backup denial protects the primary save, force=%s, then retries", (force) => {
+    const files = memoryStorage();
+    const raw = serialize(createInitialState(), 500);
+    files.setItem(STORAGE_KEY, raw);
+    let denyBackup = true;
+    const storage = {
+      getItem: files.getItem,
+      setItem: (key: string, value: string) => {
+        if (key === ORIGINAL_SAVE_KEY && denyBackup) throw new Error("quota exceeded");
+        files.setItem(key, value);
+      },
+    };
+    const owner = new SharedSave(storage);
+    expect(owner.load()).toHaveProperty("state");
+    owner.incorporate(500);
+    expect(owner.write(createInitialState(), 1000, force)).toBe("failed");
+    expect(files.getItem(STORAGE_KEY)).toBe(raw);
+    expect(files.getItem(ORIGINAL_SAVE_KEY)).toBeNull();
+    denyBackup = false;
+    expect(owner.write(createInitialState(), 1000, force)).toBe("written");
+    expect(files.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+    expect(files.getItem(STORAGE_KEY)).not.toBe(raw);
+  });
+
+  it("a write without a prior load retains the source first", () => {
+    const storage = memoryStorage();
+    const raw = "{corrupt original";
+    storage.setItem(STORAGE_KEY, raw);
+    expect(new SharedSave(storage).write(createInitialState(), 1000)).toBe("written");
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it("isolated memory storage keeps the primary and backup slots separate", () => {
+    const storage = memorySaveStorage();
+    storage.setItem(STORAGE_KEY, "primary");
+    storage.setItem(ORIGINAL_SAVE_KEY, "original");
+    expect(storage.getItem(STORAGE_KEY)).toBe("primary");
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe("original");
   });
 });

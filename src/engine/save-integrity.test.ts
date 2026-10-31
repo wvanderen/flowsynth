@@ -1,13 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { advance, advanceBreather } from "./advance";
-import { pauseSession, prestige, startSession } from "./actions";
+import { endSession, pauseSession, prestige, startSession } from "./actions";
+import { addPracticeLog } from "./habits";
+import { createGoal } from "./goals";
+import { writeNote } from "./notes";
 import { NumericFault } from "./numeric";
 import { addForgeProgress, addMutatorForgeProgress } from "./rolls";
 import { deserialize, serialize } from "./save";
-import { resolveHonestyReport } from "./trust";
+import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 import { advanceWorldCharge } from "./world";
 import { createWeapon } from "./state";
-import { fresh, give } from "./fixtures";
+import { fresh, give, giveHabit } from "./fixtures";
 import { hex } from "./hex";
 import type { GameState } from "./types";
 
@@ -229,4 +232,109 @@ describe("failure without destructive mutation, then a valid save (issue #486)",
     expect(reloaded.state?.nous).toBe(validNous);
     expect(reloaded.state?.session?.earned).toBe(s.session!.earned);
   });
+});
+
+describe("review regressions: recoverable refusal boundaries (#486)", () => {
+  it.each([null, 1800, 7200])("a refused absence survives reload and retries once with plan %s", (target) => {
+    const s = fresh();
+    startSession(s, target);
+    const voice = give(s, "additive", hex(0, 0), 4);
+    voice.level = OVERFLOW_LEVEL;
+    s.session!.accounting.pendingAwaySeconds = 3600;
+    const before = serialize(s, 1000);
+    expect(flushPendingAway(s).fault).toBeTruthy();
+    expect(serialize(s, 1000)).toBe(before);
+    const restored = deserialize(before).state!;
+    restored.modules.find((m) => m.id === voice.id)!.level = 4;
+    expect(flushPendingAway(restored).fault).toBeUndefined();
+    expect(restored.session!.elapsed).toBe(3600);
+    expect(restored.session!.accounting.pendingAwaySeconds).toBe(0);
+    const settled = serialize(restored, 1000);
+    flushPendingAway(restored);
+    expect(serialize(restored, 1000)).toBe(settled);
+  });
+
+  it("a refused absence prevents the following live slice from committing", () => {
+    const s = flowState();
+    const voice = give(s, "additive", hex(0, 0), 4);
+    voice.level = OVERFLOW_LEVEL;
+    s.session!.accounting.pendingAwaySeconds = 3600;
+    expect(applyGap(s, 60, "visible", 0).fault).toBeTruthy();
+    expect(s.session!.accounting.pendingAwaySeconds).toBe(3600);
+    expect(s.session!.elapsed).toBe(0);
+  });
+
+  it.each(["finish", "note"])("%s refuses all reserve credits before changing practice or notes", (action) => {
+    const s = flowState();
+    const first = give(s, "focusKeyed", null);
+    const runaway = give(s, "focusKeyed", null);
+    advance(s, 60);
+    runaway.level = OVERFLOW_LEVEL;
+    const before = serialize(s, 1000);
+    const result = action === "finish" ? endSession(s) : writeNote(s, "A note that earns generator charge.");
+    expect(result.ok).toBe(false);
+    expect(serialize(s, 1000)).toBe(before);
+    expect(first.reserve).toBe(0);
+    runaway.level = 4;
+    expect((action === "finish" ? endSession(s) : writeNote(s, "A note that earns generator charge.")).ok).toBe(true);
+    expect(deserialize(serialize(s, 1000)).state).toBeTruthy();
+    expect(s.modules.find((m) => m.id === runaway.id)!.reserve).toBeGreaterThan(0);
+  });
+});
+
+it("a goal reserve overflow refuses honesty settlement without losing practice or completing the goal", () => {
+  const s = fresh();
+  const { habit } = giveHabit(s);
+  createGoal(s, { habitId: habit.id, minutes: 5, schedule: "once", now: 1 });
+  const generator = give(s, "goalKeyed", null);
+  generator.level = OVERFLOW_LEVEL;
+  startSession(s, null, 1);
+  s.session!.accounting.poolSeconds = 300;
+  s.session!.accounting.bucketNous = 10;
+  const before = serialize(s, 1000);
+  expect(resolveHonestyReport(s, "full").ok).toBe(false);
+  expect(serialize(s, 1000)).toBe(before);
+  s.modules.find((m) => m.id === generator.id)!.level = 4;
+  expect(resolveHonestyReport(s, "full").ok).toBe(true);
+  expect(s.session!.accounting.creditedSeconds).toBe(300);
+  expect(s.nous).toBeGreaterThan(0);
+  expect(deserialize(serialize(s, 1000)).state).toBeTruthy();
+});
+
+it("a finite focus credit refuses a reserve sum that overflows", () => {
+  const s = flowState();
+  const generator = give(s, "focusKeyed", null);
+  generator.level = 3880;
+  generator.reserve = 1.7e308;
+  advance(s, 60);
+  const before = serialize(s, 1000);
+  expect(endSession(s).ok).toBe(false);
+  expect(serialize(s, 1000)).toBe(before);
+});
+
+it("a mixed goal completion refuses a manual log atomically when reserve earning overflows", () => {
+  const s = fresh();
+  const { habit } = giveHabit(s);
+  createGoal(s, { habitId: habit.id, minutes: 5, schedule: "once", now: 1 });
+  startSession(s, null, 1);
+  advance(s, 60);
+  endSession(s, 60001);
+  const generator = give(s, "goalKeyed", null);
+  generator.level = OVERFLOW_LEVEL;
+  const before = serialize(s, 1000);
+  expect(addPracticeLog(s, habit.id, 4, 60002).ok).toBe(false);
+  expect(serialize(s, 1000)).toBe(before);
+});
+
+it("a provisional failure rolls back the successful trusted half of a split absence", () => {
+  const s = fresh();
+  startSession(s, 1);
+  const voice = give(s, "additive", hex(0, 0));
+  voice.level = 3880;
+  s.session!.accounting.pendingAwaySeconds = 3600;
+  const before = serialize(s, 1000);
+  const result = flushPendingAway(s);
+  expect(result.fault).toBeTruthy();
+  expect(result.nousEarned).toBe(0);
+  expect(serialize(s, 1000)).toBe(before);
 });

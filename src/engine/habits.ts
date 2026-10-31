@@ -1,3 +1,4 @@
+import { NumericFault } from "./numeric";
 import { EPS } from "./constants";
 import { syncAchievements } from "./achievements";
 import { createHabitClasses } from "./classes";
@@ -105,7 +106,7 @@ export function selectHabit(state: GameState, id: string | null): { ok: boolean;
 
 // Manual practice log: advances development and goal conditions without
 // producing nous or charge (§2.3).
-export function addPracticeLog(
+function applyPracticeLog(
   state: GameState,
   habitId: string,
   minutes: number,
@@ -152,4 +153,20 @@ export function logSessionPractice(state: GameState, seconds: number, now: numbe
     source: "live",
     at: now,
   });
+}
+
+export function addPracticeLog(
+  state: GameState,
+  habitId: string,
+  minutes: number,
+  now: number = 0,
+): { ok: boolean; reason?: string; completions?: number; unlocked?: string[] } {
+  const pristine = structuredClone(state);
+  try {
+    return applyPracticeLog(state, habitId, minutes, now);
+  } catch (error) {
+    if (!(error instanceof NumericFault)) throw error;
+    Object.assign(state, pristine);
+    return { ok: false, reason: "The generator charge cannot bank safely, so nothing was logged." };
+  }
 }

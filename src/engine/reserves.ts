@@ -1,4 +1,5 @@
 import { BALANCE, EPS } from "./constants";
+import { requireFinite } from "./numeric";
 import { hostPower } from "./economy";
 import { GENERATOR_PROFILES, generatorProfileOf, type GeneratorProfile } from "./profiles";
 import type { GameState } from "./types";
@@ -24,11 +25,14 @@ export function goalCompletionBase(goalSeconds: number, liveShare: number): numb
 // The one walk the three seams share: every owned generator, its profile,
 // and its power, credited in one place.
 function creditEachGenerator(state: GameState, credit: (profile: GeneratorProfile, power: number) => number): void {
-  for (const module of state.modules) {
+  const updates = state.modules.flatMap((module) => {
     const profile = generatorProfileOf(module.type);
-    if (!profile) continue;
-    module.reserve += credit(profile, hostPower(state, module));
-  }
+    if (!profile) return [];
+    const amount = requireFinite(credit(profile, hostPower(state, module)), "a generator's reserve earning");
+    const reserve = requireFinite(module.reserve + amount, "a generator's reserve");
+    return [{ module, reserve }];
+  });
+  for (const { module, reserve } of updates) module.reserve = reserve;
 }
 
 // The banked-earning seam (the session end, actions.endSession): every
@@ -75,7 +79,7 @@ export function creditGoalEarning(state: GameState, goalSeconds: number, liveSha
   for (const module of state.modules) {
     const profile = generatorProfileOf(module.type);
     if (!profile) continue;
-    desired += profile.goal * base * hostPower(state, module);
+    desired = requireFinite(desired + profile.goal * base * hostPower(state, module), "the goal reserve earning");
   }
   if (!(desired > EPS)) return;
   const scale = Math.min(1, Math.max(0, state.goalFuel) / desired);

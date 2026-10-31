@@ -1,4 +1,5 @@
 import { DRIFT_NOISE_SECONDS, EPS, RECONCILIATION_FLOOR_SECONDS } from "./constants";
+import { NumericFault } from "./numeric";
 import { advance, advanceBreather, earnNous, sumResults } from "./advance";
 import { accrueLivePractice } from "./habits";
 import { accrueClassDevelopment } from "./classes";
@@ -97,6 +98,7 @@ export function applyGap(
   // sleep banks live regardless, even past the target.
   state.session!.accounting.pendingAwaySeconds += slept;
   const flushed = flushPendingAway(state, rng);
+  if (flushed.fault) return flushed;
   const live = advance(state, awake, rng);
   return sumResults(flushed, live);
 }
@@ -111,18 +113,30 @@ export function flushPendingAway(state: GameState, rng: Rng = Math.random): Adva
   if (state.mode !== "flow") return ZERO;
   const accounting = state.session?.accounting;
   if (!accounting || accounting.pendingAwaySeconds <= EPS) return ZERO;
+  const pristine = structuredClone(state);
   const seconds = accounting.pendingAwaySeconds;
   accounting.pendingAwaySeconds = 0;
-  if (seconds < RECONCILIATION_FLOOR_SECONDS) return advance(state, seconds, rng);
+  let result: AdvanceResult;
   const session = state.session!;
-  if (session.target !== null && session.elapsed < session.target) {
+  if (seconds < RECONCILIATION_FLOOR_SECONDS) {
+    result = advance(state, seconds, rng);
+  } else if (session.target !== null && session.elapsed < session.target) {
     const underPlan = Math.min(seconds, session.target - session.elapsed);
-    return sumResults(
-      advance(state, underPlan, rng),
+    const trusted = advance(state, underPlan, rng);
+    result = trusted.fault ? trusted : sumResults(
+      trusted,
       advance(state, seconds - underPlan, rng, "provisional"),
     );
+  } else {
+    result = advance(state, seconds, rng, "provisional");
   }
-  return advance(state, seconds, rng, "provisional");
+  // The buffer belongs to the same transaction as both sides of the plan.
+  // A refused walk must leave the absence available for a later retry.
+  if (result.fault) {
+    Object.assign(state, pristine);
+    return { ...ZERO, fault: result.fault };
+  }
+  return result;
 }
 
 export interface HonestyResolution {
@@ -140,7 +154,7 @@ export interface HonestyResolution {
 // bucket; did what I planned credits up to the plan (C rises to max(C, T));
 // practiced the whole time away credits fully. Both non-missed answers bank
 // the bucket. The recorded event is the reconciliation's factual line.
-export function resolveHonestyReport(
+function settleHonestyReport(
   state: GameState,
   outcome: HonestyOutcome,
   rng: Rng = Math.random,
@@ -212,4 +226,21 @@ export function resolveHonestyReport(
   accounting.poolSeconds = 0;
   accounting.bucketNous = 0;
   return { ok: true, completions, rollsBanked };
+}
+
+// Goal reserve credits also run during settlement, outside the advance
+// walk. Refuse them under the same all-or-nothing accounting boundary.
+export function resolveHonestyReport(
+  state: GameState,
+  outcome: HonestyOutcome,
+  rng: Rng = Math.random,
+): HonestyResolution {
+  const pristine = structuredClone(state);
+  try {
+    return settleHonestyReport(state, outcome, rng);
+  } catch (error) {
+    if (!(error instanceof NumericFault)) throw error;
+    Object.assign(state, pristine);
+    return { ok: false, reason: "The provisional nous cannot bank safely, so nothing was credited." };
+  }
 }

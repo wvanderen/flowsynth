@@ -12,6 +12,7 @@ import { createModule, createMutator, createWeapon, createWorldColumn, freshEnem
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
+import { NumericFault } from "./numeric";
 import { creditFocusEarning } from "./reserves";
 import { moduleScrapValue, skipPayoutOf } from "./scrap";
 import { syncAchievements } from "./achievements";
@@ -130,6 +131,20 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
   const queued = [...(session?.unlocked ?? [])];
   const target = session?.target ?? null;
   const targetHit = plannedTargetHit(credited, target);
+  // The banked-earning seam (§2.3, ADR-0012; basis amended by ADR-0019,
+  // generalized by issue #371): ending any session banks every owned
+  // generator's focus earning — its authored focus coefficient per credited
+  // practice second — into its reserve, board or tray alike, at the
+  // module's power exactly as delivery scales. Manual practice
+  // logs never pass through here and never bank one.
+  // Validate every reserve landing before closing or recording the session.
+  // creditFocusEarning commits all generators together, or none of them.
+  try {
+    creditFocusEarning(state, credited);
+  } catch (error) {
+    if (!(error instanceof NumericFault)) throw error;
+    return fail("The generator charge cannot bank safely, so the session is still open.");
+  }
   state.mode = "upgrade";
   // The departed session's final clock (docs/breather-spec.md §1): the
   // temporal base a following breather advances — a breather keeps the
@@ -147,13 +162,6 @@ export function endSession(state: GameState, now: number = 0): ActionResult {
     credited >= BREATHER.minCreditedSeconds
       ? Math.floor(Math.min(credited / BREATHER.creditDivisor, BREATHER.capSeconds) / 60) * 60
       : 0;
-  // The banked-earning seam (§2.3, ADR-0012; basis amended by ADR-0019,
-  // generalized by issue #371): ending any session banks every owned
-  // generator's focus earning — its authored focus coefficient per credited
-  // practice second — into its reserve, board or tray alike, at the
-  // module's power exactly as delivery scales. Manual practice
-  // logs never pass through here and never bank one.
-  creditFocusEarning(state, credited);
   logSessionPractice(state, credited, now);
   rollGoalOccurrences(state, now);
   // The session-end boundary check (ADR-0015): First light, On the clock,

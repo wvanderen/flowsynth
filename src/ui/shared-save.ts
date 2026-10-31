@@ -17,12 +17,12 @@ export const browserSaveStorage: SaveStorage = {
 };
 
 // A private in-memory slot: the storage shape SharedSave reads and writes,
-// backed by one closure cell no other tab — and no other SharedSave — can
+// backed by a private key map no other tab — and no other SharedSave — can
 // see. Previews and development scenarios ride this so their state can
 // never read, resurrect, or overwrite the player's save (issue #456).
 export function memorySaveStorage(): SaveStorage {
-  let value: string | null = null;
-  return { getItem: () => value, setItem: (_key, next) => { value = next; } };
+  const files = new Map<string, string>();
+  return { getItem: (key) => files.get(key) ?? null, setItem: (key, next) => { files.set(key, next); } };
 }
 
 function savedAtOf(raw: string): number | null {
@@ -59,7 +59,11 @@ export class SharedSave {
       // are retained too: the corrupt original is what a recovery reads.
       // Only an applied import replaces the retained source — the player
       // adopting a new lineage.
-      this.retainOnce(raw);
+      try {
+        this.retainOnce(raw);
+      } catch {
+        // A later write retries before replacing the source.
+      }
       const parsed = this.parse(raw);
       // A rejected file is ours to replace, even if its stamp is in the
       // future. Successful reads are incorporated when App adopts them.
@@ -70,27 +74,21 @@ export class SharedSave {
     }
   }
 
-  // The applied import's adoption (issue #486): the imported text becomes
-  // the retained source, replacing the previous lineage's original. A
-  // failed retention (denied storage) degrades silently — the backup must
-  // never break the save it backs up.
-  retain(raw: string): void {
+  // An import adopts a new lineage only after its source bytes are safe.
+  retain(raw: string): boolean {
     try {
       this.storage.setItem(ORIGINAL_SAVE_KEY, raw);
+      return true;
     } catch {
-      // The backup is best-effort by design.
+      return false;
     }
   }
 
-  // First-seen retention (issue #486): the original is written once per
-  // lineage and never overwritten by an ordinary load — the bytes a future
-  // migration or recovery reads are the original's, not the newest slot's.
+  // Ordinary loads and writes retain the first source once per lineage.
+  // Let the caller handle denial; a write must never replace that source.
   private retainOnce(raw: string): void {
-    try {
-      if (this.storage.getItem(ORIGINAL_SAVE_KEY) !== null) return;
+    if (this.storage.getItem(ORIGINAL_SAVE_KEY) === null) {
       this.storage.setItem(ORIGINAL_SAVE_KEY, raw);
-    } catch {
-      // The backup is best-effort by design.
     }
   }
 
@@ -112,7 +110,10 @@ export class SharedSave {
   write(state: GameState, now: number = this.now(), force = false): WriteOutcome {
     if (!force && this.isNewer()) return "refused";
     try {
-      this.storage.setItem(STORAGE_KEY, serialize(state, now));
+      const text = serialize(state, now);
+      const raw = this.storage.getItem(STORAGE_KEY);
+      if (raw !== null) this.retainOnce(raw);
+      this.storage.setItem(STORAGE_KEY, text);
       this.knownSavedAt = now;
       return "written";
     } catch {

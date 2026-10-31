@@ -99,3 +99,32 @@ describe("the import path's retained bytes (issue #486)", () => {
     expect(localStorage.getItem(ORIGINAL_SAVE_KEY)).toBe(stored);
   });
 });
+
+it("backup denial refuses an import before adopting progress or replacing source bytes", () => {
+  const files = new Map<string, string>();
+  const raw = serialize(createInitialState(), 500);
+  files.set(STORAGE_KEY, raw);
+  let denyBackup = false;
+  const shared = new SharedSave({
+    getItem: (key) => files.get(key) ?? null,
+    setItem: (key, value) => {
+      if (key === ORIGINAL_SAVE_KEY && denyBackup) throw new Error("quota exceeded");
+      files.set(key, value);
+    },
+  });
+  app = boot(undefined, false, shared);
+  const before = serialize(app.state, 1000);
+  const primary = files.get(STORAGE_KEY);
+  const original = files.get(ORIGINAL_SAVE_KEY);
+  const imported = serialize({ ...createInitialState(), nous: 999 }, 750);
+  denyBackup = true;
+  expect(app.importText(imported)).toBe(false);
+  expect(app.ui.importError).toBe("The original save could not be retained. Nothing was imported.");
+  expect(serialize(app.state, 1000)).toBe(before);
+  expect(files.get(STORAGE_KEY)).toBe(primary);
+  expect(files.get(ORIGINAL_SAVE_KEY)).toBe(original);
+  denyBackup = false;
+  expect(app.importText(imported)).toBe(true);
+  expect(app.state.nous).toBe(999);
+  expect(files.get(ORIGINAL_SAVE_KEY)).toBe(imported);
+});

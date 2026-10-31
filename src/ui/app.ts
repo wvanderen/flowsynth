@@ -843,12 +843,14 @@ export class App {
       this.render();
       return false;
     }
+    if (!this.sharedSave.retain(text)) {
+      this.ui.importError = "The original save could not be retained. Nothing was imported.";
+      this.render();
+      return false;
+    }
     this.clearTransientUi();
     this.ui.modal = null;
     this.ui.importError = null;
-    // The applied import's source bytes join the backup (issue #486):
-    // retained before anything can replace them.
-    this.sharedSave.retain(text);
     this.resumeFromSave(parsed);
     this.say(
       poolOutstanding(this.state)
