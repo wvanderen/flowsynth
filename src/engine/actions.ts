@@ -1199,8 +1199,13 @@ export interface PrestigeTuning {
 export function prestige(state: GameState, tuning: PrestigeTuning = {}): ActionResult {
   if (state.mode !== "upgrade") return fail("Prestige happens between sessions.");
   if (!horizonReached(state)) return fail("The horizon is not reached yet.");
-  // The claim transaction (issue #425): bank and advance in one move.
+  // The claim transaction (issue #425): bank and advance in one move. The
+  // claim's own integrity check (issue #486): an era measure that cannot
+  // yield a representable claim — the runaway the parent save carried —
+  // refuses the reset whole instead of banking an unrepresentable Arete
+  // figure that would serialize to null.
   const claim = bankableClaimOf(state, tuning.claimBase);
+  if (!Number.isFinite(claim)) return fail("The pending claim cannot be read from this era's ledger.");
   state.arete += claim;
   state.world.frontier += claim;
   // The starter grant (issue #425, priority 2): the first World-eligible

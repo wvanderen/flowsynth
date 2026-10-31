@@ -6,7 +6,7 @@ import { createHabit, selectHabit } from "./habits";
 import { BALANCE, SAVE_VERSION } from "./constants";
 import { longGoalCost, mutatorSlotCost } from "./economy";
 import { activeGoals, accrueGoalProgress, createGoal, deleteGoal, editGoal, retainGoalChoice, rollGoalOccurrences } from "./goals";
-import { deserialize, serialize, GOAL_CAPACITY_REFUND_CAP } from "./save";
+import { deserialize, serialize, SaveRefusedError, GOAL_CAPACITY_REFUND_CAP } from "./save";
 import { freshWorld } from "./state";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
 import { ARETE_HORIZON } from "./accumulator";
@@ -323,6 +323,36 @@ describe("the version gate (ADR-0017's pattern)", () => {
     const loaded = deserialize(serialize(s, 42));
     expect(loaded.error).toBeUndefined();
     expect(loaded.state!.notes[0]!.text).toBe("portable");
+  });
+});
+
+describe("serialization refuses what it cannot write (issue #486)", () => {
+  it("a state carrying a nonfinite number refuses the save instead of writing null", () => {
+    for (const figure of [Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, Number.NaN]) {
+      const s = fresh();
+      s.nous = figure;
+      expect(() => serialize(s)).toThrow(SaveRefusedError);
+    }
+  });
+
+  it("the refusal names where the figure lives, however deep it hides", () => {
+    const s = fresh();
+    give(s, "additive", null);
+    s.modules[s.modules.length - 1]!.reserve = NaN;
+    try {
+      serialize(s);
+      expect.unreachable("serialize should have refused");
+    } catch (error) {
+      expect(error).toBeInstanceOf(SaveRefusedError);
+      expect((error as Error).message).toMatch(/modules.*reserve/);
+    }
+  });
+
+  it("a session's unrepresentable accounting refuses the save, not a null bucket", () => {
+    const s = fresh();
+    startSession(s, null);
+    s.session!.accounting.bucketNous = Infinity;
+    expect(() => serialize(s)).toThrow(/bucketNous/);
   });
 });
 

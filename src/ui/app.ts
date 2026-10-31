@@ -551,6 +551,10 @@ export class App {
   // and greet() passes the observation on.
   private resumedFromDiscard = false;
   lastSaveWall = 0;
+  // The failure-path streak flags (issue #486): each line says once, and
+  // the next landing clears its flag. Ephemeral — never saved.
+  private saveFailedNotice = false;
+  private faultNotice = false;
   private sharedSave: SharedSave;
   dev: boolean;
   // The session's AudioContext (§4): created or resumed inside the start
@@ -774,9 +778,22 @@ export class App {
 
   // Session timing owns the throttle: a refused write is not an attempt,
   // while a failed storage write still advances the attempt's wall clock.
+  // A failed write — storage denial or a serialization the save refuses
+  // (issue #486) — says so once per streak through the live region, and
+  // never claims a recovery: the last valid save stands untouched. A
+  // landing write ends the streak.
   save(now: number = Date.now(), force = false): void {
     if (this.released) return;
-    if (this.sharedSave.write(this.state, now, force) !== "refused") this.lastSaveWall = now;
+    const outcome = this.sharedSave.write(this.state, now, force);
+    if (outcome !== "refused") this.lastSaveWall = now;
+    if (outcome === "failed") {
+      if (!this.saveFailedNotice) {
+        this.saveFailedNotice = true;
+        this.say("Saving failed — your last valid save stands untouched.");
+      }
+    } else {
+      this.saveFailedNotice = false;
+    }
   }
 
   exportText(): string {
@@ -829,6 +846,9 @@ export class App {
     this.clearTransientUi();
     this.ui.modal = null;
     this.ui.importError = null;
+    // The applied import's source bytes join the backup (issue #486):
+    // retained before anything can replace them.
+    this.sharedSave.retain(text);
     this.resumeFromSave(parsed);
     this.say(
       poolOutstanding(this.state)
@@ -1234,6 +1254,17 @@ export class App {
   }
 
   private reportAdvance(result: AdvanceResult): void {
+    // The refusal's one line (issue #486): the refused update left nothing
+    // behind, and the player hears that once per streak — the next valid
+    // update ends it. No recovery is ever claimed here.
+    if (result.fault) {
+      if (!this.faultNotice) {
+        this.faultNotice = true;
+        this.say("The board's figures outran the instrument's range — the refused moments left nothing behind.");
+      }
+      return;
+    }
+    this.faultNotice = false;
     const notes: string[] = [];
     if (result.rollsBanked > 0) {
       notes.push(`${result.rollsBanked} module ${result.rollsBanked === 1 ? "roll" : "rolls"} banked.`);
@@ -2725,13 +2756,19 @@ export class App {
     return false;
   }
 
-  devAdvance(seconds: number): void {
-    if (!this.dev || !this.devClockReady()) return;
+  devAdvance(seconds: number): AdvanceResult {
+    if (!this.dev || !this.devClockReady()) {
+      return { nousEarned: 0, rollsBanked: 0, rollsFlow: 0, rollsForge: 0, rollsMutator: 0, goalsCompleted: 0 };
+    }
     const result = advance(this.state, seconds);
     this.reportAdvance(result);
-    this.say(`Dev clock +${seconds}s.`);
-    this.recordDevIntervention(`Dev clock +${seconds}s`);
+    // A refused update's line stands; the dev stamp never talks over it.
+    if (!result.fault) {
+      this.say(`Dev clock +${seconds}s.`);
+      this.recordDevIntervention(`Dev clock +${seconds}s`);
+    }
     this.render();
+    return result;
   }
 
   devToTarget(): void {
@@ -3405,8 +3442,8 @@ export class App {
     }
     return this.devGameAction(`Dev clock +${Math.round(seconds)}s`, () => {
       if (this.state.mode !== "flow") return { ok: false, reason: DEV_CLOCK_FLOW_REASON };
-      advance(this.state, seconds);
-      return { ok: true };
+      const result = advance(this.state, seconds);
+      return result.fault ? { ok: false, reason: result.fault } : { ok: true };
     });
   }
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAVE_VERSION } from "../engine/constants";
-import { serialize, STORAGE_KEY } from "../engine/save";
+import { serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY } from "../engine/save";
 import { createInitialState } from "../engine/state";
 import { SharedSave } from "./shared-save";
 
@@ -148,5 +148,53 @@ describe("shared-save ownership (ADR-0032)", () => {
     storage.setItem(STORAGE_KEY, serialize({ ...state, nous: 777 }, 2000));
     expect(owner.isNewer()).toBe(true);
     expect(owner.write(state)).toBe("refused");
+  });
+});
+
+describe("the original-bytes backup (issue #486)", () => {
+  it("a loaded save's raw bytes are retained before anything can replace them", () => {
+    const storage = memoryStorage();
+    const raw = serialize({ ...createInitialState(), nous: 123 }, 500);
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage, () => 1000);
+    expect(owner.load()).not.toHaveProperty("error");
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+    // Ordinary saves move the main slot; the retained bytes stand.
+    owner.incorporate(500);
+    expect(owner.write({ ...createInitialState(), nous: 5 }, 1000)).toBe("written");
+    expect(storage.getItem(STORAGE_KEY)).not.toBe(raw);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it("a rejected save's bytes are retained too — the corrupt original is the recovery source", () => {
+    const storage = memoryStorage();
+    const raw = JSON.stringify({ app: "flowsynth", version: 1, savedAt: 500, state: { nous: null } });
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage, () => 1000);
+    expect(owner.load()).toHaveProperty("error");
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it("a refused write leaves the last valid save and the retained original byte-identical", () => {
+    const storage = memoryStorage();
+    const raw = serialize(createInitialState(), 500);
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage, () => 1000);
+    owner.load();
+    owner.incorporate(500); // the loaded save is this owner's to replace
+    const broken = createInitialState();
+    broken.nous = Infinity; // serialize refuses: JSON would write null
+    expect(owner.write(broken, 1000)).toBe("failed");
+    expect(storage.getItem(STORAGE_KEY)).toBe(raw);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it("the retained slot takes an applied import's source bytes", () => {
+    const storage = memoryStorage();
+    const owner = new SharedSave(storage, () => 1000);
+    const imported = serialize({ ...createInitialState(), nous: 9 }, 750);
+    owner.parse(imported); // the parse the import applies
+    owner.retain(imported);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(imported);
   });
 });

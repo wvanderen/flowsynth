@@ -160,6 +160,24 @@ export function resolveHonestyReport(
   } else if (outcome === "planned") {
     credit = Math.min(pool, Math.max(0, session.target! - accounting.creditedSeconds));
   }
+  // The bucket's landing is checked before anything credits (issue #486):
+  // an unrepresentable bucket refuses the whole report — no credited
+  // minute, no partial bank — and the pool stays outstanding for a player
+  // who now knows the figures cannot land as asked. A refusal, never a
+  // throw: the report answers the player's choice.
+  if (outcome !== "missed" && accounting.bucketNous > 0) {
+    const bank = accounting.bucketNous;
+    const lands = [
+      bank,
+      state.nous + bank,
+      state.totalEarned + bank,
+      state.eraEarned + bank,
+      session.earned + bank,
+    ];
+    if (!lands.every((figure) => Number.isFinite(figure))) {
+      return { ok: false, reason: "The provisional nous cannot bank safely, so nothing was credited." };
+    }
+  }
   let completions = 0;
   let rollsBanked = 0;
   if (credit > EPS) {
@@ -180,7 +198,8 @@ export function resolveHonestyReport(
     rollsBanked = accrueClassDevelopment(state, credit, rng);
   }
   if (outcome !== "missed" && accounting.bucketNous > 0) {
-    // The bucket's nous banks through the one production-credit seam.
+    // The bucket's nous banks through the one production-credit seam; the
+    // landing's figures were checked above, before anything credited.
     earnNous(state, accounting.bucketNous);
     session.earned += accounting.bucketNous;
     // The bucket's landing is an era-earned move outside the walk (issue

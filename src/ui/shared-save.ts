@@ -1,4 +1,4 @@
-import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
+import { deserialize, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY } from "../engine/save";
 import type { GameState } from "../engine/types";
 
 export interface LoadedSave {
@@ -52,6 +52,11 @@ export class SharedSave {
     try {
       const raw = this.storage.getItem(STORAGE_KEY);
       if (!raw) return null;
+      // The original-bytes backup (issue #486): the slot's exact bytes are
+      // retained before anything — a later save, a future migration, a
+      // recovery reset — can replace them. A rejected save's bytes are
+      // retained too: the corrupt original is what a recovery reads.
+      this.retain(raw);
       const parsed = this.parse(raw);
       // A rejected file is ours to replace, even if its stamp is in the
       // future. Successful reads are incorporated when App adopts them.
@@ -59,6 +64,18 @@ export class SharedSave {
       return parsed;
     } catch {
       return null;
+    }
+  }
+
+  // The retained source of the currently adopted save (issue #486): the
+  // stored bytes at load, the pasted text at import. A failed retention
+  // (denied storage) degrades silently — the backup must never break the
+  // save it backs up.
+  retain(raw: string): void {
+    try {
+      this.storage.setItem(ORIGINAL_SAVE_KEY, raw);
+    } catch {
+      // The backup is best-effort by design.
     }
   }
 

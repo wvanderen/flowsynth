@@ -9,6 +9,7 @@
 // beside the horizon it gates.
 import { BALANCE, EPS, WORLD_ENEMIES } from "./constants";
 import { adjacent, sameHex } from "./hex";
+import { requireFinite } from "./numeric";
 import type { GameState, Hex, RateSnapshot, WeaponCopy, WeaponType, WorldEnemyState } from "./types";
 
 const ENEMY_BY_KEY = new Map(WORLD_ENEMIES.map((def) => [def.key, def]));
@@ -190,7 +191,7 @@ export function advanceWorldCombat(state: GameState, spanSeconds: number): void 
   const cadence = BALANCE.world.attackCadenceSeconds;
   for (const weapon of state.world.weapons) {
     if (weapon.pos === null) continue;
-    weapon.cooldown += spanSeconds;
+    weapon.cooldown = requireFinite(weapon.cooldown + spanSeconds, "a weapon's combat clock");
     let fires = Math.floor(weapon.cooldown / cadence);
     if (fires <= 0) continue;
     weapon.cooldown -= fires * cadence;
@@ -198,9 +199,9 @@ export function advanceWorldCombat(state: GameState, spanSeconds: number): void 
       const target = eligibleTargetsOf(state, weapon)[0];
       if (target === undefined) break;
       if (weapon.store < BALANCE.world.attackCost) break;
-      weapon.store -= BALANCE.world.attackCost;
+      weapon.store = requireFinite(weapon.store - BALANCE.world.attackCost, "a weapon's stored charge");
       const live = state.world.enemies[target]!;
-      live.hp = Math.max(0, live.hp - attackPowerOf(state, weapon.type));
+      live.hp = Math.max(0, requireFinite(live.hp - attackPowerOf(state, weapon.type), "an enemy's health"));
     }
   }
 }
@@ -307,7 +308,7 @@ export function advanceWorldCharge(state: GameState, snapshot: RateSnapshot, spa
     if (pos === null) continue;
     const module = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
     if (!module) continue;
-    const copied = (snapshot.chargeStrength.get(module.id) ?? 0) * spanSeconds;
+    const copied = requireFinite((snapshot.chargeStrength.get(module.id) ?? 0) * spanSeconds, "a Charge Column's copied supply");
     if (copied <= EPS) continue;
     const consumers: { weapon: WeaponCopy; space: number }[] = [];
     for (const weapon of state.world.weapons) {
@@ -322,7 +323,7 @@ export function advanceWorldCharge(state: GameState, snapshot: RateSnapshot, spa
     );
     for (const [id, amount] of split.accepted) {
       const weapon = state.world.weapons.find((w) => w.id === id);
-      if (weapon) weapon.store += amount;
+      if (weapon) weapon.store = requireFinite(weapon.store + amount, "a weapon's stored charge");
     }
   }
 }

@@ -1,4 +1,5 @@
 import { BALANCE, CATEGORY_OF, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL, TYPE_RARITY } from "./constants";
+import { requireFinite } from "./numeric";
 import { unlockedMergeCap } from "./catalog";
 import { newModuleId } from "./state";
 import type { Candidate, Category, GameState, Meter, ModuleType, MutatorRollOffer, Rarity, RollOffer, RollSources, SpecialDraftKind } from "./types";
@@ -234,7 +235,7 @@ export function bankRolls<O>(
   queue: O[],
   generate: (state: GameState, rng: Rng) => O,
 ): number {
-  meter.progress += amount;
+  meter.progress = requireFinite(meter.progress + amount, "a forge meter's progress");
   let rolls = 0;
   while (meter.progress + 1e-9 >= threshold(meter.earned)) {
     meter.progress = Math.max(0, meter.progress - threshold(meter.earned));
