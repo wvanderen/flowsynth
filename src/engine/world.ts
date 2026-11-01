@@ -8,6 +8,7 @@
 // state.ts beside their module kin; the claim curve lives in accumulator.ts
 // beside the horizon it gates.
 import { BALANCE, EPS, WORLD_ENEMIES } from "./constants";
+import type { WorldEnemyDef } from "./constants";
 import { adjacent, sameHex } from "./hex";
 import { requireFinite } from "./numeric";
 import type { GameState, Hex, RateSnapshot, WeaponCopy, WeaponType, WorldEnemyState } from "./types";
@@ -52,17 +53,48 @@ export function enemyDefeated(state: GameState, key: string): boolean {
 // The World layer's remaining-production factor (issue #425): every
 // discovered, living enemy multiplies its (1 − penalty) into the product,
 // every defeated one its (1 + bonus) — multiplicative stacking, so the
-// nine-living-enemies floor is penalty⁹, never an additive sum. Undiscovered
-// enemies weigh nothing. Nous production only: charge generation, routing,
-// and combat never read this.
+// nine-living-enemies floor is penalty⁹, never an additive sum. The
+// penalty is the enemy's live depth band (issue #489): it deepens with
+// era-earned past the enemy's own reveal, bounded by the authored bands'
+// strictly positive floor. Undiscovered enemies weigh nothing. Nous
+// production only: charge generation, routing, and combat never read this.
 export function worldFactorOf(state: GameState): number {
   let factor = 1;
   for (const def of WORLD_ENEMIES) {
     const live = state.world.enemies[def.key];
     if (!live?.discovered) continue;
-    factor *= enemyDefeated(state, def.key) ? 1 + def.bonus : 1 - def.penalty;
+    factor *= enemyDefeated(state, def.key) ? 1 + def.bonus : 1 - enemyPenaltyOf(state, def.key);
   }
   return factor;
+}
+
+// The enemy's authored band marks: its discovery threshold times each
+// authored step — the crossings the depth read counts and the walk's
+// boundary splits at. One construction, so the two reads can never
+// disagree about what a band crossing is.
+function bandMarksOf(def: WorldEnemyDef): number[] {
+  return BALANCE.world.enemyDepthSteps.map((step) => def.threshold * step);
+}
+
+// The enemy's depth (issue #489): how many authored band steps its era
+// has earned past its OWN discovery threshold. Derived, never stored —
+// era-earned is the whole input, so spending the wallet provides no
+// relief, a prestige rebases the depth away with the era, and an enemy
+// the era's one-move settlement reveals past several of its steps lands
+// at its full earned depth at once. Exact threshold counts as crossed.
+export function enemyDepthOf(state: GameState, key: string): number {
+  const def = ENEMY_BY_KEY.get(key)!;
+  const eraEarned = state.eraEarned;
+  return bandMarksOf(def).filter((mark) => mark <= eraEarned).length;
+}
+
+// The enemy's live penalty at its current depth (issue #489): the one
+// read the production factor and both inspection surfaces (the World
+// plate and the Hex detail's World line) share, so no inspection can
+// disagree with the rate pass about the pressure. The authored array is
+// the single source; its last entry is the bound.
+export function enemyPenaltyOf(state: GameState, key: string): number {
+  return BALANCE.world.enemyDepthPenalties[enemyDepthOf(state, key)]!;
 }
 
 // The discovery sync (issue #425): every authored enemy whose reveal
@@ -101,11 +133,36 @@ export function discoverySecondsOf(state: GameState, rate: number): number {
   return next === Infinity ? Infinity : (next - state.eraEarned) / rate;
 }
 
+// The depth-band boundary (issue #489): seconds of production until
+// era-earned crosses the next authored band step of any discovered,
+// undefeated enemy — a rate-relevant boundary the walk splits at, because
+// the penalty change lands exactly at the crossing. Defeated enemies
+// hold no boundary (their pressure is gone), undiscovered ones neither
+// (their reveal boundary is the earlier split and always fires first — a
+// step mark sits at or above the enemy's own threshold). Infinity when
+// no deeper band waits or nothing produces.
+export function bandBoundarySeconds(state: GameState, rate: number): number {
+  if (rate <= EPS) return Infinity;
+  let next = Infinity;
+  for (const def of WORLD_ENEMIES) {
+    const live = state.world.enemies[def.key];
+    if (!live?.discovered || enemyDefeated(state, def.key)) continue;
+    for (const mark of bandMarksOf(def)) {
+      if (mark > state.eraEarned) {
+        next = Math.min(next, mark);
+        break;
+      }
+    }
+  }
+  return next === Infinity ? Infinity : (next - state.eraEarned) / rate;
+}
+
 // The World's own span boundary (issue #425, priority 5): the earlier of
-// the discovery crossing and the next attack tick — the one read both walk
-// loops share, so the trusted-time legs can never drift apart.
+// the discovery crossing, the depth-band crossing (issue #489), and the
+// next attack tick — the one read both walk loops share, so the
+// trusted-time legs can never drift apart.
 export function worldBoundarySeconds(state: GameState, rate: number): number {
-  return Math.min(discoverySecondsOf(state, rate), combatBoundaryOf(state));
+  return Math.min(discoverySecondsOf(state, rate), combatBoundaryOf(state), bandBoundarySeconds(state, rate));
 }
 
 // The weapon type's current attack power (issue #425): the authored base

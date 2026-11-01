@@ -624,7 +624,7 @@ The World layer's authored adversary: occupying an authored World position, appl
 _Avoid_: encounter (on any surface), hostile, mob
 
 **Penalty**:
-A discovered enemy's bounded production reduction, multiplying its remaining-production factors. First-experiment penalties touch nous production alone, leaving charge generation, routing, and combat functional. Defeat replaces it with the era bonus.
+A discovered enemy's bounded production reduction, deepening one authored band each time era-earned crosses a multiple of the enemy's own discovery threshold, and multiplying its remaining-production factors. The measure is era-earned, never the wallet balance, and the deepest band keeps a strictly positive floor. First-experiment penalties touch nous production alone, leaving charge generation, routing, and combat functional. Defeat replaces it with the era bonus; prestige restores the enemy at its discovery band.
 _Avoid_: debuff, curse, malus
 
 **Era bonus**:

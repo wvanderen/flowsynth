@@ -338,12 +338,28 @@ export interface Balance {
     columnFirstPrice: number;
     columnPriceGrowth: number;
     // The authored encounter table's shared arithmetic (findings.md:
-    // nine fixed enemies, HP 12×1.5ⁱ, ×0.8 remaining production while
-    // discovered and alive, ×1.08 era-local bonus when defeated —
-    // multiplicative stacking, nine living enemies floor to ×0.8⁹).
+    // nine fixed enemies, HP 12×1.5ⁱ, and the discovery-band ×0.8
+    // remaining production while discovered and alive, ×1.08 era-local
+    // bonus when defeated — multiplicative stacking, nine living enemies
+    // flooring at 0.8⁹ at the discovery band). The penalty is no longer a
+    // fixed stat: the depth bands below deepen it with era progress
+    // (issue #489, ADR-0078).
     enemyBaseHp: number;
     enemyHpGrowth: number;
-    enemyPenalty: number;
+    // The authored depth bands (issue #489, ADR-0078): a discovered,
+    // undefeated enemy sits one band deeper each time era-earned crosses
+    // the next multiple of its OWN discovery threshold — step i of
+    // `enemyDepthSteps` lifts it to band i+1 — and reads its penalty from
+    // `enemyDepthPenalties`, band 0 being the discovery penalty. The last
+    // band is the bound: its remaining factor (1 − deepest penalty) is
+    // the strictly positive floor production keeps, per enemy and in the
+    // nine-enemies product. The measure is era-earned — the era's
+    // cumulative production — never the wallet balance, so spending
+    // provides no relief; prestige rebases era-earned and the depth falls
+    // out. Provisional coefficients pending scheduled calibration; no
+    // new enemies, no new combat families.
+    enemyDepthSteps: readonly number[];
+    enemyDepthPenalties: readonly number[];
     enemyBonus: number;
   };
 }
@@ -359,7 +375,6 @@ export interface WorldEnemyDef {
   threshold: number;
   pos: Hex;
   maxHp: number;
-  penalty: number;
   bonus: number;
 }
 
@@ -490,7 +505,11 @@ export const BALANCE: Balance = {
     columnPriceGrowth: 2,
     enemyBaseHp: 12,
     enemyHpGrowth: 1.5,
-    enemyPenalty: 0.2,
+    // Bands at a decade, two, and three past the enemy's own reveal; the
+    // deepest band keeps ×0.35 of production standing. Provisional —
+    // scheduled calibration tunes these.
+    enemyDepthSteps: [10, 100, 1000],
+    enemyDepthPenalties: [0.2, 0.35, 0.5, 0.65],
     enemyBonus: 0.08,
   },
 };
@@ -522,7 +541,6 @@ export const WORLD_ENEMIES: readonly WorldEnemyDef[] = ENEMY_POSITIONS.map((pos,
   threshold: BALANCE.world.entryNous * 10 ** i,
   pos,
   maxHp: BALANCE.world.enemyBaseHp * BALANCE.world.enemyHpGrowth ** i,
-  penalty: BALANCE.world.enemyPenalty,
   bonus: BALANCE.world.enemyBonus,
 }));
 

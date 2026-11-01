@@ -14,7 +14,7 @@ import { BALANCE, WORLD_ENEMIES } from "../engine/constants";
 // (columnLiftsOf), never a UI-side re-derivation. Combat never demands
 // attention: the faces carry their own figures, a fed weapon's fill
 // breathes at low amplitude, and reduced motion stands fully static.
-import { enemyDefAt, enemyDefeated, enemyStateOf, attackPowerOf, columnLiftsOf, eligibleTargetsOf, worldOccupantAt } from "../engine/world";
+import { enemyDefAt, enemyDefeated, enemyPenaltyOf, enemyStateOf, attackPowerOf, columnLiftsOf, eligibleTargetsOf, worldOccupantAt } from "../engine/world";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf } from "../engine/lattice";
 import { displayedRates } from "../engine/economy";
@@ -219,7 +219,9 @@ function reservedFaceHtml(pos: Hex): string {
 }
 
 // The discovered enemy's face: the firm plate, the hostile glyph, the
-// remaining HP, the penalty figure.
+// remaining HP, the live penalty figure — the shared read, not the
+// authored base, so the plate shows the era's current pressure (issue
+// #489).
 function enemyFaceHtml(state: GameState, pos: Hex, key: string): string {
   const def = enemyDefAt(pos)!;
   const live = enemyStateOf(state, key);
@@ -227,8 +229,15 @@ function enemyFaceHtml(state: GameState, pos: Hex, key: string): string {
     <text class="world-word" y="${NAME_Y}" text-anchor="middle">ENEMY</text>
     ${worldGlyph("enemy", false, 0.85)}
     <text class="world-fig" y="16" text-anchor="middle">HP ${formatInt(Math.max(0, Math.ceil(live.hp)))}/${formatInt(Math.ceil(def.maxHp))}</text>
-    <text class="world-fig penalty" y="${VERDICT_Y}" text-anchor="middle">−${Math.round(def.penalty * 100)}% ν</text>
+    <text class="world-fig penalty" y="${VERDICT_Y}" text-anchor="middle">${enemyPenaltyFigure(state, key)}</text>
     <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+}
+
+// The one penalty figure every enemy surface prints — the plate, the Hex
+// detail's chassis, the Hex detail's World line: the shared live read,
+// rendered in exactly one place (issue #489).
+export function enemyPenaltyFigure(state: GameState, key: string): string {
+  return `−${Math.round(enemyPenaltyOf(state, key) * 100)}% ν`;
 }
 
 // The cleared plate: the encounter retained, the era bonus engraved — the
@@ -743,7 +752,7 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
       };
     }
     return {
-      chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("firm", 52)}<text class="world-word" y="-38" text-anchor="middle">ENEMY</text><g transform="translate(0,-14)">${worldGlyph("enemy", false, 1.2)}</g><text class="world-fig" y="24" text-anchor="middle">HP ${formatInt(Math.max(0, Math.ceil(live.hp)))}/${formatInt(Math.ceil(def.maxHp))}</text><text class="world-fig penalty" y="44" text-anchor="middle">−${Math.round(def.penalty * 100)}% ν</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
+      chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("firm", 52)}<text class="world-word" y="-38" text-anchor="middle">ENEMY</text><g transform="translate(0,-14)">${worldGlyph("enemy", false, 1.2)}</g><text class="world-fig" y="24" text-anchor="middle">HP ${formatInt(Math.max(0, Math.ceil(live.hp)))}/${formatInt(Math.ceil(def.maxHp))}</text><text class="world-fig penalty" y="44" text-anchor="middle">${enemyPenaltyFigure(state, def.key)}</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
       tip: `Enemy · attacked by adjacent weapons on their cadence`,
     };
   }

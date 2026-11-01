@@ -10,6 +10,7 @@ import { renderHexDetail } from "./hexdetail";
 import { formatInt, formatNumber } from "./format";
 import { levelsCost, displayedRates, deployedAt } from "../engine/economy";
 import { BALANCE } from "../engine/constants";
+import { enemyPenaltyOf } from "../engine/world";
 import { createWeapon, createWorldColumn } from "../engine/state";
 
 // The Hex detail (issue #295): the module bloom's successor — an owned
@@ -330,6 +331,22 @@ describe("the World face in detail", () => {
     app.closeDetail();
     const reserved = grid().querySelector('[data-key="world-w0"]')!;
     expect(reserved.textContent).toContain("RESERVED");
+  });
+
+  it("an enemy's detail reads its live depth-band penalty on the line and the chassis (issue #489)", () => {
+    seedEra();
+    // The enemy coordinate owned: the cross-section can stand there.
+    app.state.cells.push(hex(-1, 0));
+    app.state.world.enemies["w0"] = { discovered: true, hp: BALANCE.world.enemyBaseHp };
+    app.state.eraEarned = BALANCE.world.entryNous * 100; // two bands past w0's reveal
+    app.render();
+    app.openDetail(hex(-1, 0), "world");
+    const figure = `−${Math.round(enemyPenaltyOf(app.state, "w0") * 100)}% ν`;
+    expect(enemyPenaltyOf(app.state, "w0")).toBe(BALANCE.world.enemyDepthPenalties[2]);
+    // The details column's World line and the World chassis carry the
+    // same shared read, not a def field.
+    expect(detail().querySelector(".hex-detail-world-line")!.textContent).toContain(`Enemy · ${figure} while it stands`);
+    expect(faceSvg("world").textContent).toContain(figure);
   });
 
   it("the rail's retrieve lands the occupant in the World tray", () => {

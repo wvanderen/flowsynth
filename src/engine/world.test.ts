@@ -2,20 +2,25 @@ import { describe, expect, it } from "vitest";
 import {
   advanceWorldCharge,
   attackPowerOf,
+  bandBoundarySeconds,
   columnCost,
   columnLiftsOf,
   combatBoundaryOf,
   eligibleTargetsOf,
   enemyDefAt,
+  enemyDepthOf,
+  enemyPenaltyOf,
   honeCostOf,
   splitColumnSupply,
   syncWorldDiscoveries,
+  worldBoundarySeconds,
   worldFactorOf,
 } from "./world";
 import { bankableClaimOf, frontierEntitlement, pendingClaimOf, ARETE_HORIZON } from "./accumulator";
 import { buyChargeColumn, buyHoneRank, placeWorldOccupant, prestige, reshapeCells, retrieveWorldOccupant, setWeaponTargetPriority, startSession } from "./actions";
-import { advance, advanceBreather } from "./advance";
+import { advance, advanceBreather, emptyAdvanceResult, sumResults } from "./advance";
 import { BALANCE, WORLD_ENEMIES } from "./constants";
+import { syncRates } from "./economy";
 import { createInitialState, createWeapon } from "./state";
 import { fresh, give } from "./fixtures";
 import { serialize, deserialize } from "./save";
@@ -47,6 +52,19 @@ function grantWeapon(state: GameState, pos: Hex | null, store = BALANCE.world.st
   weapon.store = store;
   state.world.weapons.push(weapon);
   return weapon;
+}
+
+// The charged rig: a host voice, a fed generator, the Column over the
+// host, and the store-empty weapon beside both — the board shape the
+// charge-and-combat cases share.
+function chargedRig(): GameState {
+  const s = flowing();
+  give(s, "additive", hex(0, 1));
+  const generator = give(s, "focusKeyed", hex(1, 0));
+  generator.reserve = 500000;
+  s.world.columns.push({ id: "col1", pos: hex(0, 1) });
+  grantWeapon(s, hex(1, 0), 0);
+  return s;
 }
 
 // Reveals an authored enemy and scars it to the given HP.
@@ -258,7 +276,9 @@ describe("the authored roster and its reachability invariant (issue #425, priori
     // because the attack never waits on expansion.
     expect(opening.some((cell) => adjacent(cell, first.pos))).toBe(true);
     expect(first.threshold).toBe(BALANCE.world.entryNous);
-    expect(first.penalty).toBeGreaterThan(0);
+    // The discovery band's pressure is survivable — the deepened bands
+    // (issue #489) only bite as the era earns past the reveal.
+    expect(BALANCE.world.enemyDepthPenalties[0]).toBeGreaterThan(0);
   });
 
   it("thresholds, positions, and stats repeat unchanged each era — prestige never raises enemy strength", () => {
@@ -304,7 +324,7 @@ describe("discovery (issue #425, priorities 3 and 5)", () => {
     // rate, the remainder carried the penalty from the discovery point on.
     // The era started five below the threshold, so the crossing spent the
     // first 5/rate seconds of the window at full production.
-    const expected = def.threshold + (1 - BALANCE.world.enemyPenalty) * (rate * 1000 - 5);
+    const expected = def.threshold + (1 - BALANCE.world.enemyDepthPenalties[0]!) * (rate * 1000 - 5);
     expect(Math.abs(s.eraEarned - expected)).toBeLessThan(1e-9);
   });
 
@@ -320,7 +340,7 @@ describe("discovery (issue #425, priorities 3 and 5)", () => {
     grantWeapon(twin, hex(1, 0));
     advance(twin, 10);
     const rate = twin.eraEarned / 10;
-    const penalized = rate * (1 - BALANCE.world.enemyPenalty);
+    const penalized = rate * (1 - BALANCE.world.enemyDepthPenalties[0]!);
     const bonus = rate * (1 + BALANCE.world.enemyBonus);
     // Five attacks at 60s cadence: the kill lands at t = 300 exactly.
     advance(s, 600);
@@ -362,7 +382,258 @@ describe("multiplicative penalty stacking (issue #425, priority 3)", () => {
     const s = flowing();
     reveal(s, "w0");
     advance(s, 10);
-    expect(Math.abs(s.eraEarned - rate * (1 - BALANCE.world.enemyPenalty) * 10)).toBeLessThan(1e-9);
+    expect(Math.abs(s.eraEarned - rate * (1 - BALANCE.world.enemyDepthPenalties[0]!) * 10)).toBeLessThan(1e-9);
+  });
+});
+
+// ── Era pressure: the depth bands (issue #489, ADR-0078) ────────────────
+describe("era pressure: the depth bands (issue #489)", () => {
+  const bands = () => BALANCE.world.enemyDepthPenalties;
+
+  it("each authored step past its own reveal deepens the enemy one band, bounded at the last", () => {
+    const s = fresh();
+    reveal(s, "w0");
+    const def = WORLD_ENEMIES[0]!;
+    expect(enemyDepthOf(s, "w0")).toBe(0);
+    expect(enemyPenaltyOf(s, "w0")).toBe(bands()[0]);
+    BALANCE.world.enemyDepthSteps.forEach((step, i) => {
+      s.eraEarned = def.threshold * step;
+      expect(enemyDepthOf(s, "w0")).toBe(i + 1);
+      expect(enemyPenaltyOf(s, "w0")).toBe(bands()[i + 1]);
+    });
+    // Bounded: past the last authored step the deepest band holds.
+    s.eraEarned = def.threshold * 1e6;
+    expect(enemyDepthOf(s, "w0")).toBe(BALANCE.world.enemyDepthSteps.length);
+    expect(enemyPenaltyOf(s, "w0")).toBe(bands()[bands().length - 1]);
+    // And the factor carries the deepened figure.
+    expect(worldFactorOf(s)).toBe(1 - bands()[bands().length - 1]!);
+  });
+
+  it("the depth is era-earned's own measure: the wallet never relieves it", () => {
+    const def = WORLD_ENEMIES[0]!;
+    const poor = fresh();
+    reveal(poor, "w0");
+    poor.eraEarned = def.threshold * 10;
+    const wealthy = fresh();
+    reveal(wealthy, "w0");
+    wealthy.eraEarned = poor.eraEarned;
+    wealthy.nous = 1e15; // a huge balance on the same era measure
+    expect(enemyPenaltyOf(wealthy, "w0")).toBe(enemyPenaltyOf(poor, "w0"));
+    // Spending the wallet to zero leaves the pressure standing.
+    poor.nous = 0;
+    expect(enemyPenaltyOf(poor, "w0")).toBe(bands()[1]);
+  });
+
+  it("the deepest band leaves a strictly positive floor, per enemy and across all nine", () => {
+    const deepest = bands()[bands().length - 1]!;
+    expect(1 - deepest).toBeGreaterThan(0);
+    const s = fresh();
+    s.eraEarned = 1e24; // past every enemy's deepest mark
+    for (const def of WORLD_ENEMIES) reveal(s, def.key);
+    for (const def of WORLD_ENEMIES) expect(enemyPenaltyOf(s, def.key)).toBe(deepest);
+    expect(worldFactorOf(s)).toBeCloseTo((1 - deepest) ** WORLD_ENEMIES.length, 12);
+    expect(worldFactorOf(s)).toBeGreaterThan(0);
+  });
+
+  it("the next uncrossed band step is a walk boundary; defeated and undiscovered enemies hold none", () => {
+    const def = WORLD_ENEMIES[0]!;
+    const banded = () => {
+      const s = fresh();
+      reveal(s, "w0");
+      s.eraEarned = def.threshold * 10 - 100;
+      return s;
+    };
+    // 100 earned ν short of the first step mark: 50 s of production at rate 2.
+    expect(bandBoundarySeconds(banded(), 2)).toBe(50);
+    // The walk's one boundary read carries the band crossing beside the others.
+    expect(worldBoundarySeconds(banded(), 2)).toBe(50);
+    // An exact mark counts as crossed; the next step owns the boundary.
+    const atMark = banded();
+    atMark.eraEarned = def.threshold * 10;
+    expect(bandBoundarySeconds(atMark, 2)).toBe((def.threshold * 90) / 2);
+    // Defeated: no pressure stands, so no band waits.
+    const cleared = banded();
+    cleared.world.enemies.w0!.hp = 0;
+    expect(bandBoundarySeconds(cleared, 2)).toBe(Infinity);
+    // Undiscovered: the reveal boundary is the earlier split, always.
+    expect(bandBoundarySeconds(fresh(), 2)).toBe(Infinity);
+  });
+
+  it("production splits at the band crossing: the remainder earns at the deepened factor", () => {
+    const s = flowing();
+    reveal(s, "w0");
+    const def = WORLD_ENEMIES[0]!;
+    s.eraEarned = def.threshold * 10 - 5;
+    // Rate from a twin's returned earnings — era-earned itself sits on
+    // the 1e13 float grid and is too coarse to measure with.
+    const twin = flowing();
+    reveal(twin, "w0");
+    const rate = advance(twin, 10).nousEarned / 10;
+    const earned = advance(s, 1000).nousEarned;
+    // The crossing is also w1's reveal (its threshold is the same
+    // figure): the factor moves from w0's discovery band to w0's band
+    // one beside w1's discovery band — a ratio the expected figure names
+    // against the pre-boundary rate. Tolerance: 0.01 earned ν — the
+    // era-earned grid at 1e13 can wobble the split instant by about one
+    // ulp, and any real mis-split misses by tens.
+    const preFactor = 1 - bands()[0]!;
+    const postFactor = (1 - bands()[1]!) * (1 - bands()[0]!);
+    const expected = 5 + (postFactor / preFactor) * (rate * 1000 - 5);
+    expect(Math.abs(earned - expected)).toBeLessThan(0.01);
+    expect(enemyDepthOf(s, "w0")).toBe(1);
+    expect(s.world.enemies.w1!.discovered).toBe(true);
+    expect(enemyDepthOf(s, "w1")).toBe(0);
+  });
+
+  it.each(["flow", "breather"] as const)("%s: one long advance and per-second steps across band, discovery, and combat boundaries earn and damage identically", (mode) => {
+    const rig = () => {
+      const s = chargedRig();
+      // Just under the mark that is at once w0's first band step and
+      // w1's reveal: the boundary fires inside the window's first
+      // second, then the weapon's ticks carry the combat boundaries.
+      reveal(s, "w0");
+      s.eraEarned = BALANCE.world.entryNous * 10 - 0.05;
+      if (mode === "breather") {
+        s.mode = "breather";
+        s.breather = { startedAt: 0, allowanceSeconds: 400, elapsed: 0 };
+      }
+      return s;
+    };
+    const long = rig();
+    const short = rig();
+    const walk = mode === "flow" ? advance : advanceBreather;
+    const earnedLong = walk(long, 400);
+    let earnedShort = emptyAdvanceResult();
+    for (let second = 0; second < 400; second++) {
+      earnedShort = sumResults(earnedShort, walk(short, 1));
+    }
+    // The band landed and the reveal fired in both — the boundary walk
+    // is step-size independent, not a long-run privilege.
+    expect(enemyDepthOf(long, "w0")).toBe(1);
+    expect(enemyDepthOf(short, "w0")).toBe(1);
+    expect(long.world.enemies.w1!.discovered).toBe(true);
+    expect(short.world.enemies.w1!.discovered).toBe(true);
+    // Earnings agree within 1e-4 ν on a ~150 ν window — the era-earned
+    // float grid at 1e13 wobbles the split instant by less than that,
+    // and any real boundary mis-walk misses by whole earned ν.
+    expect(Math.abs(earnedLong.nousEarned - earnedShort.nousEarned)).toBeLessThan(1e-4);
+    // Damage and the combat clock agree exactly: w1 (the only adjacent
+    // living enemy) took the same five attacks and fell in both.
+    expect(long.world.enemies.w1!.hp).toBe(0);
+    expect(short.world.enemies.w1!.hp).toBe(0);
+    expect(long.world.weapons[0]!.store).toBe(short.world.weapons[0]!.store);
+    expect(long.world.weapons[0]!.cooldown).toBeCloseTo(short.world.weapons[0]!.cooldown, 9);
+  });
+
+  it("paused time neither earns nor deepens; provisional time produces but never deepens until its report settles", () => {
+    const s = flowing();
+    reveal(s, "w0");
+    s.eraEarned = BALANCE.world.entryNous * 10 - 1;
+    // Paused: no walk, no era movement, no depth change.
+    s.mode = "paused";
+    expect(advance(s, 600).nousEarned).toBe(0);
+    expect(enemyDepthOf(s, "w0")).toBe(0);
+    // Provisional: production lands in the bucket at the standing band;
+    // era-earned never moves, so no boundary and no deepening mid-gap.
+    s.mode = "flow";
+    const factorBefore = worldFactorOf(s);
+    advance(s, 600, Math.random, "provisional");
+    expect(s.session!.accounting.bucketNous).toBeGreaterThan(0);
+    expect(enemyDepthOf(s, "w0")).toBe(0);
+    expect(worldFactorOf(s)).toBe(factorBefore);
+  });
+
+  it("the report's one move lands reveals and bands together; a missed report drops both", () => {
+    const settle = (outcome: "full" | "missed") => {
+      const s = flowing();
+      reveal(s, "w0");
+      s.eraEarned = BALANCE.world.entryNous * 10 - 5;
+      s.session!.accounting.bucketNous = BALANCE.world.entryNous * 500;
+      s.session!.accounting.poolSeconds = 600;
+      resolveHonestyReport(s, outcome);
+      return s;
+    };
+    const banked = settle("full");
+    // The landing crossed w0's first two marks and w1's and w2's reveals:
+    // w0 stands two bands deep, w1 one, w2 at its discovery band.
+    expect(banked.world.enemies.w1!.discovered).toBe(true);
+    expect(banked.world.enemies.w2!.discovered).toBe(true);
+    expect(banked.world.enemies.w3!.discovered).toBe(false);
+    expect(enemyDepthOf(banked, "w0")).toBe(2);
+    expect(enemyDepthOf(banked, "w1")).toBe(1);
+    expect(enemyDepthOf(banked, "w2")).toBe(0);
+    // A missed report drops the bucket: no era movement, no reveal, no
+    // deepening — rejected practice earns no pressure either way.
+    const dropped = settle("missed");
+    expect(dropped.world.enemies.w1!.discovered).toBe(false);
+    expect(enemyDepthOf(dropped, "w0")).toBe(0);
+  });
+
+  it("defeat removes only that enemy's pressure at any depth; prestige restores the era state", () => {
+    const s = fresh();
+    s.mode = "upgrade";
+    reveal(s, "w0", 0); // defeated while its era sits two bands deep
+    reveal(s, "w1"); // living at its first band
+    s.eraEarned = BALANCE.world.entryNous * 100;
+    expect(enemyDepthOf(s, "w0")).toBe(2);
+    expect(enemyDepthOf(s, "w1")).toBe(1);
+    expect(worldFactorOf(s)).toBeCloseTo((1 + WORLD_ENEMIES[0]!.bonus) * (1 - bands()[1]!), 12);
+    expect(s.eraEarned).toBeGreaterThanOrEqual(ARETE_HORIZON);
+    expect(prestige(s).ok).toBe(true);
+    // The era state returns: the enemy reserved at fixed stats, the bonus
+    // gone, and the depth fallen away with the rebased era-earned.
+    expect(s.world.enemies.w0).toEqual({ discovered: false, hp: WORLD_ENEMIES[0]!.maxHp });
+    expect(s.eraEarned).toBeLessThan(WORLD_ENEMIES[0]!.threshold);
+    expect(enemyDepthOf(s, "w0")).toBe(0);
+    expect(enemyDepthOf(s, "w1")).toBe(0);
+    expect(worldFactorOf(s)).toBe(1);
+  });
+
+  it("the depth rides the save's era-earned: a round trip reads the same pressure", () => {
+    const s = fresh();
+    reveal(s, "w0");
+    s.eraEarned = BALANCE.world.entryNous * 1000;
+    const loaded = deserialize(serialize(s, 5_000)).state!;
+    expect(loaded.world.enemies.w0).toEqual(s.world.enemies.w0);
+    expect(enemyDepthOf(loaded, "w0")).toBe(enemyDepthOf(s, "w0"));
+    expect(enemyPenaltyOf(loaded, "w0")).toBe(enemyPenaltyOf(s, "w0"));
+    expect(worldFactorOf(loaded)).toBe(worldFactorOf(s));
+  });
+
+  it("the deepened bands never touch charge, routing, cadence, or damage", () => {
+    const rig = (eraEarned: number, revealed: readonly string[]) => {
+      const s = chargedRig();
+      for (const key of revealed) reveal(s, key);
+      s.eraEarned = eraEarned;
+      return s;
+    };
+    const entry = BALANCE.world.entryNous;
+    // Shallow era: w0 and w1 at the discovery band. Deep era: w0 two
+    // bands down, w1 one, w2 discovered at its own threshold. Reserved:
+    // the same board with nothing revealed — the unpressured raw rate.
+    const shallow = rig(entry, ["w0", "w1"]);
+    const deep = rig(entry * 100, ["w0", "w1", "w2"]);
+    const reserved = rig(entry * 100, []);
+    const shallowSnapshot = syncRates(shallow);
+    const deepSnapshot = syncRates(deep);
+    const rawSnapshot = syncRates(reserved);
+    // The rate pass carries the deepened bands…
+    expect(deepSnapshot.worldFactor).toBeCloseTo((1 - bands()[2]!) * (1 - bands()[1]!) * (1 - bands()[0]!), 12);
+    expect(shallowSnapshot.worldFactor).toBeCloseTo((1 - bands()[0]!) ** 2, 12);
+    expect(rawSnapshot.worldFactor).toBe(1);
+    expect(deepSnapshot.rate).toBeCloseTo(rawSnapshot.rate * deepSnapshot.worldFactor, 9);
+    // …and only the rate: the charge legs and the forge meters are
+    // identical under every depth.
+    expect(deepSnapshot.chargeStrength).toEqual(shallowSnapshot.chargeStrength);
+    expect(deepSnapshot.chargeStrength).toEqual(rawSnapshot.chargeStrength);
+    expect(deepSnapshot.forgeRate).toBe(shallowSnapshot.forgeRate);
+    // Combat under the deepest standing pressure: same cadence, same
+    // damage, same store draw.
+    advance(shallow, 181);
+    advance(deep, 181);
+    expect(deep.world.enemies.w1!.hp).toBe(shallow.world.enemies.w1!.hp);
+    expect(deep.world.enemies.w1!.hp).toBe(WORLD_ENEMIES[1]!.maxHp - attackPowerOf(deep, "chargeBlade") * 3);
+    expect(deep.world.weapons[0]!.store).toBeCloseTo(shallow.world.weapons[0]!.store, 9);
   });
 });
 
@@ -891,9 +1162,16 @@ describe("shipped tuning defaults are hypothesis knobs — calibration unavailab
     WORLD_ENEMIES.forEach((def, i) => {
       expect(def.threshold).toBe(1e12 * 10 ** i);
       expect(def.maxHp).toBeCloseTo(12 * 1.5 ** i, 9);
-      expect(def.penalty).toBe(0.2);
       expect(def.bonus).toBe(0.08);
     });
+    // The depth bands (issue #489): band steps in the enemy's own
+    // threshold multiples, penalties per band with the discovery figure
+    // leading and the deepest leaving the positive floor. Hypothesis
+    // coefficients pending scheduled calibration — changing one must
+    // fail here and force a fresh citation.
+    expect(BALANCE.world.enemyDepthSteps).toEqual([10, 100, 1000]);
+    expect(BALANCE.world.enemyDepthPenalties).toEqual([0.2, 0.35, 0.5, 0.65]);
+    expect(BALANCE.world.enemyDepthPenalties).toHaveLength(BALANCE.world.enemyDepthSteps.length + 1);
   });
 
   it("the combat figures ship findings.md's cadence hypothesis, flagged", () => {
