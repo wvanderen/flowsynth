@@ -4,7 +4,7 @@ import { RESPONSE_CURVES, WORLD_ENEMIES } from "../src/engine/constants";
 import { stateOf, type ComparisonBoard } from "../src/engine/capacity-comparisons";
 import { fresh, give } from "../src/engine/fixtures";
 import { hex, sameHex } from "../src/engine/hex";
-import { composePlaythroughRecipe, playthroughSource, runPlaythrough, type PlaythroughRecord, type PlaythroughRecipe, type PlaythroughSource } from "../src/engine/playthrough";
+import { composePlaythroughRecipe, playthroughSource, runPlaythrough, type PlaythroughEvent, type PlaythroughRecord, type PlaythroughRecipe, type PlaythroughSource } from "../src/engine/playthrough";
 import { worldFactorOf } from "../src/engine/world";
 import type { GameState, Hex, ModuleType, ResponseCurveId } from "../src/engine/types";
 
@@ -371,7 +371,8 @@ export interface EnvelopeRow {
   // The whole-board rate at this level; null beyond the representable
   // range, recorded as null on purpose.
   readonly rate: number | null;
-  // The next level's price on the upgrade ladder (levelCost(level)).
+  // Price to raise all supplied-board copies by one level, matching the
+  // whole-board rate difference below.
   readonly nextLevelCost: number;
   // Marginal ν/s per next-level ν — growth against the upgrade cost;
   // null when either endpoint leaves the representable range.
@@ -501,7 +502,7 @@ export function envelopeRows(): EnvelopeRow[] {
       return value;
     };
     for (const level of LEVEL_SWEEP) {
-      const cost = levelCost(level);
+      const cost = SUPPLIED_BOARD.length * levelCost(level);
       const here = at(level).rate;
       const next = at(level + 1).rate;
       const finitePair = Number.isFinite(here) && Number.isFinite(next);
@@ -512,7 +513,7 @@ export function envelopeRows(): EnvelopeRow[] {
         rate: representable(here),
         nextLevelCost: cost,
         marginalNuPerNu: finitePair ? representable((next - here) / cost) : null,
-        waitRatio: finitePair ? representable((levelCost(level + 1) / next) / (cost / here)) : null,
+        waitRatio: finitePair ? representable((SUPPLIED_BOARD.length * levelCost(level + 1) / next) / (cost / here)) : null,
         certified: at(level).certified,
       });
     }
@@ -560,6 +561,13 @@ export function gestureRows(): GestureRow[] {
   });
 }
 
+// Count successful roll acquisitions using the runner's type-id labels,
+// including the runner's uniform "a" article for both support types.
+export function responseSupportsAcquired(events: readonly PlaythroughEvent[]): number {
+  return events.filter((event) => event.ok && event.kind === "roll" &&
+    /^Accepted a (chorus|exciter) from the roll$/.test(event.label)).length;
+}
+
 // The acquisition-policy pacing legs: the scheduled prompt walk, one per
 // candidate, same declared recipe otherwise. Whatever the curves do, the
 // opening era's acquisitions are recorded exactly as the policy played
@@ -568,7 +576,7 @@ export function pacingRows(budgetDays: number): PacingRow[] {
   return CURVES.map((curve) => {
     const recipe = composePlaythroughRecipe({ seed: 468, budgetDays, responseCurve: curve });
     const run: PlaythroughRecord = runPlaythrough(recipe);
-    const supports = run.events.filter((event) => /a Chorus|an Exciter/.test(event.label) && event.ok).length;
+    const supports = responseSupportsAcquired(run.events);
     return {
       evidenceClass: "pacing-acquisition" as const,
       curve,
@@ -628,7 +636,7 @@ export function acquisitionScan(seeds: readonly number[], budgetDays: number): A
       seed,
       budgetDays,
       complete: run.complete,
-      responseSupportsAcquired: run.events.filter((event) => /a Chorus|an Exciter/.test(event.label) && event.ok).length,
+      responseSupportsAcquired: responseSupportsAcquired(run.events),
     };
   });
 }
@@ -768,9 +776,9 @@ function findingsOf(report: ResponseComparisonReport): string[] {
   const acquired = report.pacing.map((row) => row.responseSupportsAcquired);
   const scanHolds = report.acquisitionScan.filter((row) => row.responseSupportsAcquired > 0).length;
   findings.push(
-    identical && acquired.every((count) => count === 0)
+    identical && acquired.every((count) => count === 0) && scanHolds === 0
       ? `Fresh-start pacing is curve-invariant in this era: the scheduled prompt policy acquired no Chorus or Exciter within ${first.budgetDays} days on seed ${first.recipe.seed}, and the recorded acquisition scan agrees (seeds ${report.acquisitionScan[0]!.seed}–${report.acquisitionScan.at(-1)!.seed} at ${report.acquisitionScan[0]!.budgetDays} days: ${scanHolds} of ${report.acquisitionScan.length} runs ever held a response support) — the candidates cannot move an opening era; the decision binds already-acquired boards.`
-      : `Fresh-start pacing diverged — response supports acquired per candidate: ${acquired.join(", ")}; scan runs holding a support: ${scanHolds} of ${report.acquisitionScan.length}; walks identical: ${identical}.`,
+      : `Fresh-start pacing walks ${identical ? "are curve-invariant" : "differ"} — response supports acquired per candidate: ${acquired.join(", ")}; scan runs holding a support: ${scanHolds} of ${report.acquisitionScan.length}; walks identical: ${identical}.`,
   );
   findings.push(
     "The declared purchase-policy gesture sweep spends the same declared bank on the same already-acquired board under each candidate — " +

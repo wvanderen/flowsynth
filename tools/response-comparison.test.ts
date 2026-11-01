@@ -15,14 +15,16 @@ import {
   phenomenonState,
   pacingRows,
   responseComparisonReport,
+  responseSupportsAcquired,
   suppliedBoardState,
   suppliedBoardUnpressed,
   uniformLevelInvestment,
 } from "./response-comparison";
+import { upgradeModuleLevels } from "../src/engine/actions";
 import { allocateRates, voiceCapacityOf } from "../src/engine/economy";
 import { BALANCE, RESPONSE_CURVES, WORLD_ENEMIES } from "../src/engine/constants";
 import { exportPlaythroughArtifact, importPlaythroughArtifact } from "../src/engine/playthrough-artifact";
-import { composePlaythroughRecipe, playthroughNote, playthroughRunId, runPlaythrough, type PlaythroughRecord } from "../src/engine/playthrough";
+import { composePlaythroughRecipe, playthroughNote, playthroughRunId, runPlaythrough, type PlaythroughEvent, type PlaythroughRecord } from "../src/engine/playthrough";
 
 // The response-support candidate comparison's checks (issue #487, parent
 // stories 7–14, 42–43). The catalog and seam pins run always; the full
@@ -198,7 +200,41 @@ describe("the supplied-board reconstruction", () => {
   });
 });
 
+describe("response-support acquisition evidence", () => {
+  it("counts successful Chorus and Exciter roll acquisitions and excludes refusals and other events", () => {
+    const event = (label: string, ok = true, kind: PlaythroughEvent["kind"] = "roll"): PlaythroughEvent =>
+      ({ at: 0, credited: 0, snapshot: 0, kind, label, ok });
+    expect(responseSupportsAcquired([
+      event("Accepted a chorus from the roll"),
+      event("Accepted a exciter from the roll"),
+      event("Accepted a chorus from the roll", false),
+      event("Accepted a exciter from the roll", false),
+      event("Accepted a additive from the roll"),
+      event("Accepted a chorus from the roll", true, "milestone"),
+    ])).toBe(2);
+    expect(responseSupportsAcquired([])).toBe(0);
+  });
+});
+
 describe("the analytical envelopes", () => {
+  it("prices the whole-board level increase against the real upgrade actions", { timeout: 120_000 }, () => {
+    const state = suppliedBoardState(0, 5, "bounded");
+    state.nous = 1000;
+    const before = allocateRates(state, true).snapshot.rate;
+    const bank = state.nous;
+    for (const module of state.modules) {
+      expect(upgradeModuleLevels(state, module.id, 1).ok).toBe(true);
+    }
+    const spent = bank - state.nous;
+    // The envelopes hold discoveries and Feats fixed; purchase actions may
+    // unlock them, so read the next endpoint from the same declared fixture.
+    const after = allocateRates(suppliedBoardState(1, 5, "bounded"), true).snapshot.rate;
+    const row = envelopeRows().find((row) => row.curve === "bounded" && row.level === 0)!;
+    expect(spent).toBe(300);
+    expect(row.nextLevelCost).toBe(spent);
+    expect(row.marginalNuPerNu).toBeCloseTo((after - before) / spent, 12);
+  });
+
   // The shipped regime's high-level solves ride the allocation valve at
   // 750 ms each before returning their incumbent — the sweep's honest
   // cost, declared here rather than trimmed away.
@@ -303,10 +339,10 @@ describe("the recorded comparison report", { skip: !process.env.FLOWSYNTH_RESPON
     expect(report.fixtures).toHaveLength(PHENOMENON_BOARDS.length * PHENOMENON_LEVELS.length * 3);
     expect(report.capacitySweep).toHaveLength(CAPACITY_SWEEP.length * 3 * 2);
     expect(report.envelopes).toHaveLength(LEVEL_SWEEP.length * 3);
-    // The acquisition scan is recorded evidence: no scheduled opening-era
-    // run held a response support, which is why the pacing rows match.
+    // The real scheduled scan must detect the supports its walks acquired;
+    // the old display-name matcher incorrectly reported zero for every seed.
     expect(report.acquisitionScan.length).toBeGreaterThan(5);
-    expect(report.acquisitionScan.every((row) => row.responseSupportsAcquired === 0)).toBe(true);
+    expect(report.acquisitionScan.some((row) => row.responseSupportsAcquired > 0)).toBe(true);
     // The findings quote the rows, and the report is writable JSON — the
     // explicit nulls carry the beyond-representable figures.
     expect(report.findings.length).toBeGreaterThanOrEqual(10);

@@ -1,6 +1,6 @@
 # Response-support candidate comparison
 
-Status: comparison evidence, 2026-10-31 (issue #487, parent #484 stories 7–14 and 42–43). Gameplay tuning is unchanged; every figure here is a declared-candidate read, never shipped-balance or production adoption. The accepted product direction lives in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md); the implementation plan and its earlier synthetic-rig experiments live in [the balance plan](balance-implementation-plan.md).
+Status: comparison evidence, 2026-11-01 (issue #487, parent #484 stories 7–14 and 42–43). Gameplay tuning is unchanged; every figure here is a declared-candidate read, never shipped-balance or production adoption. The accepted product direction lives in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md); the implementation plan and its earlier synthetic-rig experiments live in [the balance plan](balance-implementation-plan.md).
 
 ## What was compared
 
@@ -16,7 +16,7 @@ The recorded [results](response-comparison-results.json) carry the recipes, the 
 
 ## The three evidence classes
 
-- **Analytical envelopes** — the supplied board's rate curve under each candidate against the upgrade ladder's own prices. Idealized waiting-time arithmetic; never a pacing forecast.
+- **Analytical envelopes** — the supplied board's rate curve under each candidate against the upgrade ladder's own prices. Each step raises all thirty copies by one level, so its cost is thirty times the single-module level price; marginal returns use that whole-board cost. Idealized waiting-time arithmetic; never a pacing forecast.
 - **Already-acquired fixtures** — nine real allocated boards read by `allocateRates` exactly as live play reads: the eight phenomenon rigs (Chorus stacking, an independent charged Exciter producer, Sideband conversion, multiple supports, silent voices, amplitude support, conduit chains, merge-tier extremes) swept over declared finite levels, plus the Blaster's intrinsic seats and the supplied board over the full reachable capacity ladder (the two declared Expansion Bays open capacity five).
 - **Fresh-start pacing** — the scheduled prompt acquisition walk (one per candidate, seed 468, plus a recorded 12-seed scan) and a declared purchase-policy sweep — the prompt rule's gesture size and order, cheapest level first with roster-order ties, through the real bulk upgrade action against a declared bank on the already-acquired board. Real engine actions throughout; the sweep re-states the walk gesture leg's declared rule, which is not an extracted callable.
 
@@ -34,7 +34,7 @@ Quoted from the recorded report; the rows carry the same facts.
 - **The supplied board cannot hold its own shipped regime.** At level 100 the shipped board reads 2.29e+72ν/s against bounded's 1.60e+27 (1.4e+45×); by level 500 the shipped board's rate leaves the representable range (recorded as an explicit null) while bounded reads 1.01e+108 at 500 and 1.21e+206 at 1000. This is the parent's numeric-integrity motivation demonstrated on the reconstruction itself.
 - **Waiting times.** Both candidates' waiting-time ratios cross above one inside the sweep (bounded from level 250) and keep climbing; the shipped curve never crosses before its own board overflows. Levelling under a candidate eventually slows; under shipped it never does.
 - **Certification.** All phenomenon rows certified. Five envelope levels and one capacity row did not certify under the default budget (the shipped regime plus level-1000 boards) and carry `certified: false` in place — the runaway board cannot even finish its own optimal search; their figures are the incumbent's. The declared reduced-budget probe demonstrates the recorded distinction (ADR-0051).
-- **The opening era is curve-invariant.** The scheduled prompt acquisition policy acquired no Chorus or Exciter in the recorded walks (seed 468, and 0 of 12 scanned seeds at 20 days): the candidates cannot move an opening era, so the rebalance decision binds already-acquired boards and leaves the new-player path untouched.
+- **The sampled walks are curve-invariant; the scan does acquire a support.** The seed-468 walks acquire no response support and remain curve-invariant over twelve days. The twenty-day scan records one support on seed 7 (one of twelve seeds), counting successful `chorus` and `exciter` roll acquisitions by the runner's type-id labels. These observations do not establish that the new-player path is universally unaffected.
 - **The purchase side costs the same under every candidate.** The gesture sweep lands the same 1,054 levels from the same declared bank — the ladder's prices do not read the candidate — and the resulting-rate rows show what those levels earn under each curve (shipped 2.12e+44, linear 6.29e+19, bounded 2.83e+18). The decision changes the response side only.
 
 ## Limits

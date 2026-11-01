@@ -1609,8 +1609,8 @@
       "curve": "shipped",
       "level": 0,
       "rate": 23.02277722308782,
-      "nextLevelCost": 10,
-      "marginalNuPerNu": 3.780242921000101,
+      "nextLevelCost": 300,
+      "marginalNuPerNu": 0.12600809736667004,
       "waitRatio": 0.6056114844010055,
       "certified": true
     },
@@ -1620,9 +1620,9 @@
       "curve": "shipped",
       "level": 25,
       "rate": 7106315588132007000,
-      "nextLevelCost": 1267651,
-      "marginalNuPerNu": 25587438223130.402,
-      "waitRatio": 0.2875430582709991,
+      "nextLevelCost": 38029530,
+      "marginalNuPerNu": 852914607437.68,
+      "waitRatio": 0.287543058270999,
       "certified": true
     },
     {
@@ -1631,9 +1631,9 @@
       "curve": "shipped",
       "level": 100,
       "rate": 2.2854147482337165e+72,
-      "nextLevelCost": 2.5822498780869086e+21,
-      "marginalNuPerNu": 3.5318364417803655e+51,
-      "waitRatio": 0.32060531564382877,
+      "nextLevelCost": 7.746749634260726e+22,
+      "marginalNuPerNu": 1.1772788139267885e+50,
+      "waitRatio": 0.3206053156438287,
       "certified": false
     },
     {
@@ -1642,8 +1642,8 @@
       "curve": "shipped",
       "level": 250,
       "rate": 8.513019191379238e+175,
-      "nextLevelCost": 1.0715086071862674e+52,
-      "marginalNuPerNu": 3.0624484020215707e+124,
+      "nextLevelCost": 3.214525821558802e+53,
+      "marginalNuPerNu": 1.0208161340071902e+123,
       "waitRatio": 0.32958339910726797,
       "certified": true
     },
@@ -1653,7 +1653,7 @@
       "curve": "shipped",
       "level": 500,
       "rate": null,
-      "nextLevelCost": 1.1481306952742545e+103,
+      "nextLevelCost": 3.4443920858227635e+104,
       "marginalNuPerNu": null,
       "waitRatio": null,
       "certified": false
@@ -1664,7 +1664,7 @@
       "curve": "shipped",
       "level": 1000,
       "rate": null,
-      "nextLevelCost": 1.318204093430943e+205,
+      "nextLevelCost": 3.954612280292829e+206,
       "marginalNuPerNu": null,
       "waitRatio": null,
       "certified": false
@@ -1675,9 +1675,9 @@
       "curve": "linear",
       "level": 0,
       "rate": 23.02277722308782,
-      "nextLevelCost": 10,
-      "marginalNuPerNu": 2.7213195958775627,
-      "waitRatio": 0.7332682383515459,
+      "nextLevelCost": 300,
+      "marginalNuPerNu": 0.09071065319591876,
+      "waitRatio": 0.733268238351546,
       "certified": true
     },
     {
@@ -1686,8 +1686,8 @@
       "curve": "linear",
       "level": 25,
       "rate": 12820720133.397774,
-      "nextLevelCost": 1267651,
-      "marginalNuPerNu": 10290.154010948283,
+      "nextLevelCost": 38029530,
+      "marginalNuPerNu": 343.0051336982761,
       "waitRatio": 0.7930837473862717,
       "certified": true
     },
@@ -1697,8 +1697,8 @@
       "curve": "linear",
       "level": 100,
       "rate": 2.053833265933564e+29,
-      "nextLevelCost": 2.5822498780869086e+21,
-      "marginalNuPerNu": 55971232.066129744,
+      "nextLevelCost": 7.746749634260726e+22,
+      "marginalNuPerNu": 1865707.7355376582,
       "waitRatio": 0.9391231894398296,
       "certified": true
     },
@@ -1708,9 +1708,9 @@
       "curve": "linear",
       "level": 250,
       "rate": 8.947976463857253e+61,
-      "nextLevelCost": 1.0715086071862674e+52,
-      "marginalNuPerNu": 5180609078.90272,
-      "waitRatio": 0.9874280439323806,
+      "nextLevelCost": 3.214525821558802e+53,
+      "marginalNuPerNu": 172686969.29675734,
+      "waitRatio": 0.9874280439323808,
       "certified": true
     },
     {
@@ -1719,9 +1719,9 @@
       "curve": "linear",
       "level": 500,
       "rate": 1.3667646359808975e+113,
-      "nextLevelCost": 1.1481306952742545e+103,
-      "marginalNuPerNu": 7031699931.599044,
-      "waitRatio": 1.0058542632274827,
+      "nextLevelCost": 3.4443920858227635e+104,
+      "marginalNuPerNu": 234389997.7199681,
+      "waitRatio": 1.0058542632274825,
       "certified": true
     },
     {
@@ -1730,8 +1730,8 @@
       "curve": "linear",
       "level": 1000,
       "rate": 4.504664243522236e+212,
-      "nextLevelCost": 1.318204093430943e+205,
-      "marginalNuPerNu": 19665429.564554907,
+      "nextLevelCost": 3.954612280292829e+206,
+      "marginalNuPerNu": 655514.3188184969,
       "waitRatio": 1.015569120789742,
       "certified": false
     },
@@ -1741,9 +1741,9 @@
       "curve": "bounded",
       "level": 0,
       "rate": 23.02277722308782,
-      "nextLevelCost": 10,
-      "marginalNuPerNu": 3.003874295313845,
-      "waitRatio": 0.6942214138343655,
+      "nextLevelCost": 300,
+      "marginalNuPerNu": 0.10012914317712818,
+      "waitRatio": 0.6942214138343656,
       "certified": true
     },
     {
@@ -1752,9 +1752,9 @@
       "curve": "bounded",
       "level": 25,
       "rate": 4879015742.654467,
-      "nextLevelCost": 1267651,
-      "marginalNuPerNu": 3396.6324225935655,
-      "waitRatio": 0.8499321358016023,
+      "nextLevelCost": 38029530,
+      "marginalNuPerNu": 113.22108075311886,
+      "waitRatio": 0.8499321358016024,
       "certified": true
     },
     {
@@ -1763,9 +1763,9 @@
       "curve": "bounded",
       "level": 100,
       "rate": 1.5985346487294932e+27,
-      "nextLevelCost": 2.5822498780869086e+21,
-      "marginalNuPerNu": 397136.3477599684,
-      "waitRatio": 0.9747014153705503,
+      "nextLevelCost": 7.746749634260726e+22,
+      "marginalNuPerNu": 13237.878258665614,
+      "waitRatio": 0.9747014153705504,
       "certified": true
     },
     {
@@ -1774,9 +1774,9 @@
       "curve": "bounded",
       "level": 250,
       "rate": 1.5917672566156208e+58,
-      "nextLevelCost": 1.0715086071862674e+52,
-      "marginalNuPerNu": 879333.8811580635,
-      "waitRatio": 1.0050697030949203,
+      "nextLevelCost": 3.214525821558802e+53,
+      "marginalNuPerNu": 29311.12937193545,
+      "waitRatio": 1.00506970309492,
       "certified": true
     },
     {
@@ -1785,8 +1785,8 @@
       "curve": "bounded",
       "level": 500,
       "rate": 1.0133149454677793e+108,
-      "nextLevelCost": 1.1481306952742545e+103,
-      "marginalNuPerNu": 50818.71747369544,
+      "nextLevelCost": 3.4443920858227635e+104,
+      "marginalNuPerNu": 1693.9572491231816,
       "waitRatio": 1.0153582017176308,
       "certified": true
     },
@@ -1796,9 +1796,9 @@
       "curve": "bounded",
       "level": 1000,
       "rate": 1.2103311931874715e+206,
-      "nextLevelCost": 1.318204093430943e+205,
-      "marginalNuPerNu": 5.2138265981211935,
-      "waitRatio": 1.0205046113224747,
+      "nextLevelCost": 3.954612280292829e+206,
+      "marginalNuPerNu": 0.17379421993737312,
+      "waitRatio": 1.020504611322475,
       "certified": false
     }
   ],
@@ -1994,7 +1994,7 @@
       "seed": 7,
       "budgetDays": 20,
       "complete": true,
-      "responseSupportsAcquired": 0
+      "responseSupportsAcquired": 1
     },
     {
       "seed": 8,
@@ -2053,7 +2053,7 @@
     "5 envelope levels did not certify under the default budget (shipped@100, shipped@500, shipped@1000, linear@1000, bounded@1000) — their figures are the incumbent's, marked in the rows; the runaway board cannot even finish its own optimal search.",
     "The supplied board's nine discovered undefeated enemies multiply every supplied row by 1.34e-1 — the reconstruction's absolute figures are pressured production, not unpressured capacity.",
     "1 rows did not certify under the default budget and carry certified:false in place — supplied-board-p01-p30.",
-    "Fresh-start pacing is curve-invariant in this era: the scheduled prompt policy acquired no Chorus or Exciter within 12 days on seed 468, and the recorded acquisition scan agrees (seeds 0–11 at 20 days: 0 of 12 runs ever held a response support) — the candidates cannot move an opening era; the decision binds already-acquired boards.",
+    "Fresh-start pacing walks are curve-invariant — response supports acquired per candidate: 0, 0, 0; scan runs holding a support: 1 of 12; walks identical: true.",
     "The declared purchase-policy gesture sweep spends the same declared bank on the same already-acquired board under each candidate — the same levels land (the ladder's prices do not read the candidate), and the resulting-rate rows show what those levels do under each curve: the purchase side costs the same, the response side is what the decision changes.",
     "Scope: these rows support choosing a structural candidate (which curve shape removes the runaway). They are not 100-hour progression acceptance; production adoption waits for the numeric-integrity tickets and calibrated era budgets."
   ]
