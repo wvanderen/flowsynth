@@ -1,11 +1,11 @@
 {
   "app": "flowsynth",
   "check": "capture-preflight",
-  "acceptedAt": "2026-11-01T00:21:19.359Z",
+  "acceptedAt": "2026-11-01T01:21:25.109Z",
   "url": "http://localhost:5173/",
   "worktree": "/home/lem/dev/flowsynth",
   "branch": "t3/issue-487",
-  "commit": "32b3b80e25087c0e584880baff90044fbffd34ad",
+  "commit": "937490723d1a8a85cfe14dd19c0dcd82ca7bb051",
   "source": {
     "clean": true,
     "changes": [],
