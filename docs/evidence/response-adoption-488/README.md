@@ -10,7 +10,7 @@ surfaces that previously derived their figures from the retired
 exponential module power were switched to that shared read; this pass
 captured each changed surface from the verified checkout.
 
-Source: commit `04b18ac` (the review-fix revision; the same figures as the adoption commit `91aac67f` — the intervening change named the shared response-support predicate and edited comments only). Captured with the
+Source: commit `582f850` (captured after each source change; the figures are identical across the adoption, predicate-naming, and purchase-gate revisions — none of them rendered differently). Captured with the
 repo-cached Playwright Chromium headless shell against this checkout's
 dev server after `tools/evidence-preflight.mjs` accepted
 `docs/evidence/response-adoption-488/provenance.json` (worktree, commit,
