@@ -741,13 +741,18 @@ function findingsOf(report: ResponseComparisonReport): string[] {
           : "."),
     );
   }
-  // Where levelling slows.
+  // Where levelling slows — computed from the rows, so the sentence stays
+  // true under whatever curve the shipped entry carries.
   const waits = (curve: ResponseCurveId): string =>
     report.envelopes.filter((row) => row.curve === curve).map((row) => (row.waitRatio === null ? "—" : row.waitRatio.toFixed(2))).join(", ");
+  const crossOf = (curve: ResponseCurveId): string => {
+    const cross = report.envelopes.find((row) => row.curve === curve && row.waitRatio !== null && row.waitRatio > 1);
+    return cross ? `${curve} above one from level ${cross.level}` : `${curve} never crosses inside the sweep`;
+  };
   findings.push(
     `Supplied-board waiting-time ratios across the level sweep (next level's cost/rate over this level's; above one means the next level takes longer) — ` +
       `shipped: ${waits("shipped")}; linear: ${waits("linear")}; bounded: ${waits("bounded")}. ` +
-      "Both candidates cross above one inside the sweep and stay there; the shipped curve never does before its own board leaves the representable range.",
+      `${crossOf("shipped")}; ${crossOf("linear")}; ${crossOf("bounded")}.`,
   );
   const incumbent = report.envelopes.filter((row) => !row.certified);
   if (incumbent.length > 0) {

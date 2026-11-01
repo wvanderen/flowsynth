@@ -46,6 +46,8 @@ Own the numeric invariant at engine transaction and persistence boundaries. Keep
 
 ### 2. Repair response-support growth through the shared grant seam
 
+Shipped 2026-11-02 (issue #488): production adopted the comparison's bounded shape — `BALANCE.responseShare`/`responseSaturation` are the one central coefficient definition, `economy.ts:responseSupportPowerOf` reads the catalog's shipped entry for the rate pass, allocator, decomposition, and inspection alike, and the completion record for the adoption maps each acceptance criterion to its named evidence.
+
 `economy.ts:responseGrantsAt` is the shared Chorus/Exciter grant read. Add one authored response-support progression helper; the allocator, rates, decomposition, and inspection must all read it. Keep the effect on its current response axis. Preserve the level-zero grant and charged/uncharged structural conditions. Put coefficients in `BALANCE`, never in a UI or a second simulation-only production path.
 
 Compare the shipped curve, a linear level curve, and a bounded level curve for both Chorus and Exciter. Test all intrinsic/purchased capacities, multiple adjacent supports, maximum merge tiers, silent-voice combinations, Sideband conversion, amplitude support, and charge-conduit chains. Use real allocated board fixtures to confirm the envelope's suspected paths. Record allocator certification; an uncertified incumbent cannot establish the strongest possible build.

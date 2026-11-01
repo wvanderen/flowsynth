@@ -394,6 +394,20 @@ describe("the upgrade column in detail", () => {
     expect(document.querySelector(".hex-upgrade-title")!.textContent).toContain("Upgrade ×1");
   });
 
+  it("the response support's upgrade benefit reads the adopted progression, dial counts included (issue #488)", () => {
+    give(app.state, "chorus", hex(1, 0));
+    app.render();
+    clickCell(1, 0);
+    const benefit = () => document.querySelector<HTMLElement>("#detail-upgrade .hex-upgrade-benefit")!.textContent!;
+    const termAt = (level: number) => 1 + (BALANCE.responseShare * level) / (level + BALANCE.responseSaturation);
+    // One level buys the authored share over the level term's delta —
+    // the adopted term's own step, never the retired exponential's.
+    expect(benefit()).toContain(`+${formatNumber(100 * BALANCE.chorusBonus * (termAt(1) - 1))}% chord response`);
+    // The dial's k buys the term k steps along, quoted once.
+    document.querySelector<HTMLButtonElement>('.hex-dial [data-bulk="5"]')!.click();
+    expect(benefit()).toContain(`+${formatNumber(100 * BALANCE.chorusBonus * (termAt(5) - 1))}% chord response`);
+  });
+
   it("the silent wire wears no Upgrade button", () => {
     give(app.state, "spacer", hex(1, 0));
     app.render();

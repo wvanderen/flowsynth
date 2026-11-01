@@ -2,7 +2,7 @@ import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REF
 import { bankableClaimOf, frontierEntitlement, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
-import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, isPriceableLevel, levelCost, levelsCost, modulePower, mutatorSlotCost, rowGateOwed, syncRates, wholeNous } from "./economy";
+import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, isPriceableLevel, isResponseSupport, levelCost, levelsCost, modulePower, mutatorSlotCost, responseSupportPowerOf, rowGateOwed, syncRates, wholeNous } from "./economy";
 import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "./world";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
@@ -413,7 +413,7 @@ export function upgradeModuleLevels(state: GameState, id: string, want: number |
     return fail(Number.isFinite(levelCost(module.level)) ? "Not enough whole nous for even one level." : UNSAFE_PURCHASE);
   }
   const spent = levelsCost(module.level, bought);
-  if (!Number.isFinite(spent) || !purchaseStaysRepresentable(module, bought, spent)) return fail(UNSAFE_PURCHASE);
+  if (!Number.isFinite(spent) || !purchaseStaysRepresentable(state, module, bought, spent)) return fail(UNSAFE_PURCHASE);
   state.nous -= spent;
   module.invested += spent;
   module.level += bought;
@@ -421,15 +421,17 @@ export function upgradeModuleLevels(state: GameState, id: string, want: number |
 }
 
 // Whether buying `count` levels for `spent` would leave the economy
-// representable (issue #485): the module's power — the rate figure the
-// new level feeds — and its invested ledger, the cumulative spend, must
-// both stay finite. Read on the would-be values before anything is
-// written, so the refusal is atomic by construction.
-function purchaseStaysRepresentable(module: ModuleInstance, count: number, spent: number): boolean {
-  return (
-    Number.isFinite(modulePower({ ...module, level: module.level + count })) &&
-    Number.isFinite(module.invested + spent)
-  );
+// representable (issue #485): the rate figure the new level feeds and the
+// invested ledger, the cumulative spend, must both stay finite. The
+// figure is the type's own: the response supports' adopted progression
+// (issue #488), every other type's shared module power — the one read
+// the rate pass applies, so the purchase explanation cannot disagree
+// with production about what the level buys. Read on the would-be values
+// before anything is written, so the refusal is atomic by construction.
+function purchaseStaysRepresentable(state: GameState, module: ModuleInstance, count: number, spent: number): boolean {
+  const next = { ...module, level: module.level + count };
+  const power = isResponseSupport(module.type) ? responseSupportPowerOf(state, next) : modulePower(next);
+  return Number.isFinite(power) && Number.isFinite(module.invested + spent);
 }
 
 // The ladder request's shape (issue #485): a level count is a whole,
@@ -518,7 +520,7 @@ export function upgradeAll(state: GameState, want: number | "max"): ActionResult
   if (!Number.isFinite(bulk.spent) || bulk.spent > bank) return fail(UNSAFE_PURCHASE);
   for (const [id, count] of plan) {
     const module = findModule(state, id)!;
-    if (!purchaseStaysRepresentable(module, count, levelsCost(module.level, count))) return fail(UNSAFE_PURCHASE);
+    if (!purchaseStaysRepresentable(state, module, count, levelsCost(module.level, count))) return fail(UNSAFE_PURCHASE);
   }
   for (const [id, count] of plan) {
     const module = findModule(state, id)!;

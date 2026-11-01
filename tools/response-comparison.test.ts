@@ -35,22 +35,26 @@ import { composePlaythroughRecipe, playthroughNote, playthroughRunId, runPlaythr
 // ask for.
 
 describe("the declared curve catalog", () => {
-  it("declares shipped, linear, and bounded, the shipped curve unintercepted", () => {
+  it("declares shipped, linear, and bounded — shipped carrying the adopted bounded term (issue #488)", () => {
     expect(CURVES).toEqual(["shipped", "linear", "bounded"]);
     expect(RESPONSE_CURVES.map((curve) => curve.id)).toEqual(CURVES);
     expect(RESPONSE_CURVES.map((curve) => curve.name)).toEqual(["Shipped", "Linear", "Bounded"]);
     for (const curve of RESPONSE_CURVES) expect(curve.description).toBeTruthy();
-    expect(RESPONSE_CURVES.find((curve) => curve.id === "shipped")!.levelTerm).toBeNull();
-    // The bounded candidate is the previously explored formula — the same
-    // shape the balance-growth experiment carried, still a candidate.
+    // Production adopted the bounded shape: every entry carries a level
+    // term now, and the shipped entry reads BALANCE's authored
+    // coefficients — the one central definition.
+    for (const curve of RESPONSE_CURVES) expect(curve.levelTerm).toBeTruthy();
     expect(curvePower("bounded", 0)).toBe(1);
     expect(curvePower("bounded", 100)).toBeCloseTo(1 + (3 * 100) / 120, 12);
     expect(curvePower("bounded", 1e9)).toBeLessThan(4);
     expect(curvePower("linear", 0)).toBe(1);
     expect(curvePower("linear", 100)).toBeCloseTo(11, 12);
-    // The shipped read is the shared module power — rarity over level —
-    // never a re-derived copy.
-    expect(curvePower("shipped", 7)).toBe(BALANCE.rarityPower.uncommon ** 7);
+    // The shipped read is the adopted saturating term from BALANCE — ×1
+    // at level zero, the bounded candidate's shape exactly while BALANCE
+    // carries its recorded coefficients, never a re-derived copy.
+    expect(curvePower("shipped", 0)).toBe(1);
+    expect(curvePower("shipped", 7)).toBeCloseTo(1 + (BALANCE.responseShare * 7) / (7 + BALANCE.responseSaturation), 12);
+    expect(curvePower("shipped", 100)).toBe(curvePower("bounded", 100));
   });
 });
 
@@ -74,23 +78,32 @@ describe("the phenomenon fixtures", () => {
     }
   });
 
-  it("diverges the response boards in the runaway regime — shipped above the candidates", () => {
+  it("reads the adopted curve on the response boards — shipped the bounded term, linear above, everything finite", () => {
     for (const name of ["chorus-stack", "exciter-producer", "sideband-conversion"]) {
       const board = PHENOMENON_BOARDS.find((candidate) => candidate.name === name)!;
       const rates = CURVES.map((curve) => allocateRates(phenomenonState(board, 1000, 5, curve), true).snapshot.rate);
-      expect(rates[0]).toBeGreaterThan(rates[1]);
-      expect(rates[0]).toBeGreaterThan(rates[2]);
+      // The adoption removed the exponential: the shipped board reads the
+      // bounded term exactly, and every board stays inside the
+      // representable range where the recorded pre-adoption regime left
+      // it.
+      expect(rates[0]).toBe(rates[2]);
+      expect(rates[1]).toBeGreaterThanOrEqual(rates[0]);
+      for (const rate of rates) expect(Number.isFinite(rate)).toBe(true);
       // On the chord-carrying rig the grant rides inside every chord
-      // instance, so the candidates spread wide — shipped is orders of
-      // magnitude above linear.
+      // instance, so even the linear candidate spreads wide over the
+      // adopted term — the multiplicative seat structure survives the
+      // adoption untouched (the whole-board legs dilute the raw term
+      // ratio, and the spread stays many-times wide).
       if (name === "chorus-stack") {
-        expect(rates[1]).toBeGreaterThan(rates[2]);
-        expect(rates[0] / rates[1]).toBeGreaterThan(1e10);
+        expect(rates[1]).toBeGreaterThan(rates[0]);
+        expect(rates[1] / rates[0]).toBeGreaterThan(5);
+      } else {
+        // On the isolated charged producer and the converter the
+        // candidates read float-identical at this level — the recorded
+        // report's own finding: the producer's untouched power dominates,
+        // and the Exciter's grant lands once per producer.
+        expect(rates[1]).toBe(rates[0]);
       }
-      // On the isolated charged producer the candidates read equal to
-      // float precision at this level: the producer's own (untouched)
-      // power dominates, and the Exciter's grant lands once per producer
-      // — the recorded report's findings carry the same fact.
     }
   });
 
@@ -191,12 +204,12 @@ describe("the supplied-board reconstruction", () => {
     expect(pressed.snapshot.rate / unpressed.snapshot.rate).toBeCloseTo(0.8 ** WORLD_ENEMIES.length, 6);
   });
 
-  it("reads the bounded candidate's board below the shipped one at the same declared level", () => {
+  it("reads the adopted shipped board at the bounded candidate's rate, linear above, at the same declared level", () => {
     const shipped = allocateRates(suppliedBoardState(100, 5, "shipped"), true).snapshot.rate;
     const linear = allocateRates(suppliedBoardState(100, 5, "linear"), true).snapshot.rate;
     const boundedRate = allocateRates(suppliedBoardState(100, 5, "bounded"), true).snapshot.rate;
-    expect(shipped).toBeGreaterThan(linear);
-    expect(linear).toBeGreaterThan(boundedRate);
+    expect(shipped).toBe(boundedRate);
+    expect(linear).toBeGreaterThan(shipped);
   });
 });
 
@@ -235,26 +248,22 @@ describe("the analytical envelopes", () => {
     expect(row.marginalNuPerNu).toBeCloseTo((after - before) / spent, 12);
   });
 
-  // The shipped regime's high-level solves ride the allocation valve at
-  // 750 ms each before returning their incumbent — the sweep's honest
-  // cost, declared here rather than trimmed away.
-  it("show levelling slowing under the candidates and never under shipped before overflow", { timeout: 120_000 }, () => {
+  // The adopted curve's own honest cost: the sweep's high-level solves
+  // still ride the allocation valve on the thirty-copy board before
+  // returning their incumbent — declared here rather than trimmed away.
+  it("show levelling slowing under every curve — the adopted shipped term included", { timeout: 120_000 }, () => {
     const rows = envelopeRows();
     for (const curve of CURVES) {
       const curveRows = rows.filter((row) => row.curve === curve);
       expect(curveRows).toHaveLength(LEVEL_SWEEP.length);
-      // The waiting-time ratio at the top of the sweep: the candidates
-      // crossed above one and stay there; shipped's board has left the
-      // representable range before it ever slowed.
+      // The waiting-time ratio at the top of the sweep: above one under
+      // the adopted curve — levelling eventually slows, the failure mode
+      // the recorded pre-adoption regime never reached before its own
+      // board left the representable range.
       const last = curveRows.at(-1)!;
-      if (curve === "shipped") {
-        expect(last.rate).toBeNull();
-        expect(last.marginalNuPerNu).toBeNull();
-        expect(last.waitRatio).toBeNull();
-      } else {
-        expect(last.waitRatio).not.toBeNull();
-        expect(last.waitRatio!).toBeGreaterThan(1);
-      }
+      expect(last.rate).not.toBeNull();
+      expect(last.waitRatio).not.toBeNull();
+      expect(last.waitRatio!).toBeGreaterThan(1);
     }
     // The intermediate board still reads finite everywhere: level 100 is
     // inside every curve's representable range.

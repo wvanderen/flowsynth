@@ -63,6 +63,27 @@ describe("finite boundaries stay purchasable (issue #485)", () => {
     expect(synth.level).toBe(LAST_REPRESENTABLE_LEVEL + 1);
     expect(s.nous).toBe(FULL_BANK - levelCost(LAST_REPRESENTABLE_LEVEL));
   });
+
+  it("a response support buys its last representable level — the gate reads the adopted figure (issue #488)", () => {
+    const s = fresh();
+    const chorus = give(s, "chorus", hex(1, -1));
+    chorus.level = LAST_REPRESENTABLE_LEVEL;
+    chorus.tier = 2;
+    s.nous = FULL_BANK;
+    // The adopted progression stays finite at every priced level, so the
+    // chorus buys exactly where the oscillator does: the purchase gate
+    // reads the figure the rate pass applies — the shared seam's read —
+    // never the retired exponential whose modulePower figure would name
+    // a different answer.
+    expect(upgradeModuleLevels(s, chorus.id, "max")).toMatchObject({ ok: true, bulk: { levels: 1 } });
+    expect(chorus.level).toBe(LAST_REPRESENTABLE_LEVEL + 1);
+    expect(Number.isFinite(chorus.invested)).toBe(true);
+    // The successor's unrepresentable price refuses as integrity.
+    const again = upgradeModuleLevels(s, chorus.id, "max");
+    expect(again.ok).toBe(false);
+    expect(again.reason).toBe(UNSAFE);
+    expect(chorus.level).toBe(LAST_REPRESENTABLE_LEVEL + 1);
+  });
 });
 
 describe("nonfinite budgets afford nothing (issue #485)", () => {

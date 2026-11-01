@@ -30,7 +30,7 @@ import { tierPowerOf } from "../engine/module-strength";
 // Editing lives in upgrade mode only: during flow the same cross-section
 // opens read-only, its readouts live, its controls gone — the click still
 // answers the lock.
-import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, isPriceableLevel, levelCost, levelsCost, wholeNous } from "../engine/economy";
+import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, isPriceableLevel, isResponseSupport, levelCost, levelsCost, responseSupportPowerOf, wholeNous } from "../engine/economy";
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
@@ -134,12 +134,21 @@ const DETAIL_BENEFITS: Record<ModuleInstance["type"], (input: DetailEffectInput)
 
 function benefitOf(app: App, module: ModuleInstance, snapshot: RateSnapshot, levels: number, rarityPower: number): string | null {
   const power = hostPower(app.state, module);
+  // The response supports' gain reads the adopted response-support
+  // progression (issue #488) — the same shared result the rate pass
+  // grants, `levels` steps apart — never the retired exponential power
+  // the other types' one-level gain derives from. The line multiplies the
+  // authored share over the delta, exactly the grant the recipients earn.
+  const response = isResponseSupport(module.type);
+  const gain = response
+    ? responseSupportPowerOf(app.state, { ...module, level: module.level + levels }) - responseSupportPowerOf(app.state, module)
+    : power * (rarityPower - 1);
   return DETAIL_BENEFITS[module.type]({
     power,
     value: snapshot.contributions.get(module.id)?.value ?? 0,
     strength: snapshot.chargeStrength.get(module.id) ?? 0,
     level: module.level,
-    gain: power * (rarityPower - 1),
+    gain,
     levels,
     tierPower: tierPowerOf(module.tier),
   });

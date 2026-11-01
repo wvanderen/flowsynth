@@ -3,9 +3,9 @@ import { generatorProfileOf } from "../engine/profiles";
 import type { App } from "./app";
 import { inventoryCombinePreview } from "../engine/actions";
 import { CATEGORY_OF, isVoiceType, typeRarityOf } from "../engine/constants";
-import { boosterBonusOf, boosterTermOf, modulePower, voiceCapacityOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, isResponseSupport, modulePower, responseSupportPowerOf, voiceCapacityOf } from "../engine/economy";
 import { moduleScrapValue } from "../engine/scrap";
-import type { ModuleInstance } from "../engine/types";
+import type { GameState, ModuleInstance } from "../engine/types";
 import { faceLevel, inventoryTileSvg, moduleFace } from "./face";
 import { formatInt, formatNumber } from "./format";
 import { closeTooltips, wireTooltips } from "./instrument";
@@ -83,8 +83,12 @@ function moduleRow(app: App, m: ModuleInstance, partner = false): string {
 function back(): string { return `<button data-inventory-back>Back to inventory</button>`; }
 // Owned-copy strengths exclude neighbors and mutators — the live legs the
 // deployment reads add beside these authored figures.
-function intrinsicEffectsHtml(m: ModuleInstance): string {
-  const power = modulePower(m);
+function intrinsicEffectsHtml(state: GameState, m: ModuleInstance): string {
+  // The response supports quote the adopted response-support progression
+  // (issue #488) — the same shared result the rate pass grants, the tray
+  // copy's level and tier included — never the retired exponential power.
+  const response = isResponseSupport(m.type);
+  const power = response ? responseSupportPowerOf(state, m) : modulePower(m);
   const profile = generatorProfileOf(m.type);
   if (profile) return `<div class="inventory-intrinsics">
     <p class="mono">${formatNumber(profile.focus * power)} ${termTipHtml("charge")} / focus s</p>
@@ -99,7 +103,7 @@ function inspectHtml(app: App): string {
   const m = app.state.modules.find((m) => m.id === id && m.pos === null);
   if (!m) return `${back()}<p class="inventory-empty">This copy is no longer in inventory.</p>`;
   return `${back()}<div class="inventory-inspection"><svg class="inventory-detail-face hex-stack-face" viewBox="-70 -70 140 140" data-type="${m.type}" data-rarity="${typeRarityOf(m.type)}" aria-label="${META[m.type].name}" role="img">${moduleFace({ type: m.type, tier: m.tier, variant: "identity", readout: "" })}</svg>
-    <h3 class="inventory-detail-name" aria-label="${META[m.type].name} · ${moduleRead(m)}">${rarityMark(typeRarityOf(m.type))}${META[m.type].name}<span class="mono">${tierNumeral(m.tier)}</span>${faceLevel(m) === undefined ? "" : `<span class="inventory-level mono">Lv. ${m.level}</span>`}</h3><p>${breatherTermsHtml(META[m.type].role)}</p>${profileGradesHtml(m.type, { breatherDisclosed: true })}${intrinsicEffectsHtml(m)}
+    <h3 class="inventory-detail-name" aria-label="${META[m.type].name} · ${moduleRead(m)}">${rarityMark(typeRarityOf(m.type))}${META[m.type].name}<span class="mono">${tierNumeral(m.tier)}</span>${faceLevel(m) === undefined ? "" : `<span class="inventory-level mono">Lv. ${m.level}</span>`}</h3><p>${breatherTermsHtml(META[m.type].role)}</p>${profileGradesHtml(m.type, { breatherDisclosed: true })}${intrinsicEffectsHtml(app.state, m)}
     ${isVoiceType(m.type) ? `<p class="mono">${voiceCapacityOf(app.state, m.type)} ${termTipHtml("Harmonic capacity")}</p>` : ""}
     ${m.reserve > 0 ? `<p class="mono">${formatNumber(m.reserve)} charge reserve</p>` : ""}${m.shift !== null ? `<p class="mono">Pitch shift ${m.shift > 0 ? "+" : ""}${m.shift}</p>` : ""}
     <button class="primary" data-inventory-place="${m.id}">Place</button></div>`;

@@ -10,7 +10,7 @@ import { amplifierGainOf } from "../engine/module-strength";
 // engraving is noise.
 import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
 import { CATEGORY_OF, typeRarityOf } from "../engine/constants";
-import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, spotlightRecipientOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, isResponseSupport, responseSupportPowerOf, spotlightRecipientOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { cellNoteOf, noteNameOf } from "../engine/lattice";
 import { moduleIcon } from "./icons";
@@ -245,10 +245,14 @@ export function relayStrengthOf(module: ModuleInstance, snapshot: RateSnapshot):
 
 // The booster's uplift percentage — the authored share (issue #374: per
 // design, the Booster's baseline, the Field's moderate breadth, the
-// Spotlight's narrow strength) over the charged curve and its host power.
+// Spotlight's narrow strength) over the charged curve and the design's
+// power leg: the amplitude designs read the shared module power, the
+// response supports (issues #375/#376) read the adopted response-support
+// progression (issue #488) — the same shared result the rate pass grants.
 // The one read the face's readout and the Hex detail's breakdown share.
 export function boosterUpliftOf(state: GameState, module: ModuleInstance, snapshot: RateSnapshot): number {
-  return 100 * boosterBonusOf(module.type) * hostPower(state, module) * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0);
+  const power = isResponseSupport(module.type) ? responseSupportPowerOf(state, module) : hostPower(state, module);
+  return 100 * boosterBonusOf(module.type) * power * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0);
 }
 
 // The Spotlight's inactive verdict (issue #374): the actionable words for

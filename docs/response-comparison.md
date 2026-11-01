@@ -2,6 +2,8 @@
 
 Status: comparison evidence, 2026-11-01 (issue #487, parent #484 stories 7–14 and 42–43). Gameplay tuning is unchanged; every figure here is a declared-candidate read, never shipped-balance or production adoption. The accepted product direction lives in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md); the implementation plan and its earlier synthetic-rig experiments live in [the balance plan](balance-implementation-plan.md).
 
+**Amended 2026-11-02 (issue #488): production adopted the bounded shape.** The shipped entry of the engine's response-curve catalog now reads the bounded term's coefficients from `BALANCE` (`responseShare` 3, `responseSaturation` 20), and the retired exponential is gone from the catalog. The figures below were captured against the pre-adoption engine (runner provenance recorded in the [results](response-comparison-results.json)); a rerun against the adopted engine reads shipped and bounded as the same curve, so the recorded shipped column and its overflow figures are historical evidence, not live behavior. The comparison tooling stays for future tuning comparisons: the linear candidate is unchanged, the bounded entry keeps its recorded 3/20 formula, and a tuned `BALANCE` diverges shipped from it honestly.
+
 ## What was compared
 
 Shipped, linear (`1 + 0.1·level`), and bounded (`1 + 3·level/(level + 20)`) progression for the Chorus and Exciter response grants — the two candidates the plan's experiments surfaced, now declared in the engine's catalog (`RESPONSE_CURVES`) and read by the rate pass's own seam (`responseSupportPowerOf`). A candidate rides a run's own candidate state: a playthrough recipe input, a comparison fixture, never `BALANCE`, never another run, never an ordinary save.

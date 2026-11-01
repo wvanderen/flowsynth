@@ -240,21 +240,22 @@ export function modulePower(module: ModuleInstance): number {
   return BALANCE.rarityPower[typeRarityOf(module.type)] ** module.level * tierPowerOf(module.tier);
 }
 
-// The response-support power read (issue #487): how a Chorus or Exciter's
-// grant scales with its own level. The shipped curve reads the shared
-// module power; a run's declared candidate (state.candidates.responseCurve
-// — the playthrough recipe's declared input, the comparison fixtures'
-// declared candidate) substitutes the catalog's level term. Tier and power
-// mutators ride every curve unchanged — a candidate prices the response's
-// level progression, never the merge ladder or the Mutator plane. One read
-// for the rate pass, the allocator's params, and every comparison fixture,
-// so no surface can quote a grant the rate pass does not apply.
+// The response-support power read (issue #487 compared, #488 adopted): how
+// a Chorus or Exciter's grant scales with its own level. Production reads
+// the catalog's shipped entry — BALANCE's authored saturating term, the one
+// central definition — over the merge tier and the Mutator plane; a run's
+// declared candidate (state.candidates.responseCurve — the playthrough
+// recipe's declared input, the comparison fixtures' declared candidate)
+// substitutes its own level term. The retired exponential shared module
+// power is gone from this read: the response grant's level progression is
+// the authored term, the tier ladder and the Mutator plane still ride
+// every curve. One read for the rate pass, the allocator's params, the
+// decomposition, and every inspection surface, so no surface can quote a
+// grant the rate pass does not apply. An unknown stored id falls back to
+// the shipped entry — never to a re-derived copy.
 export function responseSupportPowerOf(state: GameState, module: ModuleInstance): number {
-  const candidate = responseCurveCandidateOf(state.candidates?.responseCurve ?? "shipped");
-  if (candidate?.levelTerm) {
-    return candidate.levelTerm(module.level) * tierPowerOf(module.tier) * hostPlaneOf(state, module.pos);
-  }
-  return hostPower(state, module);
+  const curve = responseCurveCandidateOf(state.candidates?.responseCurve ?? "shipped") ?? responseCurveCandidateOf("shipped")!;
+  return curve.levelTerm(module.level) * tierPowerOf(module.tier) * hostPlaneOf(state, module.pos);
 }
 
 export function deployed(state: GameState): ModuleInstance[] {
@@ -518,6 +519,17 @@ export function boosterTermOf(type: ModuleType): "amplitude" | "chord response" 
   if (type === "chorus") return "chord response";
   if (type === "exciter") return "charge response";
   return "amplitude";
+}
+
+// The response supports (issues #375/#376): the booster designs whose
+// authored share lands on a response term rather than the amplitude —
+// the designs whose power leg reads the adopted response-support
+// progression (issue #488) instead of the shared module power. The one
+// membership read for every consumer — rate pass complement, breakdown
+// rows, upgrade benefits, inspection shares, the draft's scaling chip —
+// so a future response design joins in one place.
+export function isResponseSupport(type: ModuleType): boolean {
+  return CATEGORY_OF[type] === "booster" && boosterTermOf(type) !== "amplitude";
 }
 
 // The Spotlight's resolved recipient (issue #374): the selected module

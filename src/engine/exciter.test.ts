@@ -220,15 +220,16 @@ describe("alternative charge recipients", () => {
 });
 
 describe("progression and mutators", () => {
-  it("progression scales the grant through the host power — the condition never moves", () => {
+  it("progression scales the grant through the authored level term — the condition never moves", () => {
     const s = fresh();
     give(s, "additive", FED_SEAT);
     const exciter = give(s, "exciter", EXCITER_SEAT);
-    exciter.tier = 1; // ×1.5 host power
-    exciter.level = 1; // ×1.3 rare power
+    exciter.tier = 1; // ×1.5 — the merge tier rides the term
+    exciter.level = 1; // the adopted saturating level term (issue #488), never the retired exponential
     charged(s, GEN_SEAT);
     const snapshot = computeRates(s, true);
-    const factor = 1 + (1 + BALANCE.exciterBonus * 1.5 * 1.3) * 0.5;
+    const levelTerm = 1 + (BALANCE.responseShare * 1) / (1 + BALANCE.responseSaturation);
+    const factor = 1 + (1 + BALANCE.exciterBonus * 1.5 * levelTerm) * 0.5;
     expect(snapshot.contributions.get("m2")!.chargeFactor).toBeCloseTo(factor, 9);
     // The recipient's own progression never touches the coefficient —
     // an uncharged board reads ×1 whatever the voice's power.
