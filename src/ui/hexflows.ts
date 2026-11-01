@@ -29,7 +29,7 @@ import { amplifierGainOf } from "../engine/module-strength";
 // the static wave.
 import { CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
 import { baseTermOf, productionClockFactorOf, temporalTimingOf, usesChordConversion } from "../engine/profiles";
-import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, mutatorAt, mutatorMagnitude, responseSupportPowerOf, sessionClockOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, isResponseSupport, mutatorAt, mutatorMagnitude, responseSupportPowerOf, sessionClockOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import { CHORD_HUES } from "./chordlayer";
 import { formatNumber } from "./format";
@@ -151,7 +151,7 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
     if (verdict) rows.push(row(verdict, "", "inert"));
     else {
       const term = boosterTermOf(module.type);
-      const response = term !== "amplitude";
+      const response = isResponseSupport(module.type);
       rows.push(row(response ? `Base ${term}` : "Base uplift", `+${formatNumber(100 * boosterBonusOf(module.type))}%`));
       multiplier(response ? "Response power" : "Host power", response ? responseSupportPowerOf(state, module) : hostPower(state, module));
       multiplier("Charged empowerment", chargedFactor(strength));

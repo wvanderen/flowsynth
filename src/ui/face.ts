@@ -10,7 +10,7 @@ import { amplifierGainOf } from "../engine/module-strength";
 // engraving is noise.
 import type { GameState, Hex, ModuleInstance, ModuleType, RateSnapshot } from "../engine/types";
 import { CATEGORY_OF, typeRarityOf } from "../engine/constants";
-import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, responseSupportPowerOf, spotlightRecipientOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, hostPower, isResponseSupport, responseSupportPowerOf, spotlightRecipientOf } from "../engine/economy";
 import { forgeThreshold, mutatorForgeThreshold } from "../engine/rolls";
 import { cellNoteOf, noteNameOf } from "../engine/lattice";
 import { moduleIcon } from "./icons";
@@ -251,7 +251,7 @@ export function relayStrengthOf(module: ModuleInstance, snapshot: RateSnapshot):
 // progression (issue #488) — the same shared result the rate pass grants.
 // The one read the face's readout and the Hex detail's breakdown share.
 export function boosterUpliftOf(state: GameState, module: ModuleInstance, snapshot: RateSnapshot): number {
-  const power = boosterTermOf(module.type) === "amplitude" ? hostPower(state, module) : responseSupportPowerOf(state, module);
+  const power = isResponseSupport(module.type) ? responseSupportPowerOf(state, module) : hostPower(state, module);
   return 100 * boosterBonusOf(module.type) * power * chargedFactor(snapshot.chargeStrength.get(module.id) ?? 0);
 }
 

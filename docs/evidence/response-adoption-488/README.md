@@ -57,18 +57,24 @@ the capture cannot drift from production):
   reads `+157.14% chord response` at level 50 — 0.5 × (1 + 150/70) — the
   shared term, where `modulePower` would have read `0.5 × 1.25^50`.
 
-Checks recorded from the mechanism rather than a dedicated capture:
+Checks not captured — recorded unavailable as captures, with the mechanism
+reasoning that stands in for them (per the instrument standards' evidence
+rules, these are not claimed as verified):
 
-- Reduced motion: every changed surface is static text on the existing
-  panels — no animation or glow was added; the breakdown disclosure and
-  the charge wave's reduced-motion behavior are the existing contracts,
-  untouched by this work.
-- State without color: the changed figures ride existing text/mono
-  readouts and the four-state grammar; the scaling chip is plain text.
-  No new distinction is carried by hue alone.
-- Touch: the disclosed breakdown opened by the same tap target on the
-  phone viewport (the phone breakdown captures are click-opened, the
-  same pointer path touch takes).
+- Reduced motion: unavailable as a capture — the changed surfaces add no
+  animation or glow (static text on the existing panels), and the
+  breakdown disclosure's and charge wave's reduced-motion behavior are
+  the existing contracts, untouched by this work. Not exercised under a
+  reduced-motion emulator in this pass.
+- State without color: unavailable as a capture — the changed figures
+  ride existing text/mono readouts and the four-state grammar; the
+  scaling chip is plain text. No new distinction is carried by hue
+  alone, argued from the markup rather than exercised.
+- Touch: the disclosure opened by the same pointer path on the phone
+  viewport (the phone breakdown captures are click-opened, the browser
+  click a mouse event); a genuine touch-target pass did not run and is
+  unavailable. The targets are the existing wave triggers, unchanged by
+  this work.
 
 The engine-side behavior (grant parity, marginal growth, capacities,
 merge tiers, certification, the Tail's untouched foundation) is covered

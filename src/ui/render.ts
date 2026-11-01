@@ -3,7 +3,7 @@ import { SaveRefusedError } from "../engine/save";
 import { historicalBoardHtml } from "./historical-board";
 import { termTipHtml, type CatalogTerm } from "./terms";
 import { tierPowerOf } from "../engine/module-strength";
-import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, isPriceableLevel, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
+import { cellCost, cellPurchasePrice, chargeDelivered, computeRates, displayedRates, emittedStrength, affordableLevels, flowLive, isPriceableLevel, isResponseSupport, levelCost, levelsCost, projectPlacement, voiceCapacityOf, wholeNous, type PlacementProjection } from "../engine/economy";
 import { ALLOCATION_QUALITY_BOUNDS, idleTermsOf, summaryTermsOf } from "../engine/allocation";
 import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumulator";
 import { newChordTerms, wouldFormPreview } from "../engine/chords";
@@ -3609,14 +3609,13 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
 }
 
 // The draft tile's scaling chip: the per-level claim each type's growth
-// carries. The response supports (issues #375/#376) ride the adopted
-// response-support progression (issue #488) — the grant saturates with
-// level toward ×(1 + the authored share), so the chip quotes the span
-// instead of a per-level percentage — and the remaining levelable types
-// keep the shared module power's rarity step. Silent-growth types wear
-// no chip.
+// carries. The response supports ride the adopted response-support
+// progression (issue #488) — the grant saturates with level toward
+// ×(1 + the authored share), so the chip quotes the span instead of a
+// per-level percentage — and the remaining levelable types keep the
+// shared module power's rarity step. Silent-growth types wear no chip.
 function candidateScalingHtml(type: ModuleInstance["type"]): string {
-  if (type === "chorus" || type === "exciter") {
+  if (isResponseSupport(type)) {
     return `<span class="candidate-scaling">response ×1 → ×${formatNumber(1 + BALANCE.responseShare)} with level</span>`;
   }
   if (type === "spacer" || ["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(type)) return "";

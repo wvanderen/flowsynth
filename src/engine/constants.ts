@@ -29,19 +29,8 @@ export interface Balance {
   // Provisional tuning: a standard voice's charged curve deepens from
   // ×1.5 to ×1.75 at one generator's strength beside one charged Exciter.
   exciterBonus: number;
-  // The response-support progression's authored coefficients (issue #488,
-  // parent #484 stories 7–14): a Chorus or Exciter's grant scales with the
-  // module's level as 1 + share·level/(level + saturation) — ×1 at level
-  // zero (the shipped level-zero grant stands) toward ×(1 + share) as
-  // levels grow without bound. The comparison evidence
-  // (docs/response-comparison.md) chose the saturating shape over the
-  // shipped exponential and the unbounded linear term: the exponential
-  // rode inside every multiplicative chord instance (the Chorus runaway)
-  // and deepened the Exciter's independent charged path until the parent
-  // board left the representable range, while the saturating term restores
-  // increasing waiting times from inside the sweep and keeps every
-  // intermediate level finite and accelerating. Later pacing tickets tune
-  // these two numbers; this is their only home.
+  // The response-support progression's authored coefficients — the full
+  // rationale rides the BALANCE literal below.
   responseShare: number;
   responseSaturation: number;
   // ── Harmony quality (ADR-0049): Q = clamp(1 + complexity − max(0,

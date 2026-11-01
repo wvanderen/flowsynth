@@ -3,7 +3,7 @@ import { generatorProfileOf } from "../engine/profiles";
 import type { App } from "./app";
 import { inventoryCombinePreview } from "../engine/actions";
 import { CATEGORY_OF, isVoiceType, typeRarityOf } from "../engine/constants";
-import { boosterBonusOf, boosterTermOf, modulePower, responseSupportPowerOf, voiceCapacityOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, isResponseSupport, modulePower, responseSupportPowerOf, voiceCapacityOf } from "../engine/economy";
 import { moduleScrapValue } from "../engine/scrap";
 import type { GameState, ModuleInstance } from "../engine/types";
 import { faceLevel, inventoryTileSvg, moduleFace } from "./face";
@@ -87,7 +87,7 @@ function intrinsicEffectsHtml(state: GameState, m: ModuleInstance): string {
   // The response supports quote the adopted response-support progression
   // (issue #488) — the same shared result the rate pass grants, the tray
   // copy's level and tier included — never the retired exponential power.
-  const response = CATEGORY_OF[m.type] === "booster" && boosterTermOf(m.type) !== "amplitude";
+  const response = isResponseSupport(m.type);
   const power = response ? responseSupportPowerOf(state, m) : modulePower(m);
   const profile = generatorProfileOf(m.type);
   if (profile) return `<div class="inventory-intrinsics">

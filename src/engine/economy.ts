@@ -521,6 +521,17 @@ export function boosterTermOf(type: ModuleType): "amplitude" | "chord response" 
   return "amplitude";
 }
 
+// The response supports (issues #375/#376): the booster designs whose
+// authored share lands on a response term rather than the amplitude —
+// the designs whose power leg reads the adopted response-support
+// progression (issue #488) instead of the shared module power. The one
+// membership read for every consumer — rate pass complement, breakdown
+// rows, upgrade benefits, inspection shares, the draft's scaling chip —
+// so a future response design joins in one place.
+export function isResponseSupport(type: ModuleType): boolean {
+  return CATEGORY_OF[type] === "booster" && boosterTermOf(type) !== "amplitude";
+}
+
 // The Spotlight's resolved recipient (issue #374): the selected module
 // while it stands adjacent to the booster and sings — an oscillator. Null
 // whenever the support is inactive: nothing selected, the recipient

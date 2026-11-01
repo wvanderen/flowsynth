@@ -30,8 +30,8 @@ import { tierPowerOf } from "../engine/module-strength";
 // Editing lives in upgrade mode only: during flow the same cross-section
 // opens read-only, its readouts live, its controls gone — the click still
 // answers the lock.
-import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, isPriceableLevel, levelCost, levelsCost, responseSupportPowerOf, wholeNous } from "../engine/economy";
-import { BALANCE, CATEGORY_OF, isOscillatorType, typeRarityOf } from "../engine/constants";
+import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, isPriceableLevel, isResponseSupport, levelCost, levelsCost, responseSupportPowerOf, wholeNous } from "../engine/economy";
+import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
 import { enemyDefAt, worldOccupantAt } from "../engine/world";
@@ -139,7 +139,7 @@ function benefitOf(app: App, module: ModuleInstance, snapshot: RateSnapshot, lev
   // grants, `levels` steps apart — never the retired exponential power
   // the other types' one-level gain derives from. The line multiplies the
   // authored share over the delta, exactly the grant the recipients earn.
-  const response = CATEGORY_OF[module.type] === "booster" && boosterTermOf(module.type) !== "amplitude";
+  const response = isResponseSupport(module.type);
   const gain = response
     ? responseSupportPowerOf(app.state, { ...module, level: module.level + levels }) - responseSupportPowerOf(app.state, module)
     : power * (rarityPower - 1);
