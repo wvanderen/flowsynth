@@ -72,6 +72,17 @@ describe("persistence", () => {
     expect(parsed.version).toBe(12);
   });
 
+  it("the load boundary strips a run-candidates key — an ordinary save never reads a comparison curve (issue #487)", () => {
+    // A candidate tuning rode the playthrough walk that produced an
+    // experiment state, never a save; a stray candidates key in a save
+    // file drops wholesale instead of making shipped play read a curve.
+    const file = JSON.parse(serialize(fresh()));
+    file.state.candidates = { responseCurve: "bounded" };
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.error).toBeUndefined();
+    expect(loaded.state!.candidates).toBeUndefined();
+  });
+
   it("saves lenient-default the gate ledger", () => {
     // Absent, a save written before the ledger existed owes no gates it
     // can't know about — the fresh state's granted opening rows must not

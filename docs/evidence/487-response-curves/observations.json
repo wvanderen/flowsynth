@@ -1,0 +1,41 @@
+{
+  "surface": "the dev panel's run row — the response-curve select joining the policy select (#487)",
+  "capturedAt": "2026-10-31",
+  "sourceCommit": "937490723d1a8a85cfe14dd19c0dcd82ca7bb051",
+  "verifiedUrl": "http://localhost:5173/?dev=1",
+  "preflight": "ACCEPT — provenance.json records the verified worktree, commit 9374907, and clean source",
+  "captures": {
+    "status": "captured",
+    "files": ["desktop-curve-select.png", "phone-curve-select.png"],
+    "how": "docs/evidence/487-response-curves/capture.mjs (playwright-core + system Chromium), run against the preflight-verified URL at the captured source commit",
+    "assertedBeforeEachScreenshot": [
+      "live viewport equals the target (1280x800 desktop, 390x844 phone)",
+      "prefers-reduced-motion: reduce",
+      "the curve select's options read [shipped, linear, bounded] and its aria-label is \"Response curve candidate\"",
+      "the select operates from the keyboard (selectOption to Bounded, no pointer)",
+      "the panel-composed seed-7 one-day run's note contains \"curve bounded\""
+    ]
+  },
+  "observations": [
+    { "check": "desktop composition", "result": "the run row reads Fresh start · Launch · Prompt prestige · Bounded · seed 7 · days 1 · claim ≥ · the two tuning inputs · Run playthrough; the note line reads \"… · no Arete spent · curve bounded · Feat unlocked — spark · …\"", "evidence": "desktop-curve-select.png" },
+    { "check": "phone composition", "result": "at 390x844 the run row wraps: Fresh start/Launch, Prompt prestige · Bounded · seed 7, days · claim ≥, Run playthrough; the note's \"curve bounded\" text is fully legible; controls square-cut with hairline borders per the controls sheet", "evidence": "phone-curve-select.png" },
+    { "check": "disclosure by keyboard and touch", "result": "the added control is a native select with aria-label \"Response curve candidate\"; the capture script operates it by keyboard only (focus + selectOption) and asserts the selection; no tooltip layer was added, so there is no hover-only disclosure to check", "how": "asserted in capture.mjs on the verified checkout" },
+    { "check": "state distinctions without color", "result": "the curve is named in text three ways — the select's option text (Bounded), the run note (\"curve bounded\"), and the record's recipe — none color-borne", "evidence": "both PNGs + the asserted note" },
+    { "check": "reduced motion", "result": "the capture contexts launch with reducedMotion: reduce and the script asserts matchMedia reads reduce; the surface adds no animation or glow", "how": "asserted in capture.mjs" },
+    { "check": "touch targets", "result": "the select and buttons render at the dev panel's standard control height (44 px), measured in the earlier in-page pass at (170, 449) 86x44 on a fresh 390x844 load", "how": "in-page read from the first evidence pass (recorded in git history of observations.json)" }
+  ],
+  "history": {
+    "note": "The first evidence session could not capture: the preview automation's snapshot and recording pipelines timed out on every attempt across three passes (seven preview_snapshot calls, one recording call, and late evaluate calls), while status observables passed throughout. Those passes' raw failures, recovery attempts, and the in-page observations that did run were recorded in the previous revision of this file and observations.json (commit 5035912) and stand as the honest record of that session. The captures above were produced the same day by the repo's playwright pattern after the review round made capture.mjs runnable.",
+    "rawFailures": [
+      { "pass": 1, "tab": "fresh tab, ?dev=1, desktop 1280x800", "call": "preview_snapshot", "attempts": 3, "message": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms." },
+      { "pass": 2, "tab": "second fresh tab, desktop 1280x800", "call": "preview_snapshot", "attempts": 3, "message": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms." },
+      { "pass": 2, "tab": "same tab, phone 390x844", "call": "preview_recording_start", "attempts": 1, "message": "Preview automation recordingStart timed out after 15000ms." },
+      { "pass": 3, "tab": "third fresh tab after recovery time", "call": "preview_snapshot (single bounded probe)", "attempts": 1, "message": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms." }
+    ]
+  },
+  "reproduce": [
+    "npm run dev",
+    "node tools/evidence-preflight.mjs --url http://localhost:PORT --record docs/evidence/487-response-curves/provenance.json",
+    "node docs/evidence/487-response-curves/capture.mjs --url http://localhost:PORT"
+  ]
+}

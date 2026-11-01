@@ -611,6 +611,21 @@ export interface RollSources {
 // inside their habit.
 export type FocusApp = "habit" | "time" | "notes";
 
+// The declared response-support curve candidates (issue #487): how a
+// Chorus or Exciter's grant scales with its own level. "shipped" is the
+// released rarityPower^level read; the others are declared comparison
+// candidates — a candidate is evidence, never production tuning.
+export type ResponseCurveId = "shipped" | "linear" | "bounded";
+
+// A run's declared tuning candidates (issue #487): the playthrough walk's
+// own candidate state, read by the rate pass's response-support seam and
+// nowhere else. Undefined carries the shipped tuning. A candidate never
+// rides an ordinary save — the save boundary strips it — and never mutates
+// the shared balance definitions.
+export interface RunCandidates {
+  readonly responseCurve?: ResponseCurveId;
+}
+
 export interface GameState {
   mode: Mode;
   sessionIndex: number;
@@ -793,6 +808,11 @@ export interface GameState {
   // prestige with the life record; lenient-defaulted to 0 at load.
   breathersCompleted: number;
   breatherSeconds: number;
+  // The run's declared tuning candidates (issue #487): undefined is the
+  // shipped tuning, and only a playthrough walk or a comparison fixture
+  // ever sets one. Lenient-stripped at the save boundary — an ordinary
+  // save never carries it.
+  candidates?: RunCandidates;
   nextId: number;
 }
 

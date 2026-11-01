@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BALANCE, NAMED_CHORDS } from "./constants";
-import { blasterConversion, chargeTermOf, computeRates, displayedRates, projectPlacement } from "./economy";
+import { blasterConversion, chargeTermOf, computeRates, displayedRates, projectPlacement, responseSupportPowerOf } from "./economy";
 import { allocationQualityOf, summaryTermsOf } from "./allocation";
 import { profileAxesOf, OSCILLATOR_PROFILES } from "./profiles";
 import { typeRarityOf } from "./constants";
@@ -386,5 +386,87 @@ describe("authorship and disclosure", () => {
 
   it("the vocabulary is untouched — the wave adds no chord classes", () => {
     expect(NAMED_CHORDS).toHaveLength(11);
+  });
+});
+
+describe("the declared response-curve candidates (issue #487)", () => {
+  // The comparison candidates ride the run's own candidate state; the
+  // shipped read is never intercepted. These pins hold the seam itself:
+  // which leg moves, which never does, and what rides every curve.
+  it("scales the Chorus's grant by the declared curve — the tier rides, the amplitude leg never moves", () => {
+    const build = (curve: "shipped" | "linear" | "bounded", level: number, tier = 0): number => {
+      const s = fresh();
+      give(s, "additive", hex(1, 0), 0);
+      const chorus = give(s, "chorus", CHORUS_SEAT, level);
+      chorus.tier = tier;
+      charged(s, GEN_SEAT);
+      if (curve !== "shipped") s.candidates = { responseCurve: curve };
+      const snapshot = computeRates(s, true);
+      return snapshot.contributions.get("m1")!.value;
+    };
+    // Level zero reads identically under every curve — the grant parity
+    // the candidates promise.
+    expect(build("linear", 0)).toBe(build("shipped", 0));
+    expect(build("bounded", 0)).toBe(build("shipped", 0));
+    // At level 100 the shipped chorus power is rarityPower^100; the
+    // candidates' terms are 1 + 0.1·100 and 1 + 3·100/120. The value
+    // order follows: the grant lands inside the chord factor, so the
+    // shipped board outruns linear, which outruns bounded.
+    const shipped = build("shipped", 100);
+    const linear = build("linear", 100);
+    const bounded = build("bounded", 100);
+    expect(linear).toBeLessThan(shipped);
+    expect(bounded).toBeLessThan(linear);
+    // The tier multiplier rides the candidate term itself — the seam's
+    // own read, where the ratio is exact.
+    const tiered = (curve: "shipped" | "linear" | "bounded", tier: number): number => {
+      const s = fresh();
+      const chorus = give(s, "chorus", hex(3, 3), 100);
+      chorus.tier = tier;
+      if (curve !== "shipped") s.candidates = { responseCurve: curve };
+      return responseSupportPowerOf(s, chorus);
+    };
+    expect(tiered("bounded", 2) / tiered("bounded", 0)).toBeCloseTo(2.25, 9);
+    expect(tiered("linear", 2) / tiered("linear", 0)).toBeCloseTo(2.25, 9);
+    expect(tiered("shipped", 2) / tiered("shipped", 0)).toBeCloseTo(2.25, 9);
+  });
+
+  it("deepens the Exciter's charge-response grant under the declared curve, uncharged voices reading nothing", () => {
+    const build = (curve: "shipped" | "linear" | "bounded"): number => {
+      const s = fresh();
+      give(s, "tail", hex(1, 0), 100);
+      give(s, "exciter", CHORUS_SEAT, 100);
+      charged(s, GEN_SEAT);
+      if (curve !== "shipped") s.candidates = { responseCurve: curve };
+      return computeRates(s, true).rate;
+    };
+    expect(build("bounded")).toBeLessThan(build("linear"));
+    expect(build("linear")).toBeLessThan(build("shipped"));
+    // The uncharged control: without the supply, the Exciter's grant is
+    // inert under every curve alike.
+    const inert = (curve: "shipped" | "linear" | "bounded"): number => {
+      const s = fresh();
+      give(s, "tail", hex(1, 0), 100);
+      give(s, "exciter", CHORUS_SEAT, 100);
+      if (curve !== "shipped") s.candidates = { responseCurve: curve };
+      return computeRates(s, true).rate;
+    };
+    expect(inert("bounded")).toBe(inert("shipped"));
+    expect(inert("linear")).toBe(inert("shipped"));
+  });
+
+  it("never touches the shared balance definitions — a candidate lives on the run's own state", () => {
+    const before = structuredClone(BALANCE);
+    const s = fresh();
+    give(s, "additive", hex(1, 0), 500);
+    give(s, "chorus", CHORUS_SEAT, 500);
+    charged(s, GEN_SEAT);
+    s.candidates = { responseCurve: "bounded" };
+    const bounded = computeRates(s, true).rate;
+    delete s.candidates;
+    const shipped = computeRates(s, true).rate;
+    expect(bounded).toBeLessThan(shipped);
+    expect(structuredClone(BALANCE)).toEqual(before);
+    expect(shipped).toBeGreaterThan(0);
   });
 });

@@ -348,6 +348,11 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   // The retired player-wide scalar (ADR-0047): whatever a pre-v8 save
   // carried is gone — its value rode into the reserves above.
   delete (merged as unknown as Record<string, unknown>).chargeWindow;
+  // The run candidates (issue #487): a candidate tuning rode the walk that
+  // produced an experiment state, never an ordinary save — the merged
+  // shape drops it wholesale, so a stray candidates key in a save file
+  // cannot make shipped play read a comparison curve.
+  delete (merged as unknown as Record<string, unknown>).candidates;
   merged.purchased = { ...fresh.purchased, ...merged.purchased };
   return { state: merged };
 }

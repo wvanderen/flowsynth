@@ -1,5 +1,5 @@
 import { amplifierGainOf, tierPowerOf } from "./module-strength";
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, typeRarityOf, WORLD_ENEMIES } from "./constants";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, EPS, isOscillatorType, isVoiceType, responseCurveCandidateOf, typeRarityOf, WORLD_ENEMIES } from "./constants";
 import { lifetimeBreatherSecondsOf, baseProductionOf, boosterResponseOf, breatherResponseOf, chargeResponseOf, chordResponseOf, restPhaseKeyOf, restWarmthFactorOf, usesChargeConversion, usesChordConversion, productionClockFactorOf, temporalPhaseKeyOf } from "./profiles";
 import { analyzeChords, hypotheticalBoardFor, partitionVoices, type ChordAnalysis, type Singer } from "./chords";
 import { allocateChords, DEFAULT_ALLOCATION_BUDGET, type AllocationBudget, type AllocationRead, type AllocationVoiceParams } from "./allocation";
@@ -91,13 +91,21 @@ function chargeMagnitudeAt(state: GameState, pos: Hex | null): number {
   return familyMagnitudeAt(state, pos, "charge");
 }
 
+// The Mutator plane's multiplier at the module's cell (ADR-0043): the
+// (× (1 + m)) factor every power read composes — the shared shape behind
+// hostPower and the declared-candidate read below, so the two never
+// disagree about how a power mutator rides.
+function hostPlaneOf(state: GameState, pos: Hex | null): number {
+  return 1 + powerMagnitudeAt(state, pos);
+}
+
 // The host's effective power (ADR-0043): a placed power mutator multiplies
 // its host module's power (× (1 + m)) everywhere power already appears —
 // the oscillator's final ν/s, the uplift a booster grants, a generator's
 // output strength, and Forge progress. A Mutator Forge boosting its own
 // branch is intended, not a bug. A tray module or a vacant slot: ×1.
 export function hostPower(state: GameState, module: ModuleInstance): number {
-  return modulePower(module) * (1 + powerMagnitudeAt(state, module.pos));
+  return modulePower(module) * hostPlaneOf(state, module.pos);
 }
 
 export function levelCost(level: number): number {
@@ -230,6 +238,23 @@ export function investment(level: number): number {
 // conditions, or the type's rarity.
 export function modulePower(module: ModuleInstance): number {
   return BALANCE.rarityPower[typeRarityOf(module.type)] ** module.level * tierPowerOf(module.tier);
+}
+
+// The response-support power read (issue #487): how a Chorus or Exciter's
+// grant scales with its own level. The shipped curve reads the shared
+// module power; a run's declared candidate (state.candidates.responseCurve
+// — the playthrough recipe's declared input, the comparison fixtures'
+// declared candidate) substitutes the catalog's level term. Tier and power
+// mutators ride every curve unchanged — a candidate prices the response's
+// level progression, never the merge ladder or the Mutator plane. One read
+// for the rate pass, the allocator's params, and every comparison fixture,
+// so no surface can quote a grant the rate pass does not apply.
+export function responseSupportPowerOf(state: GameState, module: ModuleInstance): number {
+  const candidate = responseCurveCandidateOf(state.candidates?.responseCurve ?? "shipped");
+  if (candidate?.levelTerm) {
+    return candidate.levelTerm(module.level) * tierPowerOf(module.tier) * hostPlaneOf(state, module.pos);
+  }
+  return hostPower(state, module);
 }
 
 export function deployed(state: GameState): ModuleInstance[] {
@@ -440,7 +465,11 @@ function responseGrantsAt(
   for (const other of deployed(state)) {
     if (other.type !== boosterType || other.pos === null) continue;
     if (!adjacent(module.pos, other.pos)) continue;
-    total += boosterBonusOf(other.type) * hostPower(state, other) * chargedFactor(chargeStrength.get(other.id) ?? 0);
+    // The support's own power rides the declared response-curve candidate
+    // (issue #487) — the one read the grants take; everything downstream
+    // (charge terms, chord conversion, the allocator's params) reads the
+    // granted figures.
+    total += boosterBonusOf(other.type) * responseSupportPowerOf(state, other) * chargedFactor(chargeStrength.get(other.id) ?? 0);
   }
   return total;
 }
@@ -908,6 +937,10 @@ function allocationFingerprint(state: GameState): string {
   parts.push(`f:${Object.keys(state.achievements).length}`);
   parts.push(`d:${discoveryCount(state)}`);
   parts.push(`c:${state.capacityBought}:${state.capacityCeilings}`);
+  // The declared response-curve candidate (issue #487): the grants' level
+  // term is the solve's input — a candidate on the state must re-solve,
+  // never serve the shipped solve's result.
+  parts.push(`r:${state.candidates?.responseCurve ?? "shipped"}`);
   // The World layer's remaining-production factor (issue #425): the
   // enemies' discovered/alive bits are the factor's whole input — a reveal
   // or a kill must re-solve, while steady combat damage between the two

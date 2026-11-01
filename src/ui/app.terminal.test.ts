@@ -214,6 +214,10 @@ describe("terminal commands", () => {
     const tuning = app.devTerminalRun("tuning");
     expect(tuning).toContain("openingGrant 0–120 (default 12)");
     expect(tuning).toContain("claimBase 1–36 (default 2)");
+    // The declared response curves (#487) ride the same read.
+    expect(tuning).toContain("curves shipped — rarity^level — the shipped exponential");
+    expect(tuning).toContain("linear — 1 + 0.1·level");
+    expect(tuning).toContain("bounded — 1 + 3·level/(level + 20)");
   });
 
   it("buys, places, and upgrades through the engine's own gates", () => {

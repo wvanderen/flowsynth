@@ -48,12 +48,12 @@ import {
 } from "../engine/actions";
 import { ARETE_HORIZON, bankableClaimOf, frontierEntitlement, horizonReached } from "../engine/accumulator";
 import { columnCost, worldOccupantAt } from "../engine/world";
-import type { WeaponType } from "../engine/types";
+import type { WeaponType, ResponseCurveId } from "../engine/types";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
 import { displayedRates, flowLive, deployedAt, syncRates, wholeNous } from "../engine/economy";
 import { worldEntered, refreshWorldPreview, worldRevealPreview, worldBoardLive } from "./world";
-import { WORLD_ENEMIES } from "../engine/constants";
+import { WORLD_ENEMIES, RESPONSE_CURVES } from "../engine/constants";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY } from "../engine/save";
 import { SharedSave, browserSaveStorage, memorySaveStorage, type LoadedSave } from "./shared-save";
@@ -3247,6 +3247,13 @@ export class App {
     return PLAYTHROUGH_TUNING;
   }
 
+  // The declared response-curve candidates (issue #487): the same catalog
+  // the recipe validates against — the panel's curve select and the
+  // terminal's `tuning` read quote it verbatim.
+  devResponseCurves(): typeof RESPONSE_CURVES {
+    return RESPONSE_CURVES;
+  }
+
   // One interactive intervention (story 33): what a human or agent did to
   // the installed run beyond its recipe, and the engine's own outcome.
   // The record owns interventions; the scenario's declared recipe — the
@@ -3525,7 +3532,8 @@ export class App {
       case "scenarios":
         return this.devScenarios().map((s) => `${s.id} — ${s.name}: ${s.situation}`).join(" · ");
       case "tuning":
-        return this.devTuning().map((p) => `${p.key} ${p.min}–${p.max} (default ${p.default}) — ${p.description}`).join(" · ");
+        return this.devTuning().map((p) => `${p.key} ${p.min}–${p.max} (default ${p.default}) — ${p.description}`).join(" · ") +
+          ` · curves ${this.devResponseCurves().map((curve) => `${curve.id} — ${curve.description}`).join(" · ")}`;
       case "launch": {
         const [id] = args;
         if (!id) throw new Error("launch needs a scenario id — try `scenarios`.");
@@ -3568,11 +3576,12 @@ export class App {
           const value = Number(raw);
           if (key === "scenario") input.scenarioId = raw;
           else if (key === "policy") input.policyId = raw;
+          else if (key === "curve") input.responseCurve = raw as ResponseCurveId;
           else if (key === "seed") input.seed = value;
           else if (key === "days") input.budgetDays = value;
           else if (key === "claim") input.claimTarget = value;
           else if (tuningKeys.includes(key)) overrides[key] = value;
-          else throw new Error(`run does not read "${key}" — scenario, policy, seed, days, claim, ${tuningKeys.join(", ")}.`);
+          else throw new Error(`run does not read "${key}" — scenario, policy, curve, seed, days, claim, ${tuningKeys.join(", ")}.`);
         }
         if (Object.keys(overrides).length > 0) input.overrides = overrides;
         return playthroughNote(this.devRunPlaythrough(input));
