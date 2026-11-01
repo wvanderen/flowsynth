@@ -91,13 +91,21 @@ function chargeMagnitudeAt(state: GameState, pos: Hex | null): number {
   return familyMagnitudeAt(state, pos, "charge");
 }
 
+// The Mutator plane's multiplier at the module's cell (ADR-0043): the
+// (× (1 + m)) factor every power read composes — the shared shape behind
+// hostPower and the declared-candidate read below, so the two never
+// disagree about how a power mutator rides.
+function hostPlaneOf(state: GameState, pos: Hex | null): number {
+  return 1 + powerMagnitudeAt(state, pos);
+}
+
 // The host's effective power (ADR-0043): a placed power mutator multiplies
 // its host module's power (× (1 + m)) everywhere power already appears —
 // the oscillator's final ν/s, the uplift a booster grants, a generator's
 // output strength, and Forge progress. A Mutator Forge boosting its own
 // branch is intended, not a bug. A tray module or a vacant slot: ×1.
 export function hostPower(state: GameState, module: ModuleInstance): number {
-  return modulePower(module) * (1 + powerMagnitudeAt(state, module.pos));
+  return modulePower(module) * hostPlaneOf(state, module.pos);
 }
 
 export function levelCost(level: number): number {
@@ -244,7 +252,7 @@ export function modulePower(module: ModuleInstance): number {
 export function responseSupportPowerOf(state: GameState, module: ModuleInstance): number {
   const candidate = responseCurveCandidateOf(state.candidates?.responseCurve ?? "shipped");
   if (candidate?.levelTerm) {
-    return candidate.levelTerm(module.level) * tierPowerOf(module.tier) * (1 + powerMagnitudeAt(state, module.pos));
+    return candidate.levelTerm(module.level) * tierPowerOf(module.tier) * hostPlaneOf(state, module.pos);
   }
   return hostPower(state, module);
 }

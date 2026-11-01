@@ -18,7 +18,7 @@ The recorded [results](response-comparison-results.json) carry the recipes, the 
 
 - **Analytical envelopes** — the supplied board's rate curve under each candidate against the upgrade ladder's own prices. Idealized waiting-time arithmetic; never a pacing forecast.
 - **Already-acquired fixtures** — nine real allocated boards read by `allocateRates` exactly as live play reads: the eight phenomenon rigs (Chorus stacking, an independent charged Exciter producer, Sideband conversion, multiple supports, silent voices, amplitude support, conduit chains, merge-tier extremes) swept over declared finite levels, plus the Blaster's intrinsic seats and the supplied board over the full reachable capacity ladder (the two declared Expansion Bays open capacity five).
-- **Fresh-start pacing** — the scheduled prompt acquisition walk (one per candidate, seed 468, plus a recorded 12-seed scan) and the prompt purchase policy's own five-level gesture sweep against a declared bank on the already-acquired board. Real engine actions throughout.
+- **Fresh-start pacing** — the scheduled prompt acquisition walk (one per candidate, seed 468, plus a recorded 12-seed scan) and a declared purchase-policy sweep — the prompt rule's gesture size and order, cheapest level first with roster-order ties, through the real bulk upgrade action against a declared bank on the already-acquired board. Real engine actions throughout; the sweep re-states the walk gesture leg's declared rule, which is not an extracted callable.
 
 ## The supplied-board reconstruction
 

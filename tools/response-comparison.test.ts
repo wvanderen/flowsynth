@@ -16,6 +16,7 @@ import {
   pacingRows,
   responseComparisonReport,
   suppliedBoardState,
+  suppliedBoardUnpressed,
   uniformLevelInvestment,
 } from "./response-comparison";
 import { allocateRates, voiceCapacityOf } from "../src/engine/economy";
@@ -175,13 +176,17 @@ describe("the supplied-board reconstruction", () => {
       expect(typeof rates.read.certified).toBe("boolean");
       expect(Number.isFinite(rates.snapshot.rate)).toBe(true);
     }
-    // The discovered undefeated enemies multiply the board's floor.
-    const shipped = suppliedBoardState(100, 5, "shipped");
-    const rates = allocateRates(shipped, true);
-    const worldFactor = 0.8 ** WORLD_ENEMIES.length;
-    expect(rates.snapshot.rate).toBeLessThan(worldFactor * 1e3 * 0 + Infinity);
-    void worldFactor;
-    expect(Number.isFinite(rates.snapshot.rate)).toBe(true);
+    // The enemies press, behaviorally: the same board with no enemy
+    // discovered reads exactly the discovered board's rate divided by the
+    // nine (1 − penalty) floors — 0.8⁹ — because the World factor
+    // multiplies every voice's weight and value alike, so the allocation
+    // cannot differ. Certified solves only: an incumbent pair could pick
+    // different allocations and spoil the ratio's meaning.
+    const pressed = allocateRates(suppliedBoardState(100, 5, "bounded"), true);
+    const unpressed = allocateRates(suppliedBoardUnpressed(100, 5, "bounded"), true);
+    expect(pressed.read.certified).toBe(true);
+    expect(unpressed.read.certified).toBe(true);
+    expect(pressed.snapshot.rate / unpressed.snapshot.rate).toBeCloseTo(0.8 ** WORLD_ENEMIES.length, 6);
   });
 
   it("reads the bounded candidate's board below the shipped one at the same declared level", () => {

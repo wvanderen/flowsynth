@@ -4079,6 +4079,14 @@ function devStageBox(): { left: number; top: number; width: number; height: numb
   return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
 }
 
+// The id/name select options the dev panel's selects share — one shape
+// for every catalog the panel offers.
+function optionList(entries: readonly { readonly id: string; readonly name: string }[]): string {
+  return entries
+    .map((entry) => `<option value="${escapeHtml(entry.id)}">${escapeHtml(entry.name)}</option>`)
+    .join("");
+}
+
 function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void {
   let panel = byId("dev-panel");
   if (!app.dev) {
@@ -4131,20 +4139,8 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
           `<option value="${escapeHtml(scenario.id)}" ${scenario.id === app.devScenarioId ? "selected" : ""}>${escapeHtml(scenario.name)}</option>`,
       )
       .join("");
-    const policyOptions = app
-      .devPlaythroughPolicies()
-      .map(
-        (policy) =>
-          `<option value="${escapeHtml(policy.id)}">${escapeHtml(policy.name)}</option>`,
-      )
-      .join("");
-    const curveOptions = app
-      .devResponseCurves()
-      .map(
-        (curve) =>
-          `<option value="${escapeHtml(curve.id)}">${escapeHtml(curve.name)}</option>`,
-      )
-      .join("");
+    const policyOptions = optionList(app.devPlaythroughPolicies());
+    const curveOptions = optionList(app.devResponseCurves());
     const tuningOptions = app
       .devTuning()
       .map(

@@ -1,64 +1,67 @@
-// The #487 evidence capture script: the dev panel's run row with its
-// response-curve select (#487), desktop and phone, from the verified
-// checkout. Drives the panel's own controls — the curve select set to
-// Bounded, a one-day seed-7 walk — so the capture shows the composed
-// run and its note line, then captures both viewports.
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+
+// The response-curve evidence capture (issue #487): the dev panel's run
+// row with its response-curve select, desktop and phone, from the
+// verified checkout. The script composes a Bounded seed-7 one-day run
+// through the panel's own controls and asserts the note names the curve
+// before each screenshot — a capture of a surface that did the thing.
 //
-// This session the preview automation's snapshot and recording pipelines
-// timed out on every attempt (see README.md — the raw failures and the
-// recovery attempts are recorded there), so the PNGs this script emits
-// are absent; the in-page observations that did run are recorded in
-// observations.json. Rerun this script against a working pipeline to
-// produce them:
-//
+// Run after the capture preflight accepted the URL:
 //   node tools/evidence-preflight.mjs --url http://localhost:PORT \
 //     --record docs/evidence/487-response-curves/provenance.json
 //   node docs/evidence/487-response-curves/capture.mjs --url http://localhost:PORT
+//
+// playwright-core resolves from the repo's node_modules when installed
+// (`npm i --no-save playwright-core`); PLAYWRIGHT_MODULE and CHROMIUM_PATH
+// override, matching the #486 capture's conventions.
 
-import { writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+const require = createRequire(import.meta.url);
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright-core");
+const url = process.argv[process.argv.indexOf("--url") + 1] ?? process.env.EVIDENCE_URL ?? "http://localhost:5173/";
 
-const here = dirname(fileURLToPath(import.meta.url));
-const url = process.argv[process.argv.indexOf("--url") + 1] ?? "http://localhost:5173/";
-const viewports = [
-  { name: "desktop", width: 1280, height: 800 },
-  { name: "phone", width: 390, height: 844 },
-];
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium", headless: true });
 
-for (const viewport of viewports) {
-  // 1. Size the tab to the target and confirm the live size (a resize's
-  //    own echo can be stale — read window.innerWidth/Height).
-  await resize(viewport.width, viewport.height);
-  const live = await evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
-  if (live.w !== viewport.width || live.h !== viewport.height) {
-    throw new Error(`${viewport.name}: live viewport ${live.w}x${live.h} never matched ${viewport.width}x${viewport.height}`);
+try {
+  for (const [name, width, height] of [["desktop", 1280, 800], ["phone", 390, 844]]) {
+    const context = await browser.newContext({ viewport: { width, height }, hasTouch: name === "phone", reducedMotion: "reduce" });
+    const page = await context.newPage();
+    // A fresh load at the target size, so the panel mounts at its own
+    // metrics — never a desktop drag position carried across a resize.
+    await page.goto(`${url}?dev=1`);
+    await page.waitForFunction(() => Boolean(window.__flowsynth));
+    const ready = await page.evaluate(() => ({
+      width: innerWidth,
+      height: innerHeight,
+      reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches,
+      options: [...document.getElementById("dev-playthrough-curve").options].map((option) => option.value),
+      label: document.getElementById("dev-playthrough-curve").getAttribute("aria-label"),
+    }));
+    assert.equal(ready.width, width);
+    assert.equal(ready.height, height);
+    assert.equal(ready.reducedMotion, true, "the capture runs reduced-motion");
+    assert.deepEqual(ready.options, ["shipped", "linear", "bounded"]);
+    assert.equal(ready.label, "Response curve candidate");
+
+    // The select operates from the keyboard: focus it, walk to Bounded,
+    // and read the selection back — no pointer involved.
+    await page.focus("#dev-playthrough-curve");
+    await page.selectOption("#dev-playthrough-curve", "bounded");
+    const selected = await page.evaluate(() => document.getElementById("dev-playthrough-curve").value);
+    assert.equal(selected, "bounded");
+
+    // The run composes from the panel's own controls, agent command aside.
+    await page.fill("#dev-playthrough-seed", "7");
+    await page.fill("#dev-playthrough-budget", "1");
+    await page.click('[data-dev="playthrough"]');
+    await page.waitForFunction(() => (document.getElementById("dev-playthrough-note")?.textContent ?? "").includes("curve bounded"));
+    const note = await page.evaluate(() => document.getElementById("dev-playthrough-note").textContent);
+    assert.ok(note.includes("curve bounded"), `the note never named the curve: ${note}`);
+
+    await page.screenshot({ path: new URL(`${name}-curve-select.png`, import.meta.url).pathname });
+    console.log(`${name}: captured at ${width}x${height}; note names "curve bounded".`);
+    await context.close();
   }
-
-  // 2. Reload at the target size so the panel mounts at its own metrics,
-  //    then compose the run from the panel's own controls.
-  await goto(`${url}?dev=1`);
-  await evaluate(() => {
-    const curve = document.getElementById("dev-playthrough-curve");
-    const seedField = document.getElementById("dev-playthrough-seed");
-    const budgetField = document.getElementById("dev-playthrough-budget");
-    curve.value = "bounded";
-    seedField.value = "7";
-    budgetField.value = "1";
-    document.querySelector('[data-dev="playthrough"]').dispatchEvent(new MouseEvent("click", { bubbles: true }));
-  });
-
-  // 3. Confirm the note names the curve, then capture.
-  const note = await evaluate(() => document.getElementById("dev-playthrough-note")?.textContent ?? "");
-  if (!note.includes("curve bounded")) throw new Error(`${viewport.name}: the note never named the curve — ${note}`);
-  await screenshot(join(here, `${viewport.name}-curve-select.png`));
-  console.log(`${viewport.name}: captured (${viewport.width}x${viewport.height}), note names "curve bounded".`);
+} finally {
+  await browser.close();
 }
-
-// The harness calls are filled by the operator's preview automation
-// (resize/goto/evaluate/screenshot over the tab tools); this script
-// documents the deterministic setup each capture shares.
-async function resize(width, height) { void width; void height; }
-async function goto(to) { void to; }
-async function evaluate(fn) { void fn; return { w: 0, h: 0 }; }
-async function screenshot(path) { void path; }

@@ -4,7 +4,7 @@ import { RESPONSE_CURVES, WORLD_ENEMIES } from "../src/engine/constants";
 import { stateOf, type ComparisonBoard } from "../src/engine/capacity-comparisons";
 import { fresh, give } from "../src/engine/fixtures";
 import { hex, sameHex } from "../src/engine/hex";
-import { composePlaythroughRecipe, playthroughSource, runPlaythrough, type PlaythroughRecord, type PlaythroughSource } from "../src/engine/playthrough";
+import { composePlaythroughRecipe, playthroughSource, runPlaythrough, type PlaythroughRecord, type PlaythroughRecipe, type PlaythroughSource } from "../src/engine/playthrough";
 import { worldFactorOf } from "../src/engine/world";
 import type { GameState, Hex, ModuleType, ResponseCurveId } from "../src/engine/types";
 
@@ -23,9 +23,9 @@ import type { GameState, Hex, ModuleType, ResponseCurveId } from "../src/engine/
 //                declared finite levels and the full reachable capacity
 //                ladder, the allocation's certification recorded per row.
 //   pacing     — fresh-start scheduled walks (the prompt acquisition
-//                policy) and the prompt purchase policy's own level
-//                gestures on an already-acquired board, both through real
-//                engine actions.
+//                policy) and a declared purchase-policy sweep — the
+//                prompt rule's gesture size and order through the real
+//                bulk action on an already-acquired board.
 //
 // The supplied board's historical levels (1506) and monetary fields were
 // lost with the parent save; nothing here treats them as valid or claims
@@ -159,6 +159,14 @@ export function suppliedComparisonBoard(level: number): ComparisonBoard {
   };
 }
 
+// The one candidate-application read: shipped sets nothing on the state,
+// so shipped runs keep the exact states they always built; a candidate
+// rides the run's own candidate state and nothing shared.
+function withCurve(state: GameState, curve: ResponseCurveId): GameState {
+  if (curve !== "shipped") state.candidates = { responseCurve: curve };
+  return state;
+}
+
 // The reconstruction's engine state: the comparison board plus the
 // table's declared facts — the four Poly Expander purchases under the two
 // Expansion Bays' ceiling, the two Chord Catalysts, the breathers, the
@@ -177,7 +185,18 @@ export function suppliedBoardState(level: number, capacity: number, curve: Respo
   for (const { from, to } of SUPPLIED_RECIPIENTS) {
     state.modules[byCopy.get(from)!]!.target = state.modules[byCopy.get(to)!]!.id;
   }
-  if (curve !== "shipped") state.candidates = { responseCurve: curve };
+  return withCurve(state, curve);
+}
+
+// The same reconstruction with the declared enemies left undiscovered —
+// everything else identical — the control the enemy-pressure pin reads
+// against.
+export function suppliedBoardUnpressed(level: number, capacity: number, curve: ResponseCurveId): GameState {
+  const state = suppliedBoardState(level, capacity, curve);
+  for (const def of WORLD_ENEMIES) {
+    const live = state.world.enemies[def.key];
+    if (live) live.discovered = false;
+  }
   return state;
 }
 
@@ -320,8 +339,7 @@ export function phenomenonState(
   board.build(state, level);
   state.capacityBought = capacity - 1;
   if (state.capacityBought > 2) state.capacityCeilings = 2;
-  if (curve !== "shipped") state.candidates = { responseCurve: curve };
-  return state;
+  return withCurve(state, curve);
 }
 
 // ── The rows ─────────────────────────────────────────────────────────────
@@ -384,7 +402,9 @@ export interface PacingRow {
   readonly curve: ResponseCurveId;
   readonly runId: string;
   readonly source: PlaythroughSource;
-  readonly recipeSeed: number;
+  // The whole composed recipe rides the row — the report records
+  // recipes, not just their seeds.
+  readonly recipe: PlaythroughRecipe;
   readonly budgetDays: number;
   readonly complete: boolean;
   readonly stop: string;
@@ -500,20 +520,29 @@ export function envelopeRows(): EnvelopeRow[] {
   return rows;
 }
 
-// The purchase policy's own sweep on the already-acquired board: the
-// prompt rule's five-level gestures, cheapest voice first, through the
-// real bulk action against a declared bank. The candidate changes how far
-// the same bank pushes the same board — the purchase-side pacing leg.
+// The declared purchase-policy sweep on the already-acquired board: the
+// prompt rule's own gesture size and order — five-level gestures over the
+// deployed voices, cheapest level first, ties in roster order exactly as
+// the walk's gesture leg resolves them — through the real bulk action
+// against a declared bank. The gesture leg inside the playthrough walk is
+// not an extracted callable, so this sweep re-states its declared rule
+// and the rows present it as that: a policy-shaped purchase sweep on a
+// real board, not a recorded walk of the whole policy. The candidate
+// changes how far the same bank pushes the same board — the purchase-side
+// pacing leg.
 export function gestureRows(): GestureRow[] {
   const startLevel = 25;
   return CURVES.map((curve) => {
     const state = suppliedBoardState(startLevel, 5, curve);
     state.nous = SYNTHETIC_BANK;
+    // Roster order for ties: the walk's own tiebreak (the stable sort's
+    // roster rank), never a lexicographic id compare — m2 outranks m10.
+    const rosterRank = new Map(state.modules.map((module, index) => [module.id, index]));
     let bought = 0;
     for (let guard = 0; guard < 4000; guard++) {
       const voice = state.modules
         .filter((m) => m.pos !== null)
-        .sort((a, b) => a.level - b.level || a.id.localeCompare(b.id))[0];
+        .sort((a, b) => a.level - b.level || rosterRank.get(a.id)! - rosterRank.get(b.id)!)[0];
       if (!voice) break;
       const result = upgradeModuleLevels(state, voice.id, GESTURE_LEVELS);
       if (!result.ok) break;
@@ -545,7 +574,7 @@ export function pacingRows(budgetDays: number): PacingRow[] {
       curve,
       runId: run.runId,
       source: run.source,
-      recipeSeed: recipe.seed,
+      recipe,
       budgetDays,
       complete: run.complete,
       stop: `${run.stop.kind} — ${run.stop.reason}`,
@@ -740,11 +769,11 @@ function findingsOf(report: ResponseComparisonReport): string[] {
   const scanHolds = report.acquisitionScan.filter((row) => row.responseSupportsAcquired > 0).length;
   findings.push(
     identical && acquired.every((count) => count === 0)
-      ? `Fresh-start pacing is curve-invariant in this era: the scheduled prompt policy acquired no Chorus or Exciter within ${first.budgetDays} days on seed ${first.recipeSeed}, and the recorded acquisition scan agrees (seeds ${report.acquisitionScan[0]!.seed}–${report.acquisitionScan.at(-1)!.seed} at ${report.acquisitionScan[0]!.budgetDays} days: ${scanHolds} of ${report.acquisitionScan.length} runs ever held a response support) — the candidates cannot move an opening era; the decision binds already-acquired boards.`
+      ? `Fresh-start pacing is curve-invariant in this era: the scheduled prompt policy acquired no Chorus or Exciter within ${first.budgetDays} days on seed ${first.recipe.seed}, and the recorded acquisition scan agrees (seeds ${report.acquisitionScan[0]!.seed}–${report.acquisitionScan.at(-1)!.seed} at ${report.acquisitionScan[0]!.budgetDays} days: ${scanHolds} of ${report.acquisitionScan.length} runs ever held a response support) — the candidates cannot move an opening era; the decision binds already-acquired boards.`
       : `Fresh-start pacing diverged — response supports acquired per candidate: ${acquired.join(", ")}; scan runs holding a support: ${scanHolds} of ${report.acquisitionScan.length}; walks identical: ${identical}.`,
   );
   findings.push(
-    "The purchase-policy gesture sweep spends the same declared bank on the same already-acquired board under each candidate — " +
+    "The declared purchase-policy gesture sweep spends the same declared bank on the same already-acquired board under each candidate — " +
       "the same levels land (the ladder's prices do not read the candidate), and the resulting-rate rows show what those levels do under each curve: the purchase side costs the same, the response side is what the decision changes.",
   );
   findings.push(
@@ -762,8 +791,7 @@ export function curvePower(curve: ResponseCurveId, level: number): number {
   const state = fresh();
   const chorus = give(state, "chorus", hex(3, 3), 0);
   chorus.level = level;
-  if (curve !== "shipped") state.candidates = { responseCurve: curve };
-  return responseSupportPowerOf(state, chorus);
+  return responseSupportPowerOf(withCurve(state, curve), chorus);
 }
 
 // The swept levels' total price from zero — what an already-acquired

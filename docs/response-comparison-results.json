@@ -4,7 +4,7 @@
     "game": "flowsynth",
     "saveVersion": 12,
     "runnerVersion": 10,
-    "engineSource": "75867e6d"
+    "engineSource": "7b51bf9a"
   },
   "curves": [
     {
@@ -433,7 +433,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 5,
-      "rate": 31586729313.925007,
+      "rate": 31586729313.925003,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -445,7 +445,7 @@
       "curve": "linear",
       "level": 100,
       "capacity": 5,
-      "rate": 18049559608.65135,
+      "rate": 18049559608.651344,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -457,7 +457,7 @@
       "curve": "bounded",
       "level": 100,
       "capacity": 5,
-      "rate": 18049559608.241848,
+      "rate": 18049559608.241844,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -541,7 +541,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 5,
-      "rate": 35752012300.347855,
+      "rate": 35752012300.34785,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -553,7 +553,7 @@
       "curve": "linear",
       "level": 100,
       "capacity": 5,
-      "rate": 22214842595.074196,
+      "rate": 22214842595.074192,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -565,7 +565,7 @@
       "curve": "bounded",
       "level": 100,
       "capacity": 5,
-      "rate": 22214842594.664696,
+      "rate": 22214842594.664692,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -649,7 +649,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 5,
-      "rate": 2.222643147091872e+26,
+      "rate": 2.2226431470918715e+26,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -973,7 +973,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 5,
-      "rate": 1.969414353089497e+21,
+      "rate": 1.9694143530894966e+21,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -985,7 +985,7 @@
       "curve": "linear",
       "level": 100,
       "capacity": 5,
-      "rate": 117543228131.20435,
+      "rate": 117543228131.20433,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -997,7 +997,7 @@
       "curve": "bounded",
       "level": 100,
       "capacity": 5,
-      "rate": 57968354276.45481,
+      "rate": 57968354276.4548,
       "activeInstances": 1,
       "certified": true,
       "worldFactor": 1
@@ -1274,7 +1274,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 1,
-      "rate": 1.1121520502793938e+29,
+      "rate": 1.1121520502793937e+29,
       "activeInstances": 4,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1297,7 +1297,7 @@
       "curve": "linear",
       "level": 100,
       "capacity": 1,
-      "rate": 273179850271488380000,
+      "rate": 273179850271488340000,
       "activeInstances": 4,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1320,7 +1320,7 @@
       "curve": "bounded",
       "level": 100,
       "capacity": 1,
-      "rate": 103267819990121270000,
+      "rate": 103267819990121250000,
       "activeInstances": 4,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1343,7 +1343,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 2,
-      "rate": 9.17182605845935e+39,
+      "rate": 9.171826058459349e+39,
       "activeInstances": 8,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1389,7 +1389,7 @@
       "curve": "bounded",
       "level": 100,
       "capacity": 2,
-      "rate": 7.909845413955992e+21,
+      "rate": 7.909845413955991e+21,
       "activeInstances": 8,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1412,7 +1412,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 3,
-      "rate": 6.0557921151121485e+50,
+      "rate": 6.055792115112148e+50,
       "activeInstances": 13,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1435,7 +1435,7 @@
       "curve": "linear",
       "level": 100,
       "capacity": 3,
-      "rate": 8.987552941443007e+24,
+      "rate": 8.987552941443006e+24,
       "activeInstances": 13,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1481,8 +1481,8 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 4,
-      "rate": 3.879560051644643e+61,
-      "activeInstances": 16,
+      "rate": 3.8795600516446425e+61,
+      "activeInstances": 17,
       "certified": true,
       "worldFactor": 0.13421772800000006
     },
@@ -1504,7 +1504,7 @@
       "curve": "linear",
       "level": 100,
       "capacity": 4,
-      "rate": 1.4164367456530146e+27,
+      "rate": 1.4164367456530143e+27,
       "activeInstances": 16,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1527,7 +1527,7 @@
       "curve": "bounded",
       "level": 100,
       "capacity": 4,
-      "rate": 2.906426782976881e+25,
+      "rate": 2.9064267829768807e+25,
       "activeInstances": 16,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1550,7 +1550,7 @@
       "curve": "shipped",
       "level": 100,
       "capacity": 5,
-      "rate": 2.2854147482337173e+72,
+      "rate": 2.2854147482337165e+72,
       "activeInstances": 20,
       "certified": false,
       "worldFactor": 0.13421772800000006
@@ -1573,7 +1573,7 @@
       "curve": "linear",
       "level": 100,
       "capacity": 5,
-      "rate": 2.0538332659335648e+29,
+      "rate": 2.053833265933564e+29,
       "activeInstances": 20,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1596,7 +1596,7 @@
       "curve": "bounded",
       "level": 100,
       "capacity": 5,
-      "rate": 1.5985346487294935e+27,
+      "rate": 1.5985346487294932e+27,
       "activeInstances": 20,
       "certified": true,
       "worldFactor": 0.13421772800000006
@@ -1619,10 +1619,10 @@
       "board": "supplied-board-p01-p30",
       "curve": "shipped",
       "level": 25,
-      "rate": 7106315588132008000,
+      "rate": 7106315588132007000,
       "nextLevelCost": 1267651,
-      "marginalNuPerNu": 25587438223130.414,
-      "waitRatio": 0.28754305827099896,
+      "marginalNuPerNu": 25587438223130.402,
+      "waitRatio": 0.2875430582709991,
       "certified": true
     },
     {
@@ -1630,10 +1630,10 @@
       "board": "supplied-board-p01-p30",
       "curve": "shipped",
       "level": 100,
-      "rate": 2.2854147482337173e+72,
+      "rate": 2.2854147482337165e+72,
       "nextLevelCost": 2.5822498780869086e+21,
       "marginalNuPerNu": 3.5318364417803655e+51,
-      "waitRatio": 0.3206053156438289,
+      "waitRatio": 0.32060531564382877,
       "certified": false
     },
     {
@@ -1685,10 +1685,10 @@
       "board": "supplied-board-p01-p30",
       "curve": "linear",
       "level": 25,
-      "rate": 12820720133.397776,
+      "rate": 12820720133.397774,
       "nextLevelCost": 1267651,
       "marginalNuPerNu": 10290.154010948283,
-      "waitRatio": 0.793083747386272,
+      "waitRatio": 0.7930837473862717,
       "certified": true
     },
     {
@@ -1696,10 +1696,10 @@
       "board": "supplied-board-p01-p30",
       "curve": "linear",
       "level": 100,
-      "rate": 2.0538332659335648e+29,
+      "rate": 2.053833265933564e+29,
       "nextLevelCost": 2.5822498780869086e+21,
-      "marginalNuPerNu": 55971232.06612972,
-      "waitRatio": 0.9391231894398299,
+      "marginalNuPerNu": 55971232.066129744,
+      "waitRatio": 0.9391231894398296,
       "certified": true
     },
     {
@@ -1718,9 +1718,9 @@
       "board": "supplied-board-p01-p30",
       "curve": "linear",
       "level": 500,
-      "rate": 1.3667646359808977e+113,
+      "rate": 1.3667646359808975e+113,
       "nextLevelCost": 1.1481306952742545e+103,
-      "marginalNuPerNu": 7031699931.599042,
+      "marginalNuPerNu": 7031699931.599044,
       "waitRatio": 1.0058542632274827,
       "certified": true
     },
@@ -1751,10 +1751,10 @@
       "board": "supplied-board-p01-p30",
       "curve": "bounded",
       "level": 25,
-      "rate": 4879015742.654468,
+      "rate": 4879015742.654467,
       "nextLevelCost": 1267651,
-      "marginalNuPerNu": 3396.6324225935646,
-      "waitRatio": 0.8499321358016024,
+      "marginalNuPerNu": 3396.6324225935655,
+      "waitRatio": 0.8499321358016023,
       "certified": true
     },
     {
@@ -1762,10 +1762,10 @@
       "board": "supplied-board-p01-p30",
       "curve": "bounded",
       "level": 100,
-      "rate": 1.5985346487294935e+27,
+      "rate": 1.5985346487294932e+27,
       "nextLevelCost": 2.5822498780869086e+21,
-      "marginalNuPerNu": 397136.3477599683,
-      "waitRatio": 0.9747014153705504,
+      "marginalNuPerNu": 397136.3477599684,
+      "waitRatio": 0.9747014153705503,
       "certified": true
     },
     {
@@ -1784,9 +1784,9 @@
       "board": "supplied-board-p01-p30",
       "curve": "bounded",
       "level": 500,
-      "rate": 1.0133149454677794e+108,
+      "rate": 1.0133149454677793e+108,
       "nextLevelCost": 1.1481306952742545e+103,
-      "marginalNuPerNu": 50818.71747369543,
+      "marginalNuPerNu": 50818.71747369544,
       "waitRatio": 1.0153582017176308,
       "certified": true
     },
@@ -1810,7 +1810,7 @@
       "bank": 1000000000000000,
       "levelsBought": 1054,
       "finalLevel": 63,
-      "rate": 2.117143016170746e+44,
+      "rate": 1.7823431007156145e+44,
       "certified": true
     },
     {
@@ -1820,7 +1820,7 @@
       "bank": 1000000000000000,
       "levelsBought": 1054,
       "finalLevel": 63,
-      "rate": 62879591855885570000,
+      "rate": 52962015001766980000,
       "certified": true
     },
     {
@@ -1830,7 +1830,7 @@
       "bank": 1000000000000000,
       "levelsBought": 1054,
       "finalLevel": 63,
-      "rate": 2827493256592382500,
+      "rate": 2382539057538745300,
       "certified": true
     }
   ],
@@ -1838,14 +1838,31 @@
     {
       "evidenceClass": "pacing-acquisition",
       "curve": "shipped",
-      "runId": "fresh-start-s468-ba8cee60",
+      "runId": "fresh-start-s468-2e8b4833",
       "source": {
         "game": "flowsynth",
         "saveVersion": 12,
         "runnerVersion": 10,
-        "engineSource": "75867e6d"
+        "engineSource": "7b51bf9a"
       },
-      "recipeSeed": 468,
+      "recipe": {
+        "scenarioId": "fresh-start",
+        "seed": 468,
+        "policyId": "prompt",
+        "claimTarget": 2,
+        "schedule": {
+          "sessionsPerDay": 2,
+          "sessionMinutes": 25,
+          "breatherMinutes": 5,
+          "habitName": "Practice",
+          "goalMinutes": 25,
+          "startAt": 1767603600000,
+          "timeZone": "America/Chicago"
+        },
+        "budgetDays": 12,
+        "responseCurve": "shipped",
+        "overrides": {}
+      },
       "budgetDays": 12,
       "complete": true,
       "stop": "prestige — First prestige at day 9.",
@@ -1858,14 +1875,31 @@
     {
       "evidenceClass": "pacing-acquisition",
       "curve": "linear",
-      "runId": "fresh-start-s468-23cad92c",
+      "runId": "fresh-start-s468-e981524f",
       "source": {
         "game": "flowsynth",
         "saveVersion": 12,
         "runnerVersion": 10,
-        "engineSource": "75867e6d"
+        "engineSource": "7b51bf9a"
       },
-      "recipeSeed": 468,
+      "recipe": {
+        "scenarioId": "fresh-start",
+        "seed": 468,
+        "policyId": "prompt",
+        "claimTarget": 2,
+        "schedule": {
+          "sessionsPerDay": 2,
+          "sessionMinutes": 25,
+          "breatherMinutes": 5,
+          "habitName": "Practice",
+          "goalMinutes": 25,
+          "startAt": 1767603600000,
+          "timeZone": "America/Chicago"
+        },
+        "budgetDays": 12,
+        "responseCurve": "linear",
+        "overrides": {}
+      },
       "budgetDays": 12,
       "complete": true,
       "stop": "prestige — First prestige at day 9.",
@@ -1878,14 +1912,31 @@
     {
       "evidenceClass": "pacing-acquisition",
       "curve": "bounded",
-      "runId": "fresh-start-s468-5a48b5d6",
+      "runId": "fresh-start-s468-3a6656e9",
       "source": {
         "game": "flowsynth",
         "saveVersion": 12,
         "runnerVersion": 10,
-        "engineSource": "75867e6d"
+        "engineSource": "7b51bf9a"
       },
-      "recipeSeed": 468,
+      "recipe": {
+        "scenarioId": "fresh-start",
+        "seed": 468,
+        "policyId": "prompt",
+        "claimTarget": 2,
+        "schedule": {
+          "sessionsPerDay": 2,
+          "sessionMinutes": 25,
+          "breatherMinutes": 5,
+          "habitName": "Practice",
+          "goalMinutes": 25,
+          "startAt": 1767603600000,
+          "timeZone": "America/Chicago"
+        },
+        "budgetDays": 12,
+        "responseCurve": "bounded",
+        "overrides": {}
+      },
       "budgetDays": 12,
       "complete": true,
       "stop": "prestige — First prestige at day 9.",
@@ -1978,7 +2029,7 @@
       "level": 25,
       "budget": "default",
       "certified": true,
-      "rate": 7106315588132008000
+      "rate": 7106315588132007000
     },
     {
       "evidenceClass": "certification-probe",
@@ -2003,7 +2054,7 @@
     "The supplied board's nine discovered undefeated enemies multiply every supplied row by 1.34e-1 — the reconstruction's absolute figures are pressured production, not unpressured capacity.",
     "1 rows did not certify under the default budget and carry certified:false in place — supplied-board-p01-p30.",
     "Fresh-start pacing is curve-invariant in this era: the scheduled prompt policy acquired no Chorus or Exciter within 12 days on seed 468, and the recorded acquisition scan agrees (seeds 0–11 at 20 days: 0 of 12 runs ever held a response support) — the candidates cannot move an opening era; the decision binds already-acquired boards.",
-    "The purchase-policy gesture sweep spends the same declared bank on the same already-acquired board under each candidate — the same levels land (the ladder's prices do not read the candidate), and the resulting-rate rows show what those levels do under each curve: the purchase side costs the same, the response side is what the decision changes.",
+    "The declared purchase-policy gesture sweep spends the same declared bank on the same already-acquired board under each candidate — the same levels land (the ladder's prices do not read the candidate), and the resulting-rate rows show what those levels do under each curve: the purchase side costs the same, the response side is what the decision changes.",
     "Scope: these rows support choosing a structural candidate (which curve shape removes the runaway). They are not 100-hour progression acceptance; production adoption waits for the numeric-integrity tickets and calibrated era budgets."
   ]
 }
