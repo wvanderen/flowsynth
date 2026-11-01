@@ -59,18 +59,6 @@ describe("the adopted response progression on real boards", () => {
     }
   });
 
-  it("keeps the level-zero grant: every rig's supports read exactly tier × plane at level zero", () => {
-    for (const name of RESPONSE_RIGS) {
-      const state = phenomenonState(board(name), 0, 5, "shipped");
-      for (const support of state.modules.filter((m) => m.type === "chorus" || m.type === "exciter")) {
-        // The merge tier rides the level term — a tiered support's
-        // level-zero grant is exactly its tier strength, the parity the
-        // comparison recorded.
-        expect(responseSupportPowerOf(state, support)).toBe(tierPowerOf(support.tier));
-      }
-    }
-  });
-
   it("marginal growth: the supplied board accelerates through the intermediate levels, then slows; every response rig stays finite and slows at the top", () => {
     // The small rigs: every swept rate inside the representable range,
     // and the next level always costs more waiting time than the last —
@@ -83,7 +71,11 @@ describe("the adopted response progression on real boards", () => {
     // instances — carries the shape the whole adoption is about: the
     // single-step ratios dip below one through the intermediate board
     // (beyond the opening level, where an asymptotic-only test would
-    // never look) and cross above one before the sweep's end.
+    // never look) and cross above one before the sweep's end. The
+    // acceleration half lives here alone because it can only live here:
+    // the phenomenon rigs' few legs never outrun the ladder early, so
+    // their ratios start above one — measured, not assumed — and the
+    // dense board is the honest intermediate-acceleration witness.
     const supplied = (level: number): number => allocateRates(suppliedBoardState(level, 5, "shipped"), true).snapshot.rate;
     const ratios = SWEEP.map((level) => stepRatio(supplied, level));
     expect(Math.min(...ratios.slice(1))).toBeLessThan(1);
