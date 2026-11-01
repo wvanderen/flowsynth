@@ -7,7 +7,7 @@ import { hex } from "../engine/hex";
 import { BALANCE } from "../engine/constants";
 import { endSession, prestige, startSession } from "../engine/actions";
 import { bankableClaimOf } from "../engine/accumulator";
-import { attackPowerOf, columnLiftsOf } from "../engine/world";
+import { attackPowerOf, columnLiftsOf, enemyPenaltyOf } from "../engine/world";
 import { createInitialState } from "../engine/state";
 import type { GameState } from "../engine/types";
 
@@ -132,7 +132,18 @@ describe("the enemy plates (issue #426, priority 2)", () => {
     const discovered = face("world-w0")!;
     expect(discovered.textContent).toContain("ENEMY");
     expect(discovered.textContent).toContain(`HP ${BALANCE.world.enemyBaseHp}/${BALANCE.world.enemyBaseHp}`);
-    expect(discovered.textContent).toContain(`−${Math.round(BALANCE.world.enemyPenalty * 100)}% ν`);
+    // The plate reads the shared live figure, not a def field (issue #489).
+    expect(discovered.textContent).toContain(`−${Math.round(enemyPenaltyOf(app.state, "w0") * 100)}% ν`);
+  });
+
+  it("the plate's penalty figure deepens with the era's band (issue #489)", () => {
+    seedEra();
+    app.state.world.enemies["w0"] = { discovered: true, hp: BALANCE.world.enemyBaseHp };
+    app.state.eraEarned = BALANCE.world.entryNous * 100; // two bands past w0's reveal
+    app.render();
+    app.setBoardLayer("world");
+    expect(enemyPenaltyOf(app.state, "w0")).toBe(BALANCE.world.enemyDepthPenalties[2]);
+    expect(face("world-w0")!.textContent).toContain("−50% ν");
   });
 
   it("defeat turns the face to its cleared state, era bonus engraved, encounter retained", () => {

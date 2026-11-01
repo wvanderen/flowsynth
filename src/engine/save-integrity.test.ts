@@ -330,7 +330,12 @@ it("a provisional failure rolls back the successful trusted half of a split abse
   const s = fresh();
   startSession(s, 1);
   const voice = give(s, "additive", hex(0, 0));
-  voice.level = 3880;
+  // Hot enough to overflow even under the era pressure (issue #489): at
+  // level 3880 the trusted second revealed every enemy at its deepest
+  // band, and the 0.35⁹ floor suppressed the provisional leg below the
+  // representable range — the pressure working as designed. The rollback
+  // premise needs a runaway that overflows through that floor.
+  voice.level = 3950;
   s.session!.accounting.pendingAwaySeconds = 3600;
   const before = serialize(s, 1000);
   const result = flushPendingAway(s);
