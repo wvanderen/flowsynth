@@ -1,0 +1,35 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-01T22:31:21.210Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "t3/issue-489",
+  "commit": "f4d22b48fe8d5db0035e9d6cde70479d1d997885",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/era-pressure-2026-11-01/desktop-hexdetail-world.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/era-pressure-2026-11-01/desktop-world-layer.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/era-pressure-2026-11-01/phone-hexdetail-world.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/era-pressure-2026-11-01/phone-world-layer.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/era-pressure-2026-11-01/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}
