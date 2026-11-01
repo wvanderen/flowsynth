@@ -44,7 +44,7 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
   "Charge Blade": "Granted weapon with stored charge and capped cadence",
   "Charge Column": "Lifts its module cell’s received charge to adjacent weapons",
   Enemy: "Authored adversary revealing at its threshold",
-  Penalty: "A discovered enemy’s production reduction, deepening with the era",
+  Penalty: "A discovered enemy’s production cut, deepening with the era",
   "Era bonus": "The production bonus replacing a defeated enemy’s penalty",
   "Reserved cell": "An enemy position set aside, identity concealed",
   Cleared: "A defeated enemy’s face, restored at prestige",

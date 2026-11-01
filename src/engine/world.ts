@@ -8,6 +8,7 @@
 // state.ts beside their module kin; the claim curve lives in accumulator.ts
 // beside the horizon it gates.
 import { BALANCE, EPS, WORLD_ENEMIES } from "./constants";
+import type { WorldEnemyDef } from "./constants";
 import { adjacent, sameHex } from "./hex";
 import { requireFinite } from "./numeric";
 import type { GameState, Hex, RateSnapshot, WeaponCopy, WeaponType, WorldEnemyState } from "./types";
@@ -67,6 +68,14 @@ export function worldFactorOf(state: GameState): number {
   return factor;
 }
 
+// The enemy's authored band marks: its discovery threshold times each
+// authored step — the crossings the depth read counts and the walk's
+// boundary splits at. One construction, so the two reads can never
+// disagree about what a band crossing is.
+function bandMarksOf(def: WorldEnemyDef): number[] {
+  return BALANCE.world.enemyDepthSteps.map((step) => def.threshold * step);
+}
+
 // The enemy's depth (issue #489): how many authored band steps its era
 // has earned past its OWN discovery threshold. Derived, never stored —
 // era-earned is the whole input, so spending the wallet provides no
@@ -75,11 +84,8 @@ export function worldFactorOf(state: GameState): number {
 // at its full earned depth at once. Exact threshold counts as crossed.
 export function enemyDepthOf(state: GameState, key: string): number {
   const def = ENEMY_BY_KEY.get(key)!;
-  let depth = 0;
-  for (const step of BALANCE.world.enemyDepthSteps) {
-    if (state.eraEarned >= def.threshold * step) depth++;
-  }
-  return depth;
+  const eraEarned = state.eraEarned;
+  return bandMarksOf(def).filter((mark) => mark <= eraEarned).length;
 }
 
 // The enemy's live penalty at its current depth (issue #489): the one
@@ -141,10 +147,11 @@ export function bandBoundarySeconds(state: GameState, rate: number): number {
   for (const def of WORLD_ENEMIES) {
     const live = state.world.enemies[def.key];
     if (!live?.discovered || enemyDefeated(state, def.key)) continue;
-    for (const step of BALANCE.world.enemyDepthSteps) {
-      const mark = def.threshold * step;
-      if (mark <= state.eraEarned) continue;
-      next = Math.min(next, mark);
+    for (const mark of bandMarksOf(def)) {
+      if (mark > state.eraEarned) {
+        next = Math.min(next, mark);
+        break;
+      }
     }
   }
   return next === Infinity ? Infinity : (next - state.eraEarned) / rate;

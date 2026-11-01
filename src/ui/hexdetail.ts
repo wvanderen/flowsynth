@@ -34,13 +34,13 @@ import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, 
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
-import { enemyDefAt, enemyPenaltyOf, worldOccupantAt } from "../engine/world";
+import { enemyDefAt, worldOccupantAt } from "../engine/world";
 import type { Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App, DetailFace } from "./app";
 import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead, spotlightInactiveVerdict } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
-import { bindWorldDrag, targetPriorityHtml, worldChassisHtml } from "./world";
+import { bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
 import { COLUMN_WORD, META, RARITY_LABEL, WORLD_META, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
@@ -443,7 +443,7 @@ function detailColumnHtml(app: App, pos: Hex, module: ModuleInstance | undefined
       ? "Reserved cell — the World holds this position"
       : live.hp <= 0
         ? `Cleared · era bonus +${Math.round(enemyDef.bonus * 100)}% ν`
-        : `Enemy · −${Math.round(enemyPenaltyOf(state, enemyDef.key) * 100)}% ν while it stands`;
+        : `Enemy · ${enemyPenaltyFigure(state, enemyDef.key)} while it stands`;
     sections.push(`<section class="hex-detail-section"><span class="hex-detail-section-head">World</span><p class="hex-detail-world-line">${line}</p></section>`);
   }
   if (sections.length === 0) return "";

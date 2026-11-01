@@ -54,6 +54,19 @@ function grantWeapon(state: GameState, pos: Hex | null, store = BALANCE.world.st
   return weapon;
 }
 
+// The charged rig: a host voice, a fed generator, the Column over the
+// host, and the store-empty weapon beside both — the board shape the
+// charge-and-combat cases share.
+function chargedRig(): GameState {
+  const s = flowing();
+  give(s, "additive", hex(0, 1));
+  const generator = give(s, "focusKeyed", hex(1, 0));
+  generator.reserve = 500000;
+  s.world.columns.push({ id: "col1", pos: hex(0, 1) });
+  grantWeapon(s, hex(1, 0), 0);
+  return s;
+}
+
 // Reveals an authored enemy and scars it to the given HP.
 function reveal(state: GameState, key: string, hp?: number): void {
   const live = state.world.enemies[key]!;
@@ -474,12 +487,7 @@ describe("era pressure: the depth bands (issue #489)", () => {
 
   it.each(["flow", "breather"] as const)("%s: one long advance and per-second steps across band, discovery, and combat boundaries earn and damage identically", (mode) => {
     const rig = () => {
-      const s = flowing();
-      give(s, "additive", hex(0, 1));
-      const generator = give(s, "focusKeyed", hex(1, 0));
-      generator.reserve = 500000;
-      s.world.columns.push({ id: "col1", pos: hex(0, 1) });
-      grantWeapon(s, hex(1, 0), 0);
+      const s = chargedRig();
       // Just under the mark that is at once w0's first band step and
       // w1's reveal: the boundary fires inside the window's first
       // second, then the weapon's ticks carry the combat boundaries.
@@ -594,12 +602,7 @@ describe("era pressure: the depth bands (issue #489)", () => {
 
   it("the deepened bands never touch charge, routing, cadence, or damage", () => {
     const rig = (eraEarned: number, revealed: readonly string[]) => {
-      const s = flowing();
-      give(s, "additive", hex(0, 1));
-      const generator = give(s, "focusKeyed", hex(1, 0));
-      generator.reserve = 500000;
-      s.world.columns.push({ id: "col1", pos: hex(0, 1) });
-      grantWeapon(s, hex(1, 0), 0);
+      const s = chargedRig();
       for (const key of revealed) reveal(s, key);
       s.eraEarned = eraEarned;
       return s;
