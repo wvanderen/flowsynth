@@ -10,20 +10,21 @@ surfaces that previously derived their figures from the retired
 exponential module power were switched to that shared read; this pass
 captured each changed surface from the verified checkout.
 
-Source: commit `91aac67f` (the adoption commit). Captured with the
+Source: commit `04b18ac` (the review-fix revision; the same figures as the adoption commit `91aac67f` — the intervening change named the shared response-support predicate and edited comments only). Captured with the
 repo-cached Playwright Chromium headless shell against this checkout's
 dev server after `tools/evidence-preflight.mjs` accepted
 `docs/evidence/response-adoption-488/provenance.json` (worktree, commit,
-and clean-source verified). The dev panel was hidden at capture time —
-it is development furniture, not a reviewed surface. The staged state
-(the dev panel's own line named it during the run): the `fresh-start`
-scenario installed on its isolated slot, seeded with a level-100 tier-II
-Chorus beside the opening, a charged Focus-keyed generator, a level-50
-tray Chorus, and a Forge offer carrying Chorus/Exciter/Sine candidates.
-The T3 preview panel's snapshot pipeline timed out on this machine
-(three attempts per its budget, `preview_status` healthy throughout) —
-the captures were taken through the same verified URL with Playwright
-instead; no claim below rests on the preview panel.
+and clean-source verified at the captured commit). The dev panel was
+hidden at capture time — it is development furniture, not a reviewed
+surface. The staged state (the dev panel's own line named it during the
+run): the `fresh-start` scenario installed on its isolated slot, seeded
+with a level-100 tier-II Chorus beside the opening, a charged
+Focus-keyed generator, a level-50 tray Chorus, and a Forge offer
+carrying Chorus/Exciter/Sine candidates. The T3 preview panel's
+snapshot pipeline timed out on this machine (three attempts per its
+budget, `preview_status` healthy throughout) — the captures were taken
+through the same verified URL with Playwright instead; no claim below
+rests on the preview panel.
 
 Changed surfaces and their figures (all computed by the shared seam, so
 the capture cannot drift from production):
