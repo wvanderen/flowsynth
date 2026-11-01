@@ -23,7 +23,7 @@ import {
 } from "./actions";
 import type { ActionResult } from "./actions";
 import { frontier, seededRng } from "./capacity-calibration";
-import { BALANCE, CATEGORY_OF, isOscillatorType, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, RESPONSE_CURVES, responseCurveCandidateOf, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
 import { affordableLevels, syncRates, wholeNous, levelsCost } from "./economy";
 import { activeGoalOf, createGoal, rollGoalOccurrences } from "./goals";
 import { createHabit, selectHabit } from "./habits";
@@ -32,7 +32,7 @@ import { cellNoteOf } from "./lattice";
 import { writeNote } from "./notes";
 import { SCENARIOS, scenarioOf } from "./scenarios";
 import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt, hasActiveWorldEnemy } from "./world";
-import type { GameState, Hex, ModuleInstance, ModuleType, WeaponType } from "./types";
+import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, WeaponType } from "./types";
 
 // The reproducible playthrough runner (issues #468/#469/#472, parent
 // #465): a recipe declares every behavior-affecting input — starting
@@ -71,8 +71,9 @@ import type { GameState, Hex, ModuleInstance, ModuleType, WeaponType } from "./t
 // The runner's own version: a behavior-affecting change here is a source
 // change, and a rerun against different source identifies separately
 // (story 36's foundation). The declared override set (issue #472) rides
-// the recipe, so this bump records the walk's new inputs.
-export const PLAYTHROUGH_RUNNER_VERSION = 9;
+// the recipe, so this bump records the walk's new inputs; the response
+// curve (issue #487) joins them.
+export const PLAYTHROUGH_RUNNER_VERSION = 10;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -200,6 +201,12 @@ export interface PlaythroughRecipe {
   // The simulated time budget in days: an unsuccessful policy terminates
   // here with an explicit incomplete result (story 21).
   readonly budgetDays: number;
+  // The declared response-curve candidate (issue #487): which supported
+  // curve the walk's Chorus/Exciter response grants read — shipped by
+  // default, never a silent shipped read for a misspelled candidate. The
+  // curve rides the recipe so run identity, the artifact, and every
+  // comparison report name it.
+  readonly responseCurve: ResponseCurveId;
   // The declared tuning overrides (issue #472): validated magnitudes from
   // the declared catalog, confined to this run's own candidate state —
   // never the live state, the save, or any other reader of the constant.
@@ -228,6 +235,7 @@ export function defaultPlaythroughRecipe(): PlaythroughRecipe {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
     budgetDays: 30,
+    responseCurve: "shipped",
     overrides: {},
   };
 }
@@ -239,6 +247,7 @@ export interface PlaythroughRecipeInput {
   claimTarget?: number;
   schedule?: Partial<PlaythroughSchedule>;
   budgetDays?: number;
+  responseCurve?: ResponseCurveId;
   overrides?: Record<string, number>;
 }
 
@@ -246,7 +255,7 @@ export interface PlaythroughRecipeInput {
 // an explicit input, validated with named failures. Unknown input keys are
 // rejected — an unsupported request never quietly runs a default.
 export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): PlaythroughRecipe {
-  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays", "overrides"]);
+  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays", "responseCurve", "overrides"]);
   for (const key of Object.keys(input)) {
     if (!known.has(key)) throw new Error(`Playthrough recipe: unsupported input "${key}".`);
   }
@@ -258,6 +267,7 @@ export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): Pl
     ...(input.policyId !== undefined ? { policyId: input.policyId } : {}),
     ...(input.claimTarget !== undefined ? { claimTarget: input.claimTarget } : {}),
     ...(input.budgetDays !== undefined ? { budgetDays: input.budgetDays } : {}),
+    ...(input.responseCurve !== undefined ? { responseCurve: input.responseCurve } : {}),
     ...(input.overrides !== undefined ? { overrides: input.overrides } : {}),
     schedule: { ...base.schedule, ...(input.schedule ?? {}) },
   };
@@ -284,6 +294,11 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
   }
   if (recipe.overrides.claimBase !== undefined && recipe.policyId === PROMPT_POLICY.id) {
     fail('override "claimBase" is inapplicable — the prompt policy banks at the first horizon crossing, where the frontier curve has not opened yet.');
+  }
+  // The declared response curve (issue #487): supported candidates only,
+  // rejected by name — a misspelled candidate never quietly walks shipped.
+  if (!responseCurveCandidateOf(recipe.responseCurve)) {
+    fail(`response curve "${String(recipe.responseCurve)}" is not supported — the suite offers ${RESPONSE_CURVES.map((curve) => curve.id).join(", ")}.`);
   }
   if (!scenarioOf(recipe.scenarioId)) {
     fail(`no scenario "${recipe.scenarioId}" — the suite offers ${SCENARIOS.map((s) => s.id).join(", ")}.`);
@@ -1368,6 +1383,14 @@ function* walkPlaythrough(
   if (recipe.overrides.openingGrant !== undefined && scenario.origin === "initial state") {
     state.nous = recipe.overrides.openingGrant;
   }
+  // The declared response curve (issue #487) applies to this run's own
+  // candidate state: the walk's rate reads — and nothing else, no other
+  // run, no shared balance definition — take the candidate's grant level
+  // term from here on. Shipped sets nothing, so shipped runs keep the
+  // exact states they always built.
+  if (recipe.responseCurve !== "shipped") {
+    state.candidates = { responseCurve: recipe.responseCurve };
+  }
   const policy = policyOf(recipe.policyId);
   const ctx: RunContext = {
     schedule: recipe.schedule,
@@ -1550,9 +1573,13 @@ export function playthroughNote(record: PlaythroughRecord): string {
   if (spent) parts.push(spent);
   // A tuned run names its overrides beside the baseline recipe's figures,
   // so an altered run cannot masquerade as shipped-tuning evidence
-  // (issue #472).
+  // (issue #472); a candidate curve names itself the same way (issue
+  // #487).
   const tuned = Object.entries(record.recipe.overrides).map(([key, value]) => `${key}=${value}`);
   if (tuned.length > 0) parts.push(`tuned ${tuned.join(", ")}`);
+  // Older artifacts' recipes predate the declared curve (issue #487) —
+  // absent reads shipped, never "curve undefined".
+  if ((record.recipe.responseCurve ?? "shipped") !== "shipped") parts.push(`curve ${record.recipe.responseCurve}`);
   if (record.recovery) parts.push(recoveryNote(record.recovery));
   if (record.stop.kind === "checkpoint") parts.push(record.stop.reason);
   else if (record.complete) parts.push(record.stop.reason);

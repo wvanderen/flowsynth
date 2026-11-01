@@ -1,4 +1,4 @@
-import type { Category, Hex, ModuleType, MutatorFamily, Rarity, ShelfType, SpecialDraftKind } from "./types";
+import type { Category, Hex, ModuleType, MutatorFamily, Rarity, ResponseCurveId, ShelfType, SpecialDraftKind } from "./types";
 
 export interface Balance {
   // One unified oscillator base rate (ADR-0022): every oscillator shares
@@ -506,6 +506,55 @@ export const WORLD_ENEMIES: readonly WorldEnemyDef[] = ENEMY_POSITIONS.map((pos,
   penalty: BALANCE.world.enemyPenalty,
   bonus: BALANCE.world.enemyBonus,
 }));
+
+// ── The declared response-curve candidates (issue #487, parent #484) ──
+
+// How a response-support booster's (Chorus, Exciter) grant scales with its
+// own level. The shipped curve reads the shared module power —
+// rarityPower^level over tier and mutators — and its exponential is the
+// runaway the parent save rode. These are the declared comparison
+// candidates a playthrough recipe or a comparison fixture may carry; a
+// candidate is evidence toward the parent's coefficient decision, never
+// approved production tuning, and nothing here changes BALANCE.
+export interface ResponseCurveCandidate {
+  readonly id: ResponseCurveId;
+  readonly name: string;
+  // What the curve does and where it came from — the recipe validation's
+  // named failures and the comparison report quote this verbatim.
+  readonly description: string;
+  // The level term the candidate substitutes for the shipped
+  // rarityPower^level power. Null on the shipped entry: the shipped curve
+  // is not intercepted — the engine reads the shared module power, which
+  // stays the one definition of shipped behavior.
+  readonly levelTerm: ((level: number) => number) | null;
+}
+
+export const RESPONSE_CURVES: readonly ResponseCurveCandidate[] = [
+  {
+    id: "shipped",
+    name: "Shipped",
+    description: "rarity^level — the shipped exponential response progression, unmodified",
+    levelTerm: null,
+  },
+  {
+    id: "linear",
+    name: "Linear",
+    description: "1 + 0.1·level — unbounded growth at one tenth of the authored share per level",
+    levelTerm: (level) => 1 + 0.1 * level,
+  },
+  {
+    id: "bounded",
+    name: "Bounded",
+    description: "1 + 3·level/(level + 20) — the explored bounded candidate, ×1 at level zero toward ×4 at infinite levels; a search candidate, not an approved coefficient",
+    levelTerm: (level) => 1 + (3 * level) / (level + 20),
+  },
+];
+
+// The one catalog read: unknown ids return null, so every validator and
+// seam names the failure instead of guessing a curve.
+export function responseCurveCandidateOf(id: string): ResponseCurveCandidate | null {
+  return RESPONSE_CURVES.find((candidate) => candidate.id === id) ?? null;
+}
 
 // The chord vocabulary (#218's eleven classes, ADR-0021/0022 as extended by
 // ADR-0048/0049): register-free pitch sets — interval classes above the

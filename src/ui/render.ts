@@ -24,7 +24,7 @@ import { TILE_APPS, type FocusApp } from "../engine/apps";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { Category, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, NamedChordTerm, RateSnapshot, SpecialDraftKind, WeaponType } from "../engine/types";
+import type { Category, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, NamedChordTerm, RateSnapshot, ResponseCurveId, SpecialDraftKind, WeaponType } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
@@ -4138,6 +4138,13 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
           `<option value="${escapeHtml(policy.id)}">${escapeHtml(policy.name)}</option>`,
       )
       .join("");
+    const curveOptions = app
+      .devResponseCurves()
+      .map(
+        (curve) =>
+          `<option value="${escapeHtml(curve.id)}">${escapeHtml(curve.name)}</option>`,
+      )
+      .join("");
     const tuningOptions = app
       .devTuning()
       .map(
@@ -4150,6 +4157,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       <select id="dev-scenario" aria-label="Playtesting scenario">${scenarioOptions}</select>
       <button data-dev="scenario">Launch</button>
       <select id="dev-playthrough-policy" aria-label="Playthrough policy">${policyOptions}</select>
+      <select id="dev-playthrough-curve" aria-label="Response curve candidate">${curveOptions}</select>
       <input id="dev-playthrough-seed" type="number" min="0" step="1" inputmode="numeric" aria-label="Playthrough seed" placeholder="seed" />
       <input id="dev-playthrough-budget" type="number" min="1" max="366" step="1" inputmode="numeric" aria-label="Playthrough budget in days" placeholder="days" />
       <input id="dev-playthrough-target" type="number" min="1" max="36" step="1" inputmode="numeric" aria-label="Pushing pending-claim target in Arete" placeholder="claim ≥" />
@@ -4316,11 +4324,13 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
       } else if (key === "playthrough") {
         // The run composes from the panel's own selections: the scenario
         // and policy selects name the starting state and the player; the
-        // claim target arms the pushing rule; the declared tuning inputs
-        // carry the run's overrides (#472); blank inputs mean the
+        // curve select names the declared response-curve candidate (#487);
+        // the claim target arms the pushing rule; the declared tuning
+        // inputs carry the run's overrides (#472); blank inputs mean the
         // declared defaults. The same composition the agent command takes.
         const select = byId("dev-scenario") as HTMLSelectElement | null;
         const policy = byId("dev-playthrough-policy") as HTMLSelectElement | null;
+        const curve = byId("dev-playthrough-curve") as HTMLSelectElement | null;
         const seedField = byId("dev-playthrough-seed") as HTMLInputElement | null;
         const budgetField = byId("dev-playthrough-budget") as HTMLInputElement | null;
         const targetField = byId("dev-playthrough-target") as HTMLInputElement | null;
@@ -4335,6 +4345,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
         app.devRunPlaythrough({
           ...(select ? { scenarioId: select.value } : {}),
           ...(policy ? { policyId: policy.value } : {}),
+          ...(curve ? { responseCurve: curve.value as ResponseCurveId } : {}),
           ...(seed !== undefined ? { seed } : {}),
           ...(budgetDays !== undefined ? { budgetDays } : {}),
           ...(claimTarget !== undefined ? { claimTarget } : {}),

@@ -591,6 +591,91 @@ describe("declared tuning overrides", () => {
   });
 });
 
+describe("declared response curves (issue #487)", () => {
+  it("declares the curve catalog, and the default recipe carries shipped", () => {
+    app = boot(undefined, true);
+    const curves = app.devResponseCurves();
+    expect(curves.map((curve) => curve.id)).toEqual(["shipped", "linear", "bounded"]);
+    expect(curves.map((curve) => curve.name)).toEqual(["Shipped", "Linear", "Bounded"]);
+    for (const curve of curves) expect(curve.description).toBeTruthy();
+    expect(app.devPlaythroughRecipe().responseCurve).toBe("shipped");
+  });
+
+  it("rejects unknown candidates by name before running, through the command and the terminal", () => {
+    app = boot(undefined, true);
+    expect(() => app.devRunPlaythrough({ responseCurve: "exponential" as never }))
+      .toThrow(/response curve "exponential" is not supported — the suite offers shipped, linear, bounded\./);
+    expect(app.devPlaythrough).toBeNull();
+    expect(app.devTerminalRun("run curve=bogus seed=7 days=1")).toMatch(/✗ .*response curve "bogus" is not supported/);
+    expect(app.devPlaythrough).toBeNull();
+  });
+
+  it("applies the declared curve to the walk's own state and names it in the note; shipped stays untouched", () => {
+    app = boot(undefined, true);
+    const boundedRun = app.devRunPlaythrough({ seed: 7, budgetDays: 1, responseCurve: "bounded" });
+    expect(boundedRun.recipe.responseCurve).toBe("bounded");
+    expect(boundedRun.state.candidates).toEqual({ responseCurve: "bounded" });
+    expect(boundedRun.snapshots[0]!.state.candidates).toEqual({ responseCurve: "bounded" });
+    expect(app.devPlaythroughNote).toContain("curve bounded");
+    const plain = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    expect(plain.recipe.responseCurve).toBe("shipped");
+    expect(plain.state.candidates).toBeUndefined();
+    expect(app.devPlaythroughNote).not.toContain("curve");
+    expect(boundedRun.runId).not.toBe(plain.runId);
+  });
+
+  it("never lets a candidate curve touch the live state or the ordinary save", () => {
+    app = boot(undefined, true);
+    const before = app.state;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1, responseCurve: "linear" });
+    expect(app.state).toBe(before);
+    expect(app.state.candidates).toBeUndefined();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    expect(app.devPlaythroughRecipe().responseCurve).toBe("shipped");
+    expect(record.recipe.responseCurve).toBe("linear");
+  });
+
+  it("reproduces a curve run from the same recipe and identifies a changed candidate", () => {
+    app = boot(undefined, true);
+    const input = { seed: 9, budgetDays: 2, responseCurve: "bounded" as const };
+    const first = app.devRunPlaythrough({ ...input });
+    const second = app.devRunPlaythrough({ ...input });
+    expect(second.runId).not.toBe(first.runId);
+    expect(comparable(second)).toEqual(comparable(first));
+    const changed = app.devRunPlaythrough({ ...input, responseCurve: "linear" });
+    expect(changed.runId).not.toBe(first.runId);
+    expect(changed.recipe.responseCurve).toBe("linear");
+  });
+
+  it("runs from the panel's curve select — the same composition the agent command takes", () => {
+    app = boot(undefined, true);
+    const curve = document.getElementById("dev-playthrough-curve") as HTMLSelectElement;
+    expect([...curve.options].map((option) => option.value)).toEqual(["shipped", "linear", "bounded"]);
+    expect(curve.options[curve.selectedIndex]!.text).toBe("Shipped");
+    curve.value = "bounded";
+    const seedField = document.getElementById("dev-playthrough-seed") as HTMLInputElement;
+    const budgetField = document.getElementById("dev-playthrough-budget") as HTMLInputElement;
+    seedField.value = "9";
+    budgetField.value = "1";
+    const run = document.querySelector<HTMLButtonElement>('[data-dev="playthrough"]')!;
+    run.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const clicked = app.devPlaythrough!;
+    expect(clicked.recipe.responseCurve).toBe("bounded");
+    expect(clicked.state.candidates).toEqual({ responseCurve: "bounded" });
+    expect(note()).toContain("curve bounded");
+    const agent = app.devRunPlaythrough({ seed: 9, budgetDays: 1, responseCurve: "bounded" });
+    expect(agent.runId).not.toBe(clicked.runId);
+    expect(comparable(agent)).toEqual(comparable(clicked));
+  });
+
+  it("serves the curve through the terminal run command", () => {
+    app = boot(undefined, true);
+    expect(app.devTerminalRun("run curve=bounded seed=7 days=1")).toContain("curve bounded");
+    expect(app.devPlaythrough!.recipe.responseCurve).toBe("bounded");
+  });
+});
+
 describe("the panel's visible wiring", () => {
   it("runs from the controls, shows the result note, and matches the agent command", () => {
     app = boot(undefined, true);
