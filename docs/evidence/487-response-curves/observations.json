@@ -1,0 +1,38 @@
+{
+  "surface": "the dev panel's run row — the response-curve select joining the policy select (#487)",
+  "capturedAt": "2026-10-31",
+  "sourceCommit": "32b3b80e25087c0e584880baff90044fbffd34ad",
+  "verifiedUrl": "http://localhost:5173/?dev=1",
+  "preflight": "ACCEPT — provenance.json records the verified worktree, commit, and clean source",
+  "captures": {
+    "status": "unavailable",
+    "reason": "the preview automation's snapshot and recording pipelines timed out on every attempt this session; only status, resize, navigate, and evaluate calls were served",
+    "rawFailures": [
+      { "pass": 1, "tab": "fresh tab, ?dev=1, desktop 1280x800", "call": "preview_snapshot", "attempts": 3, "recoveryBetween": ["preview_status read (available, not loading, no dialog, verified URL — all pass)", "preview_open activation"], "message": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms." },
+      { "pass": 2, "tab": "second fresh tab after closing the first (the #456 two-tab practice), desktop 1280x800", "call": "preview_snapshot", "attempts": 3, "recoveryBetween": ["preview_status read (all observables pass)", "preview_open activation"], "message": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms." },
+      { "pass": 2, "tab": "same tab, phone 390x844", "call": "preview_recording_start (alternate capture pipeline)", "attempts": 1, "recoveryBetween": [], "message": "Preview automation recordingStart timed out after 15000ms." },
+      { "pass": 2, "tab": "same tab, phone 390x844, after the recording attempt", "call": "preview_evaluate (final read)", "attempts": 2, "recoveryBetween": ["preview_status read"], "message": "Preview automation evaluate timed out after 15000ms." },
+      { "pass": 3, "tab": "third fresh tab after several minutes' recovery time, desktop 1280x800", "call": "preview_snapshot (single bounded probe)", "attempts": 1, "recoveryBetween": [], "message": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms." }
+    ],
+    "healthcheck": "tools/evidence-healthcheck.mjs printed the recovery rubric; check 1 (status observables) passed on every read — server-provenance and viewport classes never failed"
+  },
+  "observationsRun": [
+    { "check": "the curve select exists in the dev panel's run row and offers the declared candidates", "result": "options [\"shipped\", \"linear\", \"bounded\"], mounted between the policy select and the seed field", "how": "in-page read (preview_evaluate) on the verified URL" },
+    { "check": "the panel's run composes the selected candidate — the same composition the agent command takes", "result": "curve select set to Bounded, seed 7, days 1, Run playthrough clicked: the note reads \"Prompt prestige ✗ 1d · 50m credited of 60m elapsed · claim none Arete · seed 7 · fresh-start · fresh-start-s7-… · no Arete spent · curve bounded · Feat unlocked — spark · The 1-day budget ended before the first prestige. Last decline — levels on the focusKeyed — Not enough whole nous for even one level.\"", "how": "in-page drive of the panel's own controls" },
+    { "check": "desktop viewport", "result": "resize to 1280x800 confirmed by the live in-page read (window.innerWidth/innerHeight)", "how": "in-page read" },
+    { "check": "phone viewport", "result": "resize to 390x844 confirmed by the live in-page read; the resize response's own echo was stale (1280x800) exactly as the health check warns", "how": "in-page read" },
+    { "check": "phone reachability of the changed control", "result": "on a fresh load at 390x844 the curve select sits at (170, 449) sized 86x44 — fully inside the viewport, 44 px tall (touch-sized); the Run playthrough button at (155, 575) 120x44 also inside; the panel mounts at its own phone metrics (a stale desktop drag position carried only across a live resize, never on a phone's fresh load)", "how": "in-page read after a fresh navigation at the phone viewport" }
+  ],
+  "unavailable": [
+    { "check": "desktop PNG of the changed surface", "why": "snapshot pipeline timed out on every attempt (both passes)" },
+    { "check": "phone PNG of the changed surface", "why": "snapshot pipeline timed out on every attempt (both passes)" },
+    { "check": "disclosure opened and dismissed by keyboard focus and touch", "why": "needs visual confirmation; the added control is a native select with an aria-label (\"Response curve candidate\") and no tooltip layer — keyboard operation rides the platform's own select behavior — but the visual half cannot be claimed without a capture" },
+    { "check": "state distinctions readable without color", "why": "needs visual confirmation; the select's option list is text-only and the note names the curve in text, but the out-of-greyscale check cannot run without a capture" },
+    { "check": "reduced-motion behavior", "why": "needs visual confirmation; no animation or glow was added to the surface, but the check cannot run without a capture" }
+  ],
+  "reproduce": [
+    "npm run dev (picks a free port; prints the served worktree, commit, and URL)",
+    "node tools/evidence-preflight.mjs --url http://localhost:PORT --record docs/evidence/487-response-curves/provenance.json",
+    "node docs/evidence/487-response-curves/capture.mjs --url http://localhost:PORT"
+  ]
+}
