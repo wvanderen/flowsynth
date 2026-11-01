@@ -29,7 +29,7 @@ import { amplifierGainOf } from "../engine/module-strength";
 // the static wave.
 import { CHARGE_RECEIVING_CATEGORIES, CATEGORY_OF } from "../engine/constants";
 import { baseTermOf, productionClockFactorOf, temporalTimingOf, usesChordConversion } from "../engine/profiles";
-import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, mutatorAt, mutatorMagnitude, sessionClockOf } from "../engine/economy";
+import { boosterBonusOf, boosterTermOf, chargedFactor, chordConversionScaleOf, emittedStrength, exciterGrantsAt, hostPower, mutatorAt, mutatorMagnitude, responseSupportPowerOf, sessionClockOf } from "../engine/economy";
 import type { GameState, ModuleInstance, RateSnapshot } from "../engine/types";
 import { CHORD_HUES } from "./chordlayer";
 import { formatNumber } from "./format";
@@ -143,13 +143,17 @@ function productionRows(state: GameState, module: ModuleInstance, snapshot: Rate
     // The authored share is per design (issues #374/#375/#376); an
     // inactive Spotlight's rows are its verdict alone — the product rows
     // would quote a grant nothing receives. The row label names the
-    // design's authored term.
+    // design's authored term, and the power leg quotes exactly what the
+    // rate pass reads: the amplitude designs' host power, the response
+    // supports' adopted response-support progression (issue #488) — the
+    // shared result, never a second formula.
     const verdict = spotlightInactiveVerdict(state, module);
     if (verdict) rows.push(row(verdict, "", "inert"));
     else {
       const term = boosterTermOf(module.type);
-      rows.push(row(term === "amplitude" ? "Base uplift" : `Base ${term}`, `+${formatNumber(100 * boosterBonusOf(module.type))}%`));
-      multiplier("Host power", hostPower(state, module));
+      const response = term !== "amplitude";
+      rows.push(row(response ? `Base ${term}` : "Base uplift", `+${formatNumber(100 * boosterBonusOf(module.type))}%`));
+      multiplier(response ? "Response power" : "Host power", response ? responseSupportPowerOf(state, module) : hostPower(state, module));
       multiplier("Charged empowerment", chargedFactor(strength));
     }
   } else if (module.type === "ritual") {

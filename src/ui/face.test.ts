@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { BALANCE, CATEGORY_OF, MODULE_TYPES } from "../engine/constants";
 import { computeRates } from "../engine/economy";
+import { tierPowerOf } from "../engine/module-strength";
 import { fresh, give } from "../engine/fixtures";
 import type { ModuleType } from "../engine/types";
 import { CHARGED_OUTLINE_MIN, CHARGED_OUTLINE_SPAN, HUE_TOKEN_OF, faceReadoutFor, moduleFace, readoutFitClass, ringCount, spacerClipPath, SPACER_WINDOW_RADIUS, hexPoints } from "./face";
 import { chargeGlow } from "./leads";
 import { META } from "./meta";
 import { moduleIcon } from "./icons";
+import { formatNumber } from "./format";
 import { defaultTheme } from "./theme";
 
 describe("module face", () => {
@@ -259,5 +261,15 @@ describe("face readouts", () => {
     const read = faceReadoutFor(s, exciter, null, computeRates(s, false));
     expect(read.readout).toBe("+50%");
     expect(read.note).toBe("charge response");
+  });
+
+  it("the levelled Chorus's share reads the adopted progression — the shared seam's figure (issue #488)", () => {
+    const s = fresh();
+    const chorus = give(s, "chorus", null, 100);
+    chorus.tier = 1;
+    const read = faceReadoutFor(s, chorus, null, computeRates(s, false));
+    const term = 1 + (BALANCE.responseShare * 100) / (100 + BALANCE.responseSaturation);
+    expect(read.readout).toBe(`+${formatNumber(100 * BALANCE.chorusBonus * tierPowerOf(1) * term)}%`);
+    expect(read.note).toBe("chord response");
   });
 });

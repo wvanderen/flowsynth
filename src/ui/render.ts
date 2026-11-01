@@ -3608,6 +3608,21 @@ function forgeEffect(type: ModuleInstance["type"], tier: number): string {
   }
 }
 
+// The draft tile's scaling chip: the per-level claim each type's growth
+// carries. The response supports (issues #375/#376) ride the adopted
+// response-support progression (issue #488) — the grant saturates with
+// level toward ×(1 + the authored share), so the chip quotes the span
+// instead of a per-level percentage — and the remaining levelable types
+// keep the shared module power's rarity step. Silent-growth types wear
+// no chip.
+function candidateScalingHtml(type: ModuleInstance["type"]): string {
+  if (type === "chorus" || type === "exciter") {
+    return `<span class="candidate-scaling">response ×1 → ×${formatNumber(1 + BALANCE.responseShare)} with level</span>`;
+  }
+  if (type === "spacer" || ["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(type)) return "";
+  return `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[typeRarityOf(type)] - 1) * 100)}% / level</span>`;
+}
+
 // Match the visible copy once so generated tooltip markup is never reprocessed.
 function forgeEffectHtml(effect: string): string {
   let breatherDisclosed = false;
@@ -3689,7 +3704,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           <span class="candidate-readout"><span class="candidate-name">${rarityMark(typeRarityOf(candidate.type))} ${META[candidate.type].name} <span class="mono">${tierNumeral(candidate.tier)}</span></span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type, candidate.tier))}</span>
           ${profileGradesHtml(candidate.type, { breatherDisclosed: true })}
-          ${candidate.type !== "spacer" && !["harmonizer", "echo", "bend", "amplifier", "ritual"].includes(candidate.type) ? `<span class="candidate-scaling">+${formatNumber((BALANCE.rarityPower[typeRarityOf(candidate.type)] - 1) * 100)}% / level</span>` : ""}</span>
+          ${candidateScalingHtml(candidate.type)}</span>
         </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
         <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>
           <span class="module-preview"><svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg></span>

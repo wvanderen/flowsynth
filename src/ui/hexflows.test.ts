@@ -6,7 +6,8 @@ import { createAppFixture, clickCell } from "./testing/app-fixture";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { endSession, pauseSession, resumeSession, startSession } from "../engine/actions";
-import { displayedRates } from "../engine/economy";
+import { chargedFactor, displayedRates, responseSupportPowerOf } from "../engine/economy";
+import { BALANCE } from "../engine/constants";
 import type { MutatorFamily, MutatorInstance, Rarity } from "../engine/types";
 import { renderHexDetail } from "./hexdetail";
 import { formatNumber } from "./format";
@@ -86,6 +87,26 @@ describe("the incoming charge wave (issue #297)", () => {
     const value = snap.contributions.get("m1")!.value;
     expect(value).toBeCloseTo(0.1 * 1.5 * snap.achievementBoost * snap.discoveryBoost, 9);
     expect(body.textContent).toContain(`+${formatNumber(value)} ν/s`);
+    endSession(app.state);
+  });
+
+  it("the Chorus's breakdown quotes the adopted response power and multiplies out to its outcome (issue #488)", () => {
+    const chorus = give(app.state, "chorus", hex(1, 0), 100);
+    give(app.state, "focusKeyed", hex(0, 1)).reserve = 100;
+    app.state.sessionsCompleted = 1;
+    startSession(app.state, 600);
+    app.render();
+    clickCell(1, 0);
+    const body = breakdownOf(trigger("charge"));
+    const snap = displayedRates(app.state, true);
+    const power = responseSupportPowerOf(app.state, chorus);
+    expect(body.textContent).toContain("Base chord response");
+    expect(body.textContent).toContain("Response power");
+    expect(body.textContent).toContain(`×${formatNumber(power)}`);
+    // The outcome states the whole grant — share × the adopted term ×
+    // the charge the chorus itself receives — the rate pass's figure.
+    const granted = 100 * BALANCE.chorusBonus * power * chargedFactor(snap.chargeStrength.get(chorus.id)!);
+    expect(body.textContent).toContain(`+${formatNumber(granted)}%`);
     endSession(app.state);
   });
 

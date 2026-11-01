@@ -4,7 +4,7 @@ import type { App } from "./app";
 import { give } from "../engine/fixtures";
 import { hex } from "../engine/hex";
 import { createAppFixture } from "./testing/app-fixture";
-import { boosterBonusOf, modulePower } from "../engine/economy";
+import { boosterBonusOf, modulePower, responseSupportPowerOf } from "../engine/economy";
 import { generatorProfileOf } from "../engine/profiles";
 import { formatNumber } from "./format";
 import { inventoryModules } from "./inventory";
@@ -85,7 +85,10 @@ describe("inventory browsing", () => {
     expect(host().textContent).toContain("delivery strength");
     expect(host().textContent).not.toContain("incoming");
     click("[data-inventory-back]"); click(`[data-inv="${boost.id}"]`);
-    expect(host().textContent).toContain(`+${formatNumber(100 * boosterBonusOf(boost.type) * modulePower(boost))}% chord response`);
+    // The response support's tray share reads the adopted progression
+    // (issue #488) — the shared seam's figure, level and tier included —
+    // never the retired exponential module power.
+    expect(host().textContent).toContain(`+${formatNumber(100 * boosterBonusOf(boost.type) * responseSupportPowerOf(app.state, boost))}% chord response`);
   });
   it("discloses the canonical Harmonic capacity term in inspection", () => {
     const m = give(app.state, "triangle", null);

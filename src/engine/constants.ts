@@ -29,6 +29,21 @@ export interface Balance {
   // Provisional tuning: a standard voice's charged curve deepens from
   // ×1.5 to ×1.75 at one generator's strength beside one charged Exciter.
   exciterBonus: number;
+  // The response-support progression's authored coefficients (issue #488,
+  // parent #484 stories 7–14): a Chorus or Exciter's grant scales with the
+  // module's level as 1 + share·level/(level + saturation) — ×1 at level
+  // zero (the shipped level-zero grant stands) toward ×(1 + share) as
+  // levels grow without bound. The comparison evidence
+  // (docs/response-comparison.md) chose the saturating shape over the
+  // shipped exponential and the unbounded linear term: the exponential
+  // rode inside every multiplicative chord instance (the Chorus runaway)
+  // and deepened the Exciter's independent charged path until the parent
+  // board left the representable range, while the saturating term restores
+  // increasing waiting times from inside the sweep and keeps every
+  // intermediate level finite and accelerating. Later pacing tickets tune
+  // these two numbers; this is their only home.
+  responseShare: number;
+  responseSaturation: number;
   // ── Harmony quality (ADR-0049): Q = clamp(1 + complexity − max(0,
   // tension − A), Qmin, cap) over the formation's deduplicated pitch
   // classes. All magnitudes provisional tuning per the map's standing note.
@@ -368,6 +383,21 @@ export const BALANCE: Balance = {
   spotlightBonus: 0.5,
   chorusBonus: 0.5,
   exciterBonus: 0.5,
+  // The response-support progression's authored coefficients (issue #488,
+  // parent #484 stories 7–14): a Chorus or Exciter's grant scales with the
+  // module's level as 1 + share·level/(level + saturation) — ×1 at level
+  // zero (the shipped level-zero grant stands) toward ×(1 + share) as
+  // levels grow without bound. The comparison evidence
+  // (docs/response-comparison.md) chose the saturating shape over the
+  // shipped exponential and the unbounded linear term: the exponential
+  // rode inside every multiplicative chord instance (the Chorus runaway)
+  // and deepened the Exciter's independent charged path until the parent
+  // board left the representable range, while the saturating term restores
+  // increasing waiting times from inside the sweep and keeps every
+  // intermediate level finite and accelerating. Later pacing tickets tune
+  // these two numbers; this is their only home.
+  responseShare: 3,
+  responseSaturation: 20,
   tensionWeights: { 1: 1.0, 2: 0.2, 3: 0, 4: 0, 5: 0, 6: 0.5 },
   complexityRate: 0.06,
   tensionAllowance: 0.7,
@@ -507,34 +537,40 @@ export const WORLD_ENEMIES: readonly WorldEnemyDef[] = ENEMY_POSITIONS.map((pos,
   bonus: BALANCE.world.enemyBonus,
 }));
 
-// ── The declared response-curve candidates (issue #487, parent #484) ──
+// ── The response-curve catalog (issue #487 comparison; adopted #488) ──
 
 // How a response-support booster's (Chorus, Exciter) grant scales with its
-// own level. The shipped curve reads the shared module power —
-// rarityPower^level over tier and mutators — and its exponential is the
-// runaway the parent save rode. These are the declared comparison
-// candidates a playthrough recipe or a comparison fixture may carry; a
-// candidate is evidence toward the parent's coefficient decision, never
-// approved production tuning, and nothing here changes BALANCE.
+// own level. The comparison ran the shipped exponential (the shared module
+// power's rarityPower^level) against linear and bounded level terms and
+// the bounded shape won: the exponential rode inside every multiplicative
+// chord instance and exhausted the economy, the saturating term preserves
+// the level-zero grants and restores increasing waiting times. Production
+// adopted it (issue #488): the shipped entry reads BALANCE's authored
+// coefficients — the one central definition — while the comparison
+// candidates keep their declared formulas for recorded-run identity and
+// future tuning comparisons. A candidate rides a run's own candidate
+// state: a playthrough recipe input, a comparison fixture, never another
+// run, never an ordinary save, never a second production path.
 export interface ResponseCurveCandidate {
   readonly id: ResponseCurveId;
   readonly name: string;
   // What the curve does and where it came from — the recipe validation's
   // named failures and the comparison report quote this verbatim.
   readonly description: string;
-  // The level term the candidate substitutes for the shipped
-  // rarityPower^level power. Null on the shipped entry: the shipped curve
-  // is not intercepted — the engine reads the shared module power, which
-  // stays the one definition of shipped behavior.
-  readonly levelTerm: ((level: number) => number) | null;
+  // The level term the curve substitutes for the retired exponential
+  // module power. Production adopted the bounded term (issue #488), so
+  // every entry carries one — the shipped entry reads BALANCE's authored
+  // coefficients, the comparison candidates keep their declared formulas.
+  readonly levelTerm: (level: number) => number;
 }
 
 export const RESPONSE_CURVES: readonly ResponseCurveCandidate[] = [
   {
     id: "shipped",
     name: "Shipped",
-    description: "rarity^level — the shipped exponential response progression, unmodified",
-    levelTerm: null,
+    description:
+      "1 + share·level/(level + saturation) — the adopted response-support progression: ×1 at level zero, saturating with level; coefficients authored in BALANCE (issue #488)",
+    levelTerm: (level) => 1 + (BALANCE.responseShare * level) / (level + BALANCE.responseSaturation),
   },
   {
     id: "linear",
@@ -545,7 +581,7 @@ export const RESPONSE_CURVES: readonly ResponseCurveCandidate[] = [
   {
     id: "bounded",
     name: "Bounded",
-    description: "1 + 3·level/(level + 20) — the explored bounded candidate, ×1 at level zero toward ×4 at infinite levels; a search candidate, not an approved coefficient",
+    description: "1 + 3·level/(level + 20) — the explored bounded candidate as recorded (docs/response-comparison.md), retained under its comparison id; it matches the shipped curve until tuning diverges them",
     levelTerm: (level) => 1 + (3 * level) / (level + 20),
   },
 ];
