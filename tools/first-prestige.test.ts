@@ -125,10 +125,18 @@ describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_FIRST_
     expect(report.distributions).toHaveLength(4);
     expect(report.source.runnerVersion).toBeGreaterThanOrEqual(11);
     // Every pushing run names its worthwhile classification; every prompt
-    // run stays honestly unreached with its zero-claim door recorded.
+    // run stops at its first bank — the honest zero below the entry depth,
+    // or the positive claim a long session's overshoot earned before the
+    // door check. Either way the row records what the door actually paid.
     for (const row of report.runs) {
       expect(row.worthwhileClass).toBeTruthy();
-      if (row.policy === "prompt") expect(row.worthwhileClass).toBe("unreached");
+      if (row.policy === "prompt") {
+        expect(row.stopKind).toBe("prestige");
+        expect(row.eligibilityHours).not.toBeNull();
+        expect(row.claims).toHaveLength(1);
+        if (row.claims[0] === 0) expect(row.worthwhileClass).toBe("unreached");
+        else expect(row.worthwhileClass).toBe(classifyHours(row.worthwhileHours));
+      }
       if (row.policy === "pushing" && row.claims.length > 0) {
         expect(row.journey).not.toBeNull();
         expect(row.journey!.claim).toBe(row.claims[0]);
