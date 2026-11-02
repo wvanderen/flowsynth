@@ -305,13 +305,18 @@ export interface Balance {
   // hypothesis fixtures in world.test.ts mark each one as such until the
   // re-derivation lands.
   world: {
-    // The frontier claim curve (accumulator.ts): the 1T era-earned entry —
+    // The frontier claim curve (accumulator.ts): the era-earned entry —
     // the first enemy's reveal and the first claim's opening — and the log
     // candidate's two figures, 2 + 2·log₁₀(x) over x = era-earned / entry.
     // The entry grant pays exactly one weapon plus one Column (findings.md);
     // curve construction asserts the entry entitlement covers the Column's
-    // price. Hypothesis knobs: findings.md's short-horizon comparison
-    // evidence, pending the no-refund re-derivation.
+    // price. The shipped figure is the first-worthwhile-prestige
+    // calibration (issue #490): a little under three times the prestige
+    // horizon, so holding the door briefly past first eligibility banks
+    // the first positive claim — around ten credited hours on the baseline
+    // schedule — and the enemy ladder (thresholds ×10ⁱ below) scales with
+    // it. The findings.md hypothesis figure (1e12) sat five decades past
+    // the horizon and banked no claim inside any baseline-budgeted run.
     entryNous: number;
     claimBase: number;
     claimDepthSlope: number;
@@ -489,7 +494,7 @@ export const BALANCE: Balance = {
   // All World figures are hypothesis knobs (see the interface block above):
   // findings.md's comparison evidence, never selected balance.
   world: {
-    entryNous: 1e12,
+    entryNous: 2e7,
     claimBase: 2,
     claimDepthSlope: 2,
     attackCost: 1,
@@ -515,15 +520,15 @@ export const BALANCE: Balance = {
 };
 
 // The authored enemy roster (issue #425, ADR-0074; findings.md's nine fixed
-// encounters): thresholds at 1T × 10ⁱ era-earned, HP baseHp × growthⁱ, the
-// shared penalty while discovered and alive, and the shared era bonus once
-// defeated — the shared arithmetic living once in BALANCE.world. Positions
-// are authored World coordinates inside the launch band's rows (−1..2, well
-// within the six-row cap) — unowned coordinates allowed; the first enemy
-// sits adjacent to the opening footprint so its cell is attackable through
-// ordinary expansion from day one. Keys are authored placeholders until a
-// design session names the encounters. The reachability invariant over this
-// roster is pinned in world.test.ts.
+// encounters): thresholds at the World entry depth × 10ⁱ era-earned, HP
+// baseHp × growthⁱ, the shared penalty while discovered and alive, and the
+// shared era bonus once defeated — the shared arithmetic living once in
+// BALANCE.world. Positions are authored World coordinates inside the launch
+// band's rows (−1..2, well within the six-row cap) — unowned coordinates
+// allowed; the first enemy sits adjacent to the opening footprint so its
+// cell is attackable through ordinary expansion from day one. Keys are
+// authored placeholders until a design session names the encounters. The
+// reachability invariant over this roster is pinned in world.test.ts.
 const ENEMY_POSITIONS: readonly Hex[] = [
   { q: -1, r: 0 },
   { q: 1, r: 1 },

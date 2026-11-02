@@ -35,7 +35,7 @@ afterEach(() => fixture.release());
 const grid = () => document.getElementById("grid") as unknown as SVGSVGElement;
 const status = () => document.getElementById("status")!.textContent ?? "";
 
-// An era past the reveal: era-earned past the 1T threshold, the entry
+// An era past the reveal: era-earned past the World entry threshold, the entry
 // owned, a placed weapon and Column over the opening cells, a tray twin
 // of each, and Arete for the World section.
 function seedEra(): void {

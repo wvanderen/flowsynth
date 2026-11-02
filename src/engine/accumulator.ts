@@ -47,14 +47,19 @@ export function horizonReached(state: GameState): boolean {
 
 // The frontier claim curve (issue #425, ADR-0074's claimed-frontier
 // section): a cumulative entitlement E over era-earned nous depth assigns
-// total Arete entitlement to depth. Zero below the World's 1T entry; the
-// log candidate from research/world-frontier/findings.md — 2 + 2·log₁₀(x)
-// over x = era-earned / 1e12 — ships as the baseline, its discontinuous
-// entry grant paying exactly one weapon plus one Column. HYPOTHESIS KNOBS:
+// total Arete entitlement to depth. Zero below the World's entry depth
+// (BALANCE.world.entryNous); the log candidate from
+// research/world-frontier/findings.md — 2 + 2·log₁₀(x) over x = era-earned
+// / entry — ships as the baseline, its discontinuous entry grant paying
+// exactly one weapon plus one Column. The entry depth is the
+// first-worthwhile-prestige calibration (issue #490): just under three
+// times ARETE_HORIZON, so the first positive claim sits a short hold past
+// the prestige door instead of five decades above it. HYPOTHESIS KNOBS:
 // findings.md is comparison evidence within a short horizon, its own
 // provenance section records that no current-engine calibration was rerun
 // and the no-refund re-derivation (#425's second blocker) had not landed —
-// no shipped default claims recoverability. The curve is increasing with
+// the slope's no-recoverability standing stands; the entry depth is
+// calibrated. The curve is increasing with
 // diminishing marginal reward; fractionally valued, always.
 // The curve's optional claimBase (issue #472): the playtesting recipe's
 // declared override — an isolated run's curve carries its own base while

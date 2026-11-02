@@ -206,7 +206,7 @@ describe("the launch command", () => {
     await app.devLaunchScenario("after-first-bank", t);
     expect(app.devScenarioId).toBe("after-first-bank");
     expect(app.state.prestiges).toBe(1);
-    expect(app.state.arete).toBe(2);
+    expect(app.state.arete).toBe(3);
     expect(app.state.eraEarned).toBe(0);
     expect(app.devScenarioNote).toContain("After first bank ✓");
     expect(app.devScenarioNote).toContain("earned Arete unspent");
@@ -445,12 +445,12 @@ describe("the active scenario's assertion", () => {
     // The earned claim is the situation's defining figure: spend it and
     // the assertion names the drift.
     app.state.arete = 0;
-    expect(() => app.devScenarioAssert(t)).toThrowError(/After first bank: expected the earned 2-Arete claim unspent/);
+    expect(() => app.devScenarioAssert(t)).toThrowError(/After first bank: expected the earned claim \(at least 2 Arete\) unspent/);
     expect(app.devScenarioNote).toContain("After first bank ✗");
     expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✗");
 
     await app.devLaunchScenario("after-first-bank", t);
-    expect(app.state.arete).toBe(2);
+    expect(app.state.arete).toBe(3);
     expect(() => app.devScenarioAssert(t)).not.toThrow();
     expect(app.devScenarioNote).toContain("After first bank ✓");
   });
@@ -496,7 +496,7 @@ describe("the dev panel's suite entry", () => {
     relaunched.value = "after-first-bank";
     document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
     await vi.waitFor(() => expect(app.devScenarioId).toBe("after-first-bank"));
-    expect(app.state.arete).toBe(2);
+    expect(app.state.arete).toBe(3);
     expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✓");
   });
 

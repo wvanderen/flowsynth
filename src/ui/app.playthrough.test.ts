@@ -2,16 +2,16 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { playthroughEventMarker, playthroughRunId, playthroughNote, type PlaythroughRecord } from "../engine/playthrough";
-import { exportPlaythroughArtifact } from "../engine/playthrough-artifact";
+import { exportPlaythroughArtifact, PLAYTHROUGH_ARTIFACT_VERSION } from "../engine/playthrough-artifact";
 import { ARETE_HORIZON } from "../engine/accumulator";
-import { CATEGORY_OF } from "../engine/constants";
+import { BALANCE, CATEGORY_OF } from "../engine/constants";
 import { adjacent } from "../engine/hex";
 import { syncRates } from "../engine/economy";
 import { createAppFixture } from "./testing/app-fixture";
 import * as actions from "../engine/actions";
 import { composePlaythroughRecipe } from "../engine/playthrough";
 import { scenarioOf } from "../engine/scenarios";
-import { createInitialState } from "../engine/state";
+import { createInitialState, createModule } from "../engine/state";
 import { STORAGE_KEY } from "../engine/save";
 import type { GameState } from "../engine/types";
 
@@ -297,13 +297,13 @@ describe("completion", () => {
 });
 
 describe("the pushing policy", () => {
-  it("never banks again while observing the first recovery era", () => {
+  it("never banks past the frontier advance while observing the recovered era", () => {
     app = boot(undefined, true);
     const scenario = scenarioOf("fresh-start")!;
     vi.spyOn(scenario, "build").mockImplementation(() => {
       const state = createInitialState();
-      state.eraEarned = 1e12;
-      state.totalEarned = 1e12;
+      state.eraEarned = BALANCE.world.entryNous * 10;
+      state.totalEarned = state.eraEarned;
       return state;
     });
     vi.spyOn(scenario, "assert").mockImplementation(() => {});
@@ -311,16 +311,24 @@ describe("the pushing policy", () => {
     const bank = vi.spyOn(actions, "prestige").mockImplementation((state) => {
       const result = prestige(state);
       // Force the next claim across the target immediately, so this case
-      // distinguishes observing recovery from repeatedly resetting it.
-      state.eraEarned = 1e12;
+      // distinguishes the frontier advance's cap from endlessly farming
+      // deeper claims: every break could bank again, and must not.
+      state.eraEarned = BALANCE.world.entryNous *
+        10 ** (state.world.frontier / BALANCE.world.claimDepthSlope + 1);
       return result;
     });
-    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 3,
       schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
-    expect(bank).toHaveBeenCalledTimes(1);
-    expect(record.claims).toEqual([2]);
-    expect(record.state.prestiges).toBe(1);
-    expect(record.recovery!.eligibilityReached).toEqual({ elapsed: 0, credited: 0 });
+    // The second bank advanced the frontier beyond the first bank's claim
+    // — the journey's last mark — and the walk banked no more: three
+    // further breaks followed with the refill mock always offering a
+    // claim, and none of them prestaged.
+    expect(bank).toHaveBeenCalledTimes(2);
+    expect(record.claims).toHaveLength(2);
+    expect(record.recovery!.frontierAdvanced).not.toBeNull();
+    expect(record.state.prestiges).toBe(2);
+    expect(record.stop.kind).toBe("budget");
+    expect(record.stop.reason).toContain("worthwhile-prestige journey");
   });
 
   it("keeps World occupants in the tray when no cell satisfies their adjacency rule", () => {
@@ -346,124 +354,147 @@ describe("the pushing policy", () => {
     expect(record.events.some((event) => event.reason === "no free World cell beside a deployed generator")).toBe(true);
   });
 
-  it("pushes past the first eligibility, banks its claim, spends it, and measures both recovery marks", { timeout: 300_000 }, () => {
+  it("pushes past the first eligibility, banks, spends, deploys the starter rig, recovers, and advances the frontier", { timeout: 300_000 }, () => {
     app = boot(undefined, true);
     const before = app.state;
     const saved = localStorage.getItem(STORAGE_KEY);
-    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 36, schedule: PUSHING_SCHEDULE });
+    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 12, schedule: PUSHING_SCHEDULE });
     // The run never touched the live state or the save.
     expect(app.state).toBe(before);
     expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
 
-    // The claim: the pushing policy held the first-eligibility door (where
-    // the prompt run banks zero) and banked the configured 2-Arete claim
-    // at the World's entry depth instead.
+    // The claims: the pushing policy held the first-eligibility door (where
+    // the prompt run banks zero) and banked the first worthwhile claim at
+    // the World's entry depth — 3 Arete, the curve's honest floor where
+    // the 600-minute session carried the era measure past the entry — then
+    // banked again to advance the frontier beyond the claimed frontier.
     expect(record.complete).toBe(true);
     expect(record.stop.kind).toBe("recovered");
+    expect(record.stop.reason).toContain("worthwhile-prestige journey completed at day 10");
     expect(record.claimTarget).toBe(2);
-    expect(record.claims).toEqual([2]);
-    expect(record.state.prestiges).toBe(1);
+    expect(record.claims).toEqual([3, 2]);
+    expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
-    // The earned spending: the Catalog entry and the first Charge Column
-    // — nothing granted, nothing minted. The starter Charge Blade is the
-    // first World-eligible claim's own grant, and the bank ends empty.
-    expect(record.areteSpent).toEqual({ entry: 1, discounts: 0, ceilings: 0, columns: 1, hone: { chargeBlade: 0 } });
+    // The earned spending: the Catalog entry, the first Charge Column,
+    // and a Hone rank — nothing granted, nothing minted. The starter
+    // Charge Blade is the first World-eligible claim's own grant.
+    expect(record.areteSpent).toEqual({ entry: 1, discounts: 0, ceilings: 0, columns: 1, hone: { chargeBlade: 1 } });
     expect(record.state.world.starterWeaponGranted).toBe(true);
-    expect(record.state.arete).toBe(0);
-    expect(record.state.world.frontier).toBe(2);
+    expect(record.state.arete).toBe(2);
+    expect(record.state.world.frontier).toBe(5);
     // No grants: every ν the state ever banked is what the run earned —
-    // the sessions and their breathers. At this scale the two summations
-    // drift by float rounding alone, so the guarantee reads as a relative
-    // tolerance, not an exact figure.
+    // the sessions and their breathers, each recorded separately. At this
+    // scale the summations drift by float rounding alone, so the
+    // guarantee reads as a relative tolerance, not an exact figure.
+    expect(record.sessionNous).toBeGreaterThan(record.breatherNous);
+    expect(record.sessionNous + record.breatherNous).toBe(record.earnedNous);
     expect(Math.abs(record.state.totalEarned - record.earnedNous)).toBeLessThan(Math.max(1, record.earnedNous) * 1e-12);
 
-    // The World effects, through the real actions: the Column stands on an
-    // owned, enemy-unreserved cell on a generator's charge line. The
-    // weapon waits in the tray: prestige restored w0 undiscovered, and the
-    // era-2 depth re-revealed it only inside the recovery's final stretch
-    // — "beside the fight" had no living enemy at any break after the
-    // grant, and the run completed before the next break could deploy it.
+    // The functioning starter rig, through the real actions: the weapon
+    // deployed beside the living discovered enemy and the Column on the
+    // charge line — and the rig fought: the starter blade defeated w0 on
+    // its own cadence, the combat route the journey exists to prove.
+    const weapon = record.state.world.weapons[0]!;
+    expect(weapon.type).toBe("chargeBlade");
+    expect(weapon.pos).not.toBeNull();
     const column = record.state.world.columns[0]!;
     expect(column.pos).not.toBeNull();
     expect(record.state.cells.some((cell) => cell.q === column.pos!.q && cell.r === column.pos!.r)).toBe(true);
-    expect(record.state.world.enemies.w0?.discovered).toBe(true);
-    expect(record.state.world.enemies.w0?.hp).toBeGreaterThan(0);
-    const weapon = record.state.world.weapons[0]!;
-    expect(weapon.type).toBe("chargeBlade");
-    expect(weapon.pos).toBeNull();
+    // The rig fought: the defeat ledger carries w0, killed on the blade's
+    // own cadence — the final state's w0 is the second prestige's fresh
+    // enemy, so the defeat lives in the ledger, not the last board.
+    expect(record.worldDefeats).toContain("w0");
+    expect(record.worldDiscoveries).toContain("w0");
     expect(column.pos !== null && record.state.modules.some((m) => m.pos !== null && CATEGORY_OF[m.type] === "generator" && adjacent(column.pos!, m.pos))).toBe(true);
     const worldEvents = record.events.filter((event) => event.kind === "world" && event.ok);
     expect(worldEvents.map((event) => event.label)).toContain("World Column");
+    expect(worldEvents.some((event) => event.label.startsWith("Placed the chargeBlade at"))).toBe(true);
     expect(worldEvents.some((event) => event.label.startsWith("Placed a Charge Column at"))).toBe(true);
 
-    // The recovery measures, both clocks, both marks: the next era reached
-    // prestige eligibility first and regained the pre-reset production
-    // later — measured, never judged. Each mark's credited practice
-    // cannot exceed its simulated elapsed time.
+    // The worthwhile-prestige ledger, both clocks, every mark measured
+    // from the first bank: the Catalog entry landed the moment the walk
+    // could spend, the Column with it; the blade deployed beside the fight
+    // once era 2 re-revealed w0; the next era regained the pre-reset
+    // production and reached the door again together; and the second bank
+    // advanced the frontier. Each mark's credited practice cannot exceed
+    // its simulated elapsed time.
     expect(record.recovery).not.toBeNull();
     const recovery = record.recovery!;
-    expect(recovery.productionRegained).toEqual({ elapsed: 11 * 86_400, credited: 11 * 600 * 60 });
+    expect(recovery.claim).toBe(3);
+    expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0 });
+    expect(recovery.lastingPurchaseLabel).toBe("Catalog entry");
+    expect(recovery.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
+    expect(recovery.weaponDeployed).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
+    expect(recovery.productionRegained).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
     expect(recovery.eligibilityReached).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
+    expect(recovery.frontierAdvanced).toEqual({ elapsed: 5 * 86_400, credited: 5 * 600 * 60 });
     expect(recovery.preResetRate).toBeGreaterThan(0);
-    expect(recovery.eligibilityReached).not.toBeNull();
-    expect(recovery.productionRegained).not.toBeNull();
-    for (const mark of [recovery.eligibilityReached!, recovery.productionRegained!]) {
-      expect(mark.credited).toBeGreaterThan(0);
+    for (const mark of [recovery.lastingPurchase!, recovery.weaponDeployed!, recovery.columnDeployed!,
+      recovery.eligibilityReached!, recovery.productionRegained!, recovery.frontierAdvanced!]) {
+      expect(mark.credited).toBeGreaterThanOrEqual(0);
       expect(mark.credited).toBeLessThanOrEqual(mark.elapsed);
     }
-    expect(recovery.eligibilityReached!.elapsed).toBeLessThan(recovery.productionRegained!.elapsed);
+    expect(recovery.frontierAdvanced!.elapsed).toBeGreaterThan(recovery.eligibilityReached!.elapsed);
     expect(record.events.some((event) => event.milestone && event.label.includes("next prestige eligibility reached"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label.includes("pre-reset production regained"))).toBe(true);
+    expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Catalog entry)")).toBe(true);
+    expect(record.events.some((event) => event.milestone && event.label === "Recovery — frontier advanced to 5 Arete")).toBe(true);
 
-    // The readable record: the discovery rode era 1 (the claim's depth),
-    // the prestige line names its bank, and the note carries both claims
-    // figures and the recovery read.
-    expect(record.worldDiscoveries).toContain("w0");
-    const prestige = record.events.find((event) => event.kind === "prestige")!;
-    expect(prestige.label).toBe("Prestige 1 — banked 2 Arete");
-    expect(prestige.milestone).toBe(true);
-    expect(app.devPlaythroughNote).toContain("claim 2/2 Arete");
-    expect(app.devPlaythroughNote).toContain("recovery — rate");
-    expect(app.devPlaythroughNote).toContain("door");
+    // The readable record: the discoveries rode era 1 (the claim's depth),
+    // the prestige lines name their banks, and the note carries the
+    // journey's read.
+    const prestiges = record.events.filter((event) => event.kind === "prestige");
+    expect(prestiges.map((event) => event.label)).toEqual(["Prestige 1 — banked 3 Arete", "Prestige 2 — banked 2 Arete"]);
+    for (const event of prestiges) expect(event.milestone).toBe(true);
+    expect(app.devPlaythroughNote).toContain("claim 3, 2/2 Arete");
+    expect(app.devPlaythroughNote).toContain("recovery — bank 3, purchase 0.0d/0m (Catalog entry)");
+    expect(app.devPlaythroughNote).toContain("frontier 5.0d/3000m");
+    expect(app.devPlaythroughNote).toContain("The worthwhile-prestige journey completed at day 10");
   });
 
   it("treats an unreached claim target as an explicit incomplete outcome, never a fabricated bank", { timeout: 120_000 }, () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 6, budgetDays: 4, schedule: PUSHING_SCHEDULE });
+    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 36, budgetDays: 4, schedule: PUSHING_SCHEDULE });
     // The push ran well past the first eligibility — the era measure the
-    // prompt door opens at — but the 6-Arete entitlement lives at the
-    // World's 100T depth, and the budget ended first.
+    // prompt door opens at — but the 36-Arete entitlement lives decades
+    // past the World's entry, and the budget ended first.
     expect(record.complete).toBe(false);
     expect(record.stop.kind).toBe("budget");
-    expect(record.claimTarget).toBe(6);
+    expect(record.claimTarget).toBe(36);
     expect(record.claims).toEqual([]);
     expect(record.state.prestiges).toBe(0);
     expect(record.state.eraEarned).toBeGreaterThan(ARETE_HORIZON);
     expect(record.recovery).toBeNull();
     expect(record.lastMilestone).toBeTruthy();
-    expect(record.bottleneck).toContain("6-Arete");
+    expect(record.bottleneck).toContain("36-Arete");
     // Nothing was spent, because nothing was ever banked.
     expect(record.areteSpent).toEqual({ entry: 0, discounts: 0, ceilings: 0, columns: 0, hone: { chargeBlade: 0 } });
     expect(app.devPlaythroughNote).toContain("Pushing ✗");
-    expect(app.devPlaythroughNote).toContain("claim none/6 Arete");
+    expect(app.devPlaythroughNote).toContain("claim none/36 Arete");
   });
 
-  it("reports a half-recovered era with the missing measure explicitly unreached", { timeout: 300_000 }, () => {
+  it("reports a half-recovered era with the missing measures explicitly unreached", { timeout: 300_000 }, () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 23, schedule: PUSHING_SCHEDULE });
-    // The bank and the spending landed; the next era reached the door
-    // again inside the budget, but production was still rebuilding when
-    // the budget ended — a slower recovery is valid evidence, and the
-    // missing mark stays explicitly null.
+    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 6, schedule: PUSHING_SCHEDULE });
+    // The bank landed at the World's entry depth and the next morning's
+    // manage spent it — Catalog entry and Column; the next era was still
+    // rebuilding when the budget ended — blade, rate, and door all
+    // explicitly unreached, a slower recovery being valid evidence no
+    // fabricated mark may replace.
     expect(record.complete).toBe(false);
     expect(record.stop.kind).toBe("budget");
-    expect(record.stop.reason).toContain("recovery era");
-    expect(record.claims).toEqual([2]);
+    expect(record.stop.reason).toContain("worthwhile-prestige journey");
+    expect(record.claims).toEqual([3]);
     expect(record.recovery).not.toBeNull();
-    expect(record.recovery!.eligibilityReached).not.toBeNull();
+    expect(record.recovery!.claim).toBe(3);
+    expect(record.recovery!.lastingPurchase).not.toBeNull();
+    expect(record.recovery!.columnDeployed).not.toBeNull();
+    expect(record.recovery!.weaponDeployed).toBeNull();
+    expect(record.recovery!.eligibilityReached).toBeNull();
     expect(record.recovery!.productionRegained).toBeNull();
-    expect(app.devPlaythroughNote).toContain("rate unreached");
+    expect(record.recovery!.frontierAdvanced).toBeNull();
+    expect(app.devPlaythroughNote).toContain("blade unreached, column 0.0d/0m, rate unreached");
     expect(app.devPlaythroughNote).not.toContain("✓");
   });
 
@@ -542,8 +573,8 @@ describe("declared tuning overrides", () => {
     const scenario = scenarioOf("fresh-start")!;
     vi.spyOn(scenario, "build").mockImplementation(() => {
       const state = createInitialState();
-      state.eraEarned = 1e12;
-      state.totalEarned = 1e12;
+      state.eraEarned = BALANCE.world.entryNous;
+      state.totalEarned = state.eraEarned;
       return state;
     });
     vi.spyOn(scenario, "assert").mockImplementation(() => {});
@@ -818,8 +849,16 @@ describe("historical snapshots and inspection", () => {
     const scenario = scenarioOf("fresh-start")!;
     vi.spyOn(scenario, "build").mockImplementation(() => {
       const state = createInitialState();
-      state.eraEarned = 1e12;
-      state.totalEarned = 1e12;
+      // A crafted journey board: the opening synth already sits beside w0's
+      // cell, a generator stands on the charge line, the era measure waits
+      // at the World's entry depth, and w0 is discovered and alive — the
+      // whole worthwhile journey one bank away.
+      const generator = createModule(state, "focusKeyed");
+      generator.pos = { q: 1, r: 0 };
+      state.modules.push(generator);
+      state.world.enemies.w0 = { discovered: true, hp: 12 };
+      state.eraEarned = BALANCE.world.entryNous;
+      state.totalEarned = state.eraEarned;
       state.modules[0]!.level = 100;
       return state;
     });
@@ -827,28 +866,45 @@ describe("historical snapshots and inspection", () => {
     const prestige = actions.prestige;
     vi.spyOn(actions, "prestige").mockImplementation(state => {
       const result = prestige(state);
-      state.modules[0]!.level = stop === "recovered" ? 100 : 0;
+      state.modules.forEach(module => { module.level = stop === "recovered" ? 100 : 0; });
+      // Keep the era measure across both gates the journey reads — the
+      // horizon for the recovery door and the entry depth for the next
+      // bank — so every break faces a claim.
+      state.eraEarned = BALANCE.world.entryNous *
+        10 ** (state.world.frontier / BALANCE.world.claimDepthSlope + 1);
       return result;
     });
     const end = actions.endSession;
     vi.spyOn(actions, "endSession").mockImplementation((state, now) => {
       const result = end(state, now);
-      state.eraEarned = 1e12;
+      state.eraEarned = BALANCE.world.entryNous *
+        10 ** (state.world.frontier / BALANCE.world.claimDepthSlope + 1);
       return result;
     });
-    // Production recovery can occur during manage; eligibility is forced
-    // across the horizon during the final session, after that settlement.
-    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+    // The recovered variant gets the days its weapon needs — a manage after
+    // a session re-revealed w0; the budget variant ends inside the journey.
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: stop === "recovered" ? 3 : 1,
       schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
     expect(record.stop.kind).toBe(stop);
+    if (stop === "recovered") {
+      expect(record.complete).toBe(true);
+      expect(record.recovery!.weaponDeployed).not.toBeNull();
+      expect(record.recovery!.productionRegained).not.toBeNull();
+    } else {
+      expect(record.complete).toBe(false);
+      expect(record.recovery!.weaponDeployed).toBeNull();
+      expect(record.recovery!.productionRegained).toBeNull();
+    }
     const eligibility = record.events.find(event => event.label === "Recovery — next prestige eligibility reached")!;
     expect(eligibility).toBeDefined();
-    expect(eligibility.at).toBe(60);
+    expect(eligibility.at).toBe(0);
     expect(eligibility.snapshot).toBeGreaterThanOrEqual(0);
     const inspection = app.devInspectPlaythrough(eligibility.snapshot)!;
     expect(inspection.elapsed).toBe(eligibility.at);
     expect(inspection.credited).toBe(eligibility.credited);
-    expect(inspection.state.eraEarned).toBe(1e12);
+    // The settle read the era measure the first bank's refill left — the
+    // entry depth a held frontier above, well past the horizon.
+    expect(inspection.state.eraEarned).toBe(BALANCE.world.entryNous * 100);
     expect(inspection.events).toContain(eligibility);
     for (const event of record.events) {
       expect(event.snapshot).toBeGreaterThanOrEqual(0);
@@ -1065,7 +1121,7 @@ describe("the run artifact boundary", () => {
     const text = app.devExportPlaythrough();
     const artifact = JSON.parse(text) as Record<string, unknown>;
     expect(artifact.format).toBe("flowsynth-playthrough");
-    expect(artifact.version).toBe(2);
+    expect(artifact.version).toBe(PLAYTHROUGH_ARTIFACT_VERSION);
     expect(artifact.runId).toBe(record.runId);
     // The import joins the library as carried, takes the selection, and
     // marks itself: old evidence never reads as a fresh walk.
@@ -1120,7 +1176,7 @@ describe("the run artifact boundary", () => {
     refuse('{"app":"flowsynth","version":14,"savedAt":0,"state":{}}', /not a FlowSynth run artifact/);
     const newer = JSON.parse(app.devExportPlaythrough()) as Record<string, unknown>;
     newer.version = 99;
-    refuse(JSON.stringify(newer), /Artifact version 99 is newer than this build supports \(2\)/);
+    refuse(JSON.stringify(newer), new RegExp(`Artifact version 99 is newer than this build supports \\(${PLAYTHROUGH_ARTIFACT_VERSION}\\)`));
     expect(app.devResults).toHaveLength(before);
     expect(app.devSelectedRunId).toBe(record.runId);
     expect(app.devPlaythroughNote).toContain("Import ✗");

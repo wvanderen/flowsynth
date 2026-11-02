@@ -30,9 +30,10 @@ import { termTipHtml } from "./terms";
 
 /* ── The layer's liveness ───────────────────────────── */
 
-// Whether the World layer has arrived in this era: the entry is the 1T
-// era-earned reveal — the first enemy's discovery threshold — never a
-// purchase. The layer re-locks each prestige until the era climbs back.
+// Whether the World layer has arrived in this era: the entry is the World
+// entry depth's era-earned reveal (BALANCE.world.entryNous) — the first
+// enemy's discovery threshold — never a purchase. The layer re-locks each
+// prestige until the era climbs back.
 export function worldEntered(state: GameState): boolean {
   return state.eraEarned >= BALANCE.world.entryNous;
 }

@@ -49,9 +49,14 @@ import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, Weapo
 // prestiges at the first eligibility: it pushes until the pending claim
 // reaches its configured target, then banks, and its record follows the
 // next era through earned-Arete spending, World placement and purchases,
-// and the two recovery measures — regaining the first era's pre-reset
-// production and reaching prestige eligibility again, each timed on both
-// clocks. The same walk carries the progression checkpoints (issue #471):
+// and the worthwhile-prestige journey (issue #490): the first bank's
+// claim, the lasting purchase it funded, the starter World rig's
+// deployment, the two recovery measures — regaining the first era's
+// pre-reset production and reaching prestige eligibility again — and the
+// frontier advancing beyond the claimed frontier, each timed on both
+// clocks. Eligibility alone is never the journey: a zero-claim reset
+// banks its honest zero and the journey marks stay explicitly unreached.
+// The same walk carries the progression checkpoints (issue #471):
 // declared between-sessions stops — the door approaching, the first earned
 // bank, the World's living fight — whose halted state is the progression
 // presets' ground, reached by the walk rather than built by hand. Overrides
@@ -72,8 +77,9 @@ import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, Weapo
 // change, and a rerun against different source identifies separately
 // (story 36's foundation). The declared override set (issue #472) rides
 // the recipe, so this bump records the walk's new inputs; the response
-// curve (issue #487) joins them.
-export const PLAYTHROUGH_RUNNER_VERSION = 10;
+// curve (issue #487) joins them; the worthwhile-prestige journey marks
+// (issue #490) change what the walk measures and when it completes.
+export const PLAYTHROUGH_RUNNER_VERSION = 11;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -157,7 +163,7 @@ export const PLAYTHROUGH_TUNING: readonly PlaythroughTuningParam[] = [
   {
     key: "claimBase",
     name: "Frontier claim base",
-    description: "The Arete the frontier claim curve pays at the World's 1T entry depth — the pushing bank's floor.",
+    description: "The Arete the frontier claim curve pays at the World's entry depth — the pushing bank's floor.",
     min: 1,
     max: 36,
     default: BALANCE.world.claimBase,
@@ -218,7 +224,7 @@ export interface PlaythroughRecipe {
 // five-minute breather on one practice — the fixture baseline, not a
 // typical-player claim (#465's implementation decisions). The claim target
 // defaults to 2 — the first positive claim the frontier curve pays, at the
-// World's 1T entry depth.
+// World's entry depth.
 export function defaultPlaythroughRecipe(): PlaythroughRecipe {
   return {
     scenarioId: "fresh-start",
@@ -388,9 +394,9 @@ function checkpointOf(id: PlaythroughCheckpointId): PlaythroughCheckpoint {
 // The checkpoints' declared recipes (parent story 8's reachability
 // evidence, carried verbatim on each preset): the approaching door rides
 // the suite's baseline schedule — the prompt walk opens it around day
-// nine — while the earned bank and the World's fight push past the 1T
-// entry depth, deeper than the baseline's credited practice can reach
-// inside any budget, so they declare the pushing fixture's own
+// nine — while the earned bank and the World's fight push past the World
+// entry depth, beyond what the baseline's credited practice banks before
+// the door, so they declare the pushing fixture's own
 // long-session schedule: two 600-minute daily sessions on the same
 // five-minute breather, the shape the pushing tests ride. Both are
 // fixtures — declared, not typical-player claims — and the preset's
@@ -575,16 +581,38 @@ export interface PlaythroughRecoveryMark {
   readonly credited: number;
 }
 
-// The next era's recovery ledger (stories 24–25): the production the
-// reset erased, and both recovery measures against it. Null until the
-// run's first prestige — a run that never banks never recovers.
+// The next era's worthwhile-prestige ledger (stories 24–25, issue #490):
+// what the first prestige banked and what its reward demonstrably funded,
+// measured from the prestige moment on both clocks. Null until the run's
+// first prestige — a run that never banks never recovers. The marks make
+// eligibility distinguishable from a worthwhile reset: the claim figure
+// (the first bank's banking), the lasting purchase it funded, the starter
+// World rig's deployment (weapon beside the fight, Column on the charge
+// line), the two recovery measures, and the frontier advancing beyond the
+// claimed frontier. A zero-claim reset carries claim zero and null marks —
+// honest, never topped up. A mark the budget outlives stays explicitly
+// null.
 export interface PlaythroughRecovery {
   // Whole-board ν/s immediately before the first prestige.
   readonly preResetRate: number;
+  // The first bank's claim — zero at the eligibility door.
+  readonly claim: number;
+  // The first lasting Arete purchase after the bank (the Catalog entry,
+  // a capacity offering, a Charge Column, a Hone rank) and what it was.
+  readonly lastingPurchase: PlaythroughRecoveryMark | null;
+  readonly lastingPurchaseLabel: string | null;
+  // The starter weapon deployed beside a living discovered enemy.
+  readonly weaponDeployed: PlaythroughRecoveryMark | null;
+  // The first Charge Column deployed on the charge line.
+  readonly columnDeployed: PlaythroughRecoveryMark | null;
   // When the next era's board first produced at least that rate again.
   readonly productionRegained: PlaythroughRecoveryMark | null;
   // When the next era first reached prestige eligibility again.
   readonly eligibilityReached: PlaythroughRecoveryMark | null;
+  // When a later bank advanced the frontier beyond the first bank's
+  // claim — progress into the next frontier, not merely recovery of the
+  // old one.
+  readonly frontierAdvanced: PlaythroughRecoveryMark | null;
 }
 
 // The run's Arete spending ledger (story 24): what the earned claims paid
@@ -611,10 +639,12 @@ export interface PlaythroughRecord {
   readonly policy: { readonly id: string; readonly name: string };
   readonly complete: boolean;
   // "prestige" is the prompt door; "recovered" is the pushing run's
-  // completed next-era demonstration — both recovery measures measured.
-  // "budget" is the explicit incomplete outcome (story 21). "checkpoint"
-  // is a declared progression checkpoint's stop (issue #471) — the walk
-  // halted exactly where its preset's situation lives.
+  // completed worthwhile-prestige journey — the bank, the lasting
+  // purchase, the deployed starter rig, both recovery measures, and the
+  // frontier advanced past the claimed frontier. "budget" is the explicit
+  // incomplete outcome (story 21). "checkpoint" is a declared progression
+  // checkpoint's stop (issue #471) — the walk halted exactly where its
+  // preset's situation lives.
   readonly stop: { readonly kind: "prestige" | "recovered" | "budget" | "checkpoint"; readonly reason: string };
   // The pushing policy's configured pending-claim target, carried beside
   // the actual claims so intent and outcome stay distinguishable
@@ -628,9 +658,18 @@ export interface PlaythroughRecord {
   readonly elapsedSeconds: number;
   readonly creditedSeconds: number;
   readonly breatherSeconds: number;
+  // The management opportunities the schedule gave the policy: one per
+  // between-sessions break the walk played (issue #490's separate
+  // recording — session length and management density are the two clocks
+  // a session shape moves).
+  readonly manageBreaks: number;
   // Every ν the run banked — sessions and their breathers together — the
-  // figure the no-grants guarantee is checked against.
+  // figure the no-grants guarantee is checked against, with the two
+  // sources recorded separately (issue #490: breather production is its
+  // own figure, never folded into the sessions' unseen).
   readonly earnedNous: number;
+  readonly sessionNous: number;
+  readonly breatherNous: number;
   readonly lastMilestone: string | null;
   // Incomplete runs only: what the budget ran out against, with the last
   // declined action's reason (story 22).
@@ -644,8 +683,10 @@ export interface PlaythroughRecord {
   readonly achievements: readonly string[];
   readonly worldDiscoveries: readonly string[];
   readonly worldDefeats: readonly string[];
-  // The next era's recovery ledger (stories 24–25): null until the run's
-  // first prestige, then the pre-reset rate and the two measures.
+  // The next era's worthwhile-prestige ledger (stories 24–25, issue
+  // #490): null until the run's first prestige, then the pre-reset rate,
+  // the banked claim, and every journey mark — the unreached ones
+  // explicitly null.
   readonly recovery: PlaythroughRecovery | null;
   // The run's final state — the ground truth behind every figure.
   readonly state: GameState;
@@ -679,14 +720,22 @@ interface RunContext {
   elapsedMs: number;
   lastDecline: string | null;
   lastMilestone: string | null;
-  // The recovery ledger (stories 24–25): armed at the run's first prestige
-  // with the pre-reset rate, then settled at every between-sessions moment
-  // until both measures carry marks.
+  // The worthwhile-prestige ledger (stories 24–25, issue #490): armed at
+  // the run's first prestige with the pre-reset rate and the frontier it
+  // banked against, then settled at every between-sessions moment and
+  // purchase until every journey mark carries its mark.
   preResetRate: number | null;
   prestigeElapsedMs: number;
   prestigeCredited: number;
+  frontierAtBank: number | null;
+  lastingPurchase: PlaythroughRecoveryMark | null;
+  lastingPurchaseLabel: string | null;
+  weaponDeployed: PlaythroughRecoveryMark | null;
+  columnDeployed: PlaythroughRecoveryMark | null;
   productionRegained: PlaythroughRecoveryMark | null;
   eligibilityReached: PlaythroughRecoveryMark | null;
+  frontierAdvanced: PlaythroughRecoveryMark | null;
+  manageBreaks: number;
 }
 
 // Session k of a day starts after the k preceding sessions and their
@@ -816,6 +865,7 @@ function recordDiscoveries(ctx: RunContext, state: GameState): void {
 // engine's own action gates. Every leg records its first decline and stops
 // — the record stays readable and the reasons stay the engine's own.
 function manage(ctx: RunContext, state: GameState): void {
+  ctx.manageBreaks++;
   recordDiscoveries(ctx, state);
   // The one standing practice: the schedule's habit with its daily goal.
   if (!state.habits.some((habit) => !habit.archived)) createHabit(state, ctx.schedule.habitName);
@@ -1017,7 +1067,10 @@ function manage(ctx: RunContext, state: GameState): void {
   // engine's own reason.
   if (!state.catalogEntryOwned && state.arete >= BALANCE.catalogEntryCost) {
     const result = buyCatalogEntry(state, ctx.rng);
-    if (result.ok) ctx.areteSpent.entry++;
+    if (result.ok) {
+      ctx.areteSpent.entry++;
+      noteLastingPurchase(ctx, "Catalog entry");
+    }
     record(ctx, { kind: "arete", label: "Catalog entry", ...outcome(result) });
     if (!result.ok) decline(ctx, "catalog entry", result.reason ?? "declined");
   } else if (state.catalogEntryOwned) {
@@ -1026,7 +1079,10 @@ function manage(ctx: RunContext, state: GameState): void {
       ["Expansion Bays", "ceilings", () => buyCapacityCeiling(state)],
     ] as const) {
       const result = attempt();
-      if (result.ok) ctx.areteSpent[kind]++;
+      if (result.ok) {
+        ctx.areteSpent[kind]++;
+        noteLastingPurchase(ctx, label);
+      }
       record(ctx, { kind: "arete", label: `Arete — ${label}`, ...outcome(result) });
       if (!result.ok) {
         decline(ctx, `arete ${label}`, result.reason ?? "declined");
@@ -1053,7 +1109,10 @@ function manage(ctx: RunContext, state: GameState): void {
         break;
       }
       const result = buyChargeColumn(state);
-      if (result.ok) ctx.areteSpent.columns++;
+      if (result.ok) {
+        ctx.areteSpent.columns++;
+        noteLastingPurchase(ctx, "a Charge Column");
+      }
       record(ctx, { kind: "world", label: "World Column", ...outcome(result) });
       if (!result.ok) {
         decline(ctx, "World Column", result.reason ?? "declined");
@@ -1068,7 +1127,10 @@ function manage(ctx: RunContext, state: GameState): void {
           break;
         }
         const result = buyHoneRank(state, weapon.type);
-        if (result.ok) ctx.areteSpent.hone[weapon.type] = (ctx.areteSpent.hone[weapon.type] ?? 0) + 1;
+        if (result.ok) {
+          ctx.areteSpent.hone[weapon.type] = (ctx.areteSpent.hone[weapon.type] ?? 0) + 1;
+          noteLastingPurchase(ctx, `a Hone rank (${weapon.type})`);
+        }
         record(ctx, { kind: "world", label: `Hone rank — ${weapon.type}`, ...outcome(result) });
         if (!result.ok) {
           decline(ctx, `Hone rank ${weapon.type}`, result.reason ?? "declined");
@@ -1114,6 +1176,7 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
     candidates: Hex[],
     rank: (pos: Hex) => readonly number[],
     unavailable: string,
+    kind: "weapon" | "column",
   ): boolean => {
     let best: Hex | undefined;
     for (const pos of candidates) {
@@ -1125,6 +1188,10 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
       return false;
     }
     const result = placeWorldOccupant(state, id, best);
+    if (result.ok) {
+      if (kind === "weapon" && ctx.weaponDeployed === null) ctx.weaponDeployed = journeyMark(ctx);
+      if (kind === "column" && ctx.columnDeployed === null) ctx.columnDeployed = journeyMark(ctx);
+    }
     record(ctx, { kind: "world", label: `Placed ${name} at ${best.q},${best.r}`, ...outcome(result) });
     if (!result.ok) decline(ctx, name, result.reason ?? "declined");
     return result.ok;
@@ -1141,6 +1208,7 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
         pos.q, pos.r,
       ],
       "no free World cell beside a living discovered enemy",
+      "weapon",
     )) break;
   }
   for (const column of state.world.columns) {
@@ -1155,11 +1223,38 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
         pos.q, pos.r,
       ],
       "no free World cell beside a deployed generator",
+      "column",
     )) break;
   }
 }
 
-// The recovery settlement (stories 24–25): measured at every
+// The journey mark's both clocks (issue #490): elapsed and credited
+// seconds since the run's first prestige. Only meaningful while the
+// ledger is armed — every caller guards on `preResetRate !== null`.
+function journeyMark(ctx: RunContext): PlaythroughRecoveryMark {
+  return {
+    elapsed: Math.max(0, Math.round((ctx.elapsedMs - ctx.prestigeElapsedMs) / 1000)),
+    credited: Math.max(0, Math.round(ctx.credited - ctx.prestigeCredited)),
+  };
+}
+
+// The first lasting Arete purchase after the bank (issue #490): the mark
+// the worthwhile-prestige ledger carries beside the claim — eligibility
+// alone never funds anything. A purchase before the ledger is armed (no
+// bank yet — Arete mints nowhere else) is not a journey purchase.
+function noteLastingPurchase(ctx: RunContext, label: string): void {
+  if (ctx.preResetRate === null || ctx.lastingPurchase !== null) return;
+  ctx.lastingPurchase = journeyMark(ctx);
+  ctx.lastingPurchaseLabel = label;
+  record(ctx, {
+    kind: "milestone",
+    label: `Recovery — lasting purchase (${label})`,
+    ok: true,
+    milestone: true,
+  });
+}
+
+// The recovery settlement (stories 24–25, issue #490): measured at every
 // between-sessions moment after the run's first prestige. Regaining
 // production compares the next era's whole-board rate against the rate the
 // reset erased; eligibility is the horizon crossing again. Both carry
@@ -1167,12 +1262,8 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
 // the budget outlives stays explicitly null.
 function settleRecovery(ctx: RunContext, state: GameState): void {
   if (ctx.preResetRate === null) return;
-  const since = (): PlaythroughRecoveryMark => ({
-    elapsed: Math.max(0, Math.round((ctx.elapsedMs - ctx.prestigeElapsedMs) / 1000)),
-    credited: Math.max(0, Math.round(ctx.credited - ctx.prestigeCredited)),
-  });
   if (ctx.productionRegained === null && syncRates(state, false).rate >= ctx.preResetRate) {
-    ctx.productionRegained = since();
+    ctx.productionRegained = journeyMark(ctx);
     record(ctx, {
       kind: "milestone",
       label: `Recovery — pre-reset production regained (${ctx.preResetRate.toFixed(2)}ν/s)`,
@@ -1181,7 +1272,7 @@ function settleRecovery(ctx: RunContext, state: GameState): void {
     });
   }
   if (ctx.eligibilityReached === null && horizonReached(state)) {
-    ctx.eligibilityReached = since();
+    ctx.eligibilityReached = journeyMark(ctx);
     record(ctx, {
       kind: "milestone",
       label: "Recovery — next prestige eligibility reached",
@@ -1191,8 +1282,14 @@ function settleRecovery(ctx: RunContext, state: GameState): void {
   }
 }
 
-function recoveryComplete(ctx: RunContext): boolean {
-  return ctx.productionRegained !== null && ctx.eligibilityReached !== null;
+// The worthwhile-prestige journey's completion (issue #490): every mark
+// carried — the bank spent into a lasting purchase, the starter rig
+// deployed, production and eligibility recovered, and the frontier
+// advanced beyond the claimed frontier. Whatever a measure lacks is the
+// record's explicit null, never a fabricated mark.
+function journeyComplete(ctx: RunContext): boolean {
+  return ctx.lastingPurchase !== null && ctx.weaponDeployed !== null && ctx.columnDeployed !== null &&
+    ctx.productionRegained !== null && ctx.eligibilityReached !== null && ctx.frontierAdvanced !== null;
 }
 
 // One planned session at its target, the breather the session minted, and
@@ -1278,24 +1375,29 @@ function* runSession(ctx: RunContext, state: GameState, day: number, session: nu
 }
 
 // The prestige check — the prompt policy's completion and the pushing
-// policy's bank. The prompt door opens at the first between-sessions
+// policy's banks. The prompt door opens at the first between-sessions
 // moment the horizon is reached; the first-eligibility claim is zero under
 // the frontier curve, and the zero banks honestly. The pushing policy
-// holds that door: it prestiges only when the pending claim reaches its
-// configured target (story 19) — a depth the horizon has long been past —
-// and its first bank arms the next era's recovery ledger (stories 24–25).
+// holds that door: it prestiges when the pending claim reaches its
+// configured target (story 19) — the first worthwhile bank (issue #490) —
+// and its first bank arms the journey ledger (stories 24–25). While the
+// journey's frontier mark is unmet it keeps banking the same declared
+// target: the bank that advances the frontier beyond the claimed frontier
+// is the journey's last mark, and once it lands the walk banks no more —
+// it observes the recovered era, it does not farm it.
 function tryPrestige(ctx: RunContext, state: GameState): boolean {
-  // This run measures the era immediately following its first bank.
-  if (ctx.claims.length > 0) return false;
   if (ctx.pushing) {
+    if (ctx.frontierAdvanced !== null) return false;
     if (pendingClaimOf(state, ctx.claimBase) < ctx.claimTarget) return false;
   } else if (!horizonReached(state)) {
     return false;
   }
   if (ctx.preResetRate === null) {
     // The first prestige, either policy: capture the production the reset
-    // is about to erase, then arm the recovery measures against it.
+    // is about to erase and the frontier it banks against, then arm the
+    // journey measures against them.
     ctx.preResetRate = syncRates(state, false).rate;
+    ctx.frontierAtBank = state.world.frontier;
     ctx.prestigeElapsedMs = ctx.elapsedMs;
     ctx.prestigeCredited = ctx.credited;
   }
@@ -1312,6 +1414,21 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
     ...outcome(result),
     milestone: true,
   });
+  // The frontier mark (issue #490): a LATER bank advancing the frontier
+  // beyond the claimed frontier — progress into the next frontier, not
+  // merely the first bank's own advance over the reset's zero.
+  if (
+    ctx.claims.length >= 2 && ctx.frontierAtBank !== null &&
+    state.world.frontier > ctx.frontierAtBank && ctx.frontierAdvanced === null
+  ) {
+    ctx.frontierAdvanced = journeyMark(ctx);
+    record(ctx, {
+      kind: "milestone",
+      label: `Recovery — frontier advanced to ${state.world.frontier} Arete`,
+      ok: true,
+      milestone: true,
+    });
+  }
   pushTrajectory(ctx, state);
   return result.ok;
 }
@@ -1418,8 +1535,15 @@ function* walkPlaythrough(
     preResetRate: null,
     prestigeElapsedMs: 0,
     prestigeCredited: 0,
+    frontierAtBank: null,
+    lastingPurchase: null,
+    lastingPurchaseLabel: null,
+    weaponDeployed: null,
+    columnDeployed: null,
     productionRegained: null,
     eligibilityReached: null,
+    frontierAdvanced: null,
+    manageBreaks: 0,
   };
 
   let days = 0;
@@ -1428,7 +1552,7 @@ function* walkPlaythrough(
   let stop: PlaythroughRecord["stop"] = {
     kind: "budget",
     reason: ctx.pushing
-      ? `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the recovery behind it.`
+      ? `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the worthwhile-prestige journey behind it.`
       : `The ${recipe.budgetDays}-day budget ended before the first prestige.`,
   };
   // A checkpoint's halt (issue #471): the declared moment named, the day
@@ -1486,23 +1610,26 @@ function* walkPlaythrough(
       // Recovery may open events after runSession closed its final sample.
       // Bind them now, before stopping or advancing to another stamp.
       if (ctx.openEvents.length > 0) snap(ctx, state);
-      // The pushing run's completion (stories 24–25): both recovery
-      // measures measured — production regained and the door reached
-      // again. Whatever the figures say is the evidence; there is no
+      // The pushing run's completion (stories 24–25, issue #490): the
+      // worthwhile-prestige journey's marks all carried — the bank, the
+      // lasting purchase, the deployed starter rig, both recovery
+      // measures, and the frontier advanced past the claimed frontier.
+      // Whatever a mark lacks is the ledger's explicit null; there is no
       // pacing threshold to miss. A checkpoint walk has its own declared
       // terminal (issue #471): it rides past this stop so a recovery
       // milestone that lands before its situation — the two thresholds
       // can finish neck and neck — never steals the walk's end.
-      if (ctx.pushing && checkpoint === null && recoveryComplete(ctx)) {
+      if (ctx.pushing && checkpoint === null && journeyComplete(ctx)) {
         complete = true;
-        stop = { kind: "recovered", reason: `Recovery measured at day ${days}.` };
+        stop = { kind: "recovered", reason: `The worthwhile-prestige journey completed at day ${days} — the frontier advanced to ${state.world.frontier} Arete.` };
         break day;
       }
     }
   }
-  // A pushing run that banked but never recovered names that stop exactly.
+  // A pushing run that banked but never finished the journey names that
+  // stop exactly, with the missing journey marks left explicitly null.
   if (!complete && ctx.pushing && ctx.claims.length > 0 && !checkpointStop) {
-    stop = { kind: "budget", reason: `The ${days}-day budget ended inside the recovery era.` };
+    stop = { kind: "budget", reason: `The ${days}-day budget ended inside the worthwhile-prestige journey.` };
   }
   const lastSessionLabel = [...ctx.events].reverse().find((event) => event.kind === "session")?.label ?? null;
   // A checkpoint stop names its moment; nothing was blocked, so no
@@ -1519,8 +1646,14 @@ function* walkPlaythrough(
       ? null
       : {
           preResetRate: ctx.preResetRate,
+          claim: ctx.claims[0] ?? 0,
+          lastingPurchase: ctx.lastingPurchase,
+          lastingPurchaseLabel: ctx.lastingPurchaseLabel,
+          weaponDeployed: ctx.weaponDeployed,
+          columnDeployed: ctx.columnDeployed,
           productionRegained: ctx.productionRegained,
           eligibilityReached: ctx.eligibilityReached,
+          frontierAdvanced: ctx.frontierAdvanced,
         };
   return {
     kind: "representative",
@@ -1537,7 +1670,10 @@ function* walkPlaythrough(
     elapsedSeconds: Math.round((ctx.elapsedMs - recipe.schedule.startAt) / 1000),
     creditedSeconds: Math.round(ctx.credited),
     breatherSeconds: Math.round(ctx.breatherSeconds),
+    manageBreaks: ctx.manageBreaks,
     earnedNous: ctx.sessionNous + ctx.breatherNous,
+    sessionNous: ctx.sessionNous,
+    breatherNous: ctx.breatherNous,
     lastMilestone: ctx.lastMilestone ?? lastSessionLabel,
     bottleneck,
     events: ctx.events,
@@ -1601,7 +1737,16 @@ function spendingNote(spent: PlaythroughAreteSpent): string {
 function recoveryNote(recovery: PlaythroughRecovery): string {
   const mark = (value: PlaythroughRecoveryMark | null): string =>
     value ? `${(value.elapsed / 86_400).toFixed(1)}d/${Math.round(value.credited / 60)}m` : "unreached";
-  return `recovery — rate ${mark(recovery.productionRegained)}, door ${mark(recovery.eligibilityReached)} (${recovery.preResetRate.toFixed(2)}ν/s pre-reset)`;
+  // A zero-claim first bank (the prompt door) has no reward to journey
+  // with — the honest door read, never topped up (issue #490).
+  if (recovery.claim === 0) {
+    return `recovery — none: the door banked 0 Arete (${recovery.preResetRate.toFixed(2)}ν/s pre-reset)`;
+  }
+  return `recovery — bank ${recovery.claim}, purchase ${mark(recovery.lastingPurchase)}` +
+    `${recovery.lastingPurchaseLabel ? ` (${recovery.lastingPurchaseLabel})` : ""}, ` +
+    `blade ${mark(recovery.weaponDeployed)}, column ${mark(recovery.columnDeployed)}, ` +
+    `rate ${mark(recovery.productionRegained)}, door ${mark(recovery.eligibilityReached)}, ` +
+    `frontier ${mark(recovery.frontierAdvanced)} (${recovery.preResetRate.toFixed(2)}ν/s pre-reset)`;
 }
 
 // ── The checkpoint presets (issue #471, parent #465) ──

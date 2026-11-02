@@ -75,7 +75,7 @@ function reveal(state: GameState, key: string, hp?: number): void {
 }
 
 describe("the frontier entitlement curve (issue #425)", () => {
-  it("pays nothing below the 1T entry and jumps to the starter grant at it", () => {
+  it("pays nothing below the World entry and jumps to the starter grant at it", () => {
     expect(frontierEntitlement(BALANCE.world.entryNous - 1)).toBe(0);
     expect(frontierEntitlement(BALANCE.world.entryNous)).toBe(2);
     expect(frontierEntitlement(0)).toBe(0);
@@ -1151,8 +1151,12 @@ describe("shipped tuning defaults are hypothesis knobs — calibration unavailab
   // records no current-engine calibration and no playtest export). Every
   // figure here is pinned as a hypothesis: changing one must fail this
   // suite and force a fresh citation, never silently claim recoverability.
-  it("the frontier curve ships the log candidate from findings.md, flagged", () => {
-    expect(BALANCE.world.entryNous).toBe(1e12);
+  it("the frontier curve ships the calibrated entry and findings.md's log shape, flagged", () => {
+    // The entry depth is the first-worthwhile-prestige calibration (issue
+    // #490): a short hold past the horizon banks the first positive claim
+    // around ten credited hours. The slope stays findings.md's flagged
+    // hypothesis — its recoverability re-derivation has not landed.
+    expect(BALANCE.world.entryNous).toBe(2e7);
     expect(BALANCE.world.claimBase).toBe(2);
     expect(BALANCE.world.claimDepthSlope).toBe(2);
   });
@@ -1160,7 +1164,9 @@ describe("shipped tuning defaults are hypothesis knobs — calibration unavailab
   it("the encounter table ships findings.md's nine fixed enemies, flagged", () => {
     expect(WORLD_ENEMIES).toHaveLength(9);
     WORLD_ENEMIES.forEach((def, i) => {
-      expect(def.threshold).toBe(1e12 * 10 ** i);
+      // Thresholds ride the calibrated entry depth (issue #490): the
+      // ladder scales with the World's own opening.
+      expect(def.threshold).toBe(BALANCE.world.entryNous * 10 ** i);
       expect(def.maxHp).toBeCloseTo(12 * 1.5 ** i, 9);
       expect(def.bonus).toBe(0.08);
     });

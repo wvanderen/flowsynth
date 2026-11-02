@@ -594,7 +594,7 @@ The greatest era-earned entitlement whose Arete has already been claimed through
 _Avoid_: high-water mark (the implementation reads entitlement, never depth), banked depth
 
 **Frontier entitlement**:
-The cumulative curve E assigning total Arete entitlement to era-earned nous depth: zero below the World's 1T entry, then the log candidate's `2 + 2·log₁₀(x)` over x = era-earned ÷ 1T — the discontinuous entry grant paying exactly one weapon plus one Column. Fractionally valued, always; increasing with diminishing marginal reward per nous. A hypothesis knob citing `research/world-frontier/findings.md`, pending the re-derivation.
+The cumulative curve E assigning total Arete entitlement to era-earned nous depth: zero below the World entry depth (`BALANCE.world.entryNous`, calibrated at 20M era-earned — issue #490 — a short hold past the prestige horizon so the first positive claim banks around ten credited hours), then the log candidate's `2 + 2·log₁₀(x)` over x = era-earned ÷ entry — the discontinuous entry grant paying exactly one weapon plus one Column. Fractionally valued, always; increasing with diminishing marginal reward per nous. The entry depth is the first-worthwhile-prestige calibration; the slope remains a hypothesis knob citing `research/world-frontier/findings.md`, pending the re-derivation.
 _Avoid_: claim formula (the pending difference is the claim; the curve is the entitlement), accumulator claim (the retired prestige-count sense)
 
 **Pending claim**:

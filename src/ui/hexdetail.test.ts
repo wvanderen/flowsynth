@@ -46,7 +46,7 @@ const worldTip = (): string | null => {
   return document.getElementById(id)?.textContent ?? section("world").querySelector(".inst-tip-body")?.textContent ?? null;
 };
 
-// An era past the World reveal: the entry owned, era-earned past the 1T
+// An era past the World reveal: the entry owned, era-earned past the World
 // threshold, a placed weapon and a placed Column over the opening cells,
 // a tray twin of each, and Arete for the World section.
 function seedEra(): void {

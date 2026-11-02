@@ -2831,7 +2831,8 @@ export class App {
   }
 
   // Dev grant of the World era (issue #426 hands-on): the reveal past the
-  // 1T entry, a granted weapon and a purchased Column on the board, a tray
+  // World entry depth, a granted weapon and a purchased Column on the
+  // board, a tray
   // twin, and Arete for the World section. The retired mutator-era grant's
   // slot/mutator rig retired with the Mutator Grid's surfaces; the
   // development board keeps a hand onto the second face.
