@@ -43,12 +43,21 @@ export const LONG_BUDGET_DAYS = 16;
 export const TARGET_WINDOW_MIN_HOURS = 8;
 export const TARGET_WINDOW_MAX_HOURS = 12;
 
-// The worthwhile-prestige target classification for one credited-hour
-// figure — or the explicit unreached class.
-export type WorthwhileClass = "in-window" | "under" | "over" | "unreached";
+// The worthwhile-prestige target classification for one run — the timing
+// class for a run that demonstrated the whole journey (bank, lasting
+// purchase, deployed starter rig, both recoveries, frontier advance), the
+// explicit bank-only class for a run that banked a positive claim without
+// demonstrating the journey (eligibility alone is never a worthwhile
+// prestige, and a bare bank is not one either), and the explicit
+// unreached class.
+export type WorthwhileClass = "in-window" | "under" | "over" | "bank-only" | "unreached";
 
-export function classifyHours(hours: number | null): WorthwhileClass {
+export function classifyRun(record: PlaythroughRecord): WorthwhileClass {
+  const hours = worthwhileHoursOf(record);
   if (hours === null) return "unreached";
+  // The journey bar: the runner's own completion — every mark carried,
+  // the frontier advance last. A bank without it is recorded bank-only.
+  if (record.recovery?.frontierAdvanced == null) return "bank-only";
   if (hours < TARGET_WINDOW_MIN_HOURS) return "under";
   if (hours > TARGET_WINDOW_MAX_HOURS) return "over";
   return "in-window";
@@ -105,7 +114,7 @@ export function worthwhileHoursOf(record: PlaythroughRecord): number | null {
   if (first === undefined || first <= 0) return null;
   const prestige = record.events.find((event) => event.kind === "prestige" && event.ok);
   if (!prestige) return null;
-  return Math.round((prestige.credited / 3600) * 100) / 100;
+  return hoursOf(prestige.credited);
 }
 
 // The credited hours of the first eligibility door (the prompt policy's
@@ -113,7 +122,7 @@ export function worthwhileHoursOf(record: PlaythroughRecord): number | null {
 export function eligibilityHoursOf(record: PlaythroughRecord): number | null {
   const prestige = record.events.find((event) => event.kind === "prestige" && event.ok);
   if (!prestige) return null;
-  return Math.round((prestige.credited / 3600) * 100) / 100;
+  return hoursOf(prestige.credited);
 }
 
 function hoursOf(seconds: number | null): number | null {
@@ -168,6 +177,10 @@ export interface FirstPrestigeRow {
     readonly meanCredited: number;
     readonly longest: readonly DecisionGap[];
   };
+  // The currency-integrity read (issue #490's fourth criterion): the
+  // state's whole intake against the run's own earned ν — a hidden grant,
+  // missing currency, or fabricated reward fails this row.
+  readonly noGrant: boolean;
   readonly discoveries: readonly string[];
   readonly defeats: readonly string[];
   readonly bottleneck: string | null;
@@ -178,6 +191,10 @@ export function firstPrestigeRow(seed: number, sessionMinutes: number, record: P
   const gaps = openingDecisionGaps(record);
   const sorted = [...gaps].sort((a, b) => b.credited - a.credited);
   const recovery = record.recovery;
+  const worthwhileHours = worthwhileHoursOf(record);
+  // The no-grants tolerance: the same relative read the pushing-fixture
+  // test pins — the summations drift by float rounding alone.
+  const drift = Math.abs(record.state.totalEarned - record.earnedNous);
   return {
     seed,
     sessionMinutes,
@@ -195,8 +212,8 @@ export function firstPrestigeRow(seed: number, sessionMinutes: number, record: P
     claims: record.claims,
     claimTarget: record.claimTarget,
     eligibilityHours: eligibilityHoursOf(record),
-    worthwhileHours: worthwhileHoursOf(record),
-    worthwhileClass: classifyHours(worthwhileHoursOf(record)),
+    worthwhileHours,
+    worthwhileClass: classifyRun(record),
     journey: recovery === null ? null : {
       claim: recovery.claim,
       lastingPurchaseLabel: recovery.lastingPurchaseLabel,
@@ -214,6 +231,7 @@ export function firstPrestigeRow(seed: number, sessionMinutes: number, record: P
       meanCredited: gaps.length > 0 ? Math.round(gaps.reduce((sum, gap) => sum + gap.credited, 0) / gaps.length) : 0,
       longest: sorted.slice(0, 5),
     },
+    noGrant: drift < Math.max(1, record.earnedNous) * 1e-12,
     discoveries: record.worldDiscoveries,
     defeats: record.worldDefeats,
     bottleneck: record.bottleneck,
@@ -240,17 +258,17 @@ export function firstPrestigeRecipe(seed: number, sessionMinutes: number, policy
 export interface DistributionSummary {
   readonly sessionMinutes: number;
   readonly policy: string;
-  readonly hoursBySeed: readonly { readonly seed: number; readonly hours: number | null; readonly worthWhileClass: WorthwhileClass }[];
+  readonly hoursBySeed: readonly { readonly seed: number; readonly hours: number | null; readonly worthwhileClass: WorthwhileClass }[];
   readonly counts: { readonly inWindow: number; readonly under: number; readonly over: number; readonly unreached: number };
 }
 
 export function distributionOf(rows: readonly FirstPrestigeRow[]): DistributionSummary {
-  const hoursBySeed = rows.map((row) => ({ seed: row.seed, hours: row.worthwhileHours, worthWhileClass: row.worthwhileClass }));
-  const counts = { inWindow: 0, under: 0, over: 0, unreached: 0 };
+  const hoursBySeed = rows.map((row) => ({ seed: row.seed, hours: row.worthwhileHours, worthwhileClass: row.worthwhileClass }));
+  const counts = { inWindow: 0, under: 0, over: 0, bankOnly: 0, unreached: 0 };
   const keyOf: Record<WorthwhileClass, keyof typeof counts> = {
-    "in-window": "inWindow", under: "under", over: "over", unreached: "unreached",
+    "in-window": "inWindow", under: "under", over: "over", "bank-only": "bankOnly", unreached: "unreached",
   };
-  for (const entry of hoursBySeed) counts[keyOf[entry.worthWhileClass]]++;
+  for (const entry of hoursBySeed) counts[keyOf[entry.worthwhileClass]]++;
   return {
     sessionMinutes: rows[0]?.sessionMinutes ?? 0,
     policy: rows[0]?.policy ?? "",

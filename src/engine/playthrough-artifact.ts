@@ -126,7 +126,7 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
     !Object.values(spent.hone).every(item => typeof item === "number" && Number.isFinite(item))) return "Arete spending";
   const recovery = record.recovery;
   if (recovery !== null && (!isRecord(recovery) || !finiteFields(recovery, ["preResetRate", "claim"]) ||
-    typeof recovery.lastingPurchaseLabel !== "string" && recovery.lastingPurchaseLabel !== null ||
+    (typeof recovery.lastingPurchaseLabel !== "string" && recovery.lastingPurchaseLabel !== null) ||
     ![recovery.lastingPurchase, recovery.weaponDeployed, recovery.columnDeployed, recovery.productionRegained,
       recovery.eligibilityReached, recovery.frontierAdvanced].every(item =>
         item === null || (isRecord(item) && finiteFields(item, ["elapsed", "credited"]))))) return "recovery record";

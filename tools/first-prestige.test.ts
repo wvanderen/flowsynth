@@ -8,7 +8,7 @@ import {
   LONG_SESSION_MINUTES,
   TARGET_WINDOW_MAX_HOURS,
   TARGET_WINDOW_MIN_HOURS,
-  classifyHours,
+  classifyRun,
   firstPrestigeRecipe,
   firstPrestigeReport,
   firstPrestigeRow,
@@ -49,13 +49,29 @@ describe("the declared evaluation matrix", () => {
     expect(firstPrestigeRecipe(468, LONG_SESSION_MINUTES, "pushing").budgetDays).toBe(LONG_BUDGET_DAYS);
   });
 
-  it("classifies credited hours against the 8–12 window, unreached staying explicit", () => {
-    expect(classifyHours(null)).toBe("unreached");
-    expect(classifyHours(7.9)).toBe("under");
-    expect(classifyHours(8)).toBe("in-window");
-    expect(classifyHours(10)).toBe("in-window");
-    expect(classifyHours(12)).toBe("in-window");
-    expect(classifyHours(12.1)).toBe("over");
+  it("classifies runs against the 8–12 window — a bank without the journey stays bank-only", () => {
+    // A crafted banked-but-unjouried record: the claim is positive, the
+    // journey marks never carried.
+    const bankOnly = { claims: [2], events: [{ kind: "prestige", ok: true, credited: 3600, snapshot: 0 }], recovery: { preResetRate: 1, claim: 2, lastingPurchase: null,
+      lastingPurchaseLabel: null, weaponDeployed: null, columnDeployed: null, productionRegained: null,
+      eligibilityReached: null, frontierAdvanced: null } } as unknown as Parameters<typeof classifyRun>[0];
+    expect(classifyRun(bankOnly)).toBe("bank-only");
+    const unreached = { claims: [0], events: [], recovery: null } as unknown as Parameters<typeof classifyRun>[0];
+    expect(classifyRun(unreached)).toBe("unreached");
+    const journied = (hours: number, frontier: { elapsed: number; credited: number } | null) => ({
+      claims: [2],
+      events: [{ kind: "prestige", ok: true, credited: hours * 3600, snapshot: 0 }],
+      recovery: { preResetRate: 1, claim: 2, lastingPurchase: { elapsed: 0, credited: 0 },
+        lastingPurchaseLabel: "Catalog entry", weaponDeployed: { elapsed: 0, credited: 0 },
+        columnDeployed: { elapsed: 0, credited: 0 }, productionRegained: { elapsed: 0, credited: 0 },
+        eligibilityReached: { elapsed: 0, credited: 0 }, frontierAdvanced: frontier },
+    } as unknown as Parameters<typeof classifyRun>[0]);
+    expect(classifyRun(journied(10, { elapsed: 1, credited: 1 }))).toBe("in-window");
+    expect(classifyRun(journied(7.9, { elapsed: 1, credited: 1 }))).toBe("under");
+    expect(classifyRun(journied(12.1, { elapsed: 1, credited: 1 }))).toBe("over");
+    // The frontier mark is the journey's last: without it the timing
+    // never classifies, whatever the bank's hour.
+    expect(classifyRun(journied(10, null))).toBe("bank-only");
   });
 });
 
@@ -105,6 +121,9 @@ describe("the opening decision-gap read", () => {
     const row = firstPrestigeRow(23, BASELINE_SESSION_MINUTES, record);
     expect(row.worthwhileHours).toBeNull();
     expect(row.worthwhileClass).toBe("unreached");
+    // The currency-integrity read rides every row: the state's whole
+    // intake is what the run earned, never a grant.
+    expect(row.noGrant).toBe(true);
     expect(row.journey).not.toBeNull();
     expect(row.journey!.claim).toBe(0);
     expect(row.eligibilityHours).toBeGreaterThan(0);
@@ -124,22 +143,33 @@ describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_FIRST_
     expect(report.runs).toHaveLength(FIRST_PRESTIGE_SEEDS.length * 2 * 2);
     expect(report.distributions).toHaveLength(4);
     expect(report.source.runnerVersion).toBeGreaterThanOrEqual(11);
-    // Every pushing run names its worthwhile classification; every prompt
-    // run stops at its first bank — the honest zero below the entry depth,
-    // or the positive claim a long session's overshoot earned before the
-    // door check. Either way the row records what the door actually paid.
+    // Every row names its worthwhile classification and carries the
+    // currency-integrity read: the state's whole intake is what the run
+    // earned — no hidden grant, no missing currency. A prompt run stops
+    // at its first bank — the honest zero, or a positive claim a long
+    // session's overshoot earned before the door check — and a prompt
+    // bank is never a worthwhile prestige: the journey never followed.
     for (const row of report.runs) {
+      expect(row.noGrant).toBe(true);
       expect(row.worthwhileClass).toBeTruthy();
       if (row.policy === "prompt") {
         expect(row.stopKind).toBe("prestige");
         expect(row.eligibilityHours).not.toBeNull();
         expect(row.claims).toHaveLength(1);
         if (row.claims[0] === 0) expect(row.worthwhileClass).toBe("unreached");
-        else expect(row.worthwhileClass).toBe(classifyHours(row.worthwhileHours));
+        else expect(row.worthwhileClass).toBe("bank-only");
       }
-      if (row.policy === "pushing" && row.claims.length > 0) {
-        expect(row.journey).not.toBeNull();
-        expect(row.journey!.claim).toBe(row.claims[0]);
+      if (row.policy === "pushing") {
+        if (row.claims.length > 0) {
+          expect(row.journey).not.toBeNull();
+          expect(row.journey!.claim).toBe(row.claims[0]);
+        }
+        if (row.worthwhileClass !== "unreached" && row.worthwhileClass !== "bank-only") {
+          // A timing classification is only honest on a demonstrated
+          // journey — the frontier mark is its last.
+          expect(row.journey!.frontierAdvancedHours).not.toBeNull();
+          expect(row.stopKind).toBe("recovered");
+        }
       }
     }
     const text = JSON.stringify(report, null, 2);
