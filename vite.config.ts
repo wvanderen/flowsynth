@@ -46,9 +46,6 @@ export default defineConfig({
     },
   ],
   test: {
-    // UI files share one thread to bound DOM memory. Each file still gets
-    // an isolated environment; engine files retain the parallel fork pool.
-    poolOptions: { threads: { minThreads: 1, maxThreads: 1 } },
     projects: [
       {
         extends: true,
@@ -68,6 +65,9 @@ export default defineConfig({
           environment: "node",
           pool: "threads",
           isolate: true,
+          // One worker at a time bounds DOM memory (vitest 4 spelling of
+          // the old poolOptions.threads.{min,max}Threads = 1).
+          maxWorkers: 1,
         },
       },
     ],
