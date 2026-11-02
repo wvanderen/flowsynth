@@ -16,13 +16,17 @@ import { deepFreeze, type PlaythroughRecord } from "./playthrough";
 // unsupported versions are rejected with named errors, never silently
 // interpreted (story 32's clarity rule at the file boundary).
 
-// The artifact format's own version. A behavior-affecting change to what
-// an artifact must carry bumps it; older versions read here after that
-// bump are rejected by name until a migration is authored — no silent
-// chain, ADR-0017's boundary pattern. Version 3 adds the
-// worthwhile-prestige journey to the carried recovery ledger and the
-// separate session/management accounting (issue #490); version 2 records
-// predate it and are rejected by name.
+// The format's own version. A behavior-affecting change to what an
+// artifact must carry bumps it; older versions read here after that bump
+// are rejected by name until a migration is authored — no silent chain,
+// ADR-0017's boundary pattern. Version 3 adds the worthwhile-prestige
+// journey to the carried recovery ledger and the separate session/management
+// accounting (issue #490); version 2 records predate it and are rejected
+// by name. The declared era walk (issue #491) is additive inside version
+// 3: its recipes carry the declared count and its walks may halt on the
+// new "eras" terminal — neither changes what a carried artifact must
+// contain, so older version-3 artifacts keep reading exactly as they
+// stand.
 export const PLAYTHROUGH_ARTIFACT_VERSION = 3;
 
 // The format marker, distinct from the ordinary save's `app: "flowsynth"`:
@@ -131,7 +135,7 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
       recovery.eligibilityReached, recovery.frontierAdvanced].every(item =>
         item === null || (isRecord(item) && finiteFields(item, ["elapsed", "credited"]))))) return "recovery record";
   const stop = record.stop as Record<string, unknown>;
-  if (!["prestige", "recovered", "budget", "checkpoint"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
+  if (!["prestige", "recovered", "budget", "checkpoint", "eras"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
   return null;
 }
 

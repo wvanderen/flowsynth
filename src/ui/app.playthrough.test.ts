@@ -84,8 +84,8 @@ describe("the declared recipe", () => {
     expect(typeof recipe.schedule.startAt).toBe("number");
     expect(recipe.budgetDays).toBe(30);
     expect(recipe.overrides).toEqual({});
-    // The policy catalog both policies declare, and the app offers it.
-    expect(app.devPlaythroughPolicies().map((policy) => policy.id)).toEqual(["prompt", "pushing"]);
+    // The policy catalog all four attitudes declare, and the app offers it.
+    expect(app.devPlaythroughPolicies().map((policy) => policy.id)).toEqual(["prompt", "pushing", "combat", "ignoring"]);
   });
 
   it("rejects unsupported input by name instead of running a default", () => {

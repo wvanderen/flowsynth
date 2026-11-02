@@ -17,6 +17,7 @@ import {
   placeModule,
   placeWorldOccupant,
   prestige,
+  retrieveWorldOccupant,
   startBreather,
   startSession,
   upgradeModuleLevels,
@@ -63,6 +64,23 @@ import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, Weapo
 // (issue #472) are declared, validated tuning values — magnitudes only,
 // never new mechanics — confined to the walk's own candidate state; the
 // same declarations serve the terminal command and the visual controls.
+// The banking policies also carry a declared era count (issue #491): a
+// recipe may declare more than one productive era, and the walk then keeps
+// banking at its claim target until that many banks have landed — each
+// banked era's claim advancing the claimed frontier by whole Arete, so the
+// run's frontier strictly grows — instead of closing after the first
+// worthwhile-prestige journey. The declared era count is the terminal, a
+// budget miss the honest incomplete outcome; per-era reading (recovery,
+// purchases, deployments, defeats, and the familiar/new split) derives
+// from the recorded events and trajectory, never a second ledger. The
+// combat-engaging and enemy-ignoring policies share the pushing policy's
+// schedule and purchase rules except where their rules say otherwise: the
+// combat policy orders the weapon's power before the supply line and keeps
+// a blade whose seat touches no living enemy on the fight (retrieval and
+// redeployment are free actions), while the ignoring policy buys no World
+// product and deploys no occupant — discovered enemies stand and the
+// starter weapon waits in the tray, the postponed-combat trade-off the
+// comparison measures.
 // Nothing here grants resources; an exhausted budget is an explicit
 // incomplete result with the last milestone, the bottleneck, and the
 // declined actions' reasons — and a missing recovery measure is an
@@ -78,8 +96,10 @@ import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, Weapo
 // (story 36's foundation). The declared override set (issue #472) rides
 // the recipe, so this bump records the walk's new inputs; the response
 // curve (issue #487) joins them; the worthwhile-prestige journey marks
-// (issue #490) change what the walk measures and when it completes.
-export const PLAYTHROUGH_RUNNER_VERSION = 12;
+// (issue #490) change what the walk measures and when it completes; the
+// declared era count and the combat and ignoring policies (issue #491)
+// extend when the banking walks close.
+export const PLAYTHROUGH_RUNNER_VERSION = 13;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -122,14 +142,59 @@ export const PUSHING_POLICY: PlaythroughPolicy = {
   rules: [
     "Buys exactly what the prompt policy buys, by the same rules, on the same schedule.",
     "Never prestiges at the first eligibility: it pushes until the pending claim reaches its configured target, then banks that claim.",
-    "Once the World is entered — a starter weapon granted, a claimed frontier, or a discovered enemy — it pays the Catalog entry first, then Charge Columns while affordable, then Hone ranks cheapest-first while affordable.",
+    "Once the World is entered — a starter weapon granted, a claimed frontier, or a discovered enemy — it pays the Catalog entry first, then Charge Columns while affordable, then Hone ranks cheapest-first while affordable — the supply line before the weapon's power.",
     "Each weapon deploys beside the fight: an owned cell next to a living discovered enemy, preferring a cell that also touches a placed Column, nearest the enemy first; while no enemy lives, the weapon waits in the tray.",
     "Each Column deploys on the charge line: an owned cell next to a deployed generator, preferring a cell that also touches a placed weapon.",
     "Ends every session at its planned target and writes a practice note.",
   ],
 };
 
-export const PLAYTHROUGH_POLICIES: readonly PlaythroughPolicy[] = [PROMPT_POLICY, PUSHING_POLICY];
+export const COMBAT_POLICY: PlaythroughPolicy = {
+  id: "combat",
+  name: "Combat-engaging",
+  rules: [
+    "Buys exactly what the prompt policy buys, by the same rules, on the same schedule.",
+    "Never prestiges at the first eligibility: it pushes until the pending claim reaches its configured target, then banks that claim.",
+    "Once the World is entered it pays the Catalog entry first, then Hone ranks cheapest-first across weapon types while affordable, then Charge Columns while affordable — the weapon's power before the supply line.",
+    "Each weapon deploys beside the fight: an owned cell next to a living discovered enemy, preferring a cell that also touches a placed Column, nearest the enemy first; while no enemy lives, the weapon waits in the tray.",
+    "A deployed weapon whose seat touches no living discovered enemy returns to the tray and redeploys beside the nearest one — retrieval and relocation are free, so the blade stays on the fight as the era reveals deeper enemies.",
+    "Each Column deploys on the charge line: an owned cell next to a deployed generator, preferring a cell that also touches a placed weapon.",
+    "Ends every session at its planned target and writes a practice note.",
+  ],
+};
+
+export const IGNORING_POLICY: PlaythroughPolicy = {
+  id: "ignoring",
+  name: "Enemy-ignoring",
+  rules: [
+    "Buys exactly what the prompt policy buys, by the same rules, on the same schedule — the Catalog entry and the capacity offerings included.",
+    "Never prestiges at the first eligibility: it pushes until the pending claim reaches its configured target, then banks that claim.",
+    "Buys no World product and deploys no World occupant: discovered enemies stand at their deepening bands, the starter weapon waits in the tray, and no Hone rank is ever bought — the postponed-combat trade-off.",
+    "Ends every session at its planned target and writes a practice note.",
+  ],
+};
+
+export const PLAYTHROUGH_POLICIES: readonly PlaythroughPolicy[] = [
+  PROMPT_POLICY, PUSHING_POLICY, COMBAT_POLICY, IGNORING_POLICY,
+];
+
+// The banking policies: every non-prompt policy holds the door for its
+// claim target and walks the declared era count (issue #491).
+export function isBankingPolicy(id: string): boolean {
+  return id !== PROMPT_POLICY.id;
+}
+
+// The World spending order a banking policy walks (issue #491): the
+// pushing policy builds the supply line first, the combat policy the
+// weapon's power first, and the ignoring policy buys no World product at
+// all. The prompt policy keeps its own discovered-enemy gate and order.
+type WorldSpendingOrder = "columns-first" | "hone-first" | "none";
+
+function worldSpendingOrderOf(id: string): WorldSpendingOrder {
+  if (id === COMBAT_POLICY.id) return "hone-first";
+  if (id === IGNORING_POLICY.id) return "none";
+  return "columns-first";
+}
 
 function policyOf(id: string): PlaythroughPolicy {
   return PLAYTHROUGH_POLICIES.find((policy) => policy.id === id) ?? PROMPT_POLICY;
@@ -207,6 +272,13 @@ export interface PlaythroughRecipe {
   // The simulated time budget in days: an unsuccessful policy terminates
   // here with an explicit incomplete result (story 21).
   readonly budgetDays: number;
+  // The declared era count (issue #491): how many claims a banking policy
+  // banks before the walk closes — each banked era advancing the claimed
+  // frontier by whole Arete, so the run's frontier strictly grows. The
+  // default 1 is the single-era walk the pushing policy has always walked:
+  // the worthwhile-prestige journey's own close. A prompt recipe carries 1
+  // and only 1 — the prompt door completes the walk at its first bank.
+  readonly eras: number;
   // The declared response-curve candidate (issue #487): which supported
   // curve the walk's Chorus/Exciter response grants read — shipped by
   // default, never a silent shipped read for a misspelled candidate. The
@@ -241,6 +313,7 @@ export function defaultPlaythroughRecipe(): PlaythroughRecipe {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
     budgetDays: 30,
+    eras: 1,
     responseCurve: "shipped",
     overrides: {},
   };
@@ -253,6 +326,9 @@ export interface PlaythroughRecipeInput {
   claimTarget?: number;
   schedule?: Partial<PlaythroughSchedule>;
   budgetDays?: number;
+  // The declared era count (issue #491): whole 1–8. A banking policy's
+  // walk banks exactly this many claims before closing.
+  eras?: number;
   responseCurve?: ResponseCurveId;
   overrides?: Record<string, number>;
 }
@@ -261,7 +337,7 @@ export interface PlaythroughRecipeInput {
 // an explicit input, validated with named failures. Unknown input keys are
 // rejected — an unsupported request never quietly runs a default.
 export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): PlaythroughRecipe {
-  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays", "responseCurve", "overrides"]);
+  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays", "eras", "responseCurve", "overrides"]);
   for (const key of Object.keys(input)) {
     if (!known.has(key)) throw new Error(`Playthrough recipe: unsupported input "${key}".`);
   }
@@ -273,6 +349,7 @@ export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): Pl
     ...(input.policyId !== undefined ? { policyId: input.policyId } : {}),
     ...(input.claimTarget !== undefined ? { claimTarget: input.claimTarget } : {}),
     ...(input.budgetDays !== undefined ? { budgetDays: input.budgetDays } : {}),
+    ...(input.eras !== undefined ? { eras: input.eras } : {}),
     ...(input.responseCurve !== undefined ? { responseCurve: input.responseCurve } : {}),
     ...(input.overrides !== undefined ? { overrides: input.overrides } : {}),
     schedule: { ...base.schedule, ...(input.schedule ?? {}) },
@@ -314,6 +391,15 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
   }
   if (!Number.isInteger(recipe.claimTarget) || recipe.claimTarget < 1 || recipe.claimTarget > 36) {
     fail(`claimTarget must be a whole number 1–36 — found ${recipe.claimTarget}.`);
+  }
+  // The declared era count (issue #491): a banking walk banks exactly this
+  // many claims; the prompt door completes the walk at its first bank, so
+  // any other count has no reading there.
+  if (!Number.isInteger(recipe.eras) || recipe.eras < 1 || recipe.eras > 8) {
+    fail(`eras must be a whole number 1–8 — found ${recipe.eras}.`);
+  }
+  if (recipe.eras > 1 && !isBankingPolicy(recipe.policyId)) {
+    fail(`eras ${recipe.eras} needs a banking policy — the prompt policy's walk completes at its first bank; the suite offers ${PLAYTHROUGH_POLICIES.filter((policy) => isBankingPolicy(policy.id)).map((policy) => policy.id).join(", ")}.`);
   }
   if (!Number.isInteger(recipe.seed) || recipe.seed < 0 || recipe.seed > 0xffffffff) {
     fail(`seed must be a whole number 0–4294967295 — found ${recipe.seed}.`);
@@ -644,8 +730,10 @@ export interface PlaythroughRecord {
   // frontier advanced past the claimed frontier. "budget" is the explicit
   // incomplete outcome (story 21). "checkpoint" is a declared progression
   // checkpoint's stop (issue #471) — the walk halted exactly where its
-  // preset's situation lives.
-  readonly stop: { readonly kind: "prestige" | "recovered" | "budget" | "checkpoint"; readonly reason: string };
+  // preset's situation lives. "eras" is a declared multi-era walk's own
+  // terminal (issue #491): the declared era count banked, each claim
+  // advancing the claimed frontier.
+  readonly stop: { readonly kind: "prestige" | "recovered" | "budget" | "checkpoint" | "eras"; readonly reason: string };
   // The pushing policy's configured pending-claim target, carried beside
   // the actual claims so intent and outcome stay distinguishable
   // (stories 19–20).
@@ -695,7 +783,14 @@ export interface PlaythroughRecord {
 interface RunContext {
   schedule: PlaythroughSchedule;
   claimTarget: number;
-  pushing: boolean;
+  // The declared era count (issue #491): the banking walk's terminal.
+  eras: number;
+  // Any banking policy (issue #491): holds the door for its claim target
+  // and closes at its declared era count.
+  banking: boolean;
+  // The policy's World spending order (issue #491): which lasting product
+  // the era's Arete reaches first, or no World product at all.
+  worldSpending: WorldSpendingOrder;
   // The declared overrides (issue #472): the run's own tuning, read
   // nowhere else — the candidate state carries them, nothing shared does.
   openingGrant: number | undefined;
@@ -1099,46 +1194,64 @@ function manage(ctx: RunContext, state: GameState): void {
   // bank; the door, once entered, stays entered. Then every occupant
   // deploys through the real placement action: weapons beside the fight,
   // Columns on the charge line. The placement leg keeps its readable
-  // preference order, never an optimizer.
+  // preference order, never an optimizer. The spending order is the
+  // policy's own (issue #491): the supply line before the weapon's power,
+  // the power before the supply line, or no World product at all.
   const worldEntered = state.world.starterWeaponGranted || state.world.frontier > 0 ||
     Object.values(state.world.enemies).some((enemy) => enemy.discovered);
-  if (worldEntered) {
-    for (;;) {
-      if (state.arete < columnCost(state.world.columns.length)) {
-        decline(ctx, "World Column", "Not enough Arete.");
-        break;
-      }
-      const result = buyChargeColumn(state);
-      if (result.ok) {
-        ctx.areteSpent.columns++;
-        noteLastingPurchase(ctx, "a Charge Column");
-      }
-      record(ctx, { kind: "world", label: "World Column", ...outcome(result) });
-      if (!result.ok) {
-        decline(ctx, "World Column", result.reason ?? "declined");
-        break;
-      }
-    }
-    for (const weapon of state.world.weapons) {
+  if (ctx.worldSpending !== "none" && worldEntered) {
+    const buyColumns = () => {
       for (;;) {
-        const price = honeCostOf(state, weapon.type);
-        if (price === null || state.arete < price) {
-          decline(ctx, `Hone rank ${weapon.type}`, price === null ? "at its Hone ceiling" : "Not enough Arete.");
+        if (state.arete < columnCost(state.world.columns.length)) {
+          decline(ctx, "World Column", "Not enough Arete.");
           break;
         }
-        const result = buyHoneRank(state, weapon.type);
+        const result = buyChargeColumn(state);
         if (result.ok) {
-          ctx.areteSpent.hone[weapon.type] = (ctx.areteSpent.hone[weapon.type] ?? 0) + 1;
-          noteLastingPurchase(ctx, `a Hone rank (${weapon.type})`);
+          ctx.areteSpent.columns++;
+          noteLastingPurchase(ctx, "a Charge Column");
         }
-        record(ctx, { kind: "world", label: `Hone rank — ${weapon.type}`, ...outcome(result) });
+        record(ctx, { kind: "world", label: "World Column", ...outcome(result) });
         if (!result.ok) {
-          decline(ctx, `Hone rank ${weapon.type}`, result.reason ?? "declined");
+          decline(ctx, "World Column", result.reason ?? "declined");
           break;
         }
       }
+    };
+    const buyHone = () => {
+      for (const weapon of state.world.weapons) {
+        for (;;) {
+          const price = honeCostOf(state, weapon.type);
+          if (price === null || state.arete < price) {
+            decline(ctx, `Hone rank ${weapon.type}`, price === null ? "at its Hone ceiling" : "Not enough Arete.");
+            break;
+          }
+          const result = buyHoneRank(state, weapon.type);
+          if (result.ok) {
+            ctx.areteSpent.hone[weapon.type] = (ctx.areteSpent.hone[weapon.type] ?? 0) + 1;
+            noteLastingPurchase(ctx, `a Hone rank (${weapon.type})`);
+          }
+          record(ctx, { kind: "world", label: `Hone rank — ${weapon.type}`, ...outcome(result) });
+          if (!result.ok) {
+            decline(ctx, `Hone rank ${weapon.type}`, result.reason ?? "declined");
+            break;
+          }
+        }
+      }
+    };
+    if (ctx.worldSpending === "hone-first") {
+      buyHone();
+      buyColumns();
+    } else {
+      buyColumns();
+      buyHone();
     }
     placeWorldOccupants(ctx, state);
+    // The combat policy keeps the blade on the fight (issue #491): after
+    // the placement leg, a weapon whose seat touches no living discovered
+    // enemy relocates to the best living one. Retrieval is free; the seat
+    // is confirmed before the blade leaves the old one.
+    if (ctx.worldSpending === "hone-first") relocateIdleWeapons(ctx, state);
   }
   recordDiscoveries(ctx, state);
   settleRecovery(ctx, state);
@@ -1152,22 +1265,53 @@ function manage(ctx: RunContext, state: GameState): void {
 // generator, preferring one beside a placed weapon. Readable preference
 // ranks, board order breaking ties; the engine's own placement action
 // gates every seat (enemy-reserved cells refuse, one occupant per cell).
-function placeWorldOccupants(ctx: RunContext, state: GameState): void {
-  const living = WORLD_ENEMIES.filter((def) => {
+// The discovered, undefeated enemies — the fight the placement and
+// relocation legs read. Authored roster order.
+function livingEnemiesOf(state: GameState) {
+  return WORLD_ENEMIES.filter((def) => {
     const live = state.world.enemies[def.key];
     return live?.discovered === true && !enemyDefeated(state, def.key);
   });
-  const distanceToFight = (pos: Hex): number =>
-    living.length > 0 ? Math.min(...living.map((def) => hexDistance(pos, def.pos))) : Number.POSITIVE_INFINITY;
-  const free = (): Hex[] =>
-    state.cells.filter((cell) => !enemyDefAt(cell) && !worldOccupantAt(state, cell));
-  // Rank keys compare lexicographically; lower is the earlier preference.
-  const rankLess = (a: readonly number[], b: readonly number[]): boolean => {
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return a[i]! < b[i]!;
-    }
-    return false;
-  };
+}
+
+// The owned cells a World occupant could take: not enemy-reserved, not
+// already carrying a World occupant.
+function freeWorldSeats(state: GameState): Hex[] {
+  return state.cells.filter((cell) => !enemyDefAt(cell) && !worldOccupantAt(state, cell));
+}
+
+// A weapon seat's preference rank: nearest the fight, then a cell that
+// also touches a placed Column, then board order.
+function weaponSeatRank(state: GameState, living: ReturnType<typeof livingEnemiesOf>, pos: Hex): readonly number[] {
+  const distanceToFight = living.length > 0
+    ? Math.min(...living.map((def) => hexDistance(pos, def.pos)))
+    : Number.POSITIVE_INFINITY;
+  return [
+    distanceToFight,
+    state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1,
+    pos.q, pos.r,
+  ];
+}
+
+// A Charge Column seat's preference rank: a cell that also touches a
+// placed weapon, then board order.
+function columnSeatRank(state: GameState, pos: Hex): readonly number[] {
+  return [
+    state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos)) ? 0 : 1,
+    pos.q, pos.r,
+  ];
+}
+
+// Rank keys compare lexicographically; lower is the earlier preference.
+function rankLess(a: readonly number[], b: readonly number[]): boolean {
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return a[i]! < b[i]!;
+  }
+  return false;
+}
+
+function placeWorldOccupants(ctx: RunContext, state: GameState): void {
+  const living = livingEnemiesOf(state);
   // Both occupants share selection and action handling; each rule supplies
   // eligible seats and its own readable preference ranks.
   const deploy = (
@@ -1201,12 +1345,8 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
     if (!deploy(
       weapon.id,
       `the ${weapon.type}`,
-      free().filter((pos) => living.some((def) => adjacent(pos, def.pos))),
-      (pos) => [
-        distanceToFight(pos),
-        state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1,
-        pos.q, pos.r,
-      ],
+      freeWorldSeats(state).filter((pos) => living.some((def) => adjacent(pos, def.pos))),
+      (pos) => weaponSeatRank(state, living, pos),
       "no free World cell beside a living discovered enemy",
       "weapon",
     )) break;
@@ -1216,15 +1356,41 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
     if (!deploy(
       column.id,
       "a Charge Column",
-      free().filter((pos) => state.modules.some((module) => module.pos !== null &&
+      freeWorldSeats(state).filter((pos) => state.modules.some((module) => module.pos !== null &&
         CATEGORY_OF[module.type] === "generator" && adjacent(pos, module.pos))),
-      (pos) => [
-        state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos)) ? 0 : 1,
-        pos.q, pos.r,
-      ],
+      (pos) => columnSeatRank(state, pos),
       "no free World cell beside a deployed generator",
       "column",
     )) break;
+  }
+}
+
+// The combat policy's blade-keeping leg (issue #491): a deployed weapon
+// whose seat touches no living discovered enemy — its fight is won or has
+// moved deeper — returns to the tray and redeploys beside the nearest
+// living one. Retrieval and relocation are free; the seat is confirmed
+// before the blade leaves the old one, so a seatless break strands
+// nothing: the blade waits where it stands until the next break.
+function relocateIdleWeapons(ctx: RunContext, state: GameState): void {
+  const living = livingEnemiesOf(state);
+  for (const weapon of state.world.weapons) {
+    const pos = weapon.pos;
+    if (pos === null) continue;
+    if (living.some((def) => adjacent(pos, def.pos))) continue;
+    const candidates = freeWorldSeats(state).filter((seat) => living.some((def) => adjacent(seat, def.pos)));
+    let best: Hex | undefined;
+    for (const seat of candidates) {
+      if (!best || rankLess(weaponSeatRank(state, living, seat), weaponSeatRank(state, living, best))) best = seat;
+    }
+    if (!best) continue;
+    retrieveWorldOccupant(state, weapon.id);
+    const result = placeWorldOccupant(state, weapon.id, best);
+    record(ctx, {
+      kind: "world",
+      label: `Placed the ${weapon.type} at ${best.q},${best.r} — relocated onto the fight`,
+      ...outcome(result),
+    });
+    if (!result.ok) decline(ctx, "weapon relocation", result.reason ?? "declined");
   }
 }
 
@@ -1386,9 +1552,14 @@ function* runSession(ctx: RunContext, state: GameState, day: number, session: nu
 // is the journey's last mark, and once it lands the walk banks no more —
 // it observes the recovered era, it does not farm it.
 function tryPrestige(ctx: RunContext, state: GameState): boolean {
-  if (ctx.pushing) {
-    if (ctx.frontierAdvanced !== null) return false;
+  if (ctx.banking) {
     if (pendingClaimOf(state, ctx.claimBase) < ctx.claimTarget) return false;
+    // The banking close (issue #491): a multi-era walk banks until its
+    // declared era count stands, each claim advancing the claimed
+    // frontier. The single-era walk keeps the pinned cap — once the
+    // journey's frontier advance has landed, the recovered era is
+    // observed, never farmed.
+    if (ctx.claims.length >= ctx.eras && (ctx.eras > 1 || ctx.frontierAdvanced !== null)) return false;
   } else if (!horizonReached(state)) {
     return false;
   }
@@ -1512,7 +1683,9 @@ function* walkPlaythrough(
   const ctx: RunContext = {
     schedule: recipe.schedule,
     claimTarget: recipe.claimTarget,
-    pushing: policy.id === PUSHING_POLICY.id,
+    eras: recipe.eras,
+    banking: isBankingPolicy(policy.id),
+    worldSpending: worldSpendingOrderOf(policy.id),
     openingGrant: recipe.overrides.openingGrant,
     claimBase: recipe.overrides.claimBase,
     rng: seededRng(recipe.seed),
@@ -1551,8 +1724,10 @@ function* walkPlaythrough(
   let checkpointStop: PlaythroughRecord["stop"] | null = null;
   let stop: PlaythroughRecord["stop"] = {
     kind: "budget",
-    reason: ctx.pushing
-      ? `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the worthwhile-prestige journey behind it.`
+    reason: ctx.banking
+      ? ctx.eras > 1
+        ? `The ${recipe.budgetDays}-day budget ended before the declared ${ctx.eras} eras — ${ctx.claims.length} banked.`
+        : `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the worthwhile-prestige journey behind it.`
       : `The ${recipe.budgetDays}-day budget ended before the first prestige.`,
   };
   // A checkpoint's halt (issue #471): the declared moment named, the day
@@ -1592,7 +1767,7 @@ function* walkPlaythrough(
       haltAt("approaching-prestige");
       return true;
     }
-    if (tryPrestige(ctx, state) && !ctx.pushing) {
+    if (tryPrestige(ctx, state) && !ctx.banking) {
       complete = true;
       stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
       return true;
@@ -1616,26 +1791,37 @@ function* walkPlaythrough(
       // Recovery may open events after runSession closed its final sample.
       // Bind them now, before stopping or advancing to another stamp.
       if (ctx.openEvents.length > 0) snap(ctx, state);
-      // The pushing run's completion (stories 24–25, issue #490): the
+      // The banking walk's completion (stories 24–25, issue #490; the
+      // declared era count, issue #491): the single-era walk closes on the
       // worthwhile-prestige journey's marks all carried — the bank, the
       // lasting purchase, the deployed starter rig, both recovery
       // measures, and the frontier advanced past the claimed frontier.
       // Whatever a mark lacks is the ledger's explicit null; there is no
-      // pacing threshold to miss. A checkpoint walk has its own declared
-      // terminal (issue #471): it rides past this stop so a recovery
-      // milestone that lands before its situation — the two thresholds
-      // can finish neck and neck — never steals the walk's end.
-      if (ctx.pushing && checkpoint === null && journeyComplete(ctx)) {
-        complete = true;
-        stop = { kind: "recovered", reason: `The worthwhile-prestige journey completed at day ${days} — the frontier advanced to ${state.world.frontier} Arete.` };
-        break day;
+      // pacing threshold to miss. A declared multi-era walk closes on its
+      // declared era count — every banked era's claim advanced the
+      // claimed frontier. A checkpoint walk has its own declared terminal
+      // (issue #471): it rides past this stop so a recovery milestone that
+      // lands before its situation — the two thresholds can finish neck
+      // and neck — never steals the walk's end.
+      if (ctx.banking && checkpoint === null) {
+        const erasDone = ctx.claims.length >= ctx.eras;
+        const settled = ctx.eras > 1 || journeyComplete(ctx);
+        if (erasDone && settled) {
+          complete = true;
+          stop = ctx.eras > 1
+            ? { kind: "eras", reason: `The declared ${ctx.eras}-era walk completed at day ${days} — the claimed frontier stands at ${state.world.frontier} Arete.` }
+            : { kind: "recovered", reason: `The worthwhile-prestige journey completed at day ${days} — the frontier advanced to ${state.world.frontier} Arete.` };
+          break day;
+        }
       }
     }
   }
-  // A pushing run that banked but never finished the journey names that
+  // A banking run that banked but never reached its terminal names that
   // stop exactly, with the missing journey marks left explicitly null.
-  if (!complete && ctx.pushing && ctx.claims.length > 0 && !checkpointStop) {
-    stop = { kind: "budget", reason: `The ${days}-day budget ended inside the worthwhile-prestige journey.` };
+  if (!complete && ctx.banking && ctx.claims.length > 0 && !checkpointStop) {
+    stop = ctx.eras > 1
+      ? { kind: "budget", reason: `The ${days}-day budget ended inside the declared ${ctx.eras} eras — ${ctx.claims.length} banked.` }
+      : { kind: "budget", reason: `The ${days}-day budget ended inside the worthwhile-prestige journey.` };
   }
   const lastSessionLabel = [...ctx.events].reverse().find((event) => event.kind === "session")?.label ?? null;
   // A checkpoint stop names its moment; nothing was blocked, so no
@@ -1703,7 +1889,7 @@ export function playthroughNote(record: PlaythroughRecord): string {
   const credited = Math.round(record.creditedSeconds / 60);
   const elapsed = Math.round(record.elapsedSeconds / 60);
   const claims = record.claims.length > 0 ? record.claims.join(", ") : "none";
-  const target = record.policy.id === PUSHING_POLICY.id ? `/${record.claimTarget}` : "";
+  const target = record.policy.id === PROMPT_POLICY.id ? "" : `/${record.claimTarget}`;
   const mark = record.stop.kind === "checkpoint" ? "◆" : record.complete ? "✓" : "✗";
   const parts = [
     `${record.policy.name} ${mark} ` +
