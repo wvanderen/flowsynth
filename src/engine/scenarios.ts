@@ -224,11 +224,15 @@ function assertAfterFirstBank(state: GameState, claimTarget: number): void {
   const fail = failFor("After first bank");
   if (state.mode !== "upgrade") fail(`expected upgrade mode — found ${state.mode}.`);
   if (state.prestiges !== 1) fail(`expected exactly the first prestige — found ${state.prestiges}.`);
-  if (state.arete !== claimTarget) {
-    fail(`expected the earned ${claimTarget}-Arete claim unspent — found ${state.arete}.`);
+  // The walk banks at the first break the pending claim reaches its
+  // configured target; a long session can carry the era measure deeper
+  // before that break, so the unspent bank reads at least the target —
+  // never less, never granted.
+  if (state.arete < claimTarget) {
+    fail(`expected the earned claim (at least ${claimTarget} Arete) unspent — found ${state.arete}.`);
   }
-  if (state.world.frontier !== claimTarget) {
-    fail(`expected the frontier advanced by the claim — found ${state.world.frontier}.`);
+  if (state.world.frontier !== state.arete) {
+    fail(`expected the frontier advanced by exactly the banked claim — found ${state.world.frontier} against ${state.arete} Arete.`);
   }
   const blade = state.world.weapons.length === 1 ? state.world.weapons[0] : null;
   if (!state.world.starterWeaponGranted || !blade || blade.pos !== null) {

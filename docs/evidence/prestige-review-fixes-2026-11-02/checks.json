@@ -1,0 +1,480 @@
+{
+  "sourceCommit": "4c89e4f1620dc82bb23913ef515095fd5b0899fd",
+  "node": "22.23.4",
+  "typecheck": "passed",
+  "fullSuite": {
+    "command": "npm test -- --reporter=json --outputFile=/tmp/pr501-fixed-tests.json",
+    "reportedSuccess": true,
+    "files": [
+      {
+        "name": "src/ui/app.board.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.capacity.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.catalog.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.dev.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.draft.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.inventory.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.lifecycle.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.merge-cap.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.modal-focus.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.notes.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.phone.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.playthrough.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.savefailure.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.savetriggers.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.scenarios.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.scrap.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.session.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.special-draft.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.terminal.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/app.workflow.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/chordlayer.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/face.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/focus.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/forge.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/format.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/hexdetail.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/hexflows.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/icons.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/instrument.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/leads.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/ledger.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/library.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/profile.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/shared-save.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/signals.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/svg.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/theme.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/workbench.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/ui/world.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/balance-growth.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/build-purity.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/dev-provenance.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/evidence-healthcheck.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/evidence-preflight.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/first-prestige.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/response-adoption.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "tools/response-comparison.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/accumulator.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/achievements.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/actions.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/allocation-memo.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/allocation-stress.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/allocation.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/apps.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/arc.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/boosters.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/breather-specialists.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/breather-tuning.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/breather.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/builds.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/bulk.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/capacity-calibration.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/capacity-comparisons.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/capacity.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/catalog.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/chargewindow.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/chords.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/chorus-sideband.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/classes.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/combine.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/draft.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/exciter.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/focus-scenario.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/formula.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/generators.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/goals.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/habits.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/inventory.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/lattice.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/library.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/live-allocation.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/merge-all.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/merge-cap.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/meters.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/mutator.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/notes.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/onboarding.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/opening.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/placement-preview.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/playthrough-artifact.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/prestige.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/profiles.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/progression-presets.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/purchase-integrity.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/records.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/rolls.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/roster.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/save-integrity.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/save.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/scrap.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/session.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/special-draft.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/temporal.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/trust.test.ts",
+        "status": "passed"
+      },
+      {
+        "name": "src/engine/world.test.ts",
+        "status": "passed"
+      }
+    ],
+    "failedTests": 0,
+    "exit": "terminated after successful complete JSON report; close-hang"
+  },
+  "regressions": [
+    {
+      "name": "the declared evaluation matrix declares the eight seeds, two session shapes, two policies, and the target window",
+      "status": "passed"
+    },
+    {
+      "name": "the declared evaluation matrix classifies runs against the 8\u201312 window \u2014 a bank without the journey stays bank-only",
+      "status": "passed"
+    },
+    {
+      "name": "first eligibility versus banking records the pushing door before its later bank, even when the budget ends before banking",
+      "status": "passed"
+    },
+    {
+      "name": "the opening decision-gap read reads only the ok decisions the rule names, and never session or upgrade stamps",
+      "status": "passed"
+    },
+    {
+      "name": "the opening decision-gap read measures credited gaps between consecutive opening decisions",
+      "status": "passed"
+    },
+    {
+      "name": "the opening decision-gap read keeps a zero-claim eligibility run out of the worthwhile classes",
+      "status": "passed"
+    },
+    {
+      "name": "the recorded evaluation report walks the full declared matrix \u2014 eight seeds, both session shapes, both policies \u2014 and records it",
+      "status": "skipped"
+    }
+  ],
+  "matrix": {
+    "runs": 32,
+    "seedProcesses": 8,
+    "result": "passed",
+    "assertions": [
+      "all rows present",
+      "noGrant true for every row",
+      "eligibility agrees across policies",
+      "prompt outcomes honest",
+      "classified journeys complete with every mark"
+    ],
+    "runnerVersion": 12
+  }
+}

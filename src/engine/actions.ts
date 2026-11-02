@@ -1161,7 +1161,8 @@ export function buyMergeCapIncrease(state: GameState): ActionResult {
 // prestige splittings telescope and leaves the sub-unit fraction pending
 // rather than lost. A zero-claim reset is valid — nothing banks, the
 // frontier stays.
-// The first World-eligible claim (era score past the 1T entry) grants the
+// The first World-eligible claim (era score past the World's entry depth,
+// BALANCE.world.entryNous) grants the
 // starter Charge Blade outright — a granted copy, not a roll, not a
 // purchase; no other claim or prestige ever grants a weapon.
 // The reset boundary: owned modules (types, rarity, secondaries),

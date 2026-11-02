@@ -40,8 +40,8 @@ describe("the harmonic-capacity release calibration (#262)", () => {
     expect(ratio).toBeGreaterThan(0.35);
     expect(ratio).toBeLessThan(0.7);
     // The claims ride the frontier curve now (issue #425): these
-    // at-threshold resets sit far below the World's 1T entry, so they bank
-    // zero — valid zero-claim resets. No other code path mints any.
+    // at-threshold resets sit far below the World's entry depth, so they
+    // bank zero — valid zero-claim resets. No other code path mints any.
     expect(rec.claims).toEqual([0, 0]);
     // Both first-era rungs sold inside the era, each opening a real
     // optimization opportunity on the board the player actually held.

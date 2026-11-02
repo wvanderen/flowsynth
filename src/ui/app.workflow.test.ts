@@ -263,14 +263,16 @@ describe("the walked preset rides the same workflow", () => {
     // each its own identified record. The prompt policy meets the
     // preset's open door at its first between-sessions moment and banks
     // the honest zero-Arete claim; the pushing policy holds the door and
-    // plays real sessions instead.
+    // plays real sessions instead — a target the curve cannot pay in one
+    // day from the door's depth, whatever the host calendar's pacing, so
+    // the hold (never a bank) is the demonstration.
     const promptContinuation = fresh.devRunPlaythrough({ scenarioId: "approaching-prestige", budgetDays: 1 });
     expect(promptContinuation.runId.startsWith("approaching-prestige-s468-")).toBe(true);
     expect(promptContinuation.complete).toBe(true);
     expect(promptContinuation.stop.kind).toBe("prestige");
     expect(promptContinuation.claims).toEqual([0]);
     expect(promptContinuation.state.prestiges).toBe(1);
-    const continuation = fresh.devRunPlaythrough({ scenarioId: "approaching-prestige", policyId: "pushing", claimTarget: 2, budgetDays: 1 });
+    const continuation = fresh.devRunPlaythrough({ scenarioId: "approaching-prestige", policyId: "pushing", claimTarget: 4, budgetDays: 1 });
     expect(continuation.runId.startsWith("approaching-prestige-s468-")).toBe(true);
     expect(continuation.claims).toEqual([]);
     expect(continuation.state.sessionRecords.length).toBeGreaterThan(walked.state.sessionRecords.length);

@@ -19,8 +19,11 @@ import { deepFreeze, type PlaythroughRecord } from "./playthrough";
 // The artifact format's own version. A behavior-affecting change to what
 // an artifact must carry bumps it; older versions read here after that
 // bump are rejected by name until a migration is authored — no silent
-// chain, ADR-0017's boundary pattern.
-export const PLAYTHROUGH_ARTIFACT_VERSION = 2;
+// chain, ADR-0017's boundary pattern. Version 3 adds the
+// worthwhile-prestige journey to the carried recovery ledger and the
+// separate session/management accounting (issue #490); version 2 records
+// predate it and are rejected by name.
+export const PLAYTHROUGH_ARTIFACT_VERSION = 3;
 
 // The format marker, distinct from the ordinary save's `app: "flowsynth"`:
 // a save pasted into the run importer is not an artifact, and an artifact
@@ -114,7 +117,7 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
     !isRecord(schedule) || !finiteFields(schedule, ["sessionsPerDay", "sessionMinutes", "breatherMinutes", "goalMinutes", "startAt"]) ||
     typeof schedule.habitName !== "string" || typeof schedule.timeZone !== "string") return "recipe";
   if (record.kind !== "representative" || !isRecord(record.policy) || typeof record.policy.id !== "string" || typeof record.policy.name !== "string" ||
-    !finiteFields(record, ["claimTarget", "days", "elapsedSeconds", "creditedSeconds", "breatherSeconds", "earnedNous"]) ||
+    !finiteFields(record, ["claimTarget", "days", "elapsedSeconds", "creditedSeconds", "breatherSeconds", "manageBreaks", "earnedNous", "sessionNous", "breatherNous"]) ||
     !Array.isArray(record.claims) || !record.claims.every(item => typeof item === "number" && Number.isFinite(item)) ||
     !strings(record.achievements) || !strings(record.worldDiscoveries) || !strings(record.worldDefeats) ||
     ![record.lastMilestone, record.bottleneck].every(item => item === null || typeof item === "string")) return "run summary";
@@ -122,8 +125,11 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
   if (!isRecord(spent) || !finiteFields(spent, ["entry", "discounts", "ceilings", "columns"]) || !isRecord(spent.hone) ||
     !Object.values(spent.hone).every(item => typeof item === "number" && Number.isFinite(item))) return "Arete spending";
   const recovery = record.recovery;
-  if (recovery !== null && (!isRecord(recovery) || !finiteFields(recovery, ["preResetRate"]) ||
-    ![recovery.productionRegained, recovery.eligibilityReached].every(item => item === null || (isRecord(item) && finiteFields(item, ["elapsed", "credited"]))))) return "recovery record";
+  if (recovery !== null && (!isRecord(recovery) || !finiteFields(recovery, ["preResetRate", "claim"]) ||
+    (typeof recovery.lastingPurchaseLabel !== "string" && recovery.lastingPurchaseLabel !== null) ||
+    ![recovery.lastingPurchase, recovery.weaponDeployed, recovery.columnDeployed, recovery.productionRegained,
+      recovery.eligibilityReached, recovery.frontierAdvanced].every(item =>
+        item === null || (isRecord(item) && finiteFields(item, ["elapsed", "credited"]))))) return "recovery record";
   const stop = record.stop as Record<string, unknown>;
   if (!["prestige", "recovered", "budget", "checkpoint"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
   return null;

@@ -325,8 +325,8 @@ describe("the ladder on the save surface (#259)", () => {
     // load. The documented consequence is that crossing, never a wipe:
     // the board, its inventory, the tray, and the life record all
     // survive into the next era, and the claim reads the frontier curve
-    // (issue #425) — 1e23 era-earned is eleven decades past the 1T entry,
-    // so E = 2 + 2·11 = 24 banks whole.
+    // (issue #425) — 1e23 era-earned is ~15.7 decades past the calibrated
+    // entry depth (issue #490), so E = 2 + 2·15.7 banks 33 whole.
     const state = fresh();
     affordable(state);
     state.eraEarned = 1e23;
@@ -337,7 +337,7 @@ describe("the ladder on the save surface (#259)", () => {
     const sessionsBefore = loaded.sessionsCompleted;
     const cellsBefore = loaded.cells.length;
     expect(prestige(loaded).ok).toBe(true);
-    expect(loaded.arete).toBe(24);
+    expect(loaded.arete).toBe(33);
     expect(loaded.eraEarned).toBe(0);
     expect(horizonReached(loaded)).toBe(false);
     expect(loaded.cells.length).toBe(cellsBefore);
@@ -361,9 +361,9 @@ describe("the ladder on the save surface (#259)", () => {
       give(state, "additive", hex(5, 0));
       return deserialize(serialize(state)).state!;
     };
-    // Below the 1T entry the curve pays nothing: the zero-claim reset
-    // stays valid, and the board survives it.
-    const shallow = build(7e9);
+    // Below the World entry depth the curve pays nothing: the zero-claim
+    // reset stays valid, and the board survives it.
+    const shallow = build(1e7);
     expect(horizonReached(shallow)).toBe(true);
     expect(prestige(shallow).ok).toBe(true);
     expect(shallow.arete).toBe(0);
@@ -371,15 +371,15 @@ describe("the ladder on the save surface (#259)", () => {
     expect(shallow.cells.some((c) => c.q === 5 && c.r === 0)).toBe(true);
     expect(shallow.modules.some((m) => m.type === "additive" && m.pos !== null)).toBe(true);
     expect(shallow.achievements["first-light"]).toBe(1);
-    // The old 1e23 bank: eleven decades past entry, E = 24.
+    // The old 1e23 bank: ~15.7 decades past the calibrated entry, E = 33.
     const legacy = build(1e23);
     expect(prestige(legacy).ok).toBe(true);
-    expect(legacy.arete).toBe(24);
-    // Half a decade floors: E = 2 + 2·11.5 = 25 — the same whole-step
+    expect(legacy.arete).toBe(33);
+    // Half a decade floors: E = 2 + 2·16.2 = 34 — the same whole-step
     // frontier advance every claim takes.
     const half = build(1e23 * Math.sqrt(10));
     expect(prestige(half).ok).toBe(true);
-    expect(half.arete).toBe(25);
+    expect(half.arete).toBe(34);
   });
 
   it("corrupt counts degrade to zero, over-purchased rungs clamp at the ceiling, and over-owned offerings clamp at the ladder", () => {
