@@ -1,9 +1,16 @@
 # The first worthwhile prestige — the journey note (issue #490)
 
-Captured from the verified checkout at commit `315f5d25` (branch
+Captured from the verified checkout at commit `a3980fc` (branch
 `t3/issue-490`), served by `npm run dev` at `http://localhost:5173/`. The
 capture preflight (`provenance.json` beside this README) verified the
 served worktree, commit, and clean source before any capture attempt.
+The demonstration was run twice: once at `315f5d25` and re-run in full at
+`a3980fc` (the review-fix revision — the intervening source change
+touches the evaluation harness and the artifact validator, not the
+demonstrated surface; the preflight was re-accepted and the import
+demonstration repeated at the new commit, marks asserted at both
+viewports again). The PNG-capture unavailability below applies to both
+passes.
 
 ## Changed surfaces
 
@@ -122,6 +129,7 @@ evidence.
 
 ## Suite
 
-`npm run check` and the full `npm test` at `315f5d25` — recorded in the
-PR's verification section, including the environment-blocked files'
-targeted reruns per the checks policy.
+`npm run check` and the full suite at the final revision `a3980fc` —
+recorded in the PR's verification section (the full suite green via the
+JSON-reporter run; the default reporter's dropped-results behavior on
+this machine recorded there with the main-branch comparison).
