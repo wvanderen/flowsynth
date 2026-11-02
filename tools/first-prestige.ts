@@ -55,9 +55,13 @@ export type WorthwhileClass = "in-window" | "under" | "over" | "bank-only" | "un
 export function classifyRun(record: PlaythroughRecord): WorthwhileClass {
   const hours = worthwhileHoursOf(record);
   if (hours === null) return "unreached";
-  // The journey bar: the runner's own completion — every mark carried,
-  // the frontier advance last. A bank without it is recorded bank-only.
-  if (record.recovery?.frontierAdvanced == null) return "bank-only";
+  // A frontier bank can precede deployment or recovery. Require the
+  // runner's completion and every journey mark rather than one milestone.
+  const recovery = record.recovery;
+  if (!record.complete || record.stop.kind !== "recovered" || recovery === null ||
+    [recovery.lastingPurchase, recovery.weaponDeployed, recovery.columnDeployed,
+      recovery.productionRegained, recovery.eligibilityReached, recovery.frontierAdvanced]
+      .some(mark => mark == null)) return "bank-only";
   if (hours < TARGET_WINDOW_MIN_HOURS) return "under";
   if (hours > TARGET_WINDOW_MAX_HOURS) return "over";
   return "in-window";
@@ -120,9 +124,9 @@ export function worthwhileHoursOf(record: PlaythroughRecord): number | null {
 // The credited hours of the first eligibility door (the prompt policy's
 // zero-claim bank, or the pushing run's hold before its first claim).
 export function eligibilityHoursOf(record: PlaythroughRecord): number | null {
-  const prestige = record.events.find((event) => event.kind === "prestige" && event.ok);
-  if (!prestige) return null;
-  return hoursOf(prestige.credited);
+  const eligibility = record.events.find((event) => event.kind === "milestone" &&
+    event.ok && event.label === "First prestige eligibility reached");
+  return hoursOf(eligibility?.credited ?? null);
 }
 
 function hoursOf(seconds: number | null): number | null {

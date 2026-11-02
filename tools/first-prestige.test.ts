@@ -9,6 +9,7 @@ import {
   TARGET_WINDOW_MAX_HOURS,
   TARGET_WINDOW_MIN_HOURS,
   classifyRun,
+  eligibilityHoursOf,
   firstPrestigeRecipe,
   firstPrestigeReport,
   firstPrestigeRow,
@@ -59,6 +60,7 @@ describe("the declared evaluation matrix", () => {
     const unreached = { claims: [0], events: [], recovery: null } as unknown as Parameters<typeof classifyRun>[0];
     expect(classifyRun(unreached)).toBe("unreached");
     const journied = (hours: number, frontier: { elapsed: number; credited: number } | null) => ({
+      complete: true, stop: { kind: "recovered" },
       claims: [2],
       events: [{ kind: "prestige", ok: true, credited: hours * 3600, snapshot: 0 }],
       recovery: { preResetRate: 1, claim: 2, lastingPurchase: { elapsed: 0, credited: 0 },
@@ -72,6 +74,24 @@ describe("the declared evaluation matrix", () => {
     // The frontier mark is the journey's last: without it the timing
     // never classifies, whatever the bank's hour.
     expect(classifyRun(journied(10, null))).toBe("bank-only");
+    for (const mark of ["lastingPurchase", "weaponDeployed", "columnDeployed", "productionRegained", "eligibilityReached"] as const) {
+      const incomplete = journied(10, { elapsed: 1, credited: 1 });
+      expect(classifyRun({ ...incomplete, recovery: { ...incomplete.recovery!, [mark]: null } })).toBe("bank-only");
+    }
+    const incomplete = journied(10, { elapsed: 1, credited: 1 });
+    expect(classifyRun({ ...incomplete, complete: false, stop: { kind: "budget", reason: "unfinished" } })).toBe("bank-only");
+  });
+});
+
+describe("first eligibility versus banking", () => {
+  it("records the pushing door before its later bank, even when the budget ends before banking", { timeout: 300_000 }, () => {
+    const prompt = runPlaythrough(firstPrestigeRecipe(23, 25, "prompt"));
+    const pushing = runPlaythrough({ ...firstPrestigeRecipe(23, 25, "pushing"), budgetDays: 9 });
+    expect(eligibilityHoursOf(pushing)).toBe(eligibilityHoursOf(prompt));
+    expect(eligibilityHoursOf(pushing)).toBeLessThan(worthwhileHoursOf(pushing)!);
+    const held = runPlaythrough({ ...firstPrestigeRecipe(23, 25, "pushing"), claimTarget: 36, budgetDays: 9 });
+    expect(held.claims).toEqual([]);
+    expect(eligibilityHoursOf(held)).toBe(eligibilityHoursOf(prompt));
   });
 });
 

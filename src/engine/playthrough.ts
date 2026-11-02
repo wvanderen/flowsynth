@@ -79,7 +79,7 @@ import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, Weapo
 // the recipe, so this bump records the walk's new inputs; the response
 // curve (issue #487) joins them; the worthwhile-prestige journey marks
 // (issue #490) change what the walk measures and when it completes.
-export const PLAYTHROUGH_RUNNER_VERSION = 11;
+export const PLAYTHROUGH_RUNNER_VERSION = 12;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -1581,7 +1581,13 @@ function* walkPlaythrough(
     }
     return null;
   };
+  let firstEligibilityRecorded = false;
   const stopBetweenSessions = (): boolean => {
+    if (!firstEligibilityRecorded && ctx.claims.length === 0 && horizonReached(state)) {
+      firstEligibilityRecorded = true;
+      record(ctx, { kind: "milestone", label: "First prestige eligibility reached", ok: true, milestone: true });
+      snap(ctx, state);
+    }
     if (doorOpen()) {
       haltAt("approaching-prestige");
       return true;
