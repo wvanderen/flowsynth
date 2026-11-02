@@ -1,0 +1,18 @@
+{
+  "event": {
+    "at": 520200,
+    "credited": 19500,
+    "kind": "milestone",
+    "label": "First prestige eligibility reached",
+    "ok": true,
+    "milestone": true,
+    "snapshot": 39
+  },
+  "claims": [],
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 12,
+    "runnerVersion": 12,
+    "engineSource": "cb688fb4"
+  }
+}

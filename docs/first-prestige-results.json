@@ -21,7 +21,7 @@
   "source": {
     "game": "flowsynth",
     "saveVersion": 12,
-    "runnerVersion": 11,
+    "runnerVersion": 12,
     "engineSource": "cb688fb4"
   },
   "runs": [
@@ -88,7 +88,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 9d · 450m credited of 11580m elapsed · claim 0 Arete · seed 42 · fresh-start · fresh-start-s42-0b45088e · no Arete spent · recovery — none: the door banked 0 Arete (3752.08ν/s pre-reset) · First prestige at day 9."
+      "note": "Prompt prestige ✓ 9d · 450m credited of 11580m elapsed · claim 0 Arete · seed 42 · fresh-start · fresh-start-s42-40c3f713 · no Arete spent · recovery — none: the door banked 0 Arete (3752.08ν/s pre-reset) · First prestige at day 9."
     },
     {
       "seed": 468,
@@ -153,7 +153,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 9d · 450m credited of 11580m elapsed · claim 0 Arete · seed 468 · fresh-start · fresh-start-s468-f5dae8d6 · no Arete spent · recovery — none: the door banked 0 Arete (2188.56ν/s pre-reset) · First prestige at day 9."
+      "note": "Prompt prestige ✓ 9d · 450m credited of 11580m elapsed · claim 0 Arete · seed 468 · fresh-start · fresh-start-s468-af32d7db · no Arete spent · recovery — none: the door banked 0 Arete (2188.56ν/s pre-reset) · First prestige at day 9."
     },
     {
       "seed": 157,
@@ -218,7 +218,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 17d · 850m credited of 23100m elapsed · claim 0 Arete · seed 157 · fresh-start · fresh-start-s157-aa852957 · no Arete spent · recovery — none: the door banked 0 Arete (629.36ν/s pre-reset) · First prestige at day 17."
+      "note": "Prompt prestige ✓ 17d · 850m credited of 23100m elapsed · claim 0 Arete · seed 157 · fresh-start · fresh-start-s157-138d6452 · no Arete spent · recovery — none: the door banked 0 Arete (629.36ν/s pre-reset) · First prestige at day 17."
     },
     {
       "seed": 2026,
@@ -283,7 +283,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 15d · 750m credited of 20220m elapsed · claim 0 Arete · seed 2026 · fresh-start · fresh-start-s2026-9398f2e6 · no Arete spent · recovery — none: the door banked 0 Arete (470.03ν/s pre-reset) · First prestige at day 15."
+      "note": "Prompt prestige ✓ 15d · 750m credited of 20220m elapsed · claim 0 Arete · seed 2026 · fresh-start · fresh-start-s2026-b681c1eb · no Arete spent · recovery — none: the door banked 0 Arete (470.03ν/s pre-reset) · First prestige at day 15."
     },
     {
       "seed": 7,
@@ -348,7 +348,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 15d · 750m credited of 20220m elapsed · claim 0 Arete · seed 7 · fresh-start · fresh-start-s7-f7301301 · no Arete spent · recovery — none: the door banked 0 Arete (934.69ν/s pre-reset) · First prestige at day 15."
+      "note": "Prompt prestige ✓ 15d · 750m credited of 20220m elapsed · claim 0 Arete · seed 7 · fresh-start · fresh-start-s7-8ab21440 · no Arete spent · recovery — none: the door banked 0 Arete (934.69ν/s pre-reset) · First prestige at day 15."
     },
     {
       "seed": 99,
@@ -413,7 +413,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 20d · 1000m credited of 27420m elapsed · claim 0 Arete · seed 99 · fresh-start · fresh-start-s99-1ebe0542 · no Arete spent · recovery — none: the door banked 0 Arete (454.88ν/s pre-reset) · First prestige at day 20."
+      "note": "Prompt prestige ✓ 20d · 1000m credited of 27420m elapsed · claim 0 Arete · seed 99 · fresh-start · fresh-start-s99-2512ba47 · no Arete spent · recovery — none: the door banked 0 Arete (454.88ν/s pre-reset) · First prestige at day 20."
     },
     {
       "seed": 11,
@@ -478,7 +478,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 12d · 575m credited of 15870m elapsed · claim 0 Arete · seed 11 · fresh-start · fresh-start-s11-f8c35362 · no Arete spent · recovery — none: the door banked 0 Arete (765.29ν/s pre-reset) · First prestige at day 12."
+      "note": "Prompt prestige ✓ 12d · 575m credited of 15870m elapsed · claim 0 Arete · seed 11 · fresh-start · fresh-start-s11-5ba77067 · no Arete spent · recovery — none: the door banked 0 Arete (765.29ν/s pre-reset) · First prestige at day 12."
     },
     {
       "seed": 23,
@@ -543,7 +543,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 7d · 325m credited of 8670m elapsed · claim 0 Arete · seed 23 · fresh-start · fresh-start-s23-a99a42df · no Arete spent · recovery — none: the door banked 0 Arete (2000.96ν/s pre-reset) · First prestige at day 7."
+      "note": "Prompt prestige ✓ 7d · 325m credited of 8670m elapsed · claim 0 Arete · seed 23 · fresh-start · fresh-start-s23-1a7d89da · no Arete spent · recovery — none: the door banked 0 Arete (2000.96ν/s pre-reset) · First prestige at day 7."
     },
     {
       "seed": 42,
@@ -564,7 +564,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 7.92,
+      "eligibilityHours": 7.5,
       "worthwhileHours": 7.92,
       "worthwhileClass": "under",
       "journey": {
@@ -614,7 +614,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 15d · 725m credited of 20190m elapsed · claim 2, 2/2 Arete · seed 42 · fresh-start · fresh-start-s42-f3ebe68e · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/150m, column 0.0d/0m, rate 2.0d/125m, door 2.0d/125m, frontier 5.0d/250m (5097.01ν/s pre-reset) · The worthwhile-prestige journey completed at day 15 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 15d · 725m credited of 20190m elapsed · claim 2, 2/2 Arete · seed 42 · fresh-start · fresh-start-s42-296ad513 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/150m, column 0.0d/0m, rate 2.0d/125m, door 2.0d/125m, frontier 5.0d/250m (5097.01ν/s pre-reset) · The worthwhile-prestige journey completed at day 15 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 468,
@@ -635,7 +635,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 8.33,
+      "eligibilityHours": 7.5,
       "worthwhileHours": 8.33,
       "worthwhileClass": "in-window",
       "journey": {
@@ -685,7 +685,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 18d · 875m credited of 24510m elapsed · claim 2, 2/2 Arete · seed 468 · fresh-start · fresh-start-s468-5cd4b296 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/225m, column 0.0d/0m, rate 3.0d/150m, door 4.0d/175m, frontier 8.0d/375m (2441.99ν/s pre-reset) · The worthwhile-prestige journey completed at day 18 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 18d · 875m credited of 24510m elapsed · claim 2, 2/2 Arete · seed 468 · fresh-start · fresh-start-s468-e8f8549b · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/225m, column 0.0d/0m, rate 3.0d/150m, door 4.0d/175m, frontier 8.0d/375m (2441.99ν/s pre-reset) · The worthwhile-prestige journey completed at day 18 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 157,
@@ -705,7 +705,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 17.08,
+      "eligibilityHours": 14.17,
       "worthwhileHours": 17.08,
       "worthwhileClass": "bank-only",
       "journey": {
@@ -752,7 +752,7 @@
       ],
       "defeats": [],
       "bottleneck": "The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy.",
-      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 157 · fresh-start · fresh-start-s157-e106d52d · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (1140.26ν/s pre-reset) · Poly Expander 2 — 16.71ν/s → 32.29ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
+      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 157 · fresh-start · fresh-start-s157-b865908c · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (1140.26ν/s pre-reset) · Poly Expander 2 — 16.71ν/s → 32.29ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
     },
     {
       "seed": 2026,
@@ -772,7 +772,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 16.25,
+      "eligibilityHours": 12.5,
       "worthwhileHours": 16.25,
       "worthwhileClass": "bank-only",
       "journey": {
@@ -819,7 +819,7 @@
       ],
       "defeats": [],
       "bottleneck": "The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy.",
-      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 2026 · fresh-start · fresh-start-s2026-844d35a6 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (749.92ν/s pre-reset) · Poly Expander 2 — 17.49ν/s → 27.97ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
+      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 2026 · fresh-start · fresh-start-s2026-4a1a1aab · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (749.92ν/s pre-reset) · Poly Expander 2 — 17.49ν/s → 27.97ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
     },
     {
       "seed": 7,
@@ -840,7 +840,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 14.17,
+      "eligibilityHours": 12.5,
       "worthwhileHours": 14.17,
       "worthwhileClass": "over",
       "journey": {
@@ -890,7 +890,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 30d · 1500m credited of 41820m elapsed · claim 2, 2/2 Arete · seed 7 · fresh-start · fresh-start-s7-9b24c827 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 7.0d/325m, column 0.0d/0m, rate 6.0d/300m, door 4.0d/200m, frontier 13.0d/650m (1835.92ν/s pre-reset) · The worthwhile-prestige journey completed at day 30 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 30d · 1500m credited of 41820m elapsed · claim 2, 2/2 Arete · seed 7 · fresh-start · fresh-start-s7-c174bc22 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 7.0d/325m, column 0.0d/0m, rate 6.0d/300m, door 4.0d/200m, frontier 13.0d/650m (1835.92ν/s pre-reset) · The worthwhile-prestige journey completed at day 30 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 99,
@@ -910,7 +910,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 21.67,
+      "eligibilityHours": 16.67,
       "worthwhileHours": 21.67,
       "worthwhileClass": "bank-only",
       "journey": {
@@ -957,7 +957,7 @@
       ],
       "defeats": [],
       "bottleneck": "The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy.",
-      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 99 · fresh-start · fresh-start-s99-a4f80e9a · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (572.15ν/s pre-reset) · Poly Expander 2 — 23.07ν/s → 35.27ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
+      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 99 · fresh-start · fresh-start-s99-fb016e9f · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (572.15ν/s pre-reset) · Poly Expander 2 — 23.07ν/s → 35.27ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
     },
     {
       "seed": 11,
@@ -977,7 +977,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 12.5,
+      "eligibilityHours": 9.58,
       "worthwhileHours": 12.5,
       "worthwhileClass": "bank-only",
       "journey": {
@@ -1024,7 +1024,7 @@
       ],
       "defeats": [],
       "bottleneck": "The 30-day budget ended inside the worthwhile-prestige journey. Last decline — Hone rank chargeBlade — Not enough Arete..",
-      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 11 · fresh-start · fresh-start-s11-9099613a · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 11.0d/525m, column 0.0d/0m, rate 8.0d/375m, door 8.0d/400m, frontier unreached (724.67ν/s pre-reset) · Recovery — next prestige eligibility reached · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — Hone rank chargeBlade — Not enough Arete.."
+      "note": "Pushing ✗ 30d · 1500m credited of 41820m elapsed · claim 2/2 Arete · seed 11 · fresh-start · fresh-start-s11-7c4e7abf · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 11.0d/525m, column 0.0d/0m, rate 8.0d/375m, door 8.0d/400m, frontier unreached (724.67ν/s pre-reset) · Recovery — next prestige eligibility reached · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — Hone rank chargeBlade — Not enough Arete.."
     },
     {
       "seed": 23,
@@ -1045,7 +1045,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 6.25,
+      "eligibilityHours": 5.42,
       "worthwhileHours": 6.25,
       "worthwhileClass": "under",
       "journey": {
@@ -1095,7 +1095,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 13d · 650m credited of 17340m elapsed · claim 2, 2/2 Arete · seed 23 · fresh-start · fresh-start-s23-f13dadf5 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/175m, column 0.0d/0m, rate 2.0d/125m, door 3.0d/150m, frontier 5.0d/275m (4969.29ν/s pre-reset) · The worthwhile-prestige journey completed at day 13 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 13d · 650m credited of 17340m elapsed · claim 2, 2/2 Arete · seed 23 · fresh-start · fresh-start-s23-a5d0baf4 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/175m, column 0.0d/0m, rate 2.0d/125m, door 3.0d/150m, frontier 5.0d/275m (4969.29ν/s pre-reset) · The worthwhile-prestige journey completed at day 13 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 42,
@@ -1160,7 +1160,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 9d · 1020m credited of 11585m elapsed · claim 0 Arete · seed 42 · fresh-start · fresh-start-s42-597368fb · no Arete spent · recovery — none: the door banked 0 Arete (623.93ν/s pre-reset) · First prestige at day 9."
+      "note": "Prompt prestige ✓ 9d · 1020m credited of 11585m elapsed · claim 0 Arete · seed 42 · fresh-start · fresh-start-s42-1de827f6 · no Arete spent · recovery — none: the door banked 0 Arete (623.93ν/s pre-reset) · First prestige at day 9."
     },
     {
       "seed": 468,
@@ -1225,7 +1225,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 5d · 600m credited of 5890m elapsed · claim 0 Arete · seed 468 · fresh-start · fresh-start-s468-a53f3bc3 · no Arete spent · recovery — none: the door banked 0 Arete (2822.29ν/s pre-reset) · First prestige at day 5."
+      "note": "Prompt prestige ✓ 5d · 600m credited of 5890m elapsed · claim 0 Arete · seed 468 · fresh-start · fresh-start-s468-ec153bfe · no Arete spent · recovery — none: the door banked 0 Arete (2822.29ν/s pre-reset) · First prestige at day 5."
     },
     {
       "seed": 157,
@@ -1290,7 +1290,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 16d · 1920m credited of 21730m elapsed · claim 0 Arete · seed 157 · fresh-start · fresh-start-s157-864de27e · no Arete spent · recovery — none: the door banked 0 Arete (127.63ν/s pre-reset) · First prestige at day 16."
+      "note": "Prompt prestige ✓ 16d · 1920m credited of 21730m elapsed · claim 0 Arete · seed 157 · fresh-start · fresh-start-s157-3f77e243 · no Arete spent · recovery — none: the door banked 0 Arete (127.63ν/s pre-reset) · First prestige at day 16."
     },
     {
       "seed": 2026,
@@ -1355,7 +1355,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 8d · 900m credited of 10145m elapsed · claim 0 Arete · seed 2026 · fresh-start · fresh-start-s2026-439d5b93 · no Arete spent · recovery — none: the door banked 0 Arete (567.19ν/s pre-reset) · First prestige at day 8."
+      "note": "Prompt prestige ✓ 8d · 900m credited of 10145m elapsed · claim 0 Arete · seed 2026 · fresh-start · fresh-start-s2026-0e1e6d0e · no Arete spent · recovery — none: the door banked 0 Arete (567.19ν/s pre-reset) · First prestige at day 8."
     },
     {
       "seed": 7,
@@ -1420,7 +1420,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 8d · 960m credited of 10210m elapsed · claim 0 Arete · seed 7 · fresh-start · fresh-start-s7-5ef8cfc8 · no Arete spent · recovery — none: the door banked 0 Arete (2168.06ν/s pre-reset) · First prestige at day 8."
+      "note": "Prompt prestige ✓ 8d · 960m credited of 10210m elapsed · claim 0 Arete · seed 7 · fresh-start · fresh-start-s7-c9084e49 · no Arete spent · recovery — none: the door banked 0 Arete (2168.06ν/s pre-reset) · First prestige at day 8."
     },
     {
       "seed": 99,
@@ -1485,7 +1485,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 10d · 1140m credited of 13025m elapsed · claim 0 Arete · seed 99 · fresh-start · fresh-start-s99-82c05d97 · no Arete spent · recovery — none: the door banked 0 Arete (806.54ν/s pre-reset) · First prestige at day 10."
+      "note": "Prompt prestige ✓ 10d · 1140m credited of 13025m elapsed · claim 0 Arete · seed 99 · fresh-start · fresh-start-s99-57011492 · no Arete spent · recovery — none: the door banked 0 Arete (806.54ν/s pre-reset) · First prestige at day 10."
     },
     {
       "seed": 11,
@@ -1550,7 +1550,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 11d · 1320m credited of 14530m elapsed · claim 0 Arete · seed 11 · fresh-start · fresh-start-s11-368adb37 · no Arete spent · recovery — none: the door banked 0 Arete (234.91ν/s pre-reset) · First prestige at day 11."
+      "note": "Prompt prestige ✓ 11d · 1320m credited of 14530m elapsed · claim 0 Arete · seed 11 · fresh-start · fresh-start-s11-d130fcb2 · no Arete spent · recovery — none: the door banked 0 Arete (234.91ν/s pre-reset) · First prestige at day 11."
     },
     {
       "seed": 23,
@@ -1617,7 +1617,7 @@
       ],
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 4d · 480m credited of 4450m elapsed · claim 2 Arete · seed 23 · fresh-start · fresh-start-s23-df871be6 · no Arete spent · recovery — bank 2, purchase unreached, blade unreached, column unreached, rate unreached, door unreached, frontier unreached (5140.28ν/s pre-reset) · First prestige at day 4."
+      "note": "Prompt prestige ✓ 4d · 480m credited of 4450m elapsed · claim 2 Arete · seed 23 · fresh-start · fresh-start-s23-026feaeb · no Arete spent · recovery — bank 2, purchase unreached, blade unreached, column unreached, rate unreached, door unreached, frontier unreached (5140.28ν/s pre-reset) · First prestige at day 4."
     },
     {
       "seed": 42,
@@ -1637,7 +1637,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 20,
+      "eligibilityHours": 17,
       "worthwhileHours": 20,
       "worthwhileClass": "bank-only",
       "journey": {
@@ -1686,7 +1686,7 @@
         "w0"
       ],
       "bottleneck": "The 16-day budget ended inside the worthwhile-prestige journey. Last decline — Hone rank chargeBlade — Not enough Arete..",
-      "note": "Pushing ✗ 16d · 1920m credited of 21730m elapsed · claim 2/2 Arete · seed 42 · fresh-start · fresh-start-s42-421a46fb · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/540m, column 0.0d/0m, rate 4.0d/420m, door 4.0d/420m, frontier unreached (1625.47ν/s pre-reset) · World — enemy w0 defeated · The 16-day budget ended inside the worthwhile-prestige journey. Last decline — Hone rank chargeBlade — Not enough Arete.."
+      "note": "Pushing ✗ 16d · 1920m credited of 21730m elapsed · claim 2/2 Arete · seed 42 · fresh-start · fresh-start-s42-068f05f6 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/540m, column 0.0d/0m, rate 4.0d/420m, door 4.0d/420m, frontier unreached (1625.47ν/s pre-reset) · World — enemy w0 defeated · The 16-day budget ended inside the worthwhile-prestige journey. Last decline — Hone rank chargeBlade — Not enough Arete.."
     },
     {
       "seed": 468,
@@ -1707,7 +1707,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 11,
+      "eligibilityHours": 10,
       "worthwhileHours": 11,
       "worthwhileClass": "in-window",
       "journey": {
@@ -1757,7 +1757,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 9d · 1080m credited of 11650m elapsed · claim 2, 2/2 Arete · seed 468 · fresh-start · fresh-start-s468-71747583 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 0.0d/0m, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/420m (3642.00ν/s pre-reset) · The worthwhile-prestige journey completed at day 9 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 9d · 1080m credited of 11650m elapsed · claim 2, 2/2 Arete · seed 468 · fresh-start · fresh-start-s468-0c923ebe · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 0.0d/0m, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/420m (3642.00ν/s pre-reset) · The worthwhile-prestige journey completed at day 9 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 157,
@@ -1775,7 +1775,7 @@
       "manageBreaks": 32,
       "claims": [],
       "claimTarget": 2,
-      "eligibilityHours": null,
+      "eligibilityHours": 32,
       "worthwhileHours": null,
       "worthwhileClass": "unreached",
       "journey": null,
@@ -1810,7 +1810,7 @@
       "discoveries": [],
       "defeats": [],
       "bottleneck": "The 16-day budget ended before the 2-Arete claim or the worthwhile-prestige journey behind it. Last decline — levels on the noteKeyed — Not enough whole nous for even one level..",
-      "note": "Pushing ✗ 16d · 1920m credited of 21730m elapsed · claim none/2 Arete · seed 157 · fresh-start · fresh-start-s157-a879cb8c · no Arete spent · Feat unlocked — eyes-on-the-horizon · The 16-day budget ended before the 2-Arete claim or the worthwhile-prestige journey behind it. Last decline — levels on the noteKeyed — Not enough whole nous for even one level.."
+      "note": "Pushing ✗ 16d · 1920m credited of 21730m elapsed · claim none/2 Arete · seed 157 · fresh-start · fresh-start-s157-d11b102d · no Arete spent · First prestige eligibility reached · The 16-day budget ended before the 2-Arete claim or the worthwhile-prestige journey behind it. Last decline — levels on the noteKeyed — Not enough whole nous for even one level.."
     },
     {
       "seed": 2026,
@@ -1831,7 +1831,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 18,
+      "eligibilityHours": 15,
       "worthwhileHours": 18,
       "worthwhileClass": "over",
       "journey": {
@@ -1881,7 +1881,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 16d · 1860m credited of 21665m elapsed · claim 2, 2/2 Arete · seed 2026 · fresh-start · fresh-start-s2026-ff26a953 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/540m, column 0.0d/0m, rate 4.0d/420m, door 4.0d/420m, frontier 7.0d/780m (2480.46ν/s pre-reset) · The worthwhile-prestige journey completed at day 16 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 16d · 1860m credited of 21665m elapsed · claim 2, 2/2 Arete · seed 2026 · fresh-start · fresh-start-s2026-5af0f5ce · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/540m, column 0.0d/0m, rate 4.0d/420m, door 4.0d/420m, frontier 7.0d/780m (2480.46ν/s pre-reset) · The worthwhile-prestige journey completed at day 16 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 7,
@@ -1902,7 +1902,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 17,
+      "eligibilityHours": 16,
       "worthwhileHours": 17,
       "worthwhileClass": "over",
       "journey": {
@@ -1950,7 +1950,7 @@
       ],
       "defeats": [],
       "bottleneck": null,
-      "note": "Pushing ✓ 13d · 1500m credited of 17345m elapsed · claim 2, 2/2 Arete · seed 7 · fresh-start · fresh-start-s7-3f2e14ce · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 0.0d/0m, rate 2.0d/240m, door 2.0d/240m, frontier 4.0d/480m (3776.61ν/s pre-reset) · The worthwhile-prestige journey completed at day 13 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 13d · 1500m credited of 17345m elapsed · claim 2, 2/2 Arete · seed 7 · fresh-start · fresh-start-s7-e363c853 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 0.0d/0m, rate 2.0d/240m, door 2.0d/240m, frontier 4.0d/480m (3776.61ν/s pre-reset) · The worthwhile-prestige journey completed at day 13 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 99,
@@ -1971,7 +1971,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 20,
+      "eligibilityHours": 19,
       "worthwhileHours": 20,
       "worthwhileClass": "over",
       "journey": {
@@ -2021,7 +2021,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 16d · 1860m credited of 21665m elapsed · claim 2, 2/2 Arete · seed 99 · fresh-start · fresh-start-s99-700bc92f · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/360m, column 0.0d/0m, rate 3.0d/300m, door 3.0d/300m, frontier 6.0d/660m (2535.26ν/s pre-reset) · The worthwhile-prestige journey completed at day 16 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 16d · 1860m credited of 21665m elapsed · claim 2, 2/2 Arete · seed 99 · fresh-start · fresh-start-s99-9dea8a2a · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/360m, column 0.0d/0m, rate 3.0d/300m, door 3.0d/300m, frontier 6.0d/660m (2535.26ν/s pre-reset) · The worthwhile-prestige journey completed at day 16 — the frontier advanced to 4 Arete."
     },
     {
       "seed": 11,
@@ -2041,7 +2041,7 @@
         2
       ],
       "claimTarget": 2,
-      "eligibilityHours": 30,
+      "eligibilityHours": 22,
       "worthwhileHours": 30,
       "worthwhileClass": "bank-only",
       "journey": {
@@ -2088,7 +2088,7 @@
       ],
       "defeats": [],
       "bottleneck": "The 16-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy.",
-      "note": "Pushing ✗ 16d · 1920m credited of 21730m elapsed · claim 2/2 Arete · seed 11 · fresh-start · fresh-start-s11-e4f70c4f · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (450.86ν/s pre-reset) · Poly Expander 1 — 1.45ν/s → 2.08ν/s · The 16-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
+      "note": "Pushing ✗ 16d · 1920m credited of 21730m elapsed · claim 2/2 Arete · seed 11 · fresh-start · fresh-start-s11-5f6a38ca · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column 0.0d/0m, rate unreached, door unreached, frontier unreached (450.86ν/s pre-reset) · Poly Expander 1 — 1.45ν/s → 2.08ν/s · The 16-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
     },
     {
       "seed": 23,
@@ -2159,7 +2159,7 @@
         "w0"
       ],
       "bottleneck": null,
-      "note": "Pushing ✓ 7d · 780m credited of 8705m elapsed · claim 2, 2/2 Arete · seed 23 · fresh-start · fresh-start-s23-037679d4 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/240m, column 0.0d/0m, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · The worthwhile-prestige journey completed at day 7 — the frontier advanced to 4 Arete."
+      "note": "Pushing ✓ 7d · 780m credited of 8705m elapsed · claim 2, 2/2 Arete · seed 23 · fresh-start · fresh-start-s23-2ded50d5 · spent Catalog entry + 1× Charge Column · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/240m, column 0.0d/0m, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · The worthwhile-prestige journey completed at day 7 — the frontier advanced to 4 Arete."
     }
   ],
   "distributions": [
