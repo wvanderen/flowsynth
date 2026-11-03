@@ -2,9 +2,10 @@
   "source": {
     "game": "flowsynth",
     "saveVersion": 12,
-    "runnerVersion": 13,
-    "engineSource": "3aec0c6f"
+    "runnerVersion": 14,
+    "engineSource": "1ae24261"
   },
+  "recordingCommit": "3181bebf6e8e0fb0153b90ed507e0d0ae7478654",
   "minutes": 60,
   "policy": "ignoring",
   "rows": [
@@ -49,9 +50,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 114,
+            "count": 115,
             "maxCredited": 3600,
-            "meanCredited": 568
+            "meanCredited": 595
           },
           "finite": true
         },
@@ -77,9 +78,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 51,
+            "count": 52,
             "maxCredited": 3600,
-            "meanCredited": 1129
+            "meanCredited": 1177
           },
           "finite": true
         },
@@ -90,8 +91,8 @@
           "claim": null,
           "frontierAfter": null,
           "priorDepth": 228254123.6834759,
-          "familiarHours": 17.33,
-          "newHours": 5.67,
+          "familiarHours": 17.35,
+          "newHours": 5.65,
           "newShare": 0.246,
           "familiarFaster": false,
           "priorSpanHours": 17,
@@ -105,9 +106,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 53,
+            "count": 54,
             "maxCredited": 3600,
-            "meanCredited": 1494
+            "meanCredited": 1467
           },
           "finite": null
         }
@@ -115,7 +116,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-e818d70d · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/420m, door 4.0d/420m, frontier 9.0d/1020m (1625.47ν/s pre-reset) · eras 2/4 closed · Era 2 — the prior frontier's depth passed · The 30-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-c5083cbd · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/420m, door 4.0d/420m, frontier 9.0d/1020m (1625.47ν/s pre-reset) · eras 2/4 closed · Era 2 — the prior frontier's depth passed · The 30-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 468,
@@ -160,9 +161,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 85,
+            "count": 86,
             "maxCredited": 3600,
-            "meanCredited": 381
+            "meanCredited": 419
           },
           "finite": true
         },
@@ -173,9 +174,9 @@
           "claim": 2,
           "frontierAfter": 4,
           "priorDepth": 32802891.259746928,
-          "familiarHours": 4.78,
-          "newHours": 3.22,
-          "newShare": 0.402,
+          "familiarHours": 4.8,
+          "newHours": 3.2,
+          "newShare": 0.4,
           "familiarFaster": true,
           "priorSpanHours": 11,
           "productionRegainedHours": 4,
@@ -188,9 +189,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 35,
+            "count": 36,
             "maxCredited": 3600,
-            "meanCredited": 720
+            "meanCredited": 800
           },
           "finite": true
         },
@@ -201,9 +202,9 @@
           "claim": 2,
           "frontierAfter": 6,
           "priorDepth": 318063692.58742344,
-          "familiarHours": 7,
-          "newHours": 8,
-          "newShare": 0.533,
+          "familiarHours": 7.02,
+          "newHours": 7.98,
+          "newShare": 0.532,
           "familiarFaster": true,
           "priorSpanHours": 8,
           "productionRegainedHours": 6,
@@ -216,9 +217,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 44,
+            "count": 46,
             "maxCredited": 3600,
-            "meanCredited": 1145
+            "meanCredited": 1174
           },
           "finite": true
         },
@@ -242,9 +243,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 57,
+            "count": 59,
             "maxCredited": 3600,
-            "meanCredited": 1579
+            "meanCredited": 1525
           },
           "finite": null
         }
@@ -252,7 +253,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-3f8b4315 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 4.0d/480m (3642.00ν/s pre-reset) · eras 3/4 closed · Era 3 — the prior frontier's depth passed · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-e5b0c2c5 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 4.0d/480m (3642.00ν/s pre-reset) · eras 3/4 closed · World — enemy w2 discovered · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 157,
@@ -293,9 +294,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 164,
+            "count": 165,
             "maxCredited": 3600,
-            "meanCredited": 900
+            "meanCredited": 916
           },
           "finite": true
         },
@@ -321,9 +322,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 40,
+            "count": 39,
             "maxCredited": 3600,
-            "meanCredited": 1440
+            "meanCredited": 1477
           },
           "finite": null
         }
@@ -331,7 +332,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 157 · fresh-start · fresh-start-s157-5b6f6f9a · spent Catalog entry · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate unreached, door unreached, frontier unreached (193.93ν/s pre-reset) · eras 1/4 closed · Poly Expander 2 — 8.93ν/s → 11.42ν/s · The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 157 · fresh-start · fresh-start-s157-4b1df7ba · spent Catalog entry · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate unreached, door unreached, frontier unreached (193.93ν/s pre-reset) · eras 1/4 closed · Poly Expander 2 — 8.93ν/s → 11.42ν/s · The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 2026,
@@ -376,9 +377,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 81,
+            "count": 82,
             "maxCredited": 3600,
-            "meanCredited": 711
+            "meanCredited": 746
           },
           "finite": true
         },
@@ -389,9 +390,9 @@
           "claim": 2,
           "frontierAfter": 4,
           "priorDepth": 27273416.641185228,
-          "familiarHours": 8.38,
-          "newHours": 5.62,
-          "newShare": 0.401,
+          "familiarHours": 8.4,
+          "newHours": 5.6,
+          "newShare": 0.4,
           "familiarFaster": true,
           "priorSpanHours": 18,
           "productionRegainedHours": 7,
@@ -404,9 +405,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 39,
+            "count": 40,
             "maxCredited": 3600,
-            "meanCredited": 1200
+            "meanCredited": 1260
           },
           "finite": true
         },
@@ -417,9 +418,9 @@
           "claim": 2,
           "frontierAfter": 6,
           "priorDepth": 241545034.34760708,
-          "familiarHours": 13.25,
-          "newHours": 8.75,
-          "newShare": 0.398,
+          "familiarHours": 13.27,
+          "newHours": 8.73,
+          "newShare": 0.397,
           "familiarFaster": true,
           "priorSpanHours": 14,
           "productionRegainedHours": 12,
@@ -432,9 +433,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 51,
+            "count": 53,
             "maxCredited": 3600,
-            "meanCredited": 1482
+            "meanCredited": 1494
           },
           "finite": true
         },
@@ -458,9 +459,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 14,
+            "count": 13,
             "maxCredited": 3600,
-            "meanCredited": 1286
+            "meanCredited": 1385
           },
           "finite": null
         }
@@ -468,7 +469,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-a910f645 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/420m, door 4.0d/420m, frontier 7.0d/840m (2480.46ν/s pre-reset) · eras 3/4 closed · Poly Expander 2 — 7.80ν/s → 17.92ν/s · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-3c65e055 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/420m, door 4.0d/420m, frontier 7.0d/840m (2480.46ν/s pre-reset) · eras 3/4 closed · Poly Expander 2 — 7.80ν/s → 17.92ν/s · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 7,
@@ -513,9 +514,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 79,
+            "count": 80,
             "maxCredited": 3600,
-            "meanCredited": 684
+            "meanCredited": 720
           },
           "finite": true
         },
@@ -526,9 +527,9 @@
           "claim": 2,
           "frontierAfter": 4,
           "priorDepth": 32451784.035724092,
-          "familiarHours": 5.05,
-          "newHours": 2.95,
-          "newShare": 0.369,
+          "familiarHours": 5.07,
+          "newHours": 2.93,
+          "newShare": 0.367,
           "familiarFaster": true,
           "priorSpanHours": 17,
           "productionRegainedHours": 4,
@@ -541,9 +542,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 28,
+            "count": 30,
             "maxCredited": 3600,
-            "meanCredited": 900
+            "meanCredited": 960
           },
           "finite": true
         },
@@ -554,9 +555,9 @@
           "claim": 2,
           "frontierAfter": 6,
           "priorDepth": 217832676.37936917,
-          "familiarHours": 6.38,
-          "newHours": 10.62,
-          "newShare": 0.625,
+          "familiarHours": 6.4,
+          "newHours": 10.6,
+          "newShare": 0.624,
           "familiarFaster": true,
           "priorSpanHours": 8,
           "productionRegainedHours": 4,
@@ -569,9 +570,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 40,
+            "count": 41,
             "maxCredited": 3600,
-            "meanCredited": 1440
+            "meanCredited": 1493
           },
           "finite": true
         },
@@ -595,9 +596,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 38,
+            "count": 39,
             "maxCredited": 3600,
-            "meanCredited": 1611
+            "meanCredited": 1569
           },
           "finite": null
         }
@@ -605,7 +606,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-03ab2028 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 4.0d/480m (3776.61ν/s pre-reset) · eras 3/4 closed · Era 3 — prior production regained (26644.50ν/s) · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-b9ace434 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 4.0d/480m (3776.61ν/s pre-reset) · eras 3/4 closed · World — enemy w1 discovered · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 99,
@@ -650,9 +651,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 104,
+            "count": 105,
             "maxCredited": 3600,
-            "meanCredited": 623
+            "meanCredited": 651
           },
           "finite": true
         },
@@ -663,9 +664,9 @@
           "claim": 2,
           "frontierAfter": 4,
           "priorDepth": 22295710.482301645,
-          "familiarHours": 6.1,
-          "newHours": 5.9,
-          "newShare": 0.492,
+          "familiarHours": 6.12,
+          "newHours": 5.88,
+          "newShare": 0.49,
           "familiarFaster": true,
           "priorSpanHours": 20,
           "productionRegainedHours": 5,
@@ -678,9 +679,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 42,
+            "count": 43,
             "maxCredited": 3600,
-            "meanCredited": 943
+            "meanCredited": 1005
           },
           "finite": true
         },
@@ -691,9 +692,9 @@
           "claim": 2,
           "frontierAfter": 6,
           "priorDepth": 247332817.58945817,
-          "familiarHours": 11.37,
-          "newHours": 16.63,
-          "newShare": 0.594,
+          "familiarHours": 11.38,
+          "newHours": 16.62,
+          "newShare": 0.593,
           "familiarFaster": true,
           "priorSpanHours": 12,
           "productionRegainedHours": 8,
@@ -706,43 +707,17 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 71,
+            "count": 73,
             "maxCredited": 3600,
-            "meanCredited": 1369
+            "meanCredited": 1381
           },
           "finite": true
-        },
-        {
-          "index": 3,
-          "eraClass": "open",
-          "hours": null,
-          "claim": null,
-          "frontierAfter": null,
-          "priorDepth": 2034256455.1973197,
-          "familiarHours": 0,
-          "newHours": 0,
-          "newShare": null,
-          "familiarFaster": null,
-          "priorSpanHours": 28,
-          "productionRegainedHours": null,
-          "priorDepthPassedHours": null,
-          "rebuildingShare": null,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": [],
-          "defeats": [],
-          "gaps": {
-            "count": 0,
-            "maxCredited": 0,
-            "meanCredited": 0
-          },
-          "finite": null
         }
       ],
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-850c0131 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 3.0d/300m, door 3.0d/300m, frontier 6.0d/720m (2535.26ν/s pre-reset) · eras 3/4 closed · Prestige 3 — banked 2 Arete · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-12d4c9d9 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 3.0d/300m, door 3.0d/300m, frontier 6.0d/720m (2535.26ν/s pre-reset) · eras 3/4 closed · Prestige 3 — banked 2 Arete · The 30-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 11,
@@ -783,9 +758,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 133,
+            "count": 134,
             "maxCredited": 3600,
-            "meanCredited": 758
+            "meanCredited": 779
           },
           "finite": true
         },
@@ -796,9 +771,9 @@
           "claim": null,
           "frontierAfter": null,
           "priorDepth": 21322921.380952556,
-          "familiarHours": 18.73,
-          "newHours": 11.27,
-          "newShare": 0.376,
+          "familiarHours": 18.75,
+          "newHours": 11.25,
+          "newShare": 0.375,
           "familiarFaster": true,
           "priorSpanHours": 30,
           "productionRegainedHours": 16,
@@ -821,7 +796,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 11 · fresh-start · fresh-start-s11-d8a92851 · spent Catalog entry · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 8.0d/960m, door 7.0d/780m, frontier unreached (450.86ν/s pre-reset) · eras 1/4 closed · Era 1 — the prior frontier's depth passed · The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 11 · fresh-start · fresh-start-s11-284bbc79 · spent Catalog entry · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 8.0d/960m, door 7.0d/780m, frontier unreached (450.86ν/s pre-reset) · eras 1/4 closed · World — enemy w0 discovered · The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 23,
@@ -868,9 +843,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 56,
+            "count": 58,
             "maxCredited": 3600,
-            "meanCredited": 386
+            "meanCredited": 434
           },
           "finite": true
         },
@@ -881,9 +856,9 @@
           "claim": 2,
           "frontierAfter": 4,
           "priorDepth": 28813930.03751924,
-          "familiarHours": 3.73,
-          "newHours": 1.27,
-          "newShare": 0.253,
+          "familiarHours": 3.75,
+          "newHours": 1.25,
+          "newShare": 0.25,
           "familiarFaster": true,
           "priorSpanHours": 8,
           "productionRegainedHours": 3,
@@ -898,7 +873,7 @@
           "gaps": {
             "count": 23,
             "maxCredited": 3600,
-            "meanCredited": 626
+            "meanCredited": 783
           },
           "finite": true
         },
@@ -909,9 +884,9 @@
           "claim": 2,
           "frontierAfter": 6,
           "priorDepth": 237132988.95593017,
-          "familiarHours": 4.33,
-          "newHours": 3.67,
-          "newShare": 0.458,
+          "familiarHours": 4.35,
+          "newHours": 3.65,
+          "newShare": 0.456,
           "familiarFaster": true,
           "priorSpanHours": 5,
           "productionRegainedHours": 4,
@@ -924,9 +899,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 27,
+            "count": 29,
             "maxCredited": 3600,
-            "meanCredited": 933
+            "meanCredited": 993
           },
           "finite": true
         },
@@ -937,9 +912,9 @@
           "claim": 2,
           "frontierAfter": 8,
           "priorDepth": 2462798408.224003,
-          "familiarHours": 8.2,
-          "newHours": 6.8,
-          "newShare": 0.453,
+          "familiarHours": 8.22,
+          "newHours": 6.78,
+          "newShare": 0.452,
           "familiarFaster": false,
           "priorSpanHours": 8,
           "productionRegainedHours": 7,
@@ -950,43 +925,17 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 37,
+            "count": 40,
             "maxCredited": 3600,
-            "meanCredited": 1362
+            "meanCredited": 1350
           },
           "finite": true
-        },
-        {
-          "index": 4,
-          "eraClass": "open",
-          "hours": null,
-          "claim": null,
-          "frontierAfter": null,
-          "priorDepth": 21368047374.744057,
-          "familiarHours": 0,
-          "newHours": 0,
-          "newShare": null,
-          "familiarFaster": null,
-          "priorSpanHours": 15,
-          "productionRegainedHours": null,
-          "priorDepthPassedHours": null,
-          "rebuildingShare": null,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": [],
-          "defeats": [],
-          "gaps": {
-            "count": 0,
-            "maxCredited": 0,
-            "meanCredited": 0
-          },
-          "finite": null
         }
       ],
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Enemy-ignoring ✓ 18d · 2160m credited of 24610m elapsed · claim 2, 2, 2, 2 Arete · seed 23 · fresh-start · fresh-start-s23-9a145442 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 18 — the frontier stands at 8 Arete, combat still postponed."
+      "note": "Enemy-ignoring ✓ 18d · 2160m credited of 24610m elapsed · claim 2, 2, 2, 2 Arete · seed 23 · fresh-start · fresh-start-s23-7912ece2 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 18 — the frontier stands at 8 Arete, combat still postponed."
     }
   ]
 }

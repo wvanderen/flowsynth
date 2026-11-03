@@ -1,110 +1,100 @@
-# Later eras productive and recoverable without refunds
+# Later-era productivity and no-refund recoverability
 
-Status: recorded evaluation, 2026-11-02 (issue #491, parent #484 stories 5, 17–27, and 42–43). The accepted direction lives in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md); the first worthwhile prestige this evaluation builds on is recorded in [the ten-hour evaluation](first-worthwhile-prestige.md) (issue #490).
+**Status: evaluation recorded; #491 is not complete.** The second acceptance criterion remains a merge blocker: later eras do not yet spend most of their effort on new territory. This is not an accepted deferral to #492. Completion requires either a validated balance repair or an explicit maintainer decision to change this ticket's scope. No such scope decision is recorded here.
+
+The specification is [#491](https://github.com/wvanderen/flowsynth/issues/491), parent [#484](https://github.com/wvanderen/flowsynth/issues/484), with the accepted direction in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md). The first worthwhile prestige's separate calibration is [#490's record](first-worthwhile-prestige.md).
 
 ## What was evaluated
 
-The shipped economy's repeated eras, on the existing scheduled playthrough runner invoking real engine actions — no second simulator, no shared-balance mutation, no grant, no refund. The runner grew the declared inputs this evaluation needs: a recipe walks **four claimed frontiers** (`eras: 4` — the opening era plus three later eras), and every closed era's ledger records its span on the credited clock, its banked claim, the strictly larger frontier it advanced to, the **familiar/new territory split** (credited seconds below the previous bank's depth against beyond it), the two faster-return marks (production regained, prior depth passed, both clocks from the era's own start), the consequential decisions and their pacing gaps, and a finite read over the exact recorded state the bank produced.
+The shipped economy, through the existing scheduled playthrough runner's real engine actions: no second simulator, hidden balance mutation, grant, or refund. The matrix remains eight seeds (42, 468, 157, 2026, 7, 99, 11, 23), two daily sessions of either 25 or 60 minutes, five-minute breathers, and three policies. Each walk targets four positive banks of at least 2 Arete, within 70 baseline days or 30 long-session days. The policies share the ordinary board-management rules and differ in their World purchases:
 
-The declared matrix: eight seeds (42, 468, 157, 2026, 7, 99, 11, 23) × two session shapes (the suite's baseline two-25-minute day, ~0.83 credited hours, and its two-60-minute variant, ~2 credited hours — same five-minute breather) × the parent's three declared World policies, each pushing claims to the same target of 2 Arete:
+- **Support-seeking:** Catalog entry, Columns while affordable, then Hone ranks; the charge line before the blade.
+- **Combat-engaging:** Catalog entry, Hone ranks while affordable, then Columns; the blade before the charge line.
+- **Enemy-ignoring:** Catalog entry and capacity offerings, no World purchases or deployment; discovered enemies retain their pressure.
 
-- **Support-seeking** pays the Catalog entry, then Charge Columns while affordable, then Hone ranks cheapest-first — the charge line before the blade.
-- **Combat-engaging** pays the Catalog entry, then Hone ranks cheapest-first, then Charge Columns — the blade before the charge line.
-- **Enemy-ignoring** never buys or deploys a World occupant: the starter weapon stays in the tray, every discovered enemy's pressure stands for the whole era.
+The common World placement leg seats weapons beside living discovered enemies and Columns over receiving modules on a charge line. Won fights trigger free between-session relocation. `src/engine/playthrough-placement.ts` owns the structural charge-line predicate used by both the runner and the probe. This policy is not a substitute for the engine's actual charge calculation; a seat alone does not establish a functioning fight.
 
-Two placement rules joined the runner's shared leg, both the authored mechanics read literally:
+Each era records its own credited span, bank, strictly larger claimed frontier, production-regained mark, prior-depth crossing, familiar/new split, decisions and gaps, and finite bank state. Actual open eras remain explicit; the zero-duration successor opened at a successful terminal bank is not counted as an incomplete attempted era.
 
-- **A weapon whose fight is won relocates** to the next living discovered enemy, and a Column the fight left behind follows it when a charge line touches the new fight (relocation is free between sessions). Without it the walks park the blade beside a dead enemy forever and no later frontier's resistance is ever engaged.
-- **A Column seats on a charge line** — a cell whose module can receive charge, beside a generator or conduit — with the flow-basis strength only breaking ties, and a Column moves only to a fight-adjacent line. The first recording of this matrix exposed the ticket's progression trap: the old generator-adjacent seat could strand the irreversible Arete purchase on a cell whose module receives nothing, the relocation churned between dead seats, and whole walks never surpassed the first frontier. The repair is in the placement rule, never in currency — the trap read is pinned in the suite (`walks every affordable order at each tested frontier without a trap`, `demonstrates the combat route surpassing the first frontier's resistance`, both in `tools/later-eras.test.ts`).
+## Review repairs and their regressions
 
-One consequence of the repair is recorded honestly: the shared placement leg serves the shipped pushing policy too, so the journey walk #490 recorded re-routes — its second bank reads 3 Arete (was 2), its frontier stands at 6 (was 5), and its defeat ledger gains w1 through the relocation. The journey's shape and completion day are unchanged, and the re-pinned figures live in `app.playthrough.test.ts`. [#490's record](first-worthwhile-prestige.md) remains the evidence of its own revision (runner 12) and was not re-recorded here.
+The review found recording defects, not a reason to invent better balance figures:
 
-Budgets are the walk's own honest stop: 70 baseline days, 30 long-session days. The matrix records as six independent slices (one per shape × policy) that compose into one report; a recording interruption loses at most its own slice. Reproduce after `npm install`:
+| Finding | Repair and named regression in `tools/later-eras.test.ts` |
+| --- | --- |
+| Mid-session crossing and inspection clocks disagreed | Snapshots read the same credited stamp as events. `keeps crossing events, inspection clocks, and the familiar span in agreement` asserts exact equality. Before the fix the baseline fixture's event said 33,180s while its snapshot said 33,000s. |
+| Crossing minute counted as new territory | Credit the step on its pre-crossing side, then settle the crossing. The same regression asserts familiar credited seconds equal the crossing mark; it previously differed by 60s. Breather crossings settle before a possible bank, with no practice credit. |
+| Closing facts moved into the successor era; repeated kills disappeared | Event order around banks owns each era, even when credited clocks tie. World facts deduplicate per era, while the run summary remains unique. `keeps facts before a tied bank in the closing era and facts after it in the next` and `owns closing-session defeats and repeated kills in the era that fought them` pin those boundaries; the recording tier additionally compares every era's defeats with its pre-bank board. |
+| Relocations appeared as purchases | The per-era view treats both placement and relocation events as placements. |
+| Another branch's success stood in for a no-refund route | The cheap enumeration carries `forward: null` and never claims advancement. `enumerates orders without mistaking seats or another branch for forward progress` and `continues the exact earned bank without mutating it or inferring the parent's later success` pin the distinction. The latter deliberately gives a real branch only one day and requires `unreached`, despite its parent having a later successful bank. |
+| No positive regression for the continuation seam | `banks a strictly greater frontier in a constructed continuation without a grant or refund` exercises the positive terminal with a labelled fast constructed fixture. It is not acquisition or balance evidence. |
+
+A real seed-23, 60-minute support walk now attributes w0 to era 1, w0/w1 to era 2, and w0/w1/w2 to era 3. Its era-1 crossing and inspection both read 42,300 credited seconds; the familiar span is 13,500 seconds, not 13,440. The actual session lengths, purchases, claims, production, and bank dates are unchanged by these recording repairs.
+
+## Reproduction and source provenance
+
+The six slice files and [composed results](later-era-results.json) were re-recorded from source commit `3181bebf6e8e0fb0153b90ed507e0d0ae7478654`, runner 14. Each carries that recording commit and the compiled engine fingerprint `1ae24261`. The explicit recorder compiles through Vite's real raw/glob transform; it does not rely on the content-insensitive vitest fingerprint reported in #503. Composition verifies the source and recording commit of every slice, the full seed matrix, and the branch results.
+
+After `npm install`, with committed source:
 
 ```sh
-FLOWSYNTH_LATER_ERA_SLICE="25:support" npx vitest run tools/later-eras.test.ts -t "walks the 25:support slice"
-# ... the other five slices ...
-FLOWSYNTH_LATER_ERA_REPORT=docs/later-era-results.json \
-  npx vitest run tools/later-eras.test.ts -t "composes the full declared matrix"
+node tools/record-later-eras.mjs slice 25:support
+node tools/record-later-eras.mjs slice 25:combat
+node tools/record-later-eras.mjs slice 25:ignoring
+node tools/record-later-eras.mjs slice 60:support
+node tools/record-later-eras.mjs slice 60:combat
+node tools/record-later-eras.mjs slice 60:ignoring
+node tools/record-later-eras.mjs compose
 ```
 
-The recorded [results](later-era-results.json) carry the window, the declared budgets, every row's clocks, every era's ledger, the per-era route reads, the route enumerations at the probed walk's four tested frontiers, and the per-run source provenance (runner 13). One provenance caveat, recorded rather than papered over: the engine fingerprint the runner cites is not content-sensitive in the vitest path — it held still across this ticket's own 144-line placement refactor — so the runs are identified by their recipes plus the recording commits (`a7c9c0a`…`956b866`), and determinism is carried by the reproduction check: the refactored source reproduced its recorded slice row byte for byte. The fingerprint gap is filed as issue #503. All 48 rows read `noGrant` true — the state's whole intake is what the walk earned — and every closed era's bank state scanned finite.
+The equivalent `FLOWSYNTH_LATER_ERA_SLICE` / `FLOWSYNTH_LATER_ERA_REPORT` vitest gates invoke this same recorder. Ordinary suite runs skip the multi-hour evaluation. In this re-recording the independent forward-route recording ran alongside the matrix slices, then composed with them after matching the compiled source and recording commit; the commands above reproduce the same measurements without requiring parallel execution.
 
-## The later-era distributions against the 5–10 credited-hour window
+All 48 rows read `noGrant: true`. The recorder checks finite state and rates at every recorded snapshot, not only after resets. Every closed era advances the frontier strictly; closing-session facts, repeated kills, snapshot clocks, and crossing/split agreement are checked during recording.
 
-A later era classifies `in-window` at 5–10 credited hours, `↓` under, `↑` over, `·` open when the budget ended inside it. Counts cover every closed later era across the matrix:
+## Durations and the unresolved effort criterion
 
-| slice | in 5–10 | under | over | open at stop |
-| --- | --- | --- | --- | --- |
-| support, 25m sessions | 7 | 2 | 9 | 8 |
-| combat, 25m sessions | 7 | 1 | 8 | 8 |
-| ignoring, 25m sessions | 4 | 1 | 9 | 8 |
-| support, 60m sessions | 5 | 0 | 8 | 8 |
-| combat, 60m sessions | 4 | 0 | 9 | 8 |
-| ignoring, 60m sessions | 4 | 0 | 8 | 8 |
+Later eras classify against roughly 5–10 credited hours; era 0 has its own 8–12-hour opening target and is not classified here. The report retains each seed's durations, routes, gaps, and incomplete outcome, not an average alone.
 
-Per-seed credited hours (open eras shown as the split accrued when the budget ended):
+| Policy / session length | In 5–10h | Under | Over | Actually open at budget stop |
+| --- | ---: | ---: | ---: | ---: |
+| support / 25m | 7 | 2 | 9 | 4 |
+| combat / 25m | 7 | 1 | 8 | 4 |
+| ignoring / 25m | 4 | 1 | 9 | 6 |
+| support / 60m | 5 | 0 | 8 | 6 |
+| combat / 60m | 4 | 0 | 9 | 6 |
+| ignoring / 60m | 4 | 0 | 8 | 6 |
+| **Total** | **31** | **4** | **51** | **32** |
 
-**support, 25m** — 42: 4.17↓ / 5.83 / 10.00 / open · 468: 6.25 / 11.25↑ / 25.83↑ / open · 157: 23.75↑ / open · 2026: 19.17↑ / 7.50 / 8.75 / open · 7: 10.83↑ / 19.58↑ / open · 99: 27.08↑ / open · 11: 16.25↑ / 25.42↑ / open · 23: 4.58↓ / 6.67 / 6.25 / open
+Fifteen of 48 walks complete all four banks. The earlier report counted 48 open later eras because it included 16 empty successors: 15 at completed terminal banks and one at seed 99's 60-minute ignoring bank exactly at the budget stop. The latter walk is still incomplete at three banks, but it never attempted its next era. These unattempted successors are no longer presented as open attempted eras.
 
-**combat, 25m** — 42: 4.17↓ / 7.50 / 9.58 / open · 468: 7.08 / 15.00↑ / 21.25↑ / open · 157: 23.75↑ / open · 2026: 20.83↑ / 8.75 / 8.75 / open · 7: 13.33↑ / open · 99: 31.25↑ / open · 11: 18.33↑ / open · 23: 5.00 / 9.58 / 21.25↑ / open
+Across 86 closed later eras:
 
-**ignoring, 25m** — 42: 4.17↓ / 8.33 / 17.50↑ / open · 468: 7.08 / 14.58↑ / open · 157: 23.75↑ / open · 2026: 20.83↑ / 9.17 / open · 7: 13.33↑ / open · 99: 31.25↑ / open · 11: 18.33↑ / open · 23: 5.00 / 10.83↑ / 22.50↑ / open
+- **Faster familiar return:** 78 re-walk the previous bank's depth in less credited time than its first development; eight do not. Faster return alone does not establish a majority of effort on new territory.
+- **Rebuilding:** 62 regain the previous production within half their era, while 24 spend more than half rebuilding. The latter are explicit failures of the rebuilding bar, not passes rescued by the majority.
+- **New territory:** only 22 eras have a recorded new-territory share above one half. Familiar territory still dominates most walks. The corrected crossing-step accounting does not repair this gameplay shortfall.
+- **Cadence:** 51 closed later eras exceed ten hours. The record evaluates the requested window honestly; it does not establish that the shipped deeper eras generally meet it.
 
-**support, 60m** — 42: 16.00↑ / open · 468: 7.00 / 11.00↑ / 22.00↑ / open · 157: open · 2026: 13.00↑ / 18.00↑ / open · 7: 8.00 / 11.00↑ / open · 99: 11.00↑ / 18.00↑ / open · 11: open · 23: 5.00 / 7.00 / 10.00 / open
+**These results do not satisfy the new-frontier-effort requirement.** The review fixes preserve the current entitlement curve, reset boundary, first-prestige calibration, enemy thresholds/stats, and purchase prices. Quietly changing any of these merely to make this recording green would not be a validated calibration and could strand existing saves. #492 is related calibration work, but its existence does not waive #491's requirement. This PR must not close #491 as complete without a balance repair or an explicit scope decision.
 
-**combat, 60m** — 42: 17.00↑ / open · 468: 8.00 / 15.00↑ / 22.00↑ / open · 157: open · 2026: 14.00↑ / 23.00↑ / open · 7: 8.00 / 16.00↑ / open · 99: 12.00↑ / 26.00↑ / open · 11: open · 23: 5.00 / 9.00 / 15.00↑ / open
+## Direct no-refund routes, including frontier 8
 
-**ignoring, 60m** — 42: 17.00↑ / open · 468: 8.00 / 15.00↑ / open · 157: open · 2026: 14.00↑ / 22.00↑ / open · 7: 8.00 / 17.00↑ / open · 99: 12.00↑ / 28.00↑ / open · 11: open · 23: 5.00 / 8.00 / 15.00↑ / open
+The probe enumerates the affordable entry/Column/Hone purchase orders at the exact unspent bank states of the declared seed-23, 60-minute support walk: frontiers **2, 4, 6, and 8**, 17 orders in total. Each order rides real irreversible purchase actions. A structural placement attempt runs on a separate clone, so the probe does not impose its candidate seats on the policy it is testing. An order with no Column correctly fails the immediate rig read; that does not by itself prove a progression trap.
 
-Read with the misses named, never averaged away:
+Each branch then continues its own exact purchased state through `continuePlaythrough`, the same session/management/advance/prestige walk, using a declared support policy, its remaining currency, a 30-day budget, and a target of one positive Arete. One real positive bank suffices to surpass the starting frontier; no reward is forced at a clock threshold. The continuation is labelled `kind: "continuation"`, captures its initial state, includes that state in its run identity, and is not fresh-start acquisition evidence. Its recipe and resulting run identity are carried under that order's `forward` record.
 
-- **The first later era is the window's strongest evidence, with the variance recorded beside it.** At 25m it lands in-window or under on three of eight seeds per fighting policy (4.17–7.08h) and runs 10.8–31.3h on the roll-starved openings (157, 99, 11 — the same seeds #490 recorded as door-delayed — plus 2026 and 7). At 60m, six seeds demonstrated era 1 per fighting policy and three landed in-window (7–8h on 468 and 7, 5h on 23). Seed variance, not curve drift, dominates the spread.
-- **The deeper later eras drift long, on both shapes.** Era 2 runs 7.5–28h depending on seed and schedule; era 3, demonstrated on 15 of the 48 walks, runs 6.25–25.83h. Each later bank claims one full decade more era-earned than the last — the authored claim curve pays 2 Arete per decade — and the decade's credited price grows past ten hours on most seeds. On the complete walks (468 and 23 on both shapes) eras 1–2 sit at 4.58–11h and era 3 at 6.25–22h. This is the recorded calibration input for #492's horizon work, not a defect this ticket tunes away: the entry depth and first-era pacing are #490's calibrated figures, the deeper decades' pacing is exactly what #492's 100-hour calibration revisits.
+All 17 directly continued orders bank a strictly greater frontier within budget. Every tested frontier has a directly demonstrated fighting route, including the route from frontier 8 past frontier 8; every branch carries its actual defeats, credited duration, `noGrant`, `noRefund`, and finite-state result. The last frontier is no longer certified by placement alone. This establishes routes for these tested states and policies, not universal recoverability for every future build or a guarantee of short recovery.
 
-## Faster return through familiar territory, and the rebuilding share
+The policy comparison remains material: in the 60-minute matrix support defeats enemies on seven of eight seeds (w2 on three), combat on one of eight, and ignoring on none. Seed 23's later eras take 5/7/10h under support, 5/9/15h under combat, and 5/8/15h under ignoring. Hone-first spending can leave combat unfed; ignoring still banks positive claims without defeats, paying for postponement in longer eras. Per-era routes now show repeated kills and relocations in their actual eras instead of shifting or suppressing them.
 
-Three reads per later era, from the era ledgers — figures across all 86 closed later eras that carried a crossing:
+## Every acceptance criterion beside its evidence
 
-- **Faster return**: the era's familiar credited walk (from zero to the previous bank's depth) against the previous era's FULL credited span to that same depth. Demonstrated in **78 of the 86** closed later eras; the eight misses are the deepest demonstrated eras of seeds 468 and 23 (six) and 2026-era-2-class walks (two) — the walks where the previous era's span was itself short and the re-walk's saving thins. The retained purchases — the Catalog, the capacity offerings, the World line, the class development — re-walk the claimed ground faster than its first development on nearly every demonstrated era.
-- **Rebuilding share** — recorded as a finding, not argued away: the credited span the era spent regaining the production the reset erased, against the era's whole span, stays at or under half in **62 of the 86** closed later eras and exceeds half in **24** (11 of 48 at 25m, 13 of 38 at 60m; floor 0.23, top 0.80). The misses concentrate in the support line's 60m walks (nine) and in the deepest demonstrated eras. The criterion's absolute reading — never most of ANY later era — is therefore not demonstrated on this recording; what is demonstrated is the majority hold plus the exact shape of the misses: the 60m shape's long sessions credit enough time that the rebuild's absolute span (~5–7 credited hours at 25m, ~5–11h at 60m) reads as a larger share even where it matches the baseline's figure. Whether the deeper-eras' regain span itself should shrink is #492's calibration question.
-- **New territory**: the credited share beyond the previous bank's depth — the part of the era that is genuinely new frontier — means 0.29–0.53 per slice and era. The familiar span dominates credited time on most walks: the depth the player re-walks grows a full decade per bank while the new-territory stretch is the single decade the era banks. What retained strength buys is the *pace* of the familiar re-walk (faster on 78 of 86 eras), not its share of the clock.
-
-## The no-refund routes at the tested frontiers
-
-The suite's route probe enumerates **every affordable purchase order at each tested frontier a probed walk recorded** — the exact bank states, each claim unspent, each piece priced from that state's own ladders (the Column's price grows with the copies owned; the Hone ladder's next rung; the Catalog entry while unowned) — and drives each order through the engine's own purchase and placement actions: every order lands, refunds nothing, leaves the recorded state finite, and finds seats for the rig. The always-on case reads the two banks of a baseline pushing walk (frontiers 2 and 4); the recorded report carries the four-bank enumeration of the 60m support walk — **frontiers 2, 4, 6, and 8** — under `routeProbes` in [the results](later-era-results.json). No order at any probed frontier failed a read: no affordable, irreversible purchase strands the route forward.
-
-Beyond the probed frontiers, the walks themselves demonstrate the routes at every frontier they passed, per era in the recorded rows — what the Arete bought, what deployed, what died:
-
-- **Support** (charge line first) is the strongest route: defeats reach **w2 by frontier 6** on seeds 42, 468, 2026, and 23 at 25m and 468, 7, and 23 at 60m; w0–w1 on the other demonstrated seeds except 157@60m (budget-ended before its first bank). The era bonuses of the kills are visible in its era durations (seed 23 at 60m: 5/7/10h — the matrix's only all-in-window completed walk).
-- **Combat** (blade first) matches the w2 chain at 25m on 42, 468, and 2026, but its honed blade starves without the charge line elsewhere — at 60m only 468 kills, and the walks whose line never formed (7, 99, 11, 23 at 25m and 60m) run the longest eras of their slices. The material cost of skipping support, paid under no-refund rules.
-- **Ignoring** banks its claims everywhere it demonstrated (postponing combat remains possible) and defeats nothing anywhere; its later eras run longest at the same seeds (23 at 25m: 5.00 / 10.83↑ / 22.50↑ against support's 4.58↓ / 6.67 / 6.25).
-
-The discovered-enemy pressure the ignoring walks paid is the era-earned depth bands' own arithmetic (issue #489): at frontier 6's depths three to four enemies sit discovered and alive, their production factor multiplying down while the fighting walks' defeated enemies pay their era bonuses instead. Combat and supporting placement confer their benefit exactly there: shorter eras at the same claims, and kills the ignoring route never collects.
-
-## The three policies compared
-
-The declared spending orders behave as declared on every recorded walk (pinned in the suite on real walks): support bought 16 Columns / 6 Hone ranks across the 25m matrix, combat 4 / 16, ignoring neither (its Arete goes to the Catalog's capacity offerings — 8 Chord Catalysts — the prompt policy's own lasting line). The comparison's material reading:
-
-- **Combat + supporting placement confers a material benefit.** On identical seeds and schedules the support route's eras run shortest, its defeat ledger is the deepest and the most even across seeds (w0 on all seven demonstrated seeds at 25m, w2 on four), and its rig demonstrably fights — the defeats are recorded kills through the deployed charge line, not placements.
-- **Postponing combat remains a possible trade-off.** The ignoring walks banked the same strictly larger frontiers under the enemies' full pressure — 2 of 8 seeds completed all four claimed frontiers at 25m (against support's 4) — paying for the postponement in era duration (up to +150% at the deepest demonstrated era) and in never collecting an era bonus.
-- **The blade without the line is the middle case.** Combat-engaging's no-refund purchase order still advanced every frontier it demonstrated, but where the charge line never formed its kills stayed zero and its eras paid for it — supporting placement, not the blade alone, is what the World's route rewards.
-
-## Every criterion beside its evidence
-
-| Criterion (issue #491) | Named verification | Class |
+| #491 criterion | Named verification / recorded evidence | Class and outcome |
 | --- | --- | --- |
-| Repeated productive eras through the real-action playthrough path — banked claims, purchases, combat deployment, recovery, strictly larger claimed frontiers | `closes the first era at its bank and reads the familiar/new split` (real walk: ledger's claim, frontier, split, finite); recorded compose case asserts per row: `noGrant`, frontiers strictly increasing, finite on every closed era; the 48 recorded rows carry purchases, placements, defeats, and both recovery marks per era | automated + recorded |
-| Faster return through familiar territory; new-territory time measured; rebuilding not most of every later era | `closes the first era...` pins `rebuildingShare < 0.5` on a demonstrated era and the split recombining to the span; per-era views carry `familiarFaster`, `newShare`, `rebuildingShare`, both marks; **recorded finding**: faster return 78/86 demonstrated; rebuilding under half in 62/86, over half in 24 — the misses named above and owned by #492's calibration | automated + recorded (partial: the absolute never-most bar) |
-| Later productive-era durations evaluated against 5–10 credited hours across declared policies, seeds, schedules; incomplete runs and misses explicit | `classifies eras: the opening is not a later era, and an open era stays open` pins the mechanics; the recorded tables above classify every closed later era of all 48 walks, per seed, with open eras explicit | automated + recorded |
-| At tested frontiers: enumerated affordable Arete routes; charge/weapon/placement configurations surpassing resistance under no-refund rules; traps detected and repaired | `walks every affordable order at each tested frontier without a trap` (frontiers 2 and 4, real bank states, all orders through real actions); `demonstrates the combat route surpassing the first frontier's resistance` (the recorded defeat chain); the recorded report's `routeProbes` enumerates frontiers 2, 4, 6, and 8; the charge-line trap found during recording was repaired in the placement rule, never in currency | automated + recorded |
-| Support-seeking vs combat-engaging vs enemy-ignoring: combat and supporting placement confer material benefit; postponing combat stays possible | `support buys its charge line before its blade; combat its blade before its charge line`; `ignoring never buys or deploys a World occupant, and still banks its claims`; the recorded comparison above (support defeats on every demonstrated seed, ignoring none, durations ordered) | automated + recorded |
-| Consequential purchase/build/placement opportunities and finite numeric state per era; existing reset/readout behavior preserved; every criterion mapped | Per-era views carry the decision-gap read (`reads an open era honestly...`), route labels, and the finite scan; the compose case asserts finite on every closed era; existing reset/readout behavior stays pinned by the untouched `prestige.test.ts`, `world.test.ts`, `accumulator.test.ts` and #490's cases (their eras-1 semantics unchanged, the re-pinned journey figures in `app.playthrough.test.ts`); this table is the mapping | automated |
+| Repeated productive eras; banked claims, purchases, deployment, recovery, strictly larger frontiers | `closes the first era at its bank and reads the familiar/new split`; all 48 slice rows, 15 four-bank completions; recorder asserts each bank's frontier and finite state; per-era route/marks retain unreached outcomes | automated + recorded; repeated eras demonstrated |
+| Faster familiar return, measured new territory, rebuilding not most of later eras | `keeps crossing events, inspection clocks, and the familiar span in agreement`; per-era `familiarFaster`, `newShare`, and `rebuildingShare`; 78/86 faster, 24/86 rebuilding misses, only 22/86 new-territory majorities | automated + recorded; **UNMET / merge blocker**, no accepted deferral |
+| Evaluate the 5–10h window across policies/seeds/schedules; misses and incomplete runs explicit | `classifies eras: the opening is not a later era, and an open era stays open`; all six distributions above and every per-seed era in the composed results | automated + recorded; evaluation complete, timing misses explicit |
+| Enumerate affordable no-refund routes; demonstrate configurations surpassing resistance; detect/repair traps without grants/refunds | `enumerates orders without mistaking seats or another branch for forward progress`; negative real continuation and positive labelled-fixture cases; recorded 17 real continuations over frontiers 2/4/6/8, all advanced with currency/finite checks; actual defeats establish fighting configurations | automated + recorded; demonstrated at the tested states, not extrapolated universally |
+| Support/combat/ignoring comparison; material benefit and possible postponement | `support buys its charge line before its blade; combat its blade before its charge line`; `ignoring never buys or deploys a World occupant, and still banks its claims`; the six recorded slices' durations and defeats | automated + recorded; comparison demonstrated |
+| Consequential opportunities and finite state per era; reset/readout preservation; every criterion mapped | Per-era routes/gaps; `keeps facts before a tied bank in the closing era and facts after it in the next`; `owns closing-session defeats and repeated kills in the era that fought them`; recorder checks every snapshot; existing prestige/World/accumulator/app readout tests; artifact round trips including continuations | automated + recorded; mapping is this table, not a suite count |
 
-The dev panel's policy select gained the three declared options (a UI surface change): desktop and phone captures from the verified checkout are recorded under [docs/evidence/491-policy-select/](evidence/491-policy-select/).
-
-## What this establishes and what stays open
-
-Established: repeated productive eras exist on the shipped layers — four strictly larger claimed frontiers banked on real scheduled walks with per-era ledgers (15 of 48 walks completed the fourth bank within budget); retained strength demonstrably shortens the familiar re-walk (78 of 86 demonstrated eras); the first later era lands in the 5–10-hour window on three of the demonstrated seeds per slice and shape; the no-refund purchase routes are enumerated and trap-free at the probed frontiers (2, 4, and 6); and the three declared policies' trade-offs are recorded with the currency-integrity and finite reads green on all 48 walks.
-
-Open, deliberately: a majority of the demonstrated deeper eras (era 2 and beyond) run past ten credited hours, 24 of 86 eras rebuild for more than half their span, and the fourth bank lands within budget on a minority of walks — the decades' pacing above the first frontier is #492's calibration target (the 100-hour horizon and the enemy ladder's upper decades), and the save migration the recalibrated curve implies is #493's. The entry depth and the first worthwhile prestige are #490's calibrated figures and were not re-tuned here. The recorded matrix is this ticket's evaluation evidence; it is not a claim that the deeper decades already pass.
+The changed inspection clock's verified desktop/phone evidence and check results are recorded in [the review-fix evidence](evidence/491-review-fixes/README.md). The dev panel's option catalog and presentation are unchanged by these review fixes; its original addition is documented in [the policy-select evidence](evidence/491-policy-select/README.md).
