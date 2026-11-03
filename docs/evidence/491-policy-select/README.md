@@ -2,7 +2,7 @@
 
 Captured from the verified checkout at `http://localhost:5173` (capture
 preflight accepted before both captures: worktree `/home/lem/dev/flowsynth`,
-branch `t3/issue-491`, commit `a7c9c0ad` — matching `git rev-parse HEAD`,
+branch `t3/issue-491`, commit `5fbc49b3` — matching `git rev-parse HEAD`,
 source clean; the provenance record sits beside these captures). The state
 is the shipped fresh start at `?dev=1`, upgrade mode; the dev console's
 playthrough row is the changed surface — the policy select now offers the
