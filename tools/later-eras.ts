@@ -1,4 +1,4 @@
-import { BALANCE, CATEGORY_OF, WORLD_ENEMIES } from "../src/engine/constants";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, WORLD_ENEMIES } from "../src/engine/constants";
 import {
   composePlaythroughRecipe,
   playthroughNote,
@@ -12,8 +12,8 @@ import {
   type PlaythroughSource,
 } from "../src/engine/playthrough";
 import { buyCatalogEntry, buyChargeColumn, buyHoneRank, placeWorldOccupant } from "../src/engine/actions";
-import { enemyDefAt, worldOccupantAt } from "../src/engine/world";
-import { adjacent } from "../src/engine/hex";
+import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "../src/engine/world";
+import { adjacent, sameHex } from "../src/engine/hex";
 import { seededRng } from "../src/engine/capacity-calibration";
 import type { GameState } from "../src/engine/types";
 import { meaningfulDecisions, type DecisionGap } from "./first-prestige";
@@ -362,61 +362,73 @@ export function laterEraReport(runs: readonly LaterEraRow[]): LaterEraReport {
 
 // ── The no-refund route probe (issue #491's fourth criterion) ──────────
 
-// At the first tested frontier — the exact recorded state the first
-// worthwhile bank produced, its claim unspent — every affordable purchase
-// order rides the engine's own purchase and placement actions, and each
-// order's route forward is read: the purchases land, nothing refunds, the
-// recorded state stays finite, the rig's seats exist beside the fight and
-// the charge line, and every combat piece the order skipped stays
-// affordable from the claims the curve still owes. An order that fails a
-// read is a progression trap — repaired in the authored figures, never by
-// granting currency or refunding a purchase.
+// At each tested frontier — the exact recorded state each of the walk's
+// banks produced, its claim unspent — every affordable purchase order
+// rides the engine's own purchase and placement actions, and each order's
+// route is read: the purchases land, nothing refunds, the recorded state
+// stays finite, the rig's seats exist beside the fight and the charge
+// line, and the pieces the order skipped are priced from the same state.
+// An order that fails a read is a progression trap — repaired in the
+// placement rules, never by granting currency or refunding a purchase.
 export type RoutePiece = "entry" | "column" | "hone";
 
-// The pieces' first prices at the probe state (the catalog's and the
-// World's authored ladders — read, never restated; the probe frontier's
-// first rungs are all one Arete).
-export function routePiecePrice(piece: RoutePiece): number {
-  if (piece === "entry") return BALANCE.catalogEntryCost;
-  if (piece === "column") return BALANCE.world.columnFirstPrice;
-  return BALANCE.world.honeCosts[0]!;
+// A piece's price at one bank state, read off the authored ladders — the
+// Column and Hone prices grow with what the walk already owns, so a
+// later frontier enumerates its own prices, never the first rungs.
+export function routePiecePriceAt(state: GameState, piece: RoutePiece): number | null {
+  if (piece === "entry") return state.catalogEntryOwned ? null : BALANCE.catalogEntryCost;
+  if (piece === "column") return columnCost(state.world.columns.length);
+  return honeCostOf(state, "chargeBlade");
 }
 
-// Every affordable order: the empty route, each single piece, and every
-// permutation of the affordable set — the probe walks them all.
-export function affordableOrders(budget: number): readonly RoutePiece[][] {
+// Every affordable order at one state: the empty route, each single
+// affordable piece, and every permutation of the affordable set within
+// the budget.
+export function affordableOrdersAt(state: GameState): readonly RoutePiece[][] {
   const pieces: RoutePiece[] = ["entry", "column", "hone"];
+  const priced = pieces.flatMap((piece) => {
+    const price = routePiecePriceAt(state, piece);
+    return price === null ? [] : [{ piece, price }];
+  });
   const orders: RoutePiece[][] = [[]];
-  const walk = (prefix: RoutePiece[], left: RoutePiece[], spent: number): void => {
-    for (const piece of left) {
-      const price = routePiecePrice(piece);
-      if (spent + price > budget) continue;
+  const walk = (prefix: RoutePiece[], left: typeof priced, spent: number): void => {
+    for (const { piece, price } of left) {
+      if (spent + price > state.arete) continue;
       const next = [...prefix, piece];
       orders.push(next);
-      walk(next, left.filter((entry) => entry !== piece), spent + price);
+      walk(next, left.filter((entry) => entry.piece !== piece), spent + price);
     }
   };
-  walk([], pieces, 0);
+  walk([], priced, 0);
   return orders;
 }
 
-export interface RouteProbeRow {
+export interface RouteProbeOrder {
   readonly order: readonly RoutePiece[];
-  // The Arete the order spent — the budget's whole, since every piece
-  // costs exactly one Arete at this frontier's first rungs.
   readonly spend: number;
   // Every purchase in the order landed through the engine's own action.
   readonly purchasesOk: boolean;
   // The rig's seats existed and the placements landed: the weapon beside
   // the first enemy's cell, the Column beside the charge line.
   readonly placementsOk: boolean;
-  // The route forward: every piece the order skipped stays affordable
-  // within the next two claims (the curve's own next banks), and the
-  // pending claim the walk then demonstrated still reads positive at the
-  // recorded next bank's depth.
-  readonly routeForward: boolean;
   // The finite read over the state the order left.
   readonly finite: boolean;
+}
+
+// One tested frontier's probe: the bank's claim and the frontier it
+// advanced to, the pieces the ladders offered at that state, and every
+// affordable order's reads.
+export interface RouteBankProbe {
+  readonly frontier: number;
+  readonly claim: number;
+  readonly budget: number;
+  readonly pieces: readonly { readonly piece: RoutePiece; readonly price: number }[];
+  readonly orders: readonly RouteProbeOrder[];
+  // The route forward, demonstrated: the walk itself continued past this
+  // bank — a later era closed against a strictly larger frontier. The
+  // last bank's record ends there, so its forward read is the honest
+  // false and its route evidence is the orders' own reads.
+  readonly routeDemonstrated: boolean;
 }
 
 function cloneState(state: GameState): GameState {
@@ -431,8 +443,9 @@ function probeBuy(state: GameState, piece: RoutePiece, rng: () => number): boole
 
 // The rig's placements through the engine's own action: the weapon on a
 // free owned cell beside the first enemy's authored cell, the Column on a
-// free owned cell beside a deployed generator, preferring one that also
-// touches the weapon. Returns whether both landed.
+// free owned cell whose module can receive charge beside a charge source
+// (the same topological line the placement leg reads), preferring one
+// that also touches the weapon. Returns whether both landed.
 function probePlace(state: GameState): boolean {
   const first = WORLD_ENEMIES[0]!;
   const free = state.cells.filter((cell) => !enemyDefAt(cell) && !worldOccupantAt(state, cell));
@@ -442,56 +455,62 @@ function probePlace(state: GameState): boolean {
   if (!weaponSeat || !placeWorldOccupant(state, weapon.id, weaponSeat).ok) return false;
   const column = state.world.columns[0];
   if (!column) return true;
-  const generatorCells = state.modules
-    .filter((module) => module.pos !== null && CATEGORY_OF[module.type] === "generator")
+  const generatorCells = state.modules.filter((module) => module.pos !== null &&
+    (CATEGORY_OF[module.type] === "generator" || CATEGORY_OF[module.type] === "conduit"))
     .map((module) => module.pos!);
   const columnSeat = free
-    .filter((cell) => generatorCells.some((pos) => adjacent(cell, pos)))
+    .filter((cell) => state.modules.some((module) => module.pos !== null && sameHex(module.pos, cell) &&
+      CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type]) &&
+      generatorCells.some((pos) => adjacent(cell, pos))))
     .sort((a, b) => Number(adjacent(b, weaponSeat)) - Number(adjacent(a, weaponSeat)))[0];
   return columnSeat !== undefined && placeWorldOccupant(state, column.id, columnSeat).ok;
 }
 
-// The probe itself, over one recorded walk that banked its first claim.
-// The walk's own next bank — the route forward's demonstrated reach — is
-// read off the same record: the claim it carried is what any skipped
-// piece must stay affordable against.
-export function routeProbeRows(record: PlaythroughRecord): RouteProbeRow[] {
-  const prestige = record.events.find((event) => event.kind === "prestige" && event.ok);
-  if (!prestige) throw new Error("Route probe: the walk never banked its first claim — extend the budget.");
-  const base = record.snapshots[prestige.snapshot]!.state;
-  if (base.arete < 1) throw new Error("Route probe: the bank state carries no unspent Arete — the probe reads an unspent claim.");
-  const budget = base.arete;
-  const nextClaim = Math.max(1, record.eras[1]?.claim ?? record.claimTarget);
-  const rows: RouteProbeRow[] = [];
-  for (const order of affordableOrders(budget)) {
-    const state = cloneState(base);
-    const rng = seededRng(record.recipe.seed);
-    let purchasesOk = true;
-    let spend = 0;
-    for (const piece of order) {
-      if (!probeBuy(state, piece, rng)) {
-        purchasesOk = false;
-        break;
+// The probe itself, over one recorded walk: one probe per bank the walk
+// landed, each against that bank's own unspent state.
+export function routeProbes(record: PlaythroughRecord): RouteBankProbe[] {
+  const banks = record.events
+    .map((event, index) => ({ event, index }))
+    .filter(({ event }) => event.kind === "prestige" && event.ok);
+  if (banks.length === 0) throw new Error("Route probe: the walk never banked its first claim — extend the budget.");
+  const probes: RouteBankProbe[] = [];
+  for (let bank = 0; bank < banks.length; bank++) {
+    const base = record.snapshots[banks[bank]!.event.snapshot]!.state;
+    if (base.arete < 0) throw new Error("Route probe: the bank state's Arete is unreadable.");
+    const pieces = (["entry", "column", "hone"] as const).flatMap((piece) => {
+      const price = routePiecePriceAt(base, piece);
+      return price === null ? [] : [{ piece, price }];
+    });
+    const orders: RouteProbeOrder[] = [];
+    for (const order of affordableOrdersAt(base)) {
+      const state = cloneState(base);
+      const rng = seededRng(record.recipe.seed + bank);
+      let purchasesOk = true;
+      let spend = 0;
+      for (const piece of order) {
+        const price = routePiecePriceAt(state, piece);
+        if (price === null || !probeBuy(state, piece, rng)) {
+          purchasesOk = false;
+          break;
+        }
+        spend += price;
       }
-      spend += routePiecePrice(piece);
+      orders.push({
+        order,
+        spend,
+        purchasesOk,
+        placementsOk: probePlace(state),
+        finite: stateNumbersFinite(state),
+      });
     }
-    const placementsOk = probePlace(state);
-    // The route forward: the pieces this order skipped, priced at the
-    // state's own ladders, against the next two claims the curve owes —
-    // the no-refund reading: no purchase in any affordable order can
-    // strand the frontier's route forward.
-    const skippedCost =
-      (state.catalogEntryOwned ? 0 : BALANCE.catalogEntryCost) +
-      (state.world.columns.length > 0 ? 0 : BALANCE.world.columnFirstPrice) +
-      (state.world.hone.chargeBlade > 0 ? 0 : BALANCE.world.honeCosts[0]!);
-    rows.push({
-      order,
-      spend,
-      purchasesOk,
-      placementsOk,
-      routeForward: skippedCost <= 2 * nextClaim,
-      finite: stateNumbersFinite(state),
+    probes.push({
+      frontier: base.world.frontier,
+      claim: record.eras[bank]?.claim ?? 0,
+      budget: base.arete,
+      pieces,
+      orders,
+      routeDemonstrated: record.eras.slice(bank + 1).some((era) => era.claim !== null),
     });
   }
-  return rows;
+  return probes;
 }

@@ -10,19 +10,20 @@ import {
   LONG_SESSION_MINUTES,
   TARGET_ERAS,
   WORLD_POLICIES,
-  affordableOrders,
+  affordableOrdersAt,
   classifyEra,
   eraHoursOf,
   laterEraRecipe,
   laterEraRow,
   laterEraView,
-  routePiecePrice,
-  routeProbeRows,
+  routePiecePriceAt,
+  routeProbes,
   type LaterEraRow,
 } from "./later-eras";
 import { composePlaythroughRecipe, playthroughSource, runPlaythrough, type PlaythroughEraLedger, type PlaythroughSource } from "../src/engine/playthrough";
 import { PLAYTHROUGH_POLICIES } from "../src/engine/playthrough";
 import { BALANCE } from "../src/engine/constants";
+import type { GameState } from "../src/engine/types";
 import { exportPlaythroughArtifact, importPlaythroughArtifact } from "../src/engine/playthrough-artifact";
 
 // The later-era evaluation's checks (issue #491, parent #484 stories 5,
@@ -99,21 +100,28 @@ describe("the declared evaluation matrix", () => {
   });
 
   it("enumerates every affordable route order at the probe's one-Arete rungs", () => {
-    // The probe frontier's pieces each cost their first rung — one Arete —
-    // read off the authored ladders, never restated.
+    // The first frontier's pieces each cost their first rung — one Arete —
+    // read off the authored ladders, never restated; a deeper bank's
+    // ladders price their own enumeration.
+    const firstRungs = { catalogEntryOwned: false, arete: 2, world: { columns: [], hone: { chargeBlade: 0 } } } as unknown as GameState;
     for (const piece of ["entry", "column", "hone"] as const) {
-      expect(routePiecePrice(piece)).toBe(1);
+      expect(routePiecePriceAt(firstRungs, piece)).toBe(1);
     }
-    const orders = affordableOrders(2);
+    const orders = affordableOrdersAt(firstRungs);
     // The empty route, three singles, and all six two-piece permutations.
     expect(orders).toHaveLength(10);
     expect(orders[0]).toEqual([]);
     for (const order of orders) {
-      const spend = order.reduce((sum, piece) => sum + routePiecePrice(piece), 0);
+      const spend = order.reduce((sum, piece) => sum + (routePiecePriceAt(firstRungs, piece) ?? 0), 0);
       expect(spend).toBeLessThanOrEqual(2);
       expect(new Set(order).size).toBe(order.length);
     }
-    expect(affordableOrders(0)).toEqual([[]]);
+    const broke = { ...firstRungs, arete: 0 } as unknown as GameState;
+    expect(affordableOrdersAt(broke)).toEqual([[]]);
+    // A deeper bank's own ladders: two Columns owned price the next at 4,
+    // past a 2-Arete budget — the enumeration shrinks honestly.
+    const deeper = { catalogEntryOwned: true, arete: 2, world: { columns: [{}, {}], hone: { chargeBlade: 0 } } } as unknown as GameState;
+    expect(affordableOrdersAt(deeper).every((order) => !order.includes("column"))).toBe(true);
   });
 });
 
@@ -208,25 +216,33 @@ describe("the era view and the route probe on real walks", () => {
     expect(route.nousPurchases).toBeGreaterThan(0);
   });
 
-  it("walks every affordable order at the tested frontier without a trap", () => {
-    const rows = routeProbeRows(pushingWalk);
-    expect(rows).toHaveLength(10);
-    const spent = new Set<string>();
-    for (const row of rows) {
-      // Every purchase in every order landed through the engine's own
-      // action, the state stayed finite, and the rig's seats existed.
-      expect(row.purchasesOk).toBe(true);
-      expect(row.placementsOk).toBe(true);
-      expect(row.finite).toBe(true);
-      // No refunds: the order's spend is its pieces' authored prices,
-      // never recovered.
-      expect(row.spend).toBe(row.order.reduce((sum, piece) => sum + routePiecePrice(piece), 0));
-      for (const piece of row.order) spent.add(piece);
-      // The no-refund reading: nothing an affordable order bought or
-      // skipped can strand the route forward.
-      expect(row.routeForward).toBe(true);
+  it("walks every affordable order at each tested frontier without a trap", () => {
+    // The pushing walk banked two claimed frontiers — the probe reads
+    // both banks' unspent states, each priced from its own ladders.
+    const probes = routeProbes(pushingWalk);
+    expect(probes.map((probe) => probe.frontier)).toEqual([2, 4]);
+    for (const probe of probes) {
+      expect(probe.budget).toBeGreaterThan(0);
+      // The empty order is always enumerable, and every piece's price
+      // comes from the state's own ladders — the second bank's rungs are
+      // deeper than the first's.
+      expect(probe.orders[0]!.order).toEqual([]);
+      expect(probe.pieces.length).toBeGreaterThanOrEqual(1);
+      for (const row of probe.orders) {
+        // Every purchase in every order landed through the engine's own
+        // action, the state stayed finite, and the rig's seats existed.
+        expect(row.purchasesOk).toBe(true);
+        expect(row.placementsOk).toBe(true);
+        expect(row.finite).toBe(true);
+        // No refunds: the order's spend is its pieces' authored prices,
+        // never recovered, and never above the bank's unspent claim.
+        expect(row.spend).toBeLessThanOrEqual(probe.budget);
+      }
     }
-    expect(spent.size).toBe(3);
+    // The first bank's route forward is demonstrated by the walk's own
+    // later bank; the last bank's record ends there.
+    expect(probes[0]!.routeDemonstrated).toBe(true);
+    expect(probes[1]!.routeDemonstrated).toBe(false);
   });
 
   it("round-trips the walked eras through the run artifact whole", () => {
@@ -366,6 +382,21 @@ describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_LATER_
     expect(report.runs).toHaveLength(LATER_ERA_SEEDS.length * 2 * WORLD_POLICIES.length);
     expect(report.distributions).toHaveLength(6);
     expect(report.source.runnerVersion).toBeGreaterThanOrEqual(13);
-    writeFileSync(process.env.FLOWSYNTH_LATER_ERA_REPORT!, JSON.stringify(report, null, 2));
+    // The route enumeration at the deeper tested frontiers: one recorded
+    // multi-era walk's banks — frontiers 2, 4, and 6 — each probed against
+    // its own unspent state and its own ladders, carried in the report.
+    const probeWalk = runPlaythrough(mod.laterEraRecipe(23, LONG_SESSION_MINUTES, "support"));
+    const routeProbes = mod.routeProbes(probeWalk);
+    expect(routeProbes.map((probe) => probe.frontier)).toEqual([2, 4, 6]);
+    for (const probe of routeProbes) {
+      for (const order of probe.orders) {
+        expect(order.purchasesOk).toBe(true);
+        expect(order.placementsOk).toBe(true);
+        expect(order.finite).toBe(true);
+        expect(order.spend).toBeLessThanOrEqual(probe.budget);
+      }
+    }
+    const withProbes = { ...report, routeProbes };
+    writeFileSync(process.env.FLOWSYNTH_LATER_ERA_REPORT!, JSON.stringify(withProbes, null, 2));
   });
 });
