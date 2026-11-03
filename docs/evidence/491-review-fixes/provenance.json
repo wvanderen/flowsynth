@@ -1,0 +1,35 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-03T15:52:00.521Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "t3/issue-491",
+  "commit": "9161c52b62685d8697f678fdcb11f1034b1662b8",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/491-review-fixes/capture.mjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/491-review-fixes/desktop-crossing.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/491-review-fixes/phone-crossing.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/491-review-fixes/provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/491-review-fixes/verification.json",
+        "state": "??"
+      }
+    ]
+  }
+}

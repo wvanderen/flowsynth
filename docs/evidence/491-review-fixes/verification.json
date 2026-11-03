@@ -1,0 +1,61 @@
+{
+  "setup": {
+    "event": "Era 1 — the prior frontier's depth passed",
+    "credited": 224880,
+    "inspectionCredited": 224880,
+    "snapshot": 22,
+    "runId": "fresh-start-s23-76cfe88b-9ba25371-630e-4fae-916e-77ba3807ebe0",
+    "source": {
+      "game": "flowsynth",
+      "saveVersion": 12,
+      "runnerVersion": 14,
+      "engineSource": "1ae24261"
+    },
+    "liveSaveUntouched": true,
+    "ordinarySaveUntouched": true
+  },
+  "views": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 800,
+      "readout": "boundary 23/29 · sim day 7 2:28:00 · credited 62 h 28 min · 3,690.52 ν/s\nnous\n 34.36M · era 46.55M · \narete\n 0 · \nscrap\n 0 · cells 17 · tray 108 · \nprestiges\n 1 · sessions 6",
+      "keyboardFocus": true,
+      "focusVisible": true,
+      "statusRole": "status",
+      "crossingRead": "✓\nday 7 2:28:00\nEra 1 — the prior frontier's depth passed",
+      "controlWidth": 72.5625,
+      "controlHeight": 44,
+      "staticReadout": true,
+      "reducedMotion": true,
+      "policyOptions": [
+        "Prompt prestige",
+        "Pushing",
+        "Support-seeking",
+        "Combat-engaging",
+        "Enemy-ignoring"
+      ]
+    },
+    {
+      "name": "phone",
+      "width": 390,
+      "height": 844,
+      "readout": "boundary 23/29 · sim day 7 2:28:00 · credited 62 h 28 min · 3,690.52 ν/s\nnous\n 34.36M · era 46.55M · \narete\n 0 · \nscrap\n 0 · cells 17 · tray 108 · \nprestiges\n 1 · sessions 6",
+      "keyboardFocus": true,
+      "focusVisible": true,
+      "statusRole": "status",
+      "crossingRead": "✓\nday 7 2:28:00\nEra 1 — the prior frontier's depth passed",
+      "controlWidth": 72.5625,
+      "controlHeight": 44,
+      "staticReadout": true,
+      "reducedMotion": true,
+      "policyOptions": [
+        "Prompt prestige",
+        "Pushing",
+        "Support-seeking",
+        "Combat-engaging",
+        "Enemy-ignoring"
+      ]
+    }
+  ]
+}

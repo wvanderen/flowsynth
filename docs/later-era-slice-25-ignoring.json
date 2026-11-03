@@ -1,0 +1,1001 @@
+{
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 12,
+    "runnerVersion": 14,
+    "engineSource": "1ae24261"
+  },
+  "recordingCommit": "3181bebf6e8e0fb0153b90ed507e0d0ae7478654",
+  "minutes": 25,
+  "policy": "ignoring",
+  "rows": [
+    {
+      "seed": 42,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": true,
+      "stopKind": "frontier",
+      "stopReason": "The declared 4 claimed frontiers banked at day 46 — the frontier stands at 8 Arete, combat still postponed.",
+      "days": 46,
+      "elapsedHours": 1080.5,
+      "creditedHours": 37.92,
+      "manageBreaks": 91,
+      "claims": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 7.92,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 7.92,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 83,
+            "maxCredited": 1500,
+            "meanCredited": 325
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "under",
+          "hours": 4.17,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 24263631.470498938,
+          "familiarHours": 2.57,
+          "newHours": 1.6,
+          "newShare": 0.384,
+          "familiarFaster": true,
+          "priorSpanHours": 7.92,
+          "productionRegainedHours": 2.08,
+          "priorDepthPassedHours": 2.57,
+          "rebuildingShare": 0.5,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 27,
+            "maxCredited": 1500,
+            "meanCredited": 556
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "in-window",
+          "hours": 8.33,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 205145949.03526625,
+          "familiarHours": 3.8,
+          "newHours": 4.53,
+          "newShare": 0.544,
+          "familiarFaster": true,
+          "priorSpanHours": 4.17,
+          "productionRegainedHours": 2.92,
+          "priorDepthPassedHours": 3.8,
+          "rebuildingShare": 0.35,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 33,
+            "maxCredited": 3000,
+            "meanCredited": 909
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "over",
+          "hours": 17.5,
+          "claim": 2,
+          "frontierAfter": 8,
+          "priorDepth": 2110142386.9119384,
+          "familiarHours": 7.03,
+          "newHours": 10.47,
+          "newShare": 0.598,
+          "familiarFaster": true,
+          "priorSpanHours": 8.33,
+          "productionRegainedHours": 5,
+          "priorDepthPassedHours": 7.03,
+          "rebuildingShare": 0.286,
+          "purchases": [],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 50,
+            "maxCredited": 3000,
+            "meanCredited": 1260
+          },
+          "finite": true
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": null,
+      "note": "Enemy-ignoring ✓ 46d · 2275m credited of 64830m elapsed · claim 2, 2, 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-156bcd5a · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/125m, door 2.0d/125m, frontier 5.0d/250m (5097.01ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 46 — the frontier stands at 8 Arete, combat still postponed."
+    },
+    {
+      "seed": 468,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended with combat postponed — 3 of the declared 4 era(s) closed.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 8.33,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 8.33,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 86,
+            "maxCredited": 1500,
+            "meanCredited": 331
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "in-window",
+          "hours": 7.08,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 21728829.322177354,
+          "familiarHours": 3.6,
+          "newHours": 3.48,
+          "newShare": 0.492,
+          "familiarFaster": true,
+          "priorSpanHours": 8.33,
+          "productionRegainedHours": 2.5,
+          "priorDepthPassedHours": 3.6,
+          "rebuildingShare": 0.353,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 34,
+            "maxCredited": 3000,
+            "meanCredited": 750
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "over",
+          "hours": 14.58,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 209889397.1592409,
+          "familiarHours": 6.67,
+          "newHours": 7.92,
+          "newShare": 0.543,
+          "familiarFaster": true,
+          "priorSpanHours": 7.08,
+          "productionRegainedHours": 5.83,
+          "priorDepthPassedHours": 6.67,
+          "rebuildingShare": 0.4,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 45,
+            "maxCredited": 3000,
+            "meanCredited": 1167
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 2018166996.4331567,
+          "familiarHours": 23.33,
+          "newHours": 5,
+          "newShare": 0.176,
+          "familiarFaster": false,
+          "priorSpanHours": 14.58,
+          "productionRegainedHours": 17.92,
+          "priorDepthPassedHours": 23.33,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 63,
+            "maxCredited": 3000,
+            "meanCredited": 1571
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Enemy-ignoring ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-78faa802 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 3.0d/150m, door 4.0d/175m, frontier 9.0d/425m (2441.99ν/s pre-reset) · eras 3/4 closed · World — enemy w2 discovered · The 70-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 157,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 17.08,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 17.08,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 16,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 110,
+            "maxCredited": 1500,
+            "meanCredited": 545
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 23.75,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 21520123.95262674,
+          "familiarHours": 13.15,
+          "newHours": 10.6,
+          "newShare": 0.446,
+          "familiarFaster": true,
+          "priorSpanHours": 17.08,
+          "productionRegainedHours": 10.83,
+          "priorDepthPassedHours": 13.15,
+          "rebuildingShare": 0.456,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 64,
+            "maxCredited": 3000,
+            "meanCredited": 1336
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 205497658.58054215,
+          "familiarHours": 17.5,
+          "newHours": 0,
+          "newShare": 0,
+          "familiarFaster": null,
+          "priorSpanHours": 23.75,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 0,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 39,
+            "maxCredited": 3000,
+            "meanCredited": 1577
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Enemy-ignoring ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 157 · fresh-start · fresh-start-s157-c9e15475 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 13.0d/650m, door 12.0d/625m, frontier 28.0d/1425m (1140.26ν/s pre-reset) · eras 2/4 closed · World — enemy w0 discovered · The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 2026,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended with combat postponed — 3 of the declared 4 era(s) closed.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 16.25,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 16.25,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 16,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 106,
+            "maxCredited": 3000,
+            "meanCredited": 538
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 20.83,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 21234428.704785317,
+          "familiarHours": 14.22,
+          "newHours": 6.62,
+          "newShare": 0.318,
+          "familiarFaster": true,
+          "priorSpanHours": 16.25,
+          "productionRegainedHours": 12.08,
+          "priorDepthPassedHours": 14.22,
+          "rebuildingShare": 0.58,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 3,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 59,
+            "maxCredited": 3000,
+            "meanCredited": 1271
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "in-window",
+          "hours": 9.17,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 223606898.37736562,
+          "familiarHours": 5.32,
+          "newHours": 3.85,
+          "newShare": 0.42,
+          "familiarFaster": true,
+          "priorSpanHours": 20.83,
+          "productionRegainedHours": 4.58,
+          "priorDepthPassedHours": 5.32,
+          "rebuildingShare": 0.5,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 30,
+            "maxCredited": 3000,
+            "meanCredited": 1100
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 2451808119.6672854,
+          "familiarHours": 9.38,
+          "newHours": 2.7,
+          "newShare": 0.223,
+          "familiarFaster": false,
+          "priorSpanHours": 9.17,
+          "productionRegainedHours": 11.25,
+          "priorDepthPassedHours": 9.38,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 1,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 33,
+            "maxCredited": 3000,
+            "meanCredited": 1273
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Enemy-ignoring ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-14b136d2 · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 14.0d/725m, door 12.0d/625m, frontier 25.0d/1250m (749.92ν/s pre-reset) · eras 3/4 closed · Era 3 — prior production regained (257725.37ν/s) · The 70-day budget ended with combat postponed — 3 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 7,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 14.17,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 14.17,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 103,
+            "maxCredited": 3000,
+            "meanCredited": 481
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 13.33,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 22455642.30808096,
+          "familiarHours": 5.42,
+          "newHours": 7.92,
+          "newShare": 0.594,
+          "familiarFaster": true,
+          "priorSpanHours": 14.17,
+          "productionRegainedHours": 5,
+          "priorDepthPassedHours": 5.42,
+          "rebuildingShare": 0.375,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 1,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 43,
+            "maxCredited": 3000,
+            "meanCredited": 1116
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 211390106.51179218,
+          "familiarHours": 10.1,
+          "newHours": 20.73,
+          "newShare": 0.672,
+          "familiarFaster": true,
+          "priorSpanHours": 13.33,
+          "productionRegainedHours": 7.5,
+          "priorDepthPassedHours": 10.1,
+          "rebuildingShare": null,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 76,
+            "maxCredited": 3000,
+            "meanCredited": 1441
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Enemy-ignoring ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-1e488f5f · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 6.0d/300m, door 4.0d/200m, frontier 16.0d/800m (1835.92ν/s pre-reset) · eras 2/4 closed · Era 2 — the prior frontier's depth passed · The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 99,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 21.67,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 21.67,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 15,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 117,
+            "maxCredited": 3000,
+            "meanCredited": 654
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 31.25,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 20586729.432187945,
+          "familiarHours": 13.07,
+          "newHours": 18.18,
+          "newShare": 0.582,
+          "familiarFaster": true,
+          "priorSpanHours": 21.67,
+          "productionRegainedHours": 9.17,
+          "priorDepthPassedHours": 13.07,
+          "rebuildingShare": 0.293,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 3,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 81,
+            "maxCredited": 3000,
+            "meanCredited": 1389
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 204562681.510444,
+          "familiarHours": 5.42,
+          "newHours": 0,
+          "newShare": 0,
+          "familiarFaster": null,
+          "priorSpanHours": 31.25,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 0,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 13,
+            "maxCredited": 3000,
+            "meanCredited": 1385
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Enemy-ignoring ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-148ca0de · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 11.0d/550m, door 11.0d/525m, frontier 37.9d/1875m (572.15ν/s pre-reset) · eras 2/4 closed · Poly Expander 2 — 12.89ν/s → 26.32ν/s · The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 11,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 12.5,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 12.5,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 16,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 100,
+            "maxCredited": 1500,
+            "meanCredited": 435
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 18.33,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 20245384.133810453,
+          "familiarHours": 8.57,
+          "newHours": 9.77,
+          "newShare": 0.533,
+          "familiarFaster": true,
+          "priorSpanHours": 12.5,
+          "productionRegainedHours": 6.25,
+          "priorDepthPassedHours": 8.57,
+          "rebuildingShare": 0.341,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 53,
+            "maxCredited": 3000,
+            "meanCredited": 1245
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 209727249.31669927,
+          "familiarHours": 17.55,
+          "newHours": 9.95,
+          "newShare": 0.362,
+          "familiarFaster": true,
+          "priorSpanHours": 18.33,
+          "productionRegainedHours": 15.83,
+          "priorDepthPassedHours": 17.55,
+          "rebuildingShare": null,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 1,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 65,
+            "maxCredited": 3000,
+            "meanCredited": 1500
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Enemy-ignoring ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 11 · fresh-start · fresh-start-s11-a862ed7e · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 8.0d/375m, door 8.0d/400m, frontier 22.0d/1100m (724.67ν/s pre-reset) · eras 2/4 closed · Era 2 — the prior frontier's depth passed · The 70-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 23,
+      "sessionMinutes": 25,
+      "policy": "ignoring",
+      "complete": true,
+      "stopKind": "frontier",
+      "stopReason": "The declared 4 claimed frontiers banked at day 54 — the frontier stands at 8 Arete, combat still postponed.",
+      "days": 54,
+      "elapsedHours": 1272.5,
+      "creditedHours": 44.58,
+      "manageBreaks": 107,
+      "claims": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 6.25,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 6.25,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 81,
+            "maxCredited": 1500,
+            "meanCredited": 259
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "in-window",
+          "hours": 5,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 27183828.086079344,
+          "familiarHours": 2.97,
+          "newHours": 2.03,
+          "newShare": 0.407,
+          "familiarFaster": true,
+          "priorSpanHours": 6.25,
+          "productionRegainedHours": 2.08,
+          "priorDepthPassedHours": 2.97,
+          "rebuildingShare": 0.417,
+          "purchases": [
+            "Catalog entry"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 29,
+            "maxCredited": 3000,
+            "meanCredited": 621
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "over",
+          "hours": 10.83,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 221953814.5027785,
+          "familiarHours": 4.68,
+          "newHours": 6.15,
+          "newShare": 0.568,
+          "familiarFaster": true,
+          "priorSpanHours": 5,
+          "productionRegainedHours": 3.33,
+          "priorDepthPassedHours": 4.68,
+          "rebuildingShare": 0.308,
+          "purchases": [
+            "Arete — Chord Catalysts"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 38,
+            "maxCredited": 3000,
+            "meanCredited": 1026
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "over",
+          "hours": 22.5,
+          "claim": 2,
+          "frontierAfter": 8,
+          "priorDepth": 2069038796.69985,
+          "familiarHours": 13,
+          "newHours": 9.5,
+          "newShare": 0.422,
+          "familiarFaster": false,
+          "priorSpanHours": 10.83,
+          "productionRegainedHours": 7.92,
+          "priorDepthPassedHours": 13,
+          "rebuildingShare": 0.352,
+          "purchases": [],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 59,
+            "maxCredited": 3000,
+            "meanCredited": 1373
+          },
+          "finite": true
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": null,
+      "note": "Enemy-ignoring ✓ 54d · 2675m credited of 76350m elapsed · claim 2, 2, 2, 2 Arete · seed 23 · fresh-start · fresh-start-s23-2cd9f43d · spent Catalog entry + 1× Chord Catalysts · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/125m, door 3.0d/150m, frontier 6.0d/300m (4969.29ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 54 — the frontier stands at 8 Arete, combat still postponed."
+    }
+  ]
+}

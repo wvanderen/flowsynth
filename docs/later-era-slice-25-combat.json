@@ -1,0 +1,1080 @@
+{
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 12,
+    "runnerVersion": 14,
+    "engineSource": "1ae24261"
+  },
+  "recordingCommit": "3181bebf6e8e0fb0153b90ed507e0d0ae7478654",
+  "minutes": 25,
+  "policy": "combat",
+  "rows": [
+    {
+      "seed": 42,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": true,
+      "stopKind": "frontier",
+      "stopReason": "The declared 4 claimed frontiers banked at day 35 — the frontier stands at 8 Arete.",
+      "days": 35,
+      "elapsedHours": 817,
+      "creditedHours": 29.17,
+      "manageBreaks": 70,
+      "claims": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 7.92,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 7.92,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 83,
+            "maxCredited": 1500,
+            "meanCredited": 325
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "under",
+          "hours": 4.17,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 24263631.470498938,
+          "familiarHours": 2.57,
+          "newHours": 1.6,
+          "newShare": 0.384,
+          "familiarFaster": true,
+          "priorSpanHours": 7.92,
+          "productionRegainedHours": 2.08,
+          "priorDepthPassedHours": 2.57,
+          "rebuildingShare": 0.5,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 29,
+            "maxCredited": 1500,
+            "meanCredited": 517
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "in-window",
+          "hours": 7.5,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 205145949.0352662,
+          "familiarHours": 3.68,
+          "newHours": 3.82,
+          "newShare": 0.509,
+          "familiarFaster": true,
+          "priorSpanHours": 4.17,
+          "productionRegainedHours": 2.92,
+          "priorDepthPassedHours": 3.68,
+          "rebuildingShare": 0.389,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 32,
+            "maxCredited": 3000,
+            "meanCredited": 844
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "in-window",
+          "hours": 9.58,
+          "claim": 2,
+          "frontierAfter": 8,
+          "priorDepth": 2023640873.5396214,
+          "familiarHours": 5.5,
+          "newHours": 4.08,
+          "newShare": 0.426,
+          "familiarFaster": true,
+          "priorSpanHours": 7.5,
+          "productionRegainedHours": 4.17,
+          "priorDepthPassedHours": 5.5,
+          "rebuildingShare": 0.435,
+          "purchases": [
+            "World Column"
+          ],
+          "nousPurchases": 3,
+          "placements": [
+            "Placed a Charge Column at -2,2",
+            "Relocated the chargeBlade to 0,1",
+            "Relocated a Charge Column to -1,1",
+            "Relocated the chargeBlade to 1,-1",
+            "Relocated a Charge Column to 0,-1"
+          ],
+          "defeats": [
+            "w0",
+            "w1",
+            "w2"
+          ],
+          "gaps": {
+            "count": 43,
+            "maxCredited": 3000,
+            "meanCredited": 802
+          },
+          "finite": true
+        }
+      ],
+      "noGrant": true,
+      "defeats": [
+        "w0",
+        "w1",
+        "w2"
+      ],
+      "bottleneck": null,
+      "note": "Combat-engaging ✓ 35d · 1750m credited of 49020m elapsed · claim 2, 2, 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-1b248da7 · spent Catalog entry + 1× Charge Column + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/150m, column 14.0d/700m, rate 2.0d/125m, door 2.0d/125m, frontier 5.0d/250m (5097.01ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 35 — the frontier stands at 8 Arete."
+    },
+    {
+      "seed": 468,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": true,
+      "stopKind": "frontier",
+      "stopReason": "The declared 4 claimed frontiers banked at day 62 — the frontier stands at 8 Arete.",
+      "days": 62,
+      "elapsedHours": 1465,
+      "creditedHours": 51.67,
+      "manageBreaks": 124,
+      "claims": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 8.33,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 8.33,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 86,
+            "maxCredited": 1500,
+            "meanCredited": 331
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "in-window",
+          "hours": 7.08,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 21728829.322177354,
+          "familiarHours": 3.6,
+          "newHours": 3.48,
+          "newShare": 0.492,
+          "familiarFaster": true,
+          "priorSpanHours": 8.33,
+          "productionRegainedHours": 2.5,
+          "priorDepthPassedHours": 3.6,
+          "rebuildingShare": 0.353,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 36,
+            "maxCredited": 3000,
+            "meanCredited": 708
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "over",
+          "hours": 15,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 209880629.71419373,
+          "familiarHours": 7.22,
+          "newHours": 7.78,
+          "newShare": 0.519,
+          "familiarFaster": false,
+          "priorSpanHours": 7.08,
+          "productionRegainedHours": 6.67,
+          "priorDepthPassedHours": 7.22,
+          "rebuildingShare": 0.444,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 1,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 43,
+            "maxCredited": 3000,
+            "meanCredited": 1256
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "over",
+          "hours": 21.25,
+          "claim": 2,
+          "frontierAfter": 8,
+          "priorDepth": 2031272824.7819672,
+          "familiarHours": 10.53,
+          "newHours": 10.72,
+          "newShare": 0.504,
+          "familiarFaster": true,
+          "priorSpanHours": 15,
+          "productionRegainedHours": 6.25,
+          "priorDepthPassedHours": 10.53,
+          "rebuildingShare": 0.294,
+          "purchases": [
+            "World Column"
+          ],
+          "nousPurchases": 3,
+          "placements": [
+            "Placed a Charge Column at -1,1",
+            "Relocated the chargeBlade to 0,1",
+            "Relocated the chargeBlade to 1,-1",
+            "Relocated a Charge Column to 0,0"
+          ],
+          "defeats": [
+            "w0",
+            "w1",
+            "w2"
+          ],
+          "gaps": {
+            "count": 67,
+            "maxCredited": 3000,
+            "meanCredited": 1142
+          },
+          "finite": true
+        }
+      ],
+      "noGrant": true,
+      "defeats": [
+        "w0",
+        "w1",
+        "w2"
+      ],
+      "bottleneck": null,
+      "note": "Combat-engaging ✓ 62d · 3100m credited of 87900m elapsed · claim 2, 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-6eebf27f · spent Catalog entry + 1× Charge Column + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/225m, column 27.0d/1325m, rate 3.0d/150m, door 4.0d/175m, frontier 9.0d/425m (2441.99ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 62 — the frontier stands at 8 Arete."
+    },
+    {
+      "seed": 157,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended inside the worthwhile-prestige journey.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 17.08,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 17.08,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 16,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 110,
+            "maxCredited": 1500,
+            "meanCredited": 545
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 23.75,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 21520123.95262674,
+          "familiarHours": 13.15,
+          "newHours": 10.6,
+          "newShare": 0.446,
+          "familiarFaster": true,
+          "priorSpanHours": 17.08,
+          "productionRegainedHours": 10.83,
+          "priorDepthPassedHours": 13.15,
+          "rebuildingShare": 0.456,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 66,
+            "maxCredited": 3000,
+            "meanCredited": 1295
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 205497610.43405074,
+          "familiarHours": 17.5,
+          "newHours": 0,
+          "newShare": 0,
+          "familiarFaster": null,
+          "priorSpanHours": 23.75,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 0,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 39,
+            "maxCredited": 3000,
+            "meanCredited": 1577
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Combat-engaging ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 157 · fresh-start · fresh-start-s157-066a155c · spent Catalog entry + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 15.0d/775m, column unreached, rate 13.0d/650m, door 12.0d/625m, frontier 28.0d/1425m (1140.26ν/s pre-reset) · eras 2/4 closed · World — enemy w0 discovered · The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 2026,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": true,
+      "stopKind": "frontier",
+      "stopReason": "The declared 4 claimed frontiers banked at day 66 — the frontier stands at 8 Arete.",
+      "days": 66,
+      "elapsedHours": 1559.5,
+      "creditedHours": 54.58,
+      "manageBreaks": 131,
+      "claims": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 16.25,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 16.25,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 16,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 106,
+            "maxCredited": 3000,
+            "meanCredited": 538
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 20.83,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 21234428.704785317,
+          "familiarHours": 14.22,
+          "newHours": 6.62,
+          "newShare": 0.318,
+          "familiarFaster": true,
+          "priorSpanHours": 16.25,
+          "productionRegainedHours": 12.08,
+          "priorDepthPassedHours": 14.22,
+          "rebuildingShare": 0.58,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 3,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 61,
+            "maxCredited": 3000,
+            "meanCredited": 1230
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "in-window",
+          "hours": 8.75,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 223566873.4482614,
+          "familiarHours": 5.7,
+          "newHours": 3.05,
+          "newShare": 0.349,
+          "familiarFaster": true,
+          "priorSpanHours": 20.83,
+          "productionRegainedHours": 4.58,
+          "priorDepthPassedHours": 5.7,
+          "rebuildingShare": 0.524,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 3,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 30,
+            "maxCredited": 3000,
+            "meanCredited": 1050
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "in-window",
+          "hours": 8.75,
+          "claim": 2,
+          "frontierAfter": 8,
+          "priorDepth": 2038333945.3803644,
+          "familiarHours": 6.55,
+          "newHours": 2.2,
+          "newShare": 0.251,
+          "familiarFaster": true,
+          "priorSpanHours": 8.75,
+          "productionRegainedHours": 5.42,
+          "priorDepthPassedHours": 6.55,
+          "rebuildingShare": 0.619,
+          "purchases": [
+            "World Column"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed a Charge Column at -2,2",
+            "Relocated the chargeBlade to 0,1",
+            "Relocated a Charge Column to -1,1",
+            "Relocated the chargeBlade to 1,-1",
+            "Relocated a Charge Column to 0,0"
+          ],
+          "defeats": [
+            "w0",
+            "w1",
+            "w2"
+          ],
+          "gaps": {
+            "count": 39,
+            "maxCredited": 3000,
+            "meanCredited": 808
+          },
+          "finite": true
+        }
+      ],
+      "noGrant": true,
+      "defeats": [
+        "w0",
+        "w1",
+        "w2"
+      ],
+      "bottleneck": null,
+      "note": "Combat-engaging ✓ 66d · 3275m credited of 93570m elapsed · claim 2, 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-d548508f · spent Catalog entry + 1× Charge Column + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 17.0d/850m, column 35.0d/1775m, rate 14.0d/725m, door 12.0d/625m, frontier 25.0d/1250m (749.92ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 66 — the frontier stands at 8 Arete."
+    },
+    {
+      "seed": 7,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended inside the worthwhile-prestige journey.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 14.17,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 14.17,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 103,
+            "maxCredited": 3000,
+            "meanCredited": 481
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 13.33,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 22455642.30808096,
+          "familiarHours": 5.42,
+          "newHours": 7.92,
+          "newShare": 0.594,
+          "familiarFaster": true,
+          "priorSpanHours": 14.17,
+          "productionRegainedHours": 5,
+          "priorDepthPassedHours": 5.42,
+          "rebuildingShare": 0.375,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 1,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 45,
+            "maxCredited": 3000,
+            "meanCredited": 1067
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 210913452.85938904,
+          "familiarHours": 9.82,
+          "newHours": 21.02,
+          "newShare": 0.682,
+          "familiarFaster": true,
+          "priorSpanHours": 13.33,
+          "productionRegainedHours": 7.5,
+          "priorDepthPassedHours": 9.82,
+          "rebuildingShare": null,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 76,
+            "maxCredited": 3000,
+            "meanCredited": 1441
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Combat-engaging ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-b095b982 · spent Catalog entry + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 7.0d/325m, column unreached, rate 6.0d/300m, door 4.0d/200m, frontier 16.0d/800m (1835.92ν/s pre-reset) · eras 2/4 closed · Era 2 — the prior frontier's depth passed · The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 99,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended inside the worthwhile-prestige journey.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 21.67,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 21.67,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 15,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 117,
+            "maxCredited": 3000,
+            "meanCredited": 654
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 31.25,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 20586729.432187945,
+          "familiarHours": 13.07,
+          "newHours": 18.18,
+          "newShare": 0.582,
+          "familiarFaster": true,
+          "priorSpanHours": 21.67,
+          "productionRegainedHours": 9.17,
+          "priorDepthPassedHours": 13.07,
+          "rebuildingShare": 0.293,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 3,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 83,
+            "maxCredited": 3000,
+            "meanCredited": 1355
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 204561762.60904324,
+          "familiarHours": 5.42,
+          "newHours": 0,
+          "newShare": 0,
+          "familiarFaster": null,
+          "priorSpanHours": 31.25,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 0,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 13,
+            "maxCredited": 3000,
+            "meanCredited": 1385
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Combat-engaging ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-44fa475b · spent Catalog entry + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 16.0d/775m, column unreached, rate 11.0d/550m, door 11.0d/525m, frontier 37.9d/1875m (572.15ν/s pre-reset) · eras 2/4 closed · Poly Expander 2 — 28.03ν/s → 59.26ν/s · The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 11,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": false,
+      "stopKind": "budget",
+      "stopReason": "The 70-day budget ended inside the worthwhile-prestige journey.",
+      "days": 70,
+      "elapsedHours": 1656,
+      "creditedHours": 58.33,
+      "manageBreaks": 140,
+      "claims": [
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 12.5,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 12.5,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 16,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 100,
+            "maxCredited": 1500,
+            "meanCredited": 435
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "over",
+          "hours": 18.33,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 20245384.133810453,
+          "familiarHours": 8.57,
+          "newHours": 9.77,
+          "newShare": 0.533,
+          "familiarFaster": true,
+          "priorSpanHours": 12.5,
+          "productionRegainedHours": 6.25,
+          "priorDepthPassedHours": 8.57,
+          "rebuildingShare": 0.341,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 55,
+            "maxCredited": 3000,
+            "meanCredited": 1200
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "priorDepth": 209727590.3063652,
+          "familiarHours": 17.63,
+          "newHours": 9.87,
+          "newShare": 0.359,
+          "familiarFaster": true,
+          "priorSpanHours": 18.33,
+          "productionRegainedHours": 15.42,
+          "priorDepthPassedHours": 17.63,
+          "rebuildingShare": null,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 1,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 65,
+            "maxCredited": 3000,
+            "meanCredited": 1500
+          },
+          "finite": null
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": "The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete..",
+      "note": "Combat-engaging ✗ 70d · 3500m credited of 99360m elapsed · claim 2, 2 Arete · seed 11 · fresh-start · fresh-start-s11-93a2d97b · spent Catalog entry + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 11.0d/525m, column unreached, rate 8.0d/375m, door 8.0d/400m, frontier 22.0d/1100m (724.67ν/s pre-reset) · eras 2/4 closed · Era 2 — the prior frontier's depth passed · The 70-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete.."
+    },
+    {
+      "seed": 23,
+      "sessionMinutes": 25,
+      "policy": "combat",
+      "complete": true,
+      "stopKind": "frontier",
+      "stopReason": "The declared 4 claimed frontiers banked at day 51 — the frontier stands at 8 Arete.",
+      "days": 51,
+      "elapsedHours": 1200.5,
+      "creditedHours": 42.08,
+      "manageBreaks": 101,
+      "claims": [
+        2,
+        2,
+        2,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        4,
+        6,
+        8
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 6.25,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 6.25,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 17,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 81,
+            "maxCredited": 1500,
+            "meanCredited": 259
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "in-window",
+          "hours": 5,
+          "claim": 2,
+          "frontierAfter": 4,
+          "priorDepth": 27183828.086079344,
+          "familiarHours": 2.97,
+          "newHours": 2.03,
+          "newShare": 0.407,
+          "familiarFaster": true,
+          "priorSpanHours": 6.25,
+          "productionRegainedHours": 2.08,
+          "priorDepthPassedHours": 2.97,
+          "rebuildingShare": 0.417,
+          "purchases": [
+            "Catalog entry",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 31,
+            "maxCredited": 3000,
+            "meanCredited": 581
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "in-window",
+          "hours": 9.58,
+          "claim": 2,
+          "frontierAfter": 6,
+          "priorDepth": 221953922.2011744,
+          "familiarHours": 4.48,
+          "newHours": 5.1,
+          "newShare": 0.532,
+          "familiarFaster": true,
+          "priorSpanHours": 5,
+          "productionRegainedHours": 3.33,
+          "priorDepthPassedHours": 4.48,
+          "rebuildingShare": 0.348,
+          "purchases": [
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 34,
+            "maxCredited": 3000,
+            "meanCredited": 1015
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "over",
+          "hours": 21.25,
+          "claim": 2,
+          "frontierAfter": 8,
+          "priorDepth": 2070315682.013287,
+          "familiarHours": 12.52,
+          "newHours": 8.73,
+          "newShare": 0.411,
+          "familiarFaster": false,
+          "priorSpanHours": 9.58,
+          "productionRegainedHours": 11.25,
+          "priorDepthPassedHours": 12.52,
+          "rebuildingShare": 0.529,
+          "purchases": [
+            "World Column"
+          ],
+          "nousPurchases": 3,
+          "placements": [
+            "Placed a Charge Column at -3,2"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 62,
+            "maxCredited": 3000,
+            "meanCredited": 1234
+          },
+          "finite": true
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": null,
+      "note": "Combat-engaging ✓ 51d · 2525m credited of 72030m elapsed · claim 2, 2, 2, 2 Arete · seed 23 · fresh-start · fresh-start-s23-d7a71794 · spent Catalog entry + 1× Charge Column + 2× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/175m, column 17.0d/875m, rate 2.0d/125m, door 3.0d/150m, frontier 6.0d/300m (4969.29ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 51 — the frontier stands at 8 Arete."
+    }
+  ]
+}

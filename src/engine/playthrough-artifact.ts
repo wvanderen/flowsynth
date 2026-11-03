@@ -22,8 +22,10 @@ import { deepFreeze, type PlaythroughRecord } from "./playthrough";
 // chain, ADR-0017's boundary pattern. Version 3 adds the
 // worthwhile-prestige journey to the carried recovery ledger and the
 // separate session/management accounting (issue #490); version 2 records
-// predate it and are rejected by name.
-export const PLAYTHROUGH_ARTIFACT_VERSION = 3;
+// predate it and are rejected by name. Version 4 adds the walked eras'
+// ledgers and the frontier stop (issue #491); version 3 records predate
+// it and are rejected by name.
+export const PLAYTHROUGH_ARTIFACT_VERSION = 4;
 
 // The format marker, distinct from the ordinary save's `app: "flowsynth"`:
 // a save pasted into the run importer is not an artifact, and an artifact
@@ -112,11 +114,11 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
     ["elapsed", "credited", "rate", "forgeRate", "eraEarned", "nous", "arete"]) || !index(item.snapshot))) return "trajectory";
   const recipe = record.recipe as Record<string, unknown>;
   const schedule = recipe.schedule;
-  if (!finiteFields(recipe, ["seed", "claimTarget", "budgetDays"]) || !isRecord(recipe.overrides) ||
+  if (!finiteFields(recipe, ["seed", "claimTarget", "budgetDays", "eras"]) || !Number.isInteger(recipe.eras) || Number(recipe.eras) < 1 || Number(recipe.eras) > 12 || !isRecord(recipe.overrides) ||
     !Object.values(recipe.overrides).every(item => typeof item === "number" && Number.isFinite(item)) ||
     !isRecord(schedule) || !finiteFields(schedule, ["sessionsPerDay", "sessionMinutes", "breatherMinutes", "goalMinutes", "startAt"]) ||
     typeof schedule.habitName !== "string" || typeof schedule.timeZone !== "string") return "recipe";
-  if (record.kind !== "representative" || !isRecord(record.policy) || typeof record.policy.id !== "string" || typeof record.policy.name !== "string" ||
+  if (!["representative", "continuation"].includes(String(record.kind)) || !isRecord(record.policy) || typeof record.policy.id !== "string" || typeof record.policy.name !== "string" ||
     !finiteFields(record, ["claimTarget", "days", "elapsedSeconds", "creditedSeconds", "breatherSeconds", "manageBreaks", "earnedNous", "sessionNous", "breatherNous"]) ||
     !Array.isArray(record.claims) || !record.claims.every(item => typeof item === "number" && Number.isFinite(item)) ||
     !strings(record.achievements) || !strings(record.worldDiscoveries) || !strings(record.worldDefeats) ||
@@ -130,8 +132,23 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
     ![recovery.lastingPurchase, recovery.weaponDeployed, recovery.columnDeployed, recovery.productionRegained,
       recovery.eligibilityReached, recovery.frontierAdvanced].every(item =>
         item === null || (isRecord(item) && finiteFields(item, ["elapsed", "credited"]))))) return "recovery record";
+  // The walked eras' ledgers (issue #491): one entry per opened era, each
+  // closed at its bank or explicitly open with nulls.
+  const eras = record.eras as unknown[];
+  const eraLedger = (item: unknown): boolean => {
+    if (!isRecord(item) || typeof item.index !== "number" || !Number.isInteger(item.index) || item.index < 0 ||
+      !finiteFields(item, ["startElapsed", "startCredited", "familiarCredited", "newCredited"])) return false;
+    for (const key of ["endElapsed", "endCredited", "claim", "frontierAfter", "priorDepth", "priorRate"]) {
+      const value = item[key];
+      if (value !== null && (typeof value !== "number" || !Number.isFinite(value))) return false;
+    }
+    if (item.finite !== null && typeof item.finite !== "boolean") return false;
+    return [item.productionRegained, item.priorDepthPassed].every(item =>
+      item === null || (isRecord(item) && finiteFields(item, ["elapsed", "credited"])));
+  };
+  if (!Array.isArray(eras) || !eras.every(eraLedger)) return "era ledger";
   const stop = record.stop as Record<string, unknown>;
-  if (!["prestige", "recovered", "budget", "checkpoint"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
+  if (!["prestige", "recovered", "budget", "checkpoint", "frontier"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
   return null;
 }
 

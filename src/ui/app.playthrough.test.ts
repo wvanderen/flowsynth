@@ -4,8 +4,8 @@ import type { App } from "./app";
 import { playthroughEventMarker, playthroughRunId, playthroughNote, type PlaythroughRecord } from "../engine/playthrough";
 import { exportPlaythroughArtifact, PLAYTHROUGH_ARTIFACT_VERSION } from "../engine/playthrough-artifact";
 import { ARETE_HORIZON } from "../engine/accumulator";
-import { BALANCE, CATEGORY_OF } from "../engine/constants";
-import { adjacent } from "../engine/hex";
+import { BALANCE } from "../engine/constants";
+import { sameHex } from "../engine/hex";
 import { syncRates } from "../engine/economy";
 import { createAppFixture } from "./testing/app-fixture";
 import * as actions from "../engine/actions";
@@ -83,9 +83,13 @@ describe("the declared recipe", () => {
     });
     expect(typeof recipe.schedule.startAt).toBe("number");
     expect(recipe.budgetDays).toBe(30);
+    expect(recipe.eras).toBe(1);
     expect(recipe.overrides).toEqual({});
-    // The policy catalog both policies declare, and the app offers it.
-    expect(app.devPlaythroughPolicies().map((policy) => policy.id)).toEqual(["prompt", "pushing"]);
+    // The policy catalog the five declared policies compose, and the app
+    // offers it: the prompt/pushing pair and the World-comparison trio.
+    expect(app.devPlaythroughPolicies().map((policy) => policy.id)).toEqual([
+      "prompt", "pushing", "support", "combat", "ignoring",
+    ]);
   });
 
   it("rejects unsupported input by name instead of running a default", () => {
@@ -351,7 +355,9 @@ describe("the pushing policy", () => {
     expect(record.state.world.weapons[0]!.pos).toBeNull();
     expect(record.state.world.columns[0]!.pos).toBeNull();
     expect(record.events.some((event) => event.reason === "no free World cell beside a living discovered enemy")).toBe(true);
-    expect(record.events.some((event) => event.reason === "no free World cell beside a deployed generator")).toBe(true);
+    // The charge line's seat reads the authoritative preview: the owned
+    // cell carries no module, so no line exists and the Column waits.
+    expect(record.events.some((event) => event.reason === "no free World cell on a charge line")).toBe(true);
   });
 
   it("pushes past the first eligibility, banks, spends, deploys the starter rig, recovers, and advances the frontier", { timeout: 300_000 }, () => {
@@ -368,11 +374,14 @@ describe("the pushing policy", () => {
     // the World's entry depth — 3 Arete, the curve's honest floor where
     // the 600-minute session carried the era measure past the entry — then
     // banked again to advance the frontier beyond the claimed frontier.
+    // The second bank reads 3 now: the rig's first kill pays its era
+    // bonus, and the deeper era measure the walk reaches by the next door
+    // banks the curve's honest figure there.
     expect(record.complete).toBe(true);
     expect(record.stop.kind).toBe("recovered");
     expect(record.stop.reason).toContain("worthwhile-prestige journey completed at day 10");
     expect(record.claimTarget).toBe(2);
-    expect(record.claims).toEqual([3, 2]);
+    expect(record.claims).toEqual([3, 3]);
     expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
@@ -381,8 +390,8 @@ describe("the pushing policy", () => {
     // Charge Blade is the first World-eligible claim's own grant.
     expect(record.areteSpent).toEqual({ entry: 1, discounts: 0, ceilings: 0, columns: 1, hone: { chargeBlade: 1 } });
     expect(record.state.world.starterWeaponGranted).toBe(true);
-    expect(record.state.arete).toBe(2);
-    expect(record.state.world.frontier).toBe(5);
+    expect(record.state.arete).toBe(3);
+    expect(record.state.world.frontier).toBe(6);
     // No grants: every ν the state ever banked is what the run earned —
     // the sessions and their breathers, each recorded separately. At this
     // scale the summations drift by float rounding alone, so the
@@ -403,14 +412,21 @@ describe("the pushing policy", () => {
     expect(record.state.cells.some((cell) => cell.q === column.pos!.q && cell.r === column.pos!.r)).toBe(true);
     // The rig fought: the defeat ledger carries w0, killed on the blade's
     // own cadence — the final state's w0 is the second prestige's fresh
-    // enemy, so the defeat lives in the ledger, not the last board.
-    expect(record.worldDefeats).toContain("w0");
+    // enemy, so the defeat lives in the ledger, not the last board. And
+    // the fight moved: with w0 dead the blade relocated beside the next
+    // living discovered enemy and killed w1 too — the route the later
+    // frontiers owe, demonstrated inside this same walk.
+    expect(record.worldDefeats).toEqual(["w0", "w1"]);
     expect(record.worldDiscoveries).toContain("w0");
-    expect(column.pos !== null && record.state.modules.some((m) => m.pos !== null && CATEGORY_OF[m.type] === "generator" && adjacent(column.pos!, m.pos))).toBe(true);
+    // The Column stands on a charge line: a module beneath it, receiving
+    // what the line copies — the lift's own requirement, read at the
+    // placement rule too.
+    expect(column.pos !== null && record.state.modules.some((m) => m.pos !== null && sameHex(m.pos, column.pos!))).toBe(true);
     const worldEvents = record.events.filter((event) => event.kind === "world" && event.ok);
     expect(worldEvents.map((event) => event.label)).toContain("World Column");
     expect(worldEvents.some((event) => event.label.startsWith("Placed the chargeBlade at"))).toBe(true);
     expect(worldEvents.some((event) => event.label.startsWith("Placed a Charge Column at"))).toBe(true);
+    expect(worldEvents.some((event) => event.label.startsWith("Relocated the chargeBlade to"))).toBe(true);
 
     // The worthwhile-prestige ledger, both clocks, every mark measured
     // from the first bank: the Catalog entry landed the moment the walk
@@ -424,6 +440,9 @@ describe("the pushing policy", () => {
     expect(recovery.claim).toBe(3);
     expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0 });
     expect(recovery.lastingPurchaseLabel).toBe("Catalog entry");
+    // The Column lands the moment it is bought: the opening board already
+    // carries a charge line — a receiving module beside the generator —
+    // so the purchase functions from its first between-sessions read.
     expect(recovery.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
     expect(recovery.weaponDeployed).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
     expect(recovery.productionRegained).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
@@ -439,15 +458,15 @@ describe("the pushing policy", () => {
     expect(record.events.some((event) => event.milestone && event.label.includes("next prestige eligibility reached"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label.includes("pre-reset production regained"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Catalog entry)")).toBe(true);
-    expect(record.events.some((event) => event.milestone && event.label === "Recovery — frontier advanced to 5 Arete")).toBe(true);
+    expect(record.events.some((event) => event.milestone && event.label === "Recovery — frontier advanced to 6 Arete")).toBe(true);
 
     // The readable record: the discoveries rode era 1 (the claim's depth),
     // the prestige lines name their banks, and the note carries the
     // journey's read.
     const prestiges = record.events.filter((event) => event.kind === "prestige");
-    expect(prestiges.map((event) => event.label)).toEqual(["Prestige 1 — banked 3 Arete", "Prestige 2 — banked 2 Arete"]);
+    expect(prestiges.map((event) => event.label)).toEqual(["Prestige 1 — banked 3 Arete", "Prestige 2 — banked 3 Arete"]);
     for (const event of prestiges) expect(event.milestone).toBe(true);
-    expect(app.devPlaythroughNote).toContain("claim 3, 2/2 Arete");
+    expect(app.devPlaythroughNote).toContain("claim 3, 3/2 Arete");
     expect(app.devPlaythroughNote).toContain("recovery — bank 3, purchase 0.0d/0m (Catalog entry)");
     expect(app.devPlaythroughNote).toContain("frontier 5.0d/3000m");
     expect(app.devPlaythroughNote).toContain("The worthwhile-prestige journey completed at day 10");
@@ -478,8 +497,11 @@ describe("the pushing policy", () => {
     app = boot(undefined, true);
     const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 6, schedule: PUSHING_SCHEDULE });
     // The bank landed at the World's entry depth and the next morning's
-    // manage spent it — Catalog entry and Column; the next era was still
-    // rebuilding when the budget ended — blade, rate, and door all
+    // manage spent it — Catalog entry, a Charge Column, a Hone rank. The
+    // Column lands immediately: the opening board's charge line is
+    // topological (a receiving module beside the generator), so the
+    // purchase functions from its first read. The next era was still
+    // rebuilding when the budget ended — blade, rate, and door are all
     // explicitly unreached, a slower recovery being valid evidence no
     // fabricated mark may replace.
     expect(record.complete).toBe(false);
@@ -489,7 +511,7 @@ describe("the pushing policy", () => {
     expect(record.recovery).not.toBeNull();
     expect(record.recovery!.claim).toBe(3);
     expect(record.recovery!.lastingPurchase).not.toBeNull();
-    expect(record.recovery!.columnDeployed).not.toBeNull();
+    expect(record.recovery!.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
     expect(record.recovery!.weaponDeployed).toBeNull();
     expect(record.recovery!.eligibilityReached).toBeNull();
     expect(record.recovery!.productionRegained).toBeNull();
@@ -734,8 +756,10 @@ describe("the panel's visible wiring", () => {
     app = boot(undefined, true);
     const policy = document.getElementById("dev-playthrough-policy") as HTMLSelectElement;
     const targetField = document.getElementById("dev-playthrough-target") as HTMLInputElement;
-    // The select offers both declared policies under their own names.
-    expect([...policy.options].map((option) => option.value)).toEqual(["prompt", "pushing"]);
+    // The select offers the five declared policies under their own names.
+    expect([...policy.options].map((option) => option.value)).toEqual([
+      "prompt", "pushing", "support", "combat", "ignoring",
+    ]);
     expect(policy.options[policy.selectedIndex]!.text).toBe("Prompt prestige");
     policy.value = "pushing";
     targetField.value = "5";

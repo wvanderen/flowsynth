@@ -33,6 +33,7 @@ function sampleRecord(): PlaythroughRecord {
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     },
     budgetDays: 1,
+    eras: 1,
     responseCurve: "shipped",
     overrides: {},
   });
