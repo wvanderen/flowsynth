@@ -202,7 +202,8 @@ export function laterEraView(record: PlaythroughRecord, index: number, previous:
       .filter((event) => event.ok && event.kind === "world" && event.label.startsWith(WORLD_PLACED_PREFIX))
       .map((event) => event.label),
     defeats: span
-      .filter((event) => event.ok && event.kind === "milestone" && event.label.startsWith(WORLD_DEFEAT_PREFIX))
+      .filter((event) => event.ok && event.kind === "milestone" &&
+        event.label.startsWith(WORLD_DEFEAT_PREFIX) && event.label.includes(" defeated"))
       .map((event) => event.label.slice(WORLD_DEFEAT_PREFIX.length).replace(" defeated", "")),
     gaps: gapsOf(decisions),
     finite: era.finite,
@@ -326,17 +327,22 @@ export interface LaterEraReport {
   readonly distributions: readonly LaterEraDistribution[];
 }
 
-// The full declared matrix: eight seeds × two session shapes × the three
-// declared World policies, each a real scheduled walk through the
-// existing runner.
-export function laterEraReport(): LaterEraReport {
-  const runs: LaterEraRow[] = [];
-  for (const sessionMinutes of [BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES]) {
-    for (const policyId of WORLD_POLICIES) {
-      for (const seed of LATER_ERA_SEEDS) {
-        runs.push(laterEraRow(seed, sessionMinutes, runPlaythrough(laterEraRecipe(seed, sessionMinutes, policyId))));
-      }
-    }
+// One declared slice: the eight seeds for one session shape × one policy —
+// the unit the recorded matrix runs in, so a recording interruption loses
+// at most its own slice and the slices compose (issue #491).
+export function laterEraSliceRows(sessionMinutes: number, policyId: string): LaterEraRow[] {
+  return LATER_ERA_SEEDS.map((seed) =>
+    laterEraRow(seed, sessionMinutes, runPlaythrough(laterEraRecipe(seed, sessionMinutes, policyId))));
+}
+
+// The full declared report, composed from the slices: eight seeds × two
+// session shapes × the three declared World policies, with the per-slice
+// distribution reads.
+export function laterEraReport(runs: readonly LaterEraRow[]): LaterEraReport {
+  if (runs.length !== LATER_ERA_SEEDS.length * 2 * WORLD_POLICIES.length) {
+    throw new Error(
+      `Later-era report: expected ${LATER_ERA_SEEDS.length * 2 * WORLD_POLICIES.length} recorded runs, found ${runs.length}.`,
+    );
   }
   const distributions = [BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES].flatMap((sessionMinutes) =>
     WORLD_POLICIES.map((policyId) =>

@@ -4,8 +4,8 @@ import type { App } from "./app";
 import { playthroughEventMarker, playthroughRunId, playthroughNote, type PlaythroughRecord } from "../engine/playthrough";
 import { exportPlaythroughArtifact, PLAYTHROUGH_ARTIFACT_VERSION } from "../engine/playthrough-artifact";
 import { ARETE_HORIZON } from "../engine/accumulator";
-import { BALANCE, CATEGORY_OF } from "../engine/constants";
-import { adjacent } from "../engine/hex";
+import { BALANCE } from "../engine/constants";
+import { sameHex } from "../engine/hex";
 import { syncRates } from "../engine/economy";
 import { createAppFixture } from "./testing/app-fixture";
 import * as actions from "../engine/actions";
@@ -355,7 +355,9 @@ describe("the pushing policy", () => {
     expect(record.state.world.weapons[0]!.pos).toBeNull();
     expect(record.state.world.columns[0]!.pos).toBeNull();
     expect(record.events.some((event) => event.reason === "no free World cell beside a living discovered enemy")).toBe(true);
-    expect(record.events.some((event) => event.reason === "no free World cell beside a deployed generator")).toBe(true);
+    // The charge line's seat reads the authoritative preview: the owned
+    // cell carries no module, so no line exists and the Column waits.
+    expect(record.events.some((event) => event.reason === "no free World cell on a charge line")).toBe(true);
   });
 
   it("pushes past the first eligibility, banks, spends, deploys the starter rig, recovers, and advances the frontier", { timeout: 300_000 }, () => {
@@ -416,7 +418,10 @@ describe("the pushing policy", () => {
     // frontiers owe, demonstrated inside this same walk.
     expect(record.worldDefeats).toEqual(["w0", "w1"]);
     expect(record.worldDiscoveries).toContain("w0");
-    expect(column.pos !== null && record.state.modules.some((m) => m.pos !== null && CATEGORY_OF[m.type] === "generator" && adjacent(column.pos!, m.pos))).toBe(true);
+    // The Column stands on a charge line: a module beneath it, receiving
+    // what the line copies — the lift's own requirement, read at the
+    // placement rule too.
+    expect(column.pos !== null && record.state.modules.some((m) => m.pos !== null && sameHex(m.pos, column.pos!))).toBe(true);
     const worldEvents = record.events.filter((event) => event.kind === "world" && event.ok);
     expect(worldEvents.map((event) => event.label)).toContain("World Column");
     expect(worldEvents.some((event) => event.label.startsWith("Placed the chargeBlade at"))).toBe(true);
@@ -435,6 +440,9 @@ describe("the pushing policy", () => {
     expect(recovery.claim).toBe(3);
     expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0 });
     expect(recovery.lastingPurchaseLabel).toBe("Catalog entry");
+    // The Column lands the moment it is bought: the opening board already
+    // carries a charge line — a receiving module beside the generator —
+    // so the purchase functions from its first between-sessions read.
     expect(recovery.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
     expect(recovery.weaponDeployed).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
     expect(recovery.productionRegained).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
@@ -489,8 +497,11 @@ describe("the pushing policy", () => {
     app = boot(undefined, true);
     const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 6, schedule: PUSHING_SCHEDULE });
     // The bank landed at the World's entry depth and the next morning's
-    // manage spent it — Catalog entry and Column; the next era was still
-    // rebuilding when the budget ended — blade, rate, and door all
+    // manage spent it — Catalog entry, a Charge Column, a Hone rank. The
+    // Column lands immediately: the opening board's charge line is
+    // topological (a receiving module beside the generator), so the
+    // purchase functions from its first read. The next era was still
+    // rebuilding when the budget ended — blade, rate, and door are all
     // explicitly unreached, a slower recovery being valid evidence no
     // fabricated mark may replace.
     expect(record.complete).toBe(false);
@@ -500,7 +511,7 @@ describe("the pushing policy", () => {
     expect(record.recovery).not.toBeNull();
     expect(record.recovery!.claim).toBe(3);
     expect(record.recovery!.lastingPurchase).not.toBeNull();
-    expect(record.recovery!.columnDeployed).not.toBeNull();
+    expect(record.recovery!.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
     expect(record.recovery!.weaponDeployed).toBeNull();
     expect(record.recovery!.eligibilityReached).toBeNull();
     expect(record.recovery!.productionRegained).toBeNull();

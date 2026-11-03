@@ -24,7 +24,7 @@ import {
 } from "./actions";
 import type { ActionResult } from "./actions";
 import { frontier, seededRng } from "./capacity-calibration";
-import { BALANCE, CATEGORY_OF, isOscillatorType, RESPONSE_CURVES, responseCurveCandidateOf, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
+import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, isOscillatorType, RESPONSE_CURVES, responseCurveCandidateOf, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
 import type { WorldEnemyDef } from "./constants";
 import { affordableLevels, syncRates, wholeNous, levelsCost } from "./economy";
 import { activeGoalOf, createGoal, rollGoalOccurrences } from "./goals";
@@ -146,7 +146,7 @@ export const SUPPORT_POLICY: PlaythroughPolicy = {
   rules: [
     "Buys exactly what the prompt policy buys, by the same rules, on the same schedule, and pushes claims like the pushing policy.",
     "Once the World is entered it pays the Catalog entry first, then Charge Columns while affordable, then Hone ranks cheapest-first — the charge line before the blade; the discount and ceiling offerings wait for what remains.",
-    "Columns deploy on the charge line before any waiting weapon deploys; a weapon takes the fight-adjacent seat that also touches a placed Column when one exists. A weapon whose fight is won relocates to the next living discovered enemy, and a Column the fight left behind follows the charge line — relocation is free between sessions.",
+    "The weapon takes the fight-adjacent seat that also touches a placed Column when one exists; the Column takes a charge line — a cell whose module receives charge — preferring one that touches the placed weapon. A weapon whose fight is won relocates to the next living discovered enemy, and a Column the fight left behind follows it when a charge line touches the new fight.",
     "Ends every session at its planned target and writes a practice note.",
   ],
 };
@@ -1352,6 +1352,30 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
     living.length > 0 ? Math.min(...living.map((def) => hexDistance(pos, def.pos))) : Number.POSITIVE_INFINITY;
   const free = (): Hex[] =>
     state.cells.filter((cell) => !enemyDefAt(cell) && !worldOccupantAt(state, cell));
+  // The charge line's read (issue #491's trap repair): the TOPOLOGY of a
+  // line, not its instantaneous strength. A charge line is a cell whose
+  // module can receive charge and that sits beside the board's charge
+  // sources; the strength it carries is reserve-driven and intermittent
+  // by design — generators drain while emitting and refill on the
+  // practice facts — so an instant read of zero describes a resting line,
+  // not its absence. The flow-basis strength remains the rank's
+  // tiebreak: among equal seats, the line currently carrying more stands
+  // first. A Column copies the charge the module beneath it receives — a
+  // seat with no receiving module copies nothing — and an Arete purchase
+  // stranded on such a seat is exactly the progression trap this ticket
+  // repairs in the placement rule, never in currency.
+  const chargeSnapshot = syncRates(state, true);
+  const receivedAt = (pos: Hex): number => {
+    const module = state.modules.find((entry) => entry.pos !== null && sameHex(entry.pos, pos));
+    return module ? (chargeSnapshot.chargeStrength.get(module.id) ?? 0) : 0;
+  };
+  const lineAt = (pos: Hex): boolean => {
+    const module = state.modules.find((entry) => entry.pos !== null && sameHex(entry.pos, pos));
+    if (!module || !CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type])) return false;
+    return state.modules.some((other) => other.pos !== null &&
+      (CATEGORY_OF[other.type] === "generator" || CATEGORY_OF[other.type] === "conduit") &&
+      adjacent(other.pos, pos));
+  };
   // Both occupants share selection and action handling; each rule supplies
   // eligible seats and its own readable preference ranks.
   const deploy = (
@@ -1379,6 +1403,13 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
   };
   // Each leg is one occupant family's independent attempt: the original
   // loops broke only their own iteration, never withheld the other's.
+  // Every policy deploys the weapon first — a Column must never take the
+  // fight's only seat (issue #491's repair) — then the Column takes a
+  // charge line: a cell whose module receives charge, preferring one that
+  // also touches the placed weapon, then the strongest line. The pair
+  // connects wherever the board can carry the line to the fight; where it
+  // cannot yet, the Column sits on its best line and relocates to the
+  // fight when the board grows one.
   const weaponLeg = (): void => {
     for (const weapon of state.world.weapons) {
       if (weapon.pos !== null) continue;
@@ -1402,34 +1433,28 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
       if (!deploy(
         column.id,
         "a Charge Column",
-        free().filter((pos) => state.modules.some((module) => module.pos !== null &&
-          CATEGORY_OF[module.type] === "generator" && adjacent(pos, module.pos))),
+        free().filter((pos) => lineAt(pos)),
         (pos) => [
           state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos)) ? 0 : 1,
+          -receivedAt(pos),
           pos.q, pos.r,
         ],
-        "no free World cell beside a deployed generator",
+        "no free World cell on a charge line",
         "column",
       )) break;
     }
   };
-  // The support-seeking policy deploys its charge line first (issue
-  // #491), so a waiting weapon's seat read already sees the Columns it
-  // prefers; every other order deploys the weapons first.
-  if (ctx.worldOrder === "support-first") {
-    columnLeg();
-    weaponLeg();
-  } else {
-    weaponLeg();
-    columnLeg();
-  }
-  relocateWorldOccupants(ctx, state, living, free, weaponLegSeat, columnLegSeat);
+  // The deployment order is shared: the weapon's fight first, then the
+  // charge line (issue #491's repair).
+  weaponLeg();
+  columnLeg();
+  relocateWorldOccupants(ctx, state, living, free, lineAt, receivedAt, weaponLegSeat, columnLegSeat);
 }
 
 // The seat reads the relocation shares with the initial deploy: the
-// weapon beside the fight, the Column on the charge line. Each excludes
-// the occupant's own current cell, so a move only fires when a genuinely
-// different seat ranks better.
+// weapon beside the fight, the Column on a charge line that also touches
+// the fight. Each excludes the occupant's own current cell, so a move
+// only fires when a genuinely different seat ranks better.
 function weaponLegSeat(
   state: GameState,
   living: readonly WorldEnemyDef[],
@@ -1448,14 +1473,17 @@ function weaponLegSeat(
   );
 }
 
-function columnLegSeat(state: GameState, free: () => Hex[], current: Hex): Hex | undefined {
+function columnLegSeat(
+  state: GameState,
+  free: () => Hex[],
+  lineAt: (pos: Hex) => boolean,
+  receivedAt: (pos: Hex) => number,
+  current: Hex,
+): Hex | undefined {
   return bestRanked(
-    free().filter((pos) => !sameHex(pos, current) && state.modules.some((module) => module.pos !== null &&
-      CATEGORY_OF[module.type] === "generator" && adjacent(pos, module.pos))),
-    (pos) => [
-      state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos)) ? 0 : 1,
-      pos.q, pos.r,
-    ],
+    free().filter((pos) => !sameHex(pos, current) && lineAt(pos) &&
+      state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos))),
+    (pos) => [-receivedAt(pos), pos.q, pos.r],
   );
 }
 
@@ -1476,20 +1504,22 @@ function rankLessOf(a: readonly number[], b: readonly number[]): boolean {
 
 // The relocation leg (issue #491's route at later frontiers): a weapon
 // whose fight is won — no eligible target remains adjacent — moves to the
-// next living discovered enemy, and a Column the fight left behind
-// follows the charge line. Relocation is free between sessions (the
-// authored mechanic), every move rides the engine's own retrieve and
-// placement actions, and the leg only fires when the seat has gone stale
-// and a different seat exists — it settles, never churns. A stale seat
-// with no alternative stays put quietly: the walk's rule places, it does
-// not refuse what nothing better answers.
+// next living discovered enemy, and a Column the fight left behind moves
+// to a charge line that touches the fight. Relocation is free between
+// sessions (the authored mechanic), every move rides the engine's own
+// retrieve and placement actions, and each leg only fires when the seat
+// has gone stale AND a genuinely better seat exists — a Column with no
+// fight-adjacent line to move to stays put, so the leg settles, never
+// churns.
 function relocateWorldOccupants(
   ctx: RunContext,
   state: GameState,
   living: readonly WorldEnemyDef[],
   free: () => Hex[],
+  lineAt: (pos: Hex) => boolean,
+  receivedAt: (pos: Hex) => number,
   weaponSeat: (state: GameState, living: readonly WorldEnemyDef[], free: () => Hex[], current: Hex) => Hex | undefined,
-  columnSeat: (state: GameState, free: () => Hex[], current: Hex) => Hex | undefined,
+  columnSeat: (state: GameState, free: () => Hex[], lineAt: (pos: Hex) => boolean, receivedAt: (pos: Hex) => number, current: Hex) => Hex | undefined,
 ): void {
   for (const weapon of state.world.weapons) {
     const current = weapon.pos;
@@ -1512,7 +1542,7 @@ function relocateWorldOccupants(
     const current = column.pos;
     if (current === null) continue;
     if (state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(weapon.pos, current))) continue;
-    const seat = columnSeat(state, free, current);
+    const seat = columnSeat(state, free, lineAt, receivedAt, current);
     if (!seat) continue;
     if (!retrieveWorldOccupant(state, column.id).ok) continue;
     const result = placeWorldOccupant(state, column.id, seat);

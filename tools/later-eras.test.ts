@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import {
   BASELINE_BUDGET_DAYS,
@@ -18,18 +18,22 @@ import {
   laterEraView,
   routePiecePrice,
   routeProbeRows,
+  type LaterEraRow,
 } from "./later-eras";
-import { composePlaythroughRecipe, runPlaythrough, type PlaythroughEraLedger } from "../src/engine/playthrough";
+import { composePlaythroughRecipe, playthroughSource, runPlaythrough, type PlaythroughEraLedger, type PlaythroughSource } from "../src/engine/playthrough";
 import { PLAYTHROUGH_POLICIES } from "../src/engine/playthrough";
 import { BALANCE } from "../src/engine/constants";
+import { exportPlaythroughArtifact, importPlaythroughArtifact } from "../src/engine/playthrough-artifact";
 
 // The later-era evaluation's checks (issue #491, parent #484 stories 5,
 // 17–27, 42–43). The declared matrix and the reading rules run always;
 // the full recorded report — the 48 scheduled walks over the eight seeds,
 // both session shapes, and the three declared World policies — rides the
-// FLOWSYNTH_LATER_ERA_REPORT gate like the recorded evaluations before
-// it, so a suite pass never pays for a multi-hour evaluation it did not
-// ask for.
+// FLOWSYNTH_LATER_ERA_REPORT / FLOWSYNTH_LATER_ERA_SLICE gates like the
+// recorded evaluations before it, so a suite pass never pays for a
+// multi-hour evaluation it did not ask for. The six slices (one per
+// session shape × policy) run independently and compose into the report;
+// a recording interruption loses at most its own slice.
 
 function ledgerOf(partial: Partial<PlaythroughEraLedger> & { index: number }): PlaythroughEraLedger {
   return {
@@ -224,6 +228,21 @@ describe("the era view and the route probe on real walks", () => {
     }
     expect(spent.size).toBe(3);
   });
+
+  it("round-trips the walked eras through the run artifact whole", () => {
+    // The artifact is the evidence's file format: a multi-era record
+    // exports, imports, and keeps its era ledgers exactly — and the
+    // imported copy is as read-only as a fresh walk's.
+    const text = exportPlaythroughArtifact({ record: pushingWalk });
+    const load = importPlaythroughArtifact(text);
+    expect(load.ok).toBe(true);
+    if (!load.ok) return;
+    expect(load.artifact.record.eras).toEqual(pushingWalk.eras);
+    expect(load.artifact.record.claims).toEqual(pushingWalk.claims);
+    expect(() => {
+      (load.artifact.record.eras[0] as { claim: number }).claim = 99;
+    }).toThrow();
+  });
 });
 
 describe("the declared World policies' spending orders", { timeout: 1_800_000 }, () => {
@@ -266,21 +285,28 @@ describe("the declared World policies' spending orders", { timeout: 1_800_000 },
   });
 });
 
-describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_LATER_ERA_REPORT, timeout: 36_000_000 }, () => {
-  it("walks the full declared matrix — eight seeds, both session shapes, three policies — and records it", async () => {
-    const { laterEraReport } = await import("./later-eras");
-    const report = laterEraReport();
-    // 8 seeds × 2 schedules × 3 policies.
-    expect(report.runs).toHaveLength(LATER_ERA_SEEDS.length * 2 * WORLD_POLICIES.length);
-    expect(report.distributions).toHaveLength(6);
-    expect(report.source.runnerVersion).toBeGreaterThanOrEqual(13);
-    for (const row of report.runs) {
+describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_LATER_ERA_REPORT && !process.env.FLOWSYNTH_LATER_ERA_SLICE, timeout: 7_200_000 }, () => {
+  // The matrix records in six declared slices (one per session shape ×
+  // policy), each its own invocation: FLOWSYNTH_LATER_ERA_SLICE
+  // "<minutes>:<policy>" walks its eight seeds and writes its slice file;
+  // FLOWSYNTH_LATER_ERA_REPORT composes the six into the recorded report.
+  // A recording interruption loses at most its own slice; the walks are
+  // deterministic per engine source, and every file carries (and the
+  // compose verifies) the source it was recorded against.
+  const slice = process.env.FLOWSYNTH_LATER_ERA_SLICE;
+  const slicePath = (minutes: number, policy: string) =>
+    `docs/later-era-slice-${minutes}-${policy}.json`;
+
+  // The structural and honesty rules every recorded row must carry — the
+  // same read at slice scope and at report scope.
+  const assertRows = (rows: LaterEraRow[]): void => {
+    for (const row of rows) {
       // Currency integrity rides every row: the state's whole intake is
       // what the walk earned — no hidden grant, no missing currency.
       expect(row.noGrant).toBe(true);
       // Every closed era's frontier advanced strictly beyond the last,
-      // every closed era's bank state scanned finite, every era carries a
-      // class.
+      // every closed era's bank state scanned finite, every era carries
+      // a class.
       let last = 0;
       for (const era of row.eras) {
         expect(era.eraClass).toBeTruthy();
@@ -304,7 +330,42 @@ describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_LATER_
         expect(row.eras.every((era) => era.placements.length === 0)).toBe(true);
       }
     }
-    const text = JSON.stringify(report, null, 2);
-    writeFileSync(process.env.FLOWSYNTH_LATER_ERA_REPORT!, text);
+  };
+
+  it(slice ? `walks the ${slice} slice and records it` : "composes the full declared matrix from the recorded slices", async () => {
+    const mod = await import("./later-eras");
+    const source = playthroughSource();
+    if (slice) {
+      const [minutesRaw, policyId] = slice.split(":");
+      const minutes = Number(minutesRaw);
+      expect([BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES]).toContain(minutes);
+      expect([...WORLD_POLICIES]).toContain(policyId);
+      const rows = mod.laterEraSliceRows(minutes, policyId);
+      expect(rows).toHaveLength(LATER_ERA_SEEDS.length);
+      expect(rows.map((row) => row.seed)).toEqual(LATER_ERA_SEEDS);
+      assertRows(rows);
+      writeFileSync(slicePath(minutes, policyId!), JSON.stringify({ source, minutes, policy: policyId, rows }, null, 2));
+      return;
+    }
+    const runs: LaterEraRow[] = [];
+    for (const minutes of [BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES]) {
+      for (const policyId of WORLD_POLICIES) {
+        const text = readFileSync(slicePath(minutes, policyId), "utf8");
+        const recorded = JSON.parse(text) as { source: PlaythroughSource; minutes: number; policy: string; rows: LaterEraRow[] };
+        // A slice composes only against the source it was recorded with.
+        expect(recorded.source.engineSource).toBe(source.engineSource);
+        expect(recorded.minutes).toBe(minutes);
+        expect(recorded.policy).toBe(policyId);
+        expect(recorded.rows).toHaveLength(LATER_ERA_SEEDS.length);
+        assertRows(recorded.rows);
+        runs.push(...recorded.rows);
+      }
+    }
+    const report = mod.laterEraReport(runs);
+    // 8 seeds × 2 schedules × 3 policies.
+    expect(report.runs).toHaveLength(LATER_ERA_SEEDS.length * 2 * WORLD_POLICIES.length);
+    expect(report.distributions).toHaveLength(6);
+    expect(report.source.runnerVersion).toBeGreaterThanOrEqual(13);
+    writeFileSync(process.env.FLOWSYNTH_LATER_ERA_REPORT!, JSON.stringify(report, null, 2));
   });
 });
