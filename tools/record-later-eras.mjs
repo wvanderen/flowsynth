@@ -1,0 +1,107 @@
+// Explicit, long-running evidence tier. Compile with Vite's real glob/raw
+// transforms (rather than vitest's insensitive fingerprint, issue #503),
+// then record the same functions the tests exercise. No listening server.
+import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { pathToFileURL } from "node:url";
+import { build } from "vite";
+
+const [command, slice] = process.argv.slice(2);
+if (command !== "compose" && !(command === "slice" && /^(25|60):(support|combat|ignoring)$/.test(slice ?? ""))) {
+  throw new Error("Usage: node tools/record-later-eras.mjs slice <25|60>:<support|combat|ignoring> | compose");
+}
+execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
+const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const output = await mkdtemp(join(tmpdir(), "flowsynth-later-eras-"));
+try {
+  await build({ configFile: false, logLevel: "error", build: {
+    ssr: "tools/later-eras.ts", outDir: output, emptyOutDir: true,
+    rollupOptions: { output: { entryFileNames: "later-eras.mjs" } },
+  } });
+  const m = await import(pathToFileURL(join(output, "later-eras.mjs")).href);
+  const source = m.playthroughSource();
+  const slicePath = (minutes, policy) => `docs/later-era-slice-${minutes}-${policy}.json`;
+  const assertRows = (rows, minutes, policy) => {
+    assert.deepEqual(rows.map(row => row.seed), m.LATER_ERA_SEEDS);
+    for (const row of rows) {
+      assert.equal(row.sessionMinutes, minutes);
+      assert.equal(row.policy, policy);
+      assert.equal(row.noGrant, true);
+      if (policy === "ignoring") {
+        assert.deepEqual(row.defeats, []);
+        assert.ok(row.eras.every(era => era.placements.length === 0));
+      }
+      let frontier = 0;
+      for (const era of row.eras) {
+        if (era.claim === null) continue;
+        assert.equal(era.finite, true);
+        if (era.index > 0) assert.ok(Math.abs(era.familiarHours + era.newHours - era.hours) < 0.02);
+        assert.ok(era.frontierAfter > frontier);
+        frontier = era.frontierAfter;
+      }
+    }
+  };
+  if (command === "slice") {
+    const [raw, policy] = slice.split(":");
+    const minutes = Number(raw);
+    const rows = [];
+    for (const seed of m.LATER_ERA_SEEDS) {
+      const record = m.runPlaythrough(m.laterEraRecipe(seed, minutes, policy));
+      // Every era owns its actual end-of-era kills, including repeated
+      // enemies. Check the pre-bank board, not the reset board.
+      const banks = record.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
+      for (const [index, bank] of banks.entries()) {
+        const last = record.events.slice(0, bank).reverse().find(event => event.kind === "session" || event.kind === "breather");
+        const state = record.snapshots[last.snapshot].state;
+        const defeats = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp === 0).map(([key]) => key);
+        assert.deepEqual(m.laterEraView(record, index, null).defeats, defeats);
+      }
+      for (const snapshot of record.snapshots) {
+        assert.equal(m.stateNumbersFinite(snapshot.state), true);
+        assert.ok(Number.isFinite(snapshot.rate));
+      }
+      for (const event of record.events) assert.equal(record.snapshots[event.snapshot].credited, event.credited);
+      for (const era of record.eras) {
+        if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
+      }
+      rows.push(m.laterEraRow(seed, minutes, record));
+      console.log(`${slice} seed ${seed}: ${record.claims.length} banks, ${record.creditedSeconds / 3600} credited hours`);
+    }
+    assertRows(rows, minutes, policy);
+    await writeFile(slicePath(minutes, policy), JSON.stringify({ source, recordingCommit: commit, minutes, policy, rows }, null, 2));
+  } else {
+    const runs = [];
+    for (const minutes of [25, 60]) for (const policy of m.WORLD_POLICIES) {
+      const recorded = JSON.parse(await readFile(slicePath(minutes, policy), "utf8"));
+      assert.equal(recorded.recordingCommit, commit);
+      assert.deepEqual(recorded.source, source);
+      assertRows(recorded.rows, minutes, policy);
+      runs.push(...recorded.rows);
+    }
+    const report = m.laterEraReport(runs);
+    const walk = m.runPlaythrough(m.laterEraRecipe(23, 60, "support"));
+    const routeProbes = m.routeProbes(walk, { budgetDays: 30 });
+    assert.deepEqual(routeProbes.map(probe => probe.frontier), [2, 4, 6, 8]);
+    for (const probe of routeProbes) {
+      assert.equal(probe.routeDemonstrated, true);
+      for (const order of probe.orders) {
+        assert.equal(order.purchasesOk, true);
+        assert.equal(order.finite, true);
+        assert.ok(order.spend <= probe.budget);
+        assert.equal(order.forward.noGrant, true);
+        assert.equal(order.forward.noRefund, true);
+        assert.equal(order.forward.finite, true);
+        assert.equal(order.forward.outcome, "advanced");
+        assert.ok(order.forward.frontierAfter > probe.frontier);
+      }
+      assert.ok(probe.orders.some(order => order.forward.defeats.length > 0));
+    }
+    await writeFile(process.env.FLOWSYNTH_LATER_ERA_REPORT || "docs/later-era-results.json", JSON.stringify({ ...report, recordingCommit: commit, routeProbes }, null, 2));
+    console.log(`Recorded ${runs.length} matrix walks and ${routeProbes.reduce((n, probe) => n + probe.orders.length, 0)} directly continued purchase orders.`);
+  }
+} finally {
+  await rm(output, { recursive: true, force: true });
+}

@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import {
   BASELINE_BUDGET_DAYS,
@@ -18,12 +18,13 @@ import {
   laterEraView,
   routePiecePriceAt,
   routeProbes,
-  type LaterEraRow,
+  walkRouteForward,
 } from "./later-eras";
-import { composePlaythroughRecipe, playthroughSource, runPlaythrough, type PlaythroughEraLedger, type PlaythroughSource } from "../src/engine/playthrough";
+import { composePlaythroughRecipe, continuePlaythrough, runPlaythrough, type PlaythroughEraLedger } from "../src/engine/playthrough";
 import { PLAYTHROUGH_POLICIES } from "../src/engine/playthrough";
 import { BALANCE } from "../src/engine/constants";
 import type { GameState } from "../src/engine/types";
+import { createInitialState } from "../src/engine/state";
 import { exportPlaythroughArtifact, importPlaythroughArtifact } from "../src/engine/playthrough-artifact";
 
 // The later-era evaluation's checks (issue #491, parent #484 stories 5,
@@ -216,7 +217,7 @@ describe("the era view and the route probe on real walks", () => {
     expect(route.nousPurchases).toBeGreaterThan(0);
   });
 
-  it("walks every affordable order at each tested frontier without a trap", () => {
+  it("enumerates orders without mistaking seats or another branch for forward progress", () => {
     // The pushing walk banked two claimed frontiers — the probe reads
     // both banks' unspent states, each priced from its own ladders.
     const probes = routeProbes(pushingWalk);
@@ -232,17 +233,93 @@ describe("the era view and the route probe on real walks", () => {
         // Every purchase in every order landed through the engine's own
         // action, the state stayed finite, and the rig's seats existed.
         expect(row.purchasesOk).toBe(true);
-        expect(row.placementsOk).toBe(true);
+        expect(typeof row.placementsOk).toBe("boolean");
+        expect(row.forward).toBeNull();
         expect(row.finite).toBe(true);
         // No refunds: the order's spend is its pieces' authored prices,
         // never recovered, and never above the bank's unspent claim.
         expect(row.spend).toBeLessThanOrEqual(probe.budget);
       }
     }
-    // The first bank's route forward is demonstrated by the walk's own
-    // later bank; the last bank's record ends there.
-    expect(probes[0]!.routeDemonstrated).toBe(true);
-    expect(probes[1]!.routeDemonstrated).toBe(false);
+    // The empty first-bank order has no Column: a weapon seat alone is
+    // not a functioning rig, and the parent's later bank proves nothing
+    // about any enumerated branch.
+    expect(probes[0]!.orders[0]!.placementsOk).toBe(false);
+    expect(probes.every((probe) => !probe.routeDemonstrated)).toBe(true);
+  });
+
+  it("keeps crossing events, inspection clocks, and the familiar span in agreement", () => {
+    const crossings = pushingWalk.events.filter((event) => event.label.includes("prior frontier's depth passed"));
+    expect(crossings.length).toBeGreaterThan(0);
+    for (const event of crossings) {
+      expect(pushingWalk.snapshots[event.snapshot]!.credited).toBe(event.credited);
+    }
+    for (const era of pushingWalk.eras.filter((entry) => entry.priorDepthPassed !== null)) {
+      expect(era.familiarCredited).toBe(era.priorDepthPassed!.credited);
+    }
+  });
+
+  it("owns closing-session defeats and repeated kills in the era that fought them", () => {
+    const banks = pushingWalk.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
+    expect(banks.length).toBeGreaterThan(0);
+    for (const [index, bank] of banks.entries()) {
+      const lastSession = pushingWalk.events.slice(0, bank).reverse().find((event) => event.kind === "breather" || event.kind === "session")!;
+      const state = pushingWalk.snapshots[lastSession.snapshot]!.state;
+      const defeated = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp === 0).map(([key]) => key);
+      expect(laterEraView(pushingWalk, index, null).defeats).toEqual(defeated);
+    }
+  });
+
+  it("keeps facts before a tied bank in the closing era and facts after it in the next", () => {
+    const bank = pushingWalk.events.find((event) => event.kind === "prestige")!;
+    const defeat = { ...bank, kind: "milestone" as const, label: "World — enemy w0 defeated" };
+    const purchase = { ...bank, kind: "world" as const, label: "World Column" };
+    const record = { ...pushingWalk,
+      events: [defeat, bank, purchase],
+      eras: [ledgerOf({ index: 0, endCredited: bank.credited }), ledgerOf({ index: 1, startCredited: bank.credited })],
+    };
+    expect(laterEraView(record, 0, null).defeats).toEqual(["w0"]);
+    expect(laterEraView(record, 0, null).purchases).toEqual([]);
+    expect(laterEraView(record, 1, null).defeats).toEqual([]);
+    expect(laterEraView(record, 1, null).purchases).toEqual(["World Column"]);
+  });
+
+  it("continues the exact earned bank without mutating it or inferring the parent's later success", { timeout: 60_000 }, () => {
+    const bank = pushingWalk.events.find((event) => event.kind === "prestige")!;
+    const state = pushingWalk.snapshots[bank.snapshot]!.state;
+    const before = JSON.stringify(state);
+    const forward = walkRouteForward(pushingWalk, bank, 0, state, 1);
+    expect(forward.outcome).toBe("unreached");
+    expect(forward.frontierAfter).toBe(state.world.frontier);
+    expect(forward.creditedHours).toBe(BASELINE_SESSION_MINUTES * 2 / 60);
+    expect(forward.noGrant).toBe(true);
+    expect(forward.noRefund).toBe(true);
+    expect(forward.finite).toBe(true);
+    expect(JSON.stringify(state)).toBe(before);
+    const branch = continuePlaythrough(forward.recipe, state);
+    expect(branch.kind).toBe("continuation");
+    expect(branch.snapshots[0]!.state).toEqual(state);
+    const load = importPlaythroughArtifact(exportPlaythroughArtifact({ record: branch }));
+    expect(load.ok).toBe(true);
+    if (load.ok) expect(load.artifact.record.kind).toBe("continuation");
+  });
+
+  it("banks a strictly greater frontier in a constructed continuation without a grant or refund", () => {
+    // A labelled fast fixture, not acquisition or balance evidence: one
+    // developed voice at an otherwise freshly reset, claimed frontier.
+    const state = createInitialState();
+    state.world.frontier = 2;
+    state.modules[0]!.level = 300;
+    const before = structuredClone(state);
+    const recipe = composePlaythroughRecipe({ policyId: "support", claimTarget: 1, eras: 1, budgetDays: 1 });
+    const branch = continuePlaythrough(recipe, state);
+    expect(branch.complete).toBe(true);
+    expect(branch.stop.kind).toBe("frontier");
+    expect(branch.state.world.frontier).toBeGreaterThan(before.world.frontier);
+    expect(branch.state.totalEarned - before.totalEarned).toBeCloseTo(branch.earnedNous, -2);
+    expect(branch.state.arete).toBe(branch.claims.reduce((sum, claim) => sum + claim, 0));
+    expect(state).toEqual(before);
+    expect(branch.runId).toContain("-from-");
   });
 
   it("round-trips the walked eras through the run artifact whole", () => {
@@ -302,101 +379,14 @@ describe("the declared World policies' spending orders", { timeout: 1_800_000 },
 });
 
 describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_LATER_ERA_REPORT && !process.env.FLOWSYNTH_LATER_ERA_SLICE, timeout: 7_200_000 }, () => {
-  // The matrix records in six declared slices (one per session shape ×
-  // policy), each its own invocation: FLOWSYNTH_LATER_ERA_SLICE
-  // "<minutes>:<policy>" walks its eight seeds and writes its slice file;
-  // FLOWSYNTH_LATER_ERA_REPORT composes the six into the recorded report.
-  // A recording interruption loses at most its own slice; the walks are
-  // deterministic per engine source, and every file carries (and the
-  // compose verifies) the source it was recorded against.
+  // The explicit tier compiles through Vite's real raw/glob transform,
+  // avoiding #503's vitest fingerprint. One recorder owns the provenance
+  // checks and assertions for direct CLI and env-gated invocations alike.
   const slice = process.env.FLOWSYNTH_LATER_ERA_SLICE;
-  const slicePath = (minutes: number, policy: string) =>
-    `docs/later-era-slice-${minutes}-${policy}.json`;
-
-  // The structural and honesty rules every recorded row must carry — the
-  // same read at slice scope and at report scope.
-  const assertRows = (rows: LaterEraRow[]): void => {
-    for (const row of rows) {
-      // Currency integrity rides every row: the state's whole intake is
-      // what the walk earned — no hidden grant, no missing currency.
-      expect(row.noGrant).toBe(true);
-      // Every closed era's frontier advanced strictly beyond the last,
-      // every closed era's bank state scanned finite, every era carries
-      // a class.
-      let last = 0;
-      for (const era of row.eras) {
-        expect(era.eraClass).toBeTruthy();
-        if (era.frontierAfter !== null) {
-          expect(era.frontierAfter).toBeGreaterThan(last);
-          last = era.frontierAfter;
-        }
-        if (era.claim !== null) expect(era.finite).toBe(true);
-        if (era.index > 0 && era.claim !== null) {
-          expect(["in-window", "under", "over"]).toContain(era.eraClass);
-          expect(era.hours).not.toBeNull();
-          // The split recombines to the era's span.
-          expect(era.familiarHours + era.newHours).toBeCloseTo(era.hours!, 0);
-        }
-      }
-      // The declared policies' behavior, per row: the ignoring policy
-      // never deploys; the fighting policies deploy through real
-      // placements when they defeated.
-      if (row.policy === "ignoring") {
-        expect(row.defeats).toEqual([]);
-        expect(row.eras.every((era) => era.placements.length === 0)).toBe(true);
-      }
-    }
-  };
-
-  it(slice ? `walks the ${slice} slice and records it` : "composes the full declared matrix from the recorded slices", async () => {
-    const mod = await import("./later-eras");
-    const source = playthroughSource();
-    if (slice) {
-      const [minutesRaw, policyId] = slice.split(":");
-      const minutes = Number(minutesRaw);
-      expect([BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES]).toContain(minutes);
-      expect([...WORLD_POLICIES]).toContain(policyId);
-      const rows = mod.laterEraSliceRows(minutes, policyId);
-      expect(rows).toHaveLength(LATER_ERA_SEEDS.length);
-      expect(rows.map((row) => row.seed)).toEqual(LATER_ERA_SEEDS);
-      assertRows(rows);
-      writeFileSync(slicePath(minutes, policyId!), JSON.stringify({ source, minutes, policy: policyId, rows }, null, 2));
-      return;
-    }
-    const runs: LaterEraRow[] = [];
-    for (const minutes of [BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES]) {
-      for (const policyId of WORLD_POLICIES) {
-        const text = readFileSync(slicePath(minutes, policyId), "utf8");
-        const recorded = JSON.parse(text) as { source: PlaythroughSource; minutes: number; policy: string; rows: LaterEraRow[] };
-        // A slice composes only against the source it was recorded with.
-        expect(recorded.source.engineSource).toBe(source.engineSource);
-        expect(recorded.minutes).toBe(minutes);
-        expect(recorded.policy).toBe(policyId);
-        expect(recorded.rows).toHaveLength(LATER_ERA_SEEDS.length);
-        assertRows(recorded.rows);
-        runs.push(...recorded.rows);
-      }
-    }
-    const report = mod.laterEraReport(runs);
-    // 8 seeds × 2 schedules × 3 policies.
-    expect(report.runs).toHaveLength(LATER_ERA_SEEDS.length * 2 * WORLD_POLICIES.length);
-    expect(report.distributions).toHaveLength(6);
-    expect(report.source.runnerVersion).toBeGreaterThanOrEqual(13);
-    // The route enumeration at the deeper tested frontiers: one recorded
-    // multi-era walk's banks — frontiers 2 through 8 — each probed against
-    // its own unspent state and its own ladders, carried in the report.
-    const probeWalk = runPlaythrough(mod.laterEraRecipe(23, LONG_SESSION_MINUTES, "support"));
-    const routeProbes = mod.routeProbes(probeWalk);
-    expect(routeProbes.map((probe) => probe.frontier)).toEqual([2, 4, 6, 8]);
-    for (const probe of routeProbes) {
-      for (const order of probe.orders) {
-        expect(order.purchasesOk).toBe(true);
-        expect(order.placementsOk).toBe(true);
-        expect(order.finite).toBe(true);
-        expect(order.spend).toBeLessThanOrEqual(probe.budget);
-      }
-    }
-    const withProbes = { ...report, routeProbes };
-    writeFileSync(process.env.FLOWSYNTH_LATER_ERA_REPORT!, JSON.stringify(withProbes, null, 2));
+  it(slice ? `walks the ${slice} slice and records it` : "composes the full declared matrix from the recorded slices", () => {
+    execFileSync(process.execPath, ["tools/record-later-eras.mjs", ...(slice ? ["slice", slice] : ["compose"])], {
+      stdio: "inherit",
+      timeout: 7_200_000,
+    });
   });
 });

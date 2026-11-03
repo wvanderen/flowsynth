@@ -24,8 +24,9 @@ import {
 } from "./actions";
 import type { ActionResult } from "./actions";
 import { frontier, seededRng } from "./capacity-calibration";
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, isOscillatorType, RESPONSE_CURVES, responseCurveCandidateOf, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, RESPONSE_CURVES, responseCurveCandidateOf, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
 import type { WorldEnemyDef } from "./constants";
+import { chargeLineCells } from "./playthrough-placement";
 import { affordableLevels, syncRates, wholeNous, levelsCost } from "./economy";
 import { activeGoalOf, createGoal, rollGoalOccurrences } from "./goals";
 import { createHabit, selectHabit } from "./habits";
@@ -83,7 +84,7 @@ import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, Weapo
 // (issue #490) change what the walk measures and when it completes; the
 // later-era ledger, the eras recipe input, and the three World-comparison
 // policies (issue #491) join both.
-export const PLAYTHROUGH_RUNNER_VERSION = 13;
+export const PLAYTHROUGH_RUNNER_VERSION = 14;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -694,7 +695,7 @@ export interface PlaythroughAreteSpent {
 // session schedule, practice accounting, and engine actions — it is not
 // the economy-only simulation the calibration runner performs (story 13).
 export interface PlaythroughRecord {
-  readonly kind: "representative";
+  readonly kind: "representative" | "continuation";
   readonly runId: string;
   readonly recipe: PlaythroughRecipe;
   readonly source: PlaythroughSource;
@@ -771,6 +772,7 @@ interface RunContext {
   // The declared era count (issue #491): the claimed frontiers the walk
   // banks before its completion read.
   eraGoal: number;
+  continuation: boolean;
   // The declared overrides (issue #472): the run's own tuning, read
   // nowhere else — the candidate state carries them, nothing shared does.
   openingGrant: number | undefined;
@@ -847,6 +849,8 @@ interface EraTrack {
   endElapsedMs: number | null;
   endCredited: number | null;
   finite: boolean | null;
+  discovered: string[];
+  defeated: string[];
 }
 
 function openEraTrack(index: number, startElapsedMs: number, startCredited: number): EraTrack {
@@ -866,6 +870,8 @@ function openEraTrack(index: number, startElapsedMs: number, startCredited: numb
     endElapsedMs: null,
     endCredited: null,
     finite: null,
+    discovered: [],
+    defeated: [],
   };
 }
 
@@ -953,7 +959,7 @@ function snap(ctx: RunContext, state: GameState): number {
       .map(module => ({ type: module.type, note: cellNoteOf(module.pos!), level: module.level,
         nuPerSecond: rates.contributions.get(module.id)?.value ?? null }))),
     elapsed: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000),
-    credited: Math.round(ctx.credited),
+    credited: Math.round(ctx.stampCredited),
     state: deepFreeze(captured),
   };
   ctx.snapshots.push(snapshot);
@@ -999,9 +1005,11 @@ function recordDiscoveries(ctx: RunContext, state: GameState): void {
       record(ctx, { kind: "milestone", label: `Feat unlocked — ${id}`, ok: true, milestone: true });
     }
   }
+  const era = ctx.eras[ctx.eras.length - 1]!;
   for (const [key, enemy] of Object.entries(state.world.enemies)) {
-    if (enemy.discovered && !ctx.discovered.includes(key)) {
-      ctx.discovered.push(key);
+    if (enemy.discovered && !era.discovered.includes(key)) {
+      era.discovered.push(key);
+      if (!ctx.discovered.includes(key)) ctx.discovered.push(key);
       record(ctx, {
         kind: "milestone",
         label: `World — enemy ${key} discovered`,
@@ -1009,8 +1017,9 @@ function recordDiscoveries(ctx: RunContext, state: GameState): void {
         milestone: true,
       });
     }
-    if (enemy.discovered && enemyDefeated(state, key) && !ctx.defeated.includes(key)) {
-      ctx.defeated.push(key);
+    if (enemy.discovered && enemyDefeated(state, key) && !era.defeated.includes(key)) {
+      era.defeated.push(key);
+      if (!ctx.defeated.includes(key)) ctx.defeated.push(key);
       record(ctx, {
         kind: "milestone",
         label: `World — enemy ${key} defeated`,
@@ -1380,13 +1389,8 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
     const module = moduleAt.get(seatKey(pos));
     return module ? (chargeSnapshot.chargeStrength.get(module.id) ?? 0) : 0;
   };
-  const lineAt = (pos: Hex): boolean => {
-    const module = moduleAt.get(seatKey(pos));
-    if (!module || !CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type])) return false;
-    return state.modules.some((other) => other.pos !== null &&
-      (CATEGORY_OF[other.type] === "generator" || CATEGORY_OF[other.type] === "conduit") &&
-      adjacent(other.pos, pos));
-  };
+  const lineCells = new Set(chargeLineCells(state).map(seatKey));
+  const lineAt = (pos: Hex): boolean => lineCells.has(seatKey(pos));
   // The weapon seat's rank, one construction shared by the deploy leg and
   // the relocation read — the two can never disagree about preference.
   const weaponRank = (pos: Hex): readonly number[] => [
@@ -1594,10 +1598,10 @@ function stepEraCrossing(ctx: RunContext, state: GameState): void {
 }
 
 function stepEraCredit(ctx: RunContext, state: GameState, creditedDelta: number): void {
-  stepEraCrossing(ctx, state);
   const era = ctx.eras[ctx.eras.length - 1]!;
   if (era.priorDepth === null || era.depthCrossed) era.newCredited += creditedDelta;
   else era.familiarCredited += creditedDelta;
+  stepEraCrossing(ctx, state);
 }
 
 // The finite read over the exact recorded state a bank produced (issue
@@ -1796,6 +1800,7 @@ function* runSession(ctx: RunContext, state: GameState, day: number, session: nu
       });
     }
   }
+  stepEraCrossing(ctx, state);
   recordDiscoveries(ctx, state);
   pushTrajectory(ctx, state);
 }
@@ -1818,7 +1823,7 @@ function* runSession(ctx: RunContext, state: GameState, day: number, session: nu
 // marks, and the record keeps those marks explicitly null.
 function walkComplete(ctx: RunContext): boolean {
   const closed = ctx.eras.filter((era) => era.claim !== null).length;
-  return closed >= ctx.eraGoal && (journeyComplete(ctx) || ctx.worldOrder === "none");
+  return closed >= ctx.eraGoal && (ctx.continuation || journeyComplete(ctx) || ctx.worldOrder === "none");
 }
 
 function tryPrestige(ctx: RunContext, state: GameState): boolean {
@@ -1934,6 +1939,21 @@ function assertCheckpointReached(record: PlaythroughRecord, checkpoint: Playthro
   return record;
 }
 
+// Continue an earned bank state through this same scheduled action walk.
+// The caller's state is cloned; the first snapshot preserves the exact
+// branch input. A continuation is explicitly not fresh-start acquisition
+// evidence, and its identity includes that input, not just the recipe.
+export function continuePlaythrough(
+  recipe: PlaythroughRecipe,
+  state: GameState,
+  source: PlaythroughSource = playthroughSource(),
+): PlaythroughRecord {
+  if (state.mode !== "upgrade" || state.session !== null || state.eraEarned !== 0 || !stateNumbersFinite(state)) {
+    throw new Error("Playthrough continuation: expected a finite, between-sessions bank state.");
+  }
+  return finishWalk(walkPlaythrough(recipe, null, source, state));
+}
+
 function finishWalk(walk: Generator<void, PlaythroughRecord>): PlaythroughRecord {
   let next = walk.next();
   while (!next.done) next = walk.next();
@@ -1944,10 +1964,11 @@ function* walkPlaythrough(
   recipe: PlaythroughRecipe,
   checkpoint: PlaythroughCheckpointId | null,
   source: PlaythroughSource,
+  initialState?: GameState,
 ): Generator<void, PlaythroughRecord> {
   validatePlaythroughRecipe(recipe);
   const scenario = scenarioOf(recipe.scenarioId)!;
-  const state = scenario.build(recipe.schedule.startAt);
+  const state = initialState ? structuredClone(initialState) : scenario.build(recipe.schedule.startAt);
   // A checkpoint carries real session history. Continue after its last
   // session and declared breather rather than restarting at the recipe's
   // original anchor; record the effective input so a rerun is reproducible.
@@ -1958,14 +1979,14 @@ function* walkPlaythrough(
   const startAt = Math.max(recipe.schedule.startAt, lastEnd);
   recipe = { ...recipe, schedule: { ...recipe.schedule, startAt } };
   validatePlaythroughRecipe(recipe);
-  scenario.assert(state, startAt);
+  if (!initialState) scenario.assert(state, startAt);
   // The declared overrides apply to this run's candidate only, after the
   // scenario's own assertion has verified the baseline it grew from
   // (issue #472): a run that starts at the shipped opening — the
   // scenario's own origin classification — pays the declared grant at its
   // first moment; every later era start pays it through the prestige
   // action's seam.
-  if (recipe.overrides.openingGrant !== undefined && scenario.origin === "initial state") {
+  if (!initialState && recipe.overrides.openingGrant !== undefined && scenario.origin === "initial state") {
     state.nous = recipe.overrides.openingGrant;
   }
   // The declared response curve (issue #487) applies to this run's own
@@ -1982,6 +2003,7 @@ function* walkPlaythrough(
     claimTarget: recipe.claimTarget,
     claimsPushing: policy.id !== PROMPT_POLICY.id,
     eraGoal: recipe.eras,
+    continuation: initialState !== undefined,
     openingGrant: recipe.overrides.openingGrant,
     claimBase: recipe.overrides.claimBase,
     rng: seededRng(recipe.seed),
@@ -2019,6 +2041,7 @@ function* walkPlaythrough(
     worldOrder: worldOrderOf(policy.id),
   };
 
+  if (initialState) pushTrajectory(ctx, state);
   let days = 0;
   let complete = false;
   let checkpointStop: PlaythroughRecord["stop"] | null = null;
@@ -2065,6 +2088,10 @@ function* walkPlaythrough(
       haltAt("approaching-prestige");
       return true;
     }
+    // Recovery belongs to the board before this bank erases it, including
+    // a mark first reached in the closing session or its breather.
+    settleRecovery(ctx, state);
+    if (ctx.openEvents.length > 0) snap(ctx, state);
     if (tryPrestige(ctx, state) && !ctx.claimsPushing) {
       complete = true;
       stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
@@ -2103,7 +2130,7 @@ function* walkPlaythrough(
       // can finish neck and neck — never steals the walk's end.
       if (ctx.claimsPushing && checkpoint === null && walkComplete(ctx)) {
         complete = true;
-        stop = ctx.eraGoal > 1 || ctx.worldOrder === "none"
+        stop = ctx.continuation || ctx.eraGoal > 1 || ctx.worldOrder === "none"
           ? { kind: "frontier", reason: `The declared ${ctx.eraGoal} claimed frontiers banked at day ${days} — the frontier stands at ${state.world.frontier} Arete${ctx.worldOrder === "none" ? ", combat still postponed" : ""}.` }
           : { kind: "recovered", reason: `The worthwhile-prestige journey completed at day ${days} — the frontier advanced to ${state.world.frontier} Arete.` };
         break day;
@@ -2146,8 +2173,8 @@ function* walkPlaythrough(
           frontierAdvanced: ctx.frontierAdvanced,
         };
   return {
-    kind: "representative",
-    runId: playthroughRunId(recipe, source, checkpoint),
+    kind: initialState ? "continuation" : "representative",
+    runId: playthroughRunId(recipe, source, checkpoint) + (initialState ? `-from-${fingerprint(JSON.stringify(initialState))}` : ""),
     recipe,
     source,
     policy: { id: policy.id, name: policy.name },

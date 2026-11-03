@@ -114,11 +114,11 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
     ["elapsed", "credited", "rate", "forgeRate", "eraEarned", "nous", "arete"]) || !index(item.snapshot))) return "trajectory";
   const recipe = record.recipe as Record<string, unknown>;
   const schedule = recipe.schedule;
-  if (!finiteFields(recipe, ["seed", "claimTarget", "budgetDays"]) || !isRecord(recipe.overrides) ||
+  if (!finiteFields(recipe, ["seed", "claimTarget", "budgetDays", "eras"]) || !Number.isInteger(recipe.eras) || Number(recipe.eras) < 1 || Number(recipe.eras) > 12 || !isRecord(recipe.overrides) ||
     !Object.values(recipe.overrides).every(item => typeof item === "number" && Number.isFinite(item)) ||
     !isRecord(schedule) || !finiteFields(schedule, ["sessionsPerDay", "sessionMinutes", "breatherMinutes", "goalMinutes", "startAt"]) ||
     typeof schedule.habitName !== "string" || typeof schedule.timeZone !== "string") return "recipe";
-  if (record.kind !== "representative" || !isRecord(record.policy) || typeof record.policy.id !== "string" || typeof record.policy.name !== "string" ||
+  if (!["representative", "continuation"].includes(String(record.kind)) || !isRecord(record.policy) || typeof record.policy.id !== "string" || typeof record.policy.name !== "string" ||
     !finiteFields(record, ["claimTarget", "days", "elapsedSeconds", "creditedSeconds", "breatherSeconds", "manageBreaks", "earnedNous", "sessionNous", "breatherNous"]) ||
     !Array.isArray(record.claims) || !record.claims.every(item => typeof item === "number" && Number.isFinite(item)) ||
     !strings(record.achievements) || !strings(record.worldDiscoveries) || !strings(record.worldDefeats) ||

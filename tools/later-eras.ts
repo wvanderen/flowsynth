@@ -1,6 +1,7 @@
-import { BALANCE, CATEGORY_OF, CHARGE_RECEIVING_CATEGORIES, WORLD_ENEMIES } from "../src/engine/constants";
+import { BALANCE, WORLD_ENEMIES } from "../src/engine/constants";
 import {
   composePlaythroughRecipe,
+  continuePlaythrough,
   playthroughNote,
   playthroughSource,
   runPlaythrough,
@@ -13,10 +14,14 @@ import {
 } from "../src/engine/playthrough";
 import { buyCatalogEntry, buyChargeColumn, buyHoneRank, placeWorldOccupant } from "../src/engine/actions";
 import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "../src/engine/world";
-import { adjacent, sameHex } from "../src/engine/hex";
+import { adjacent } from "../src/engine/hex";
+import { chargeLineCells } from "../src/engine/playthrough-placement";
 import { seededRng } from "../src/engine/capacity-calibration";
 import type { GameState } from "../src/engine/types";
 import { meaningfulDecisions, type DecisionGap } from "./first-prestige";
+
+// The compiled recording CLI uses exactly the same runner and source read.
+export { playthroughSource, runPlaythrough, stateNumbersFinite };
 
 // The later-era evaluation (issue #491, parent #484 stories 5, 17–27,
 // 42–43): the shipped economy's repeated productive eras, read on real
@@ -142,9 +147,11 @@ export interface LaterEraView {
 }
 
 function eraSpanEvents(record: PlaythroughRecord, era: PlaythroughEraLedger): PlaythroughEvent[] {
-  return record.events.filter((event) =>
-    event.credited >= era.startCredited &&
-    (era.endCredited === null || event.credited < era.endCredited));
+  // Closing-session facts precede the bank even when both clocks tie.
+  // Event order, not a half-open credited-time range, owns the era.
+  const banks = record.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
+  const start = era.index === 0 ? 0 : banks[era.index - 1]! + 1;
+  return record.events.slice(start, banks[era.index] ?? record.events.length);
 }
 
 function gapsOf(decisions: readonly PlaythroughEvent[]): LaterEraView["gaps"] {
@@ -160,15 +167,15 @@ function gapsOf(decisions: readonly PlaythroughEvent[]): LaterEraView["gaps"] {
 }
 
 const WORLD_DEFEAT_PREFIX = "World — enemy ";
-const WORLD_PLACED_PREFIX = "Placed ";
+const isWorldPlacement = (event: PlaythroughEvent): boolean =>
+  event.kind === "world" && (event.label.startsWith("Placed ") || event.label.startsWith("Relocated "));
 
 export function laterEraView(record: PlaythroughRecord, index: number, previous: LaterEraView | null): LaterEraView {
   const era = record.eras[index];
   if (!era) throw new Error(`Later-era view: the record carries no era ${index}.`);
   const span = eraSpanEvents(record, era);
-  const decisions = meaningfulDecisions(record).filter((event) =>
-    event.credited >= era.startCredited &&
-    (era.endCredited === null || event.credited < era.endCredited));
+  const consequential = new Set(meaningfulDecisions(record));
+  const decisions = span.filter((event) => consequential.has(event));
   const hours = eraHoursOf(era);
   const totalCredited = era.familiarCredited + era.newCredited;
   const familiarFaster = era.index === 0 || era.priorDepthPassed === null || previous === null || previous.hours === null
@@ -195,11 +202,11 @@ export function laterEraView(record: PlaythroughRecord, index: number, previous:
     purchases: span
       .filter((event) => event.ok && (
         event.kind === "arete" ||
-        (event.kind === "world" && !event.label.startsWith(WORLD_PLACED_PREFIX))))
+        (event.kind === "world" && !isWorldPlacement(event))))
       .map((event) => event.label),
     nousPurchases: span.filter((event) => event.ok && event.kind === "purchase").length,
     placements: span
-      .filter((event) => event.ok && event.kind === "world" && event.label.startsWith(WORLD_PLACED_PREFIX))
+      .filter((event) => event.ok && isWorldPlacement(event))
       .map((event) => event.label),
     defeats: span
       .filter((event) => event.ok && event.kind === "milestone" &&
@@ -240,6 +247,11 @@ export interface LaterEraRow {
 export function laterEraRow(seed: number, sessionMinutes: number, record: PlaythroughRecord): LaterEraRow {
   const views: LaterEraView[] = [];
   for (let index = 0; index < record.eras.length; index++) {
+    const era = record.eras[index]!;
+    // The just-opened successor at a successful terminal bank is not an
+    // attempted, incomplete era. Keep genuine open walks, including era 0.
+    if (index > 0 && era.claim === null && era.familiarCredited + era.newCredited === 0 &&
+      era.startElapsed === record.elapsedSeconds) continue;
     views.push(laterEraView(record, index, views[index - 1] ?? null));
   }
   const drift = Math.abs(record.state.totalEarned - record.earnedNous);
@@ -368,8 +380,9 @@ export function laterEraReport(runs: readonly LaterEraRow[]): LaterEraReport {
 // route is read: the purchases land, nothing refunds, the recorded state
 // stays finite, the rig's seats exist beside the fight and the charge
 // line, and the pieces the order skipped are priced from the same state.
-// An order that fails a read is a progression trap — repaired in the
-// placement rules, never by granting currency or refunding a purchase.
+// Purchase, finite, and structural-seat reads are distinct from forward
+// progress. Only a directly continued branch can establish that; an
+// unreached budget is not silently called either a route or a trap.
 export type RoutePiece = "entry" | "column" | "hone";
 
 // A piece's price at one bank state, read off the authored ladders — the
@@ -413,6 +426,21 @@ export interface RouteProbeOrder {
   readonly placementsOk: boolean;
   // The finite read over the state the order left.
   readonly finite: boolean;
+  // Null in the cheap enumeration tier, never inferred from another
+  // branch's walk. The recording tier continues this exact configuration.
+  readonly forward: RouteForward | null;
+}
+
+export interface RouteForward {
+  readonly outcome: "advanced" | "unreached";
+  readonly runId: string;
+  readonly recipe: PlaythroughRecipe;
+  readonly frontierAfter: number;
+  readonly creditedHours: number;
+  readonly defeats: readonly string[];
+  readonly noGrant: boolean;
+  readonly noRefund: boolean;
+  readonly finite: boolean;
 }
 
 // One tested frontier's probe: the bank's claim and the frontier it
@@ -424,10 +452,8 @@ export interface RouteBankProbe {
   readonly budget: number;
   readonly pieces: readonly { readonly piece: RoutePiece; readonly price: number }[];
   readonly orders: readonly RouteProbeOrder[];
-  // The route forward, demonstrated: the walk itself continued past this
-  // bank — a later era closed against a strictly larger frontier. The
-  // last bank's record ends there, so its forward read is the honest
-  // false and its route evidence is the orders' own reads.
+  // True only if this bank has a directly continued configuration that
+  // banked a strictly greater frontier. Placement alone proves nothing.
   readonly routeDemonstrated: boolean;
 }
 
@@ -454,21 +480,15 @@ function probePlace(state: GameState): boolean {
   const weaponSeat = free.find((cell) => adjacent(cell, first.pos));
   if (!weaponSeat || !placeWorldOccupant(state, weapon.id, weaponSeat).ok) return false;
   const column = state.world.columns[0];
-  if (!column) return true;
-  const generatorCells = state.modules.filter((module) => module.pos !== null &&
-    (CATEGORY_OF[module.type] === "generator" || CATEGORY_OF[module.type] === "conduit"))
-    .map((module) => module.pos!);
-  const columnSeat = free
-    .filter((cell) => state.modules.some((module) => module.pos !== null && sameHex(module.pos, cell) &&
-      CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type]) &&
-      generatorCells.some((pos) => adjacent(cell, pos))))
-    .sort((a, b) => Number(adjacent(b, weaponSeat)) - Number(adjacent(a, weaponSeat)))[0];
+  if (!column) return false;
+  const columnSeat = chargeLineCells(state).find((cell) =>
+    !enemyDefAt(cell) && !worldOccupantAt(state, cell) && adjacent(cell, weaponSeat));
   return columnSeat !== undefined && placeWorldOccupant(state, column.id, columnSeat).ok;
 }
 
 // The probe itself, over one recorded walk: one probe per bank the walk
 // landed, each against that bank's own unspent state.
-export function routeProbes(record: PlaythroughRecord): RouteBankProbe[] {
+export function routeProbes(record: PlaythroughRecord, forward?: { budgetDays: number }): RouteBankProbe[] {
   const banks = record.events
     .map((event, index) => ({ event, index }))
     .filter(({ event }) => event.kind === "prestige" && event.ok);
@@ -495,12 +515,14 @@ export function routeProbes(record: PlaythroughRecord): RouteBankProbe[] {
         }
         spend += price;
       }
+      const placementsOk = probePlace(cloneState(state));
       orders.push({
         order,
         spend,
         purchasesOk,
-        placementsOk: probePlace(state),
+        placementsOk,
         finite: stateNumbersFinite(state),
+        forward: forward && purchasesOk ? walkRouteForward(record, banks[bank]!.event, bank, state, forward.budgetDays) : null,
       });
     }
     probes.push({
@@ -509,8 +531,47 @@ export function routeProbes(record: PlaythroughRecord): RouteBankProbe[] {
       budget: base.arete,
       pieces,
       orders,
-      routeDemonstrated: record.eras.slice(bank + 1).some((era) => era.claim !== null),
+      routeDemonstrated: orders.some((order) => order.forward?.outcome === "advanced"),
     });
   }
   return probes;
+}
+
+// No second simulator: use the same runner on a clone of the exact bank
+// after the enumerated irreversible purchases. Remaining currency follows
+// the support policy; no further Arete exists until a real later bank.
+// One positive claim suffices to demonstrate a route past this frontier.
+export function walkRouteForward(
+  parent: PlaythroughRecord,
+  bank: PlaythroughEvent,
+  bankIndex: number,
+  state: GameState,
+  budgetDays: number,
+): RouteForward {
+  const recipe = composePlaythroughRecipe({
+    ...parent.recipe,
+    seed: parent.recipe.seed + bankIndex,
+    policyId: "support",
+    claimTarget: 1,
+    eras: 1,
+    budgetDays,
+    schedule: { ...parent.recipe.schedule, startAt: parent.recipe.schedule.startAt + bank.at * 1000 },
+  });
+  const continuation = continuePlaythrough(recipe, state, parent.source);
+  const earned = continuation.state.totalEarned - state.totalEarned;
+  const drift = Math.abs(earned - continuation.earnedNous);
+  return {
+    outcome: continuation.state.world.frontier > state.world.frontier ? "advanced" : "unreached",
+    runId: continuation.runId,
+    recipe: continuation.recipe,
+    frontierAfter: continuation.state.world.frontier,
+    creditedHours: continuation.creditedSeconds / 3600,
+    defeats: continuation.worldDefeats,
+    noGrant: drift < Math.max(1, state.totalEarned, continuation.earnedNous) * 1e-12,
+    noRefund: continuation.state.arete <= state.arete + continuation.claims.reduce((sum, claim) => sum + claim, 0) &&
+      continuation.state.world.columns.length >= state.world.columns.length &&
+      continuation.state.world.hone.chargeBlade >= state.world.hone.chargeBlade &&
+      (!state.catalogEntryOwned || continuation.state.catalogEntryOwned),
+    finite: continuation.snapshots.every((snapshot) => stateNumbersFinite(snapshot.state) && Number.isFinite(snapshot.rate)),
+  };
 }
