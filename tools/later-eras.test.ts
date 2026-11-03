@@ -383,11 +383,11 @@ describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_LATER_
     expect(report.distributions).toHaveLength(6);
     expect(report.source.runnerVersion).toBeGreaterThanOrEqual(13);
     // The route enumeration at the deeper tested frontiers: one recorded
-    // multi-era walk's banks — frontiers 2, 4, and 6 — each probed against
+    // multi-era walk's banks — frontiers 2 through 8 — each probed against
     // its own unspent state and its own ladders, carried in the report.
     const probeWalk = runPlaythrough(mod.laterEraRecipe(23, LONG_SESSION_MINUTES, "support"));
     const routeProbes = mod.routeProbes(probeWalk);
-    expect(routeProbes.map((probe) => probe.frontier)).toEqual([2, 4, 6]);
+    expect(routeProbes.map((probe) => probe.frontier)).toEqual([2, 4, 6, 8]);
     for (const probe of routeProbes) {
       for (const order of probe.orders) {
         expect(order.purchasesOk).toBe(true);

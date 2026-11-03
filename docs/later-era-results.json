@@ -7720,5 +7720,234 @@
         "open": 8
       }
     }
+  ],
+  "routeProbes": [
+    {
+      "frontier": 2,
+      "claim": 2,
+      "budget": 2,
+      "pieces": [
+        {
+          "piece": "entry",
+          "price": 1
+        },
+        {
+          "piece": "column",
+          "price": 1
+        },
+        {
+          "piece": "hone",
+          "price": 1
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "entry"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "entry",
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "entry",
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "column"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "column",
+            "entry"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "column",
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "hone",
+            "entry"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "hone",
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        }
+      ],
+      "routeDemonstrated": true
+    },
+    {
+      "frontier": 4,
+      "claim": 2,
+      "budget": 2,
+      "pieces": [
+        {
+          "piece": "column",
+          "price": 2
+        },
+        {
+          "piece": "hone",
+          "price": 1
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        }
+      ],
+      "routeDemonstrated": true
+    },
+    {
+      "frontier": 6,
+      "claim": 2,
+      "budget": 2,
+      "pieces": [
+        {
+          "piece": "column",
+          "price": 4
+        },
+        {
+          "piece": "hone",
+          "price": 1
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        }
+      ],
+      "routeDemonstrated": true
+    },
+    {
+      "frontier": 8,
+      "claim": 2,
+      "budget": 3,
+      "pieces": [
+        {
+          "piece": "column",
+          "price": 4
+        },
+        {
+          "piece": "hone",
+          "price": 2
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true
+        }
+      ],
+      "routeDemonstrated": false
+    }
   ]
 }
