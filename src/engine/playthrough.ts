@@ -764,7 +764,10 @@ export interface PlaythroughRecord {
 interface RunContext {
   schedule: PlaythroughSchedule;
   claimTarget: number;
-  pushing: boolean;
+  // True for every claim-pushing policy — pushing and the three
+  // World-comparison policies (issue #491); only the prompt policy banks
+  // at the first eligibility door instead.
+  claimsPushing: boolean;
   // The declared era count (issue #491): the claimed frontiers the walk
   // banks before its completion read.
   eraGoal: number;
@@ -1337,12 +1340,17 @@ function buyHoneWhileAffordable(ctx: RunContext, state: GameState): void {
 // The World placement leg (story 24): each weapon deploys beside the fight
 // — an owned cell adjacent to a living discovered enemy, preferring one
 // that also touches a placed Column, nearest the enemy first — and each
-// Column deploys on the charge line — an owned cell adjacent to a deployed
-// generator, preferring one beside a placed weapon. The support-seeking
-// policy (issue #491) deploys its charge line first, so a waiting weapon's
-// seat read already sees the Columns it prefers. Readable preference
-// ranks, board order breaking ties; the engine's own placement action
-// gates every seat (enemy-reserved cells refuse, one occupant per cell).
+// The World placement leg (story 24, the charge-line seat repaired by
+// issue #491): the weapon deploys beside the fight — an owned cell
+// adjacent to a living discovered enemy, preferring one that also touches
+// a placed Column, nearest the enemy first — and the Column deploys on a
+// charge line: a cell whose module can receive charge beside a charge
+// source, preferring one that also touches the placed weapon, then the
+// strongest line. Every policy deploys the weapon's fight before the
+// charge line — a Column must never take the fight's only seat. Readable
+// preference ranks, board order breaking ties; the engine's own placement
+// action gates every seat (enemy-reserved cells refuse, one occupant per
+// cell).
 function placeWorldOccupants(ctx: RunContext, state: GameState): void {
   const living = WORLD_ENEMIES.filter((def) => {
     const live = state.world.enemies[def.key];
@@ -1365,17 +1373,27 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
   // stranded on such a seat is exactly the progression trap this ticket
   // repairs in the placement rule, never in currency.
   const chargeSnapshot = syncRates(state, true);
+  // The deployed modules indexed once: the seat reads run per candidate
+  // cell, and the board never changes inside this leg.
+  const moduleAt = new Map(state.modules.filter((entry) => entry.pos !== null).map((entry) => [seatKey(entry.pos!), entry]));
   const receivedAt = (pos: Hex): number => {
-    const module = state.modules.find((entry) => entry.pos !== null && sameHex(entry.pos, pos));
+    const module = moduleAt.get(seatKey(pos));
     return module ? (chargeSnapshot.chargeStrength.get(module.id) ?? 0) : 0;
   };
   const lineAt = (pos: Hex): boolean => {
-    const module = state.modules.find((entry) => entry.pos !== null && sameHex(entry.pos, pos));
+    const module = moduleAt.get(seatKey(pos));
     if (!module || !CHARGE_RECEIVING_CATEGORIES.includes(CATEGORY_OF[module.type])) return false;
     return state.modules.some((other) => other.pos !== null &&
       (CATEGORY_OF[other.type] === "generator" || CATEGORY_OF[other.type] === "conduit") &&
       adjacent(other.pos, pos));
   };
+  // The weapon seat's rank, one construction shared by the deploy leg and
+  // the relocation read — the two can never disagree about preference.
+  const weaponRank = (pos: Hex): readonly number[] => [
+    distanceToFight(pos),
+    state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1,
+    pos.q, pos.r,
+  ];
   // Both occupants share selection and action handling; each rule supplies
   // eligible seats and its own readable preference ranks.
   const deploy = (
@@ -1417,11 +1435,7 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
         weapon.id,
         `the ${weapon.type}`,
         free().filter((pos) => living.some((def) => adjacent(pos, def.pos))),
-        (pos) => [
-          distanceToFight(pos),
-          state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1,
-          pos.q, pos.r,
-        ],
+        weaponRank,
         "no free World cell beside a living discovered enemy",
         "weapon",
       )) break;
@@ -1448,43 +1462,23 @@ function placeWorldOccupants(ctx: RunContext, state: GameState): void {
   // charge line (issue #491's repair).
   weaponLeg();
   columnLeg();
-  relocateWorldOccupants(ctx, state, living, free, lineAt, receivedAt, weaponLegSeat, columnLegSeat);
+  relocateWorldOccupants(ctx, state, { living, free, lineAt, receivedAt, weaponRank });
 }
 
-// The seat reads the relocation shares with the initial deploy: the
-// weapon beside the fight, the Column on a charge line that also touches
-// the fight. Each excludes the occupant's own current cell, so a move
-// only fires when a genuinely different seat ranks better.
-function weaponLegSeat(
-  state: GameState,
-  living: readonly WorldEnemyDef[],
-  free: () => Hex[],
-  current: Hex,
-): Hex | undefined {
-  const distanceToFight = (pos: Hex): number =>
-    living.length > 0 ? Math.min(...living.map((def) => hexDistance(pos, def.pos))) : Number.POSITIVE_INFINITY;
-  return bestRanked(
-    free().filter((pos) => !sameHex(pos, current) && living.some((def) => adjacent(pos, def.pos))),
-    (pos) => [
-      distanceToFight(pos),
-      state.world.columns.some((column) => column.pos !== null && adjacent(pos, column.pos)) ? 0 : 1,
-      pos.q, pos.r,
-    ],
-  );
+// The seat map's key: one coordinate, one string.
+function seatKey(pos: Hex): string {
+  return `${pos.q},${pos.r}`;
 }
 
-function columnLegSeat(
-  state: GameState,
-  free: () => Hex[],
-  lineAt: (pos: Hex) => boolean,
-  receivedAt: (pos: Hex) => number,
-  current: Hex,
-): Hex | undefined {
-  return bestRanked(
-    free().filter((pos) => !sameHex(pos, current) && lineAt(pos) &&
-      state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos))),
-    (pos) => [-receivedAt(pos), pos.q, pos.r],
-  );
+// The relocation's shared seat reads (issue #491): the fight's shape, the
+// free cells, the charge line's topology and strength, and the weapon
+// seat's rank — one bundle, built once per placement leg.
+interface SeatReads {
+  readonly living: readonly WorldEnemyDef[];
+  readonly free: () => Hex[];
+  readonly lineAt: (pos: Hex) => boolean;
+  readonly receivedAt: (pos: Hex) => number;
+  readonly weaponRank: (pos: Hex) => readonly number[];
 }
 
 function bestRanked(candidates: readonly Hex[], rank: (pos: Hex) => readonly number[]): Hex | undefined {
@@ -1511,22 +1505,17 @@ function rankLessOf(a: readonly number[], b: readonly number[]): boolean {
 // has gone stale AND a genuinely better seat exists — a Column with no
 // fight-adjacent line to move to stays put, so the leg settles, never
 // churns.
-function relocateWorldOccupants(
-  ctx: RunContext,
-  state: GameState,
-  living: readonly WorldEnemyDef[],
-  free: () => Hex[],
-  lineAt: (pos: Hex) => boolean,
-  receivedAt: (pos: Hex) => number,
-  weaponSeat: (state: GameState, living: readonly WorldEnemyDef[], free: () => Hex[], current: Hex) => Hex | undefined,
-  columnSeat: (state: GameState, free: () => Hex[], lineAt: (pos: Hex) => boolean, receivedAt: (pos: Hex) => number, current: Hex) => Hex | undefined,
-): void {
+function relocateWorldOccupants(ctx: RunContext, state: GameState, seats: SeatReads): void {
+  const { living, free, lineAt, receivedAt, weaponRank } = seats;
   for (const weapon of state.world.weapons) {
     const current = weapon.pos;
     if (current === null) continue;
     if (eligibleTargetsOf(state, weapon).length > 0) continue;
     if (living.length === 0) continue;
-    const seat = weaponSeat(state, living, free, current);
+    const seat = bestRanked(
+      free().filter((pos) => !sameHex(pos, current) && living.some((def) => adjacent(pos, def.pos))),
+      weaponRank,
+    );
     if (!seat) continue;
     if (!retrieveWorldOccupant(state, weapon.id).ok) continue;
     const result = placeWorldOccupant(state, weapon.id, seat);
@@ -1542,7 +1531,11 @@ function relocateWorldOccupants(
     const current = column.pos;
     if (current === null) continue;
     if (state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(weapon.pos, current))) continue;
-    const seat = columnSeat(state, free, lineAt, receivedAt, current);
+    const seat = bestRanked(
+      free().filter((pos) => !sameHex(pos, current) && lineAt(pos) &&
+        state.world.weapons.some((weapon) => weapon.pos !== null && adjacent(pos, weapon.pos))),
+      (pos) => [-receivedAt(pos), pos.q, pos.r],
+    );
     if (!seat) continue;
     if (!retrieveWorldOccupant(state, column.id).ok) continue;
     const result = placeWorldOccupant(state, column.id, seat);
@@ -1829,7 +1822,7 @@ function walkComplete(ctx: RunContext): boolean {
 }
 
 function tryPrestige(ctx: RunContext, state: GameState): boolean {
-  if (ctx.pushing) {
+  if (ctx.claimsPushing) {
     // The journey walk (eras 1, issue #490) banks no more once the
     // frontier has advanced past the claimed frontier — it observes the
     // recovered era, it does not farm it. A multi-era walk (issue #491)
@@ -1901,23 +1894,10 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
       ok: false,
     });
   }
-  ctx.eras.push({
-    index: era.index + 1,
-    startElapsedMs: ctx.elapsedMs,
-    startCredited: ctx.stampCredited,
-    priorDepth: depthAtBank,
-    priorRate: preRate,
-    depthCrossed: false,
-    familiarCredited: 0,
-    newCredited: 0,
-    productionRegained: null,
-    priorDepthPassed: null,
-    claim: null,
-    frontierAfter: null,
-    endElapsedMs: null,
-    endCredited: null,
-    finite: null,
-  });
+  ctx.eras.push(openEraTrack(era.index + 1, ctx.elapsedMs, ctx.stampCredited));
+  const next = ctx.eras[ctx.eras.length - 1]!;
+  next.priorDepth = depthAtBank;
+  next.priorRate = preRate;
   return result.ok;
 }
 
@@ -2000,7 +1980,7 @@ function* walkPlaythrough(
   const ctx: RunContext = {
     schedule: recipe.schedule,
     claimTarget: recipe.claimTarget,
-    pushing: policy.id !== PROMPT_POLICY.id,
+    claimsPushing: policy.id !== PROMPT_POLICY.id,
     eraGoal: recipe.eras,
     openingGrant: recipe.overrides.openingGrant,
     claimBase: recipe.overrides.claimBase,
@@ -2044,7 +2024,7 @@ function* walkPlaythrough(
   let checkpointStop: PlaythroughRecord["stop"] | null = null;
   let stop: PlaythroughRecord["stop"] = {
     kind: "budget",
-    reason: ctx.pushing
+    reason: ctx.claimsPushing
       ? `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the worthwhile-prestige journey behind it.`
       : `The ${recipe.budgetDays}-day budget ended before the first prestige.`,
   };
@@ -2085,7 +2065,7 @@ function* walkPlaythrough(
       haltAt("approaching-prestige");
       return true;
     }
-    if (tryPrestige(ctx, state) && !ctx.pushing) {
+    if (tryPrestige(ctx, state) && !ctx.claimsPushing) {
       complete = true;
       stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
       return true;
@@ -2121,7 +2101,7 @@ function* walkPlaythrough(
       // terminal (issue #471): it rides past this stop so a recovery
       // milestone that lands before its situation — the two thresholds
       // can finish neck and neck — never steals the walk's end.
-      if (ctx.pushing && checkpoint === null && walkComplete(ctx)) {
+      if (ctx.claimsPushing && checkpoint === null && walkComplete(ctx)) {
         complete = true;
         stop = ctx.eraGoal > 1 || ctx.worldOrder === "none"
           ? { kind: "frontier", reason: `The declared ${ctx.eraGoal} claimed frontiers banked at day ${days} — the frontier stands at ${state.world.frontier} Arete${ctx.worldOrder === "none" ? ", combat still postponed" : ""}.` }
@@ -2133,7 +2113,7 @@ function* walkPlaythrough(
   // A pushing run that banked but never finished its declared walk names
   // that stop exactly, with the missing journey marks and open eras left
   // explicitly null/open.
-  if (!complete && ctx.pushing && ctx.claims.length > 0 && !checkpointStop) {
+  if (!complete && ctx.claimsPushing && ctx.claims.length > 0 && !checkpointStop) {
     stop = {
       kind: "budget",
       reason: ctx.worldOrder === "none"
