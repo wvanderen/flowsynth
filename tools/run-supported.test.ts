@@ -121,6 +121,26 @@ describe("the run-supported CLI (issue #505)", () => {
     }
   });
 
+  it("names the located runtime — not the override — when a scanned binary lies", () => {
+    const temp4 = mkdtempSync(path.join(tmpdir(), "flowsynth-wrap-"));
+    try {
+      writeFileSync(path.join(temp4, ".node-version"), "99.99.98\n");
+      const binDir = path.join(temp4, ".local/share/mise/installs/node/99.99.98/bin");
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(path.join(binDir, "node"), "#!/bin/sh\necho 'v1.2.3'\n");
+      chmodSync(path.join(binDir, "node"), 0o755);
+      const { code, out } = run(["--root", temp4, "--print-runtime"], { HOME: temp4 });
+      expect(code).toBe(1);
+      expect(out).toContain("reports v1.2.3");
+      // The binary came from the layout scan, not the override — the hint
+      // must name what to fix without inventing an override the user never
+      // set.
+      expect(out).not.toContain("FLOWSYNTH_NODE");
+    } finally {
+      rmSync(temp4, { recursive: true, force: true });
+    }
+  });
+
   it("refuses a checkout with no runtime declaration", () => {
     const temp3 = mkdtempSync(path.join(tmpdir(), "flowsynth-wrap-"));
     try {

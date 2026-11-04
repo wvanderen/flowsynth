@@ -57,15 +57,19 @@ export function locateDeclaredRuntime(declared, { home = os.homedir(), override,
 
 // Verify a located binary reports the declared version before handing the
 // entry to it — a lying or misconfigured binary is refused here, with the
-// mismatch named.
-function verifyBinary(bin, declared) {
+// mismatch named. The hint names what the user actually selected: the
+// FLOWSYNTH_NODE override when one was set, the manager's installed runtime
+// otherwise — never an override the user did not set.
+function verifyBinary(bin, declared, fromOverride) {
+  const label = fromOverride ? "FLOWSYNTH_NODE" : "the selected runtime";
   const probe = spawnSync(bin, ["-p", "process.version"], { encoding: "utf8" });
   if (probe.status !== 0 || probe.error) {
-    return `FLOWSYNTH_NODE (${bin}) is not a runnable node binary${probe.error ? `: ${probe.error.message}` : ""}.`;
+    return `${label} (${bin}) is not a runnable node binary${probe.error ? `: ${probe.error.message}` : ""}.`;
   }
   const reported = normalizeVersion(probe.stdout.trim());
   if (reported !== declared) {
-    return `the selected binary (${bin}) reports ${probe.stdout.trim()}, not the declared ${declared} — fix FLOWSYNTH_NODE or install ${declared}.`;
+    const fix = fromOverride ? "fix FLOWSYNTH_NODE" : "install or repair the declared runtime";
+    return `the ${label} binary (${bin}) reports ${probe.stdout.trim()}, not the declared ${declared} — ${fix} before rerunning.`;
   }
   return null;
 }
@@ -108,7 +112,7 @@ export function main(argv) {
       console.error(located.error);
       return 1;
     }
-    const invalid = verifyBinary(located.bin, declared);
+    const invalid = verifyBinary(located.bin, declared, Boolean(process.env.FLOWSYNTH_NODE));
     if (invalid !== null) {
       console.error(invalid);
       return 1;
