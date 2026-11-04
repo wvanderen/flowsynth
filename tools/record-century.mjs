@@ -57,9 +57,17 @@ try {
       // the long-session slices assert only the door-banking shape.
       if (policy === "prompt" && minutes === 25) assert.equal(row.claims[0], 0, "the prompt door's honest zero");
       if (policy === "ignoring") {
+        // The postponed-combat faces: no defeats, and no World product
+        // ever bought or deployed. Board modules still place — the
+        // era views' placements count them, so the World faces read
+        // off the investment timeline and the route lines instead.
         assert.deepEqual(row.defeats, []);
-        for (const era of row.eras) assert.equal(era.placements, 0);
         for (const entry of row.investments) assert.ok(!entry.key.startsWith("Charge Column") && entry.key !== "Hone ladder");
+        for (const era of row.eras) {
+          for (const line of era.purchases) {
+            assert.ok(!line.startsWith("World Column") && !line.startsWith("Hone rank"), line);
+          }
+        }
       }
       // Every closed era with a positive claim advanced the frontier
       // strictly; zero-claim doors (the prompt policy's honest resets)
