@@ -53,6 +53,25 @@ export declare function checkRuntimeEnvironment(input?: {
 
 export declare function normalizeVersion(version: string): string;
 
+export declare function requireRuntimeEnvironment(root?: string): Promise<void>;
+
+export interface RecordingInput {
+  path: string;
+  recording: {
+    source: unknown;
+    recordingCommit?: string;
+    recordingEnvironment?: RecordingEnvironment;
+    minutes?: number;
+    policy?: string;
+    variant?: string;
+  };
+}
+
+export declare function composeRecordingPayload<T extends object>(payload: T, inputs: RecordingInput[]): T & {
+  compositionEnvironment: RecordingEnvironment;
+  recordingInputs: Array<RecordingInput["recording"] & { path: string }>;
+};
+
 export declare function recordingEnvironment(): RecordingEnvironment;
 
 /** A recording's payload with `recordingEnvironment` attached — every balance writer composes through this. */

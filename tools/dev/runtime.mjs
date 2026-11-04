@@ -151,6 +151,20 @@ export function checkRuntimeEnvironment(input = {}) {
   return report;
 }
 
+// The same fail-fast gate protects suites and standalone recorders. Check
+// the runtime before importing the storage harness or compiling an engine.
+export async function requireRuntimeEnvironment(root = process.cwd()) {
+  let report = checkRuntimeEnvironment({ root });
+  if (report.ok) report = checkRuntimeEnvironment({ root, storage: await probeStorageCapability() });
+  if (!report.ok) {
+    throw new Error([
+      "runtime preflight failed — checks and recordings require the supported environment.",
+      `  declared ${report.declared ?? "(missing)"} · effective ${report.effective} · timezone ${report.timeZone} · storage ${report.storage.detail}`,
+      ...report.diagnostics,
+    ].join("\n"));
+  }
+}
+
 // The recording environment for balance experiments (issue #505): what the
 // recording actually ran on. Written beside each new recording's commit and
 // source fingerprint; recordings made before this metadata existed carry no
@@ -166,4 +180,22 @@ export function recordingEnvironment() {
 // writer cannot forget the field and the convention lives in one place.
 export function recordingPayload(payload) {
   return { ...payload, recordingEnvironment: recordingEnvironment() };
+}
+
+// Composition is not a new measurement of the input runs. Preserve each
+// input's original provenance (including absent legacy metadata), and name
+// the composer's environment separately. Slice shape identifies its rows;
+// fixture variant identifies its continuation. Never infer an input's zone.
+export function composeRecordingPayload(payload, inputs) {
+  return {
+    ...payload,
+    compositionEnvironment: recordingEnvironment(),
+    recordingInputs: inputs.map(({ path, recording }) => {
+      const metadata = { path, source: recording.source };
+      for (const key of ["recordingCommit", "recordingEnvironment", "minutes", "policy", "variant"]) {
+        if (Object.hasOwn(recording, key)) metadata[key] = recording[key];
+      }
+      return metadata;
+    }),
+  };
 }

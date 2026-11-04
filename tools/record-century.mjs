@@ -7,9 +7,8 @@
 //   node tools/record-century.mjs compose
 //
 // The ten slices (two session shapes × five policies, eight seeds each)
-// run independently and compose into the report; the compose pass also
-// walks the anonymized supplied-board fixture's two declared variants and
-// writes the frozen calibration baseline beside the results.
+// run independently. Record both fixture variants before composing; compose
+// reads their evidence and writes the frozen calibration baseline.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -17,7 +16,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "vite";
-import { recordingPayload } from "./dev/runtime.mjs";
+import { composeRecordingPayload, recordingPayload, requireRuntimeEnvironment } from "./dev/runtime.mjs";
+
+await requireRuntimeEnvironment();
 
 const [command, arg] = process.argv.slice(2);
 const SLICE_PATTERN = /^(25|60):(prompt|pushing|support|combat|ignoring)$/;
@@ -36,7 +37,9 @@ const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).
 // or bank shape (the raw position's strand is the recorded limitation the
 // save translation, issue #493, exists to repair — never silently
 // repaired here).
-const assertFixtureRecord = (variant) => (row) => {
+const assertFixtureRecord = (variant, measurementVersion) => (row) => {
+  assert.equal(row.measurementVersion, measurementVersion,
+    "legacy fixture gap measurements require re-recording");
   assert.equal(row.kind, "continuation");
   assert.equal(row.noGrant, true);
   assert.equal(row.numeric.finiteSnapshots, true);
@@ -69,6 +72,8 @@ try {
   const assertRows = (rows, minutes, policy) => {
     assert.deepEqual(rows.map(row => row.seed), m.CENTURY_SEEDS);
     for (const row of rows) {
+      assert.equal(row.measurementVersion, m.CENTURY_MEASUREMENT_VERSION,
+        "legacy gap measurements require re-recording; do not compose them as current evidence");
       assert.equal(row.sessionMinutes, minutes);
       assert.equal(row.policy, policy);
       assert.equal(row.kind, "representative");
@@ -111,8 +116,11 @@ try {
         assert.ok(era.frontierAfter > frontier);
         frontier = era.frontierAfter;
       }
-      // The long-decision-gap read: no recorded failure may hide here.
-      assert.equal(row.gaps.longCount, row.eras.reduce((sum, era) => sum + era.longGaps.length, 0));
+      // Whole-run waits cross bank boundaries; per-era waits are clipped.
+      // They need not have the same long-gap count. A long wait is an
+      // evaluation failure, not a reason to discard the evidence row.
+      assert.equal(row.decisionGapsOk, row.gaps.longCount === 0);
+      if (!row.decisionGapsOk) console.warn(`${minutes}:${policy} seed ${row.seed}: FAIL — ${row.gaps.longCount} long decision gap(s)`);
     }
   };
 
@@ -147,30 +155,12 @@ try {
     const t0 = performance.now();
     const record = m.suppliedBoardRecord(variant);
     const row = { ...m.centuryRow(m.CENTURY_SEEDS[0], m.CENTURY_SESSION_MINUTES.long, record), note: `${variant}: ${m.playthroughNote(record)}` };
-    assert.equal(record.kind, "continuation");
-    assert.equal(row.noGrant, true);
-    assert.equal(row.numeric.finiteSnapshots, true);
-    assert.equal(row.numeric.serializedOk, row.numeric.serializedChecks);
-    if (variant === "raw") {
-      // The retained levels bank a frontier the calibrated curve cannot
-      // re-reach: the stranding the save translation (issue #493) exists
-      // to repair. Recorded, never silently repaired here.
-      assert.ok(row.claims[0] > 12, `raw fixture's first claim ${row.claims[0]}`);
-      assert.equal(row.eras.filter(era => era.claim !== null).length, row.claims.length);
-      assert.ok(row.eras.at(-1).claim === null, "the raw position's later era stays open at the mark");
-    } else {
-      assert.ok(row.claims.length >= 1, "the collection-reset position banks calibrated claims");
-      let frontier = 0;
-      for (const era of row.eras) {
-        if (era.claim === null) continue;
-        assert.ok(era.frontierAfter > frontier);
-        frontier = era.frontierAfter;
-      }
-    }
+    assertFixtureRecord(variant, m.CENTURY_MEASUREMENT_VERSION)(row);
     await writeFile(`docs/century-fixture-${variant}.json`, JSON.stringify(recordingPayload({ source, recordingCommit: commit, variant, row }), null, 2));
     console.log(`fixture ${variant}: ${row.claims.length} bank(s), ${row.creditedHours} credited h, ${dt(t0)}`);
   } else {
     const runs = [];
+    const inputs = [];
     for (const minutes of [25, 60]) for (const policy of m.CENTURY_POLICIES) {
       const recorded = JSON.parse(await readFile(slicePath(minutes, policy), "utf8"));
       // Each slice carries its own recording commit and the compiled
@@ -181,6 +171,7 @@ try {
       assert.deepEqual(recorded.source, source);
       execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
       assertRows(recorded.rows, minutes, policy);
+      inputs.push({ path: slicePath(minutes, policy), recording: recorded });
       runs.push(...recorded.rows);
     }
     const report = m.centuryReport(runs);
@@ -195,7 +186,8 @@ try {
       assert.deepEqual(recorded.source, source);
       execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
       assert.equal(recorded.variant, variant);
-      assertFixtureRecord(variant)(recorded.row);
+      assertFixtureRecord(variant, m.CENTURY_MEASUREMENT_VERSION)(recorded.row);
+      inputs.push({ path: fixturePath(variant), recording: recorded });
       fixtures[variant] = recorded.row;
       console.log(`fixture ${variant}: ${recorded.row.claims.length} bank(s), ${recorded.row.creditedHours} credited h`);
     }
@@ -203,7 +195,7 @@ try {
     const baseline = m.calibrationBaseline();
     const representative = runs.find(row => row.seed === 468 && row.sessionMinutes === 60 && row.policy === "support");
     assert.ok(representative, "the representative run recorded");
-    const results = recordingPayload({
+    const results = composeRecordingPayload({
       ...report,
       recordingCommit: commit,
       fixtures: {
@@ -219,9 +211,9 @@ try {
         frontiers: representative.frontiers,
         creditedHours: representative.creditedHours,
       },
-    });
+    }, inputs);
     await writeFile(process.env.FLOWSYNTH_CENTURY_REPORT || "docs/century-calibration-results.json", JSON.stringify(results, null, 2));
-    await writeFile("docs/century-calibration-baseline.json", JSON.stringify(recordingPayload({
+    await writeFile("docs/century-calibration-baseline.json", JSON.stringify(composeRecordingPayload({
       ...baseline,
       recordingCommit: commit,
       results: "docs/century-calibration-results.json",
@@ -234,7 +226,7 @@ try {
         "The raw supplied-board position strands its frontier past the calibrated curve's reach; the translation that repairs it is issue #493's work, grounded in the baseline's frozen figures.",
         "The Arete product ladders (Hone, Chord Catalysts, Expansion Bays) saturate inside the century; Charge Columns remain the open-ended sink.",
       ],
-    })));
+    }, inputs)));
     console.log(`Recorded ${runs.length} matrix walks, the fixture pair, and the frozen baseline.`);
   }
 } finally {

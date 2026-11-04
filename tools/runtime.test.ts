@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import {
   checkRuntimeEnvironment,
+  composeRecordingPayload,
   DECLARATION_FILE,
   declaredRuntimeVersion,
   recordingEnvironment,
@@ -124,6 +125,35 @@ describe("recordingEnvironment (issue #505)", () => {
     // The field rides every payload the writers compose — a writer cannot
     // forget it without bypassing the helper.
     expect(Object.keys(payload).sort()).toEqual(["model", "recordingEnvironment", "rows"]);
+  });
+});
+
+describe("composed recording provenance", () => {
+  it("preserves mixed input environments and leaves legacy measurements unidentified", () => {
+    const chicago = { node: "v22.23.4", timeZone: "America/Chicago", utcOffsetMinutes: -360 };
+    const utc = { node: "v22.23.4", timeZone: "UTC", utcOffsetMinutes: 0 };
+    const source = { engineSource: "recorded-engine" };
+    const inputs = [
+      { path: "support.json", recording: { source, minutes: 25, policy: "support", recordingCommit: "original", recordingEnvironment: chicago } },
+      { path: "combat.json", recording: { source, minutes: 60, policy: "combat", recordingEnvironment: utc } },
+      { path: "legacy-fixture.json", recording: { source, variant: "raw" } },
+    ];
+    const original = structuredClone(inputs);
+    const report = composeRecordingPayload({ runs: ["support", "combat"], fixtures: ["raw"] }, inputs);
+    expect(report).not.toHaveProperty("recordingEnvironment");
+    expect(report.compositionEnvironment).toEqual(recordingEnvironment());
+    expect(report.recordingInputs).toEqual(inputs.map(({ path, recording }) => ({ path, ...recording })));
+    expect(report.recordingInputs[2]).not.toHaveProperty("recordingEnvironment");
+    expect(report.recordingInputs[2]).not.toHaveProperty("recordingCommit");
+    expect(inputs).toEqual(original);
+  });
+
+  it("does not stamp the composer's environment onto an entirely legacy report", () => {
+    const report = composeRecordingPayload({ runs: [1, 2] }, [
+      { path: "legacy.json", recording: { source: { engineSource: "old" } } },
+    ]);
+    expect(report.recordingInputs[0]).toEqual({ path: "legacy.json", source: { engineSource: "old" } });
+    expect(report).not.toHaveProperty("recordingEnvironment");
   });
 });
 

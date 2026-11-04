@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { BALANCE, WORLD_ENEMIES } from "../src/engine/constants";
+import { WORLD_ENEMIES } from "../src/engine/constants";
 import {
   exportPlaythroughArtifact,
   importPlaythroughArtifact,
@@ -22,6 +23,7 @@ import {
   centuryDistribution,
   centuryEraView,
   centuryRecipe,
+  centuryRow,
   investmentTimeline,
   suppliedBoardState,
   type CenturyEraClass,
@@ -260,14 +262,67 @@ describe("the analysis reads", () => {
 });
 
 describe("the frozen baseline", () => {
-  it("compiles the calibrated figures from the shipped constants", () => {
-    const baseline = calibrationBaseline() as Record<string, Record<string, unknown>>;
-    expect(baseline.claimCurve!.entryNous).toBe(BALANCE.world.entryNous);
-    expect(baseline.claimCurve!.claimDepthSlope).toBe(BALANCE.world.claimDepthSlope);
-    expect(baseline.enemyLadder!.thresholds).toEqual(WORLD_ENEMIES.map((def) => def.threshold));
-    expect(baseline.responseSupport!.share).toBe(BALANCE.responseShare);
-    expect(baseline.openingGrant).toBe(BALANCE.openingGrant);
-    expect(baseline.saveVersion).toBeGreaterThan(0);
+  it("matches every frozen figure to the committed save-translation baseline", () => {
+    const frozen = JSON.parse(readFileSync(new URL("../docs/century-calibration-baseline.json", import.meta.url), "utf8"));
+    // Source fingerprints identify recordings, not numeric balance. A
+    // comment or measurement-only edit must not force a numeric re-freeze.
+    const { source: _source, ...compiled } = calibrationBaseline();
+    expect(Object.keys(compiled).length).toBeGreaterThan(0);
+    for (const [key, value] of Object.entries(compiled)) {
+      expect(value, `frozen ${key}: re-record and explicitly re-freeze before changing`).toEqual(frozen[key]);
+    }
+  });
+});
+
+describe("decision gaps at observation boundaries", () => {
+  const hour = 3600;
+  const reading = (times: number[], endHours: number) => {
+    const base = shortCenturyRecord("support");
+    const events: PlaythroughRecord["events"][number][] = times.map((credited) => ({ at: credited, credited, kind: "placement", label: "Placed a Sine", ok: true, snapshot: 0 }));
+    const era: PlaythroughRecord["eras"][number] = { ...base.eras[0]!, endCredited: null, newCredited: endHours * hour };
+    const record = { ...base, events, eras: [era], creditedSeconds: endHours * hour };
+    return { record, row: centuryRow(23, 60, record), view: centuryEraView(record, 0, null) };
+  };
+
+  it("records a decision-free century as one long gap in both run and open era", () => {
+    const { row, view } = reading([], 100);
+    expect(row.gaps).toMatchObject({ count: 1, maxCredited: 100 * hour, longCount: 1 });
+    expect(row.decisionGapsOk).toBe(false);
+    expect(view.longGaps).toEqual([{ credited: 100 * hour, closedBy: "Observation ended" }]);
+  });
+
+  it("includes the wait from the start to the first decision", () => {
+    const { row, view } = reading([3 * hour], 4);
+    expect(row.gaps.maxCredited).toBe(3 * hour);
+    expect(view.longGaps).toEqual([{ credited: 3 * hour, closedBy: "Placed a Sine" }]);
+  });
+
+  it("includes the wait after the last decision, even when no later decision closes it", () => {
+    const { row, view } = reading([0, 600], 100);
+    expect(row.gaps.maxCredited).toBe(100 * hour - 600);
+    expect(row.gaps.longCount).toBe(1);
+    expect(view.longGaps[0]!.credited).toBe(100 * hour - 600);
+  });
+
+  it("clips a closed era at its bank instead of extending it to the run stop", () => {
+    const { record } = reading([hour], 100);
+    record.eras[0] = { ...record.eras[0]!, endCredited: 2 * hour, endElapsed: 2 * hour, claim: 2 };
+    const view = centuryEraView(record, 0, null);
+    expect(view.gaps.maxCredited).toBe(hour);
+    expect(view.longGaps).toEqual([]);
+  });
+
+  it("does not let a prestige hide an uninterrupted whole-run wait", () => {
+    const { record } = reading([0, 3 * hour], 3);
+    record.events.splice(1, 0, { at: 1.5 * hour, credited: 1.5 * hour, kind: "prestige", label: "Prestige 1", ok: true, snapshot: 0 });
+    record.eras = [
+      { ...record.eras[0]!, endCredited: 1.5 * hour, endElapsed: 1.5 * hour, claim: 2, newCredited: 1.5 * hour },
+      { ...record.eras[0]!, index: 1, startCredited: 1.5 * hour, startElapsed: 1.5 * hour, newCredited: 1.5 * hour },
+    ];
+    const row = centuryRow(23, 60, record);
+    expect(row.gaps).toMatchObject({ maxCredited: 3 * hour, longCount: 1 });
+    expect(row.decisionGapsOk).toBe(false);
+    expect(row.eras.map((era) => era.longGaps.length)).toEqual([0, 0]);
   });
 });
 

@@ -1,5 +1,7 @@
 # Issue 505 — supported runtime: recorded demonstrations
 
+These captures document the original revisions named below. PR #514 review fixes subsequently changed the shared gate and composition metadata; current verification and the explicit long-calibration gap are recorded in [the review completion record](../pr514-review/README.md). In particular, a composed report now preserves input environments separately instead of assigning the composer's environment to inherited runs.
+
 Recorded 2026-11-04T13:37:58-06:00 in this checkout at commit `1008e831e7a6b7634b223c5743bf0330f6e84f46`
 (`git status --porcelain` clean except this evidence directory — the runs
 below executed exactly the offered revision). The demonstrations are the
