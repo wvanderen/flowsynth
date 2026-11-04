@@ -1,12 +1,12 @@
 # Issue 505 — supported runtime: recorded demonstrations
 
-Recorded 2026-11-04T12:32:33-06:00 in this checkout at commit `9601386e646b23fb037ae1e379acf6cdbe4322d4`.
-The demonstrations below are the completion record's manual evidence:
-the incompatible-environment failure, the selected-runtime acceptance,
-the npm-script runtime selection, the recording metadata, and the
-calendar regressions under both declared calendar bases. The
-fresh-checkout demonstration is recorded further down (needs the
-branch pushed first).
+Recorded 2026-11-04T13:37:58-06:00 in this checkout at commit `1008e831e7a6b7634b223c5743bf0330f6e84f46`
+(`git status --porcelain` clean except this evidence directory — the runs
+below executed exactly the offered revision). The demonstrations are the
+completion record's manual evidence: the incompatible-environment
+failure, the selected-runtime acceptance, the npm-script runtime
+selection, the recording metadata, and the calendar regressions under
+both declared calendar bases, plus the fresh-checkout demonstration.
 
 ## 1. The incompatible-environment failure
 
@@ -82,21 +82,14 @@ exit code: 0
 From the same Node 26 shell, `npm test` runs the suite under the
 declared runtime via tools/run-supported.mjs — no PATH override, no
 .npmrc workaround (the file-backed-storage shim is deleted). The
-wrapper's self-demo answers with the runtime the entry runs under:
+wrapper's self-demo answers with the runtime the entry runs under,
+and the npm-script path passes the targeted run:
 
 ```
 v22.23.4
-```
-
-And a bare vitest run on the unselected runtime fails at the guard
-(demonstration 1), while the npm-script path succeeds — here a targeted
-run from the Node 26 shell:
-
-```
- Test Files  1 passed (1)
       Tests  7 passed (7)
-   Start at  12:32:35
-   Duration  1.25s (transform 644ms, setup 0ms, import 794ms, tests 81ms, environment 0ms)
+   Start at  13:38:00
+   Duration  1.55s (transform 791ms, setup 0ms, import 963ms, tests 107ms, environment 0ms)
 
 ```
 
@@ -106,8 +99,9 @@ The cheap gated recording (growth report) writes
 `recordingEnvironment` beside its figures:
 
 ```
-   Start at  12:32:37
-   Duration  1.25s (transform 645ms, setup 0ms, import 793ms, tests 108ms, environment 0ms)
+      Tests  1 passed | 2 skipped (3)
+   Start at  13:38:02
+   Duration  1.60s (transform 833ms, setup 0ms, import 1.01s, tests 132ms, environment 0ms)
 
 recordingEnvironment: {'node': 'v22.23.4', 'timeZone': 'America/Chicago', 'utcOffsetMinutes': -360}
 ```
@@ -133,10 +127,11 @@ calendar regressions passed under UTC and America/Chicago.
 
 ## 6. The fresh-checkout setup and preflight demonstration
 
-A pristine clone of branch `t3/issue-505` from GitHub, in
-`/tmp/fs-fresh-505` — no node_modules, the shell's ambient runtime
-Node 26.7.0. The documented sequence (README): version-manager
-install, npm install, preflight, checks. Commands are prefixed with
+A pristine clone of branch `t3/issue-505` from GitHub at the offered
+revision (`1008e83`), in `/tmp/fs-fresh-505` —
+no node_modules, the shell's ambient runtime Node 26.7.0. The
+documented sequence (README): version-manager install, npm install,
+preflight, checks. Commands are prefixed with
 `mise exec node@22.23.4` the way an interactive mise shell selects
 the runtime from .node-version automatically (this capture shell has
 no per-directory hook, so the selection is spelled out); the npm
@@ -175,8 +170,8 @@ exit code: 0
 
 $ npm test -- src/engine/calendar.test.ts   (ambient Node 26 shell — the scripts select 22.23.4)
       Tests  7 passed (7)
-   Start at  12:34:02
-   Duration  1.19s (transform 610ms, setup 0ms, import 755ms, tests 80ms, environment 0ms)
+   Start at  13:38:51
+   Duration  1.52s (transform 772ms, setup 0ms, import 941ms, tests 107ms, environment 0ms)
 
 
 $ npm run test:calendar   (ambient Node 26 shell)
@@ -205,11 +200,11 @@ exit code: 1
 
 | Criterion (issue #505) | Verification | Class |
 | --- | --- | --- |
-| The project pins its CI-compatible supported Node runtime; a fresh checkout has a documented, reproducible way to select it; CI consumes the same declaration | `.node-version` (one concrete semver, `22.23.4`) is the single declaration: CI installs it via `actions/setup-node` `node-version-file` (`.github/workflows/ci.yml`); version managers read it; `tools/runtime.test.ts` "reads the one authoritative declaration, trimmed" and "refuses a malformed declaration by name"; the fresh-checkout demonstration (section 6) selects and installs from it | automated + manual |
-| A cheap preflight reports the effective runtime and timezone, checks the UI harness's storage capabilities, and fails an incompatible environment before expensive work with actionable diagnostics | `tools/runtime-preflight.mjs` via `tools/dev/runtime.mjs`; `tools/runtime-preflight.test.ts` (acceptance, version-mismatch refusal with the fix, missing-declaration refusal, unknown-argument usage); storage probe: `tools/runtime.test.ts` "refuses when the UI harness's storage capability is unavailable" + the real-probe case; demonstrations 1 (Node 26 → REJECT, exit 1) and 2 (ACCEPT) above; the suite guard repeats the check (`tools/dev/runtime-guard.mjs`, wired as vitest `globalSetup`), shown in demonstration 1's bare-invocation refusal | automated + manual |
-| Ordinary supported-runtime checks work without a private PATH override or the Node 26 file-backed-storage workaround; any remaining workaround has an explicit supported purpose | `.npmrc` deleted (the workaround is gone, none remains); `tools/run-supported.mjs` selects the declared runtime for every npm script — `tools/run-supported.test.ts` (layout coverage, override, located-binary verification, refusal diagnostics) + demonstration 3 (`npm test` from the Node 26 shell passing, wrapper self-demo answering `v22.23.4`) + demonstration 6 (fresh clone, ambient 26 shell, scripts pass) | automated + manual |
-| New balance recording metadata identifies the runtime and timezone actually used; legacy recordings remain identifiable as legacy; missing metadata is not fabricated | `recordingEnvironment()` (`tools/runtime.test.ts` "names the runtime and timezone actually used — never fabricated values"); wired into every writer: `tools/balance-growth.test.ts`, `tools/first-prestige.test.ts`, `tools/response-comparison.test.ts`, `tools/record-century.mjs` (slices, fixture, composed results), `tools/record-later-eras.mjs` (slices, composed results); demonstration 4 shows a real recording carrying `{node, timeZone, utcOffsetMinutes}` and the legacy results files carrying no field | automated + manual |
-| Targeted calendar-sensitive regressions run under UTC and a DST-observing zone and establish intended calendar behavior without a duplicate full suite | `src/engine/calendar.test.ts` (zone-invariant cases: offset-derived midnights including the fall-back day's two-midnight pick, the Monday start, a DST-shortened-day midnight split, host-calendar recipe declaration/rejection, DST day-length fit/refusal, a real walk's day-boundary stamps); `tools/calendar-regression.test.ts` pins the targeting (two files, UTC + a DST zone); demonstration 5: both legs green (46 + 46 cases); the pin bites — a UTC-day mutation of `localDayStart` fails the daily-occurrence case (mutation checked and reverted during development) | automated + manual |
-| The calendar basis is declared rather than silently changed | Gameplay semantics unchanged (local calendar); the declaration lives in `docs/adr/0080-the-supported-runtime-and-calendar-basis-are-declared-not-discovered.md`, the glossary's "Host calendar" entry, the preflight's `calendar` report line (demonstrations 1–2, 6), and `src/engine/calendar.test.ts`'s header | manual (documentation) |
+| The project pins its CI-compatible supported Node runtime; a fresh checkout has a documented, reproducible way to select it; CI consumes the same authoritative version declaration | `.node-version` (one concrete semver, `22.23.4`) is the single declaration: CI installs it via `actions/setup-node` `node-version-file` (`.github/workflows/ci.yml`); version managers read it; `tools/runtime.test.ts` "reads the one authoritative declaration, trimmed" and "refuses a malformed declaration by name"; the fresh-checkout demonstration (section 6) selects and installs from it | automated + manual |
+| A cheap preflight reports the effective Node runtime and timezone and checks the storage capabilities required by the UI harness; an incompatible environment fails before expensive work, with actionable diagnostics | `tools/runtime-preflight.mjs` via `tools/dev/runtime.mjs`; `tools/runtime-preflight.test.ts` (acceptance, version-mismatch refusal with the fix, missing-declaration refusal, unknown-argument usage); storage probe: `tools/runtime.test.ts` "refuses when the UI harness's storage capability is unavailable" + the real-probe case; demonstrations 1 (Node 26 → REJECT, exit 1) and 2 (ACCEPT) above; the suite guard repeats the check before any test file loads (`tools/dev/runtime-guard.mjs`, vitest `globalSetup`), shown in demonstration 1's bare-invocation refusal | automated + manual |
+| Ordinary supported-runtime checks work without a private PATH override or the Node 26 file-backed-storage workaround; any remaining workaround has an explicit supported purpose | `.npmrc` deleted — the workaround is gone and none remains (the intent is recorded in ADR-0080's consequences, the one explicitly supported purpose note); `tools/run-supported.mjs` selects the declared runtime for every npm script — `tools/run-supported.test.ts` (layout coverage, override, located-binary verification, refusal diagnostics) + demonstration 3 (`npm test` from the Node 26 shell passing, wrapper self-demo answering `v22.23.4`) + demonstration 6 (fresh clone, ambient-26 shell, scripts pass) | automated + manual |
+| New balance recording metadata identifies the runtime and timezone actually used; legacy recordings remain identifiable as legacy; missing metadata is not fabricated | `recordingEnvironment()` and the one composition helper `recordingPayload()` (`tools/runtime.test.ts` "names the runtime and timezone actually used — never fabricated values" and "recordingPayload attaches the environment to a writer's payload"); wired into every writer: `tools/balance-growth.test.ts`, `tools/first-prestige.test.ts`, `tools/response-comparison.test.ts`, `tools/record-century.mjs` (slices, fixture, composed results, frozen baseline), `tools/record-later-eras.mjs` (slices, composed results); demonstration 4 shows a real recording carrying `{node, timeZone, utcOffsetMinutes}` and the legacy results files carrying no field | automated + manual |
+| Targeted calendar-sensitive regressions run under UTC and a DST-observing zone and establish the intended calendar behavior without requiring a duplicate full suite | `src/engine/calendar.test.ts` (zone-invariant cases: earliest-local-midnight occurrences including the fall-back day's two-midnight pick, the Monday start, a DST-shortened-day midnight split, host-calendar recipe declaration and foreign-zone rejection, spring-forward/fall-back schedule fit, a real walk's day-boundary stamps); `tools/calendar-regression.test.ts` pins the targeting (two files, UTC + a DST zone — never a duplicated suite); demonstration 5: both legs green (46 + 46 cases); the pin bites — a UTC-day mutation of `localDayStart` fails the daily-occurrence case (mutation checked and reverted during development) | automated + manual |
+| The calendar basis is declared rather than silently changed | Gameplay semantics unchanged (the host's local calendar); the declaration lives in `docs/adr/0080-the-supported-runtime-and-calendar-basis-are-declared-not-discovered.md`, the glossary's "Host calendar" and "Supported runtime" entries, the preflight's `calendar` report line (demonstrations 1–2, 6), and `src/engine/calendar.test.ts`'s header | manual (documentation) |
 
-Executed checks at the offered revision (`9175b66` source + evidence-only additions): `npm run check` passed; `npm test` passed (113 files, 2,155 tests, 7 explicit long-recording gates skipped); `npm run test:calendar` passed under both zones. Browser evidence: not applicable — no game UI surface changed (development-tooling, CI, and documentation only; no panel, sheet, readout, or control copy touched).
+Executed checks at the offered revision (`1008e83`, the runs cited above): `npm run check` passed; `npm test` passed at this revision (113 files, 2,156 tests, 7 explicit long-recording gates skipped); `npm run test:calendar` passed under both zones. Review fixes that postdate the first captures are why every demonstration above was re-run at the final revision — nothing here cites a run of uncommitted or superseded source. Browser evidence: not applicable — no game UI surface changed (development tooling, CI, and documentation only; no panel, sheet, readout, or control copy touched).
