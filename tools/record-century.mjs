@@ -18,10 +18,15 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "vite";
 
-const [command, slice] = process.argv.slice(2);
+const [command, arg] = process.argv.slice(2);
 const SLICE_PATTERN = /^(25|60):(prompt|pushing|support|combat|ignoring)$/;
-if (command !== "compose" && !(command === "slice" && SLICE_PATTERN.test(slice ?? ""))) {
-  throw new Error("Usage: node tools/record-century.mjs slice <25|60>:<prompt|pushing|support|combat|ignoring> | compose");
+const FIXTURE_VARIANTS = ["raw", "collection-reset"];
+if (
+  (command !== "compose" && command !== "compose-matrix") &&
+  !(command === "slice" && SLICE_PATTERN.test(arg ?? "")) &&
+  !(command === "fixture" && FIXTURE_VARIANTS.includes(arg ?? ""))
+) {
+  throw new Error("Usage: node tools/record-century.mjs slice <25|60>:<policy> | fixture <raw|collection-reset> | compose");
 }
 execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
@@ -106,6 +111,37 @@ try {
     }
     assertRows(rows, minutes, policy);
     await writeFile(slicePath(minutes, policy), JSON.stringify({ source, recordingCommit: commit, minutes, policy, rows }, null, 2));
+  } else if (command === "fixture") {
+    // The anonymized supplied-board fixture's declared walks are their own
+    // recording unit: the retained board's certified-allocation cost makes
+    // each walk tens of minutes of work, so an interruption loses at most
+    // its own variant, and the compose pass reads the recorded pair.
+    const variant = arg;
+    const t0 = performance.now();
+    const record = m.suppliedBoardRecord(variant);
+    const row = { ...m.centuryRow(m.CENTURY_SEEDS[0], m.CENTURY_SESSION_MINUTES.long, record), note: `${variant}: ${m.playthroughNote(record)}` };
+    assert.equal(record.kind, "continuation");
+    assert.equal(row.noGrant, true);
+    assert.equal(row.numeric.finiteSnapshots, true);
+    assert.equal(row.numeric.serializedOk, row.numeric.serializedChecks);
+    if (variant === "raw") {
+      // The retained levels bank a frontier the calibrated curve cannot
+      // re-reach: the stranding the save translation (issue #493) exists
+      // to repair. Recorded, never silently repaired here.
+      assert.ok(row.claims[0] > 12, `raw fixture's first claim ${row.claims[0]}`);
+      assert.equal(row.eras.filter(era => era.claim !== null).length, row.claims.length);
+      assert.ok(row.eras.at(-1).claim === null, "the raw position's later era stays open at the mark");
+    } else {
+      assert.ok(row.claims.length >= 1, "the collection-reset position banks calibrated claims");
+      let frontier = 0;
+      for (const era of row.eras) {
+        if (era.claim === null) continue;
+        assert.ok(era.frontierAfter > frontier);
+        frontier = era.frontierAfter;
+      }
+    }
+    await writeFile(`docs/century-fixture-${variant}.json`, JSON.stringify({ source, recordingCommit: commit, variant, row }, null, 2));
+    console.log(`fixture ${variant}: ${row.claims.length} bank(s), ${row.creditedHours} credited h, ${dt(t0)}`);
   } else {
     const runs = [];
     for (const minutes of [25, 60]) for (const policy of m.CENTURY_POLICIES) {
@@ -121,40 +157,40 @@ try {
       runs.push(...recorded.rows);
     }
     const report = m.centuryReport(runs);
-    // The anonymized supplied-board fixture's two declared walks: the raw
-    // position's recorded stranding and the collection-reset's calibrated
-    // century. Both ride kind "continuation" and never join the matrix.
-    const rawFixtureStart = performance.now();
-    const rawRecord = m.suppliedBoardRecord("raw");
-    const rawRow = m.centuryRow(m.CENTURY_SEEDS[0], m.CENTURY_SESSION_MINUTES.long, rawRecord);
-    assert.equal(rawRecord.kind, "continuation");
-    assert.equal(rawRow.noGrant, true);
-    assert.equal(rawRow.numeric.finiteSnapshots, true);
-    assert.equal(rawRow.numeric.serializedOk, rawRow.numeric.serializedChecks);
-    // The retained levels bank a frontier the calibrated curve cannot
-    // re-reach: the stranding the save translation (issue #493) exists to
-    // repair. Recorded, never silently repaired here.
-    assert.ok(rawRow.claims[0] > 12, `raw fixture's first claim ${rawRow.claims[0]}`);
-    const closedRaw = rawRow.eras.filter(era => era.claim !== null).length;
-    assert.equal(closedRaw, rawRow.claims.length);
-    assert.ok(rawRow.eras.at(-1).claim === null, "the raw position's later era stays open at the mark");
-    console.log(`raw fixture: ${closedRaw} bank(s), claim ${rawRow.claims[0]}, ${dt(rawFixtureStart)}`);
-
-    const resetStart = performance.now();
-    const resetRecord = m.suppliedBoardRecord("collection-reset");
-    const resetRow = m.centuryRow(m.CENTURY_SEEDS[0], m.CENTURY_SESSION_MINUTES.long, resetRecord);
-    assert.equal(resetRecord.kind, "continuation");
-    assert.equal(resetRow.noGrant, true);
-    assert.equal(resetRow.numeric.finiteSnapshots, true);
-    assert.equal(resetRow.numeric.serializedOk, resetRow.numeric.serializedChecks);
-    assert.ok(resetRow.claims.length >= 1, "the collection-reset position banks calibrated claims");
-    let frontier = 0;
-    for (const era of resetRow.eras) {
-      if (era.claim === null) continue;
-      assert.ok(era.frontierAfter > frontier);
-      frontier = era.frontierAfter;
+    // The anonymized supplied-board fixture's two recorded walks (their
+    // own recording units — the retained board's certified-allocation
+    // cost makes each a tens-of-minutes walk). Both ride kind
+    // "continuation" and never join the matrix.
+    const fixturePath = variant => `docs/century-fixture-${variant}.json`;
+    const fixtures = {};
+    for (const variant of FIXTURE_VARIANTS) {
+      const recorded = JSON.parse(await readFile(fixturePath(variant), "utf8"));
+      assert.deepEqual(recorded.source, source);
+      execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
+      assert.equal(recorded.variant, variant);
+      assert.equal(recorded.row.kind, "continuation");
+      assert.equal(recorded.row.noGrant, true);
+      assert.equal(recorded.row.numeric.finiteSnapshots, true);
+      assert.equal(recorded.row.numeric.serializedOk, recorded.row.numeric.serializedChecks);
+      if (variant === "raw") {
+        // The retained levels bank a frontier the calibrated curve cannot
+        // re-reach: the stranding the save translation (issue #493)
+        // exists to repair. Recorded, never silently repaired here.
+        assert.ok(recorded.row.claims[0] > 12, `raw fixture's first claim ${recorded.row.claims[0]}`);
+        assert.equal(recorded.row.eras.filter(era => era.claim !== null).length, recorded.row.claims.length);
+        assert.ok(recorded.row.eras.at(-1).claim === null, "the raw position's later era stays open at the mark");
+      } else {
+        assert.ok(recorded.row.claims.length >= 1, "the collection-reset position banks calibrated claims");
+        let frontier = 0;
+        for (const era of recorded.row.eras) {
+          if (era.claim === null) continue;
+          assert.ok(era.frontierAfter > frontier);
+          frontier = era.frontierAfter;
+        }
+      }
+      fixtures[variant] = recorded.row;
+      console.log(`fixture ${variant}: ${recorded.row.claims.length} bank(s), ${recorded.row.creditedHours} credited h`);
     }
-    console.log(`collection-reset fixture: ${resetRow.claims.length} banks, frontier ${frontier}, ${dt(resetStart)}`);
 
     const baseline = m.calibrationBaseline();
     const representative = runs.find(row => row.seed === 468 && row.sessionMinutes === 60 && row.policy === "support");
@@ -163,8 +199,8 @@ try {
       ...report,
       recordingCommit: commit,
       fixtures: {
-        raw: { ...rawRow, trajectory: rawRow.trajectory.filter((_, index) => index % 4 === 0) },
-        collectionReset: { ...resetRow, trajectory: resetRow.trajectory.filter((_, index) => index % 4 === 0) },
+        raw: { ...fixtures.raw, trajectory: fixtures.raw.trajectory.filter((_, index) => index % 4 === 0) },
+        collectionReset: { ...fixtures["collection-reset"], trajectory: fixtures["collection-reset"].trajectory.filter((_, index) => index % 4 === 0) },
       },
       representative: {
         seed: representative.seed,
