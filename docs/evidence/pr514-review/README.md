@@ -32,4 +32,13 @@ The missing evidence is restored, **not re-recorded**. All 22 canonical calibrat
 
 ## Final checks
 
-Pending final verification at the committed source revision. Results and source identity will be recorded here before push. Browser evidence is not applicable: no player-facing UI surface changed.
+Verified at committed source `6dbfe78e627e932862894c774cae5d33a3380ba9` in a fresh local clone (`/tmp/flowsynth-pr514-final`), from an ambient Node `v26.7.0` shell. No source changes followed these checks; the following commit only adds these evidence logs and this result record.
+
+- [Fresh-clone setup and supported preflight](setup.log): `npm install`, selector-driven runtime/zone/storage preflight accepted `v22.23.4`, then `npm run check` passed. The clone was clean after install and checks.
+- [Full suite](full-suite.log): `npm test` passed, both engine and UI projects (115 files, 2,169 cases passed; 7 explicit calibration gates skipped). No second full UI pass was run. The `not a git repository` stderr comes from intentional negative-directory provenance checks; no test failed.
+- [Calendar regressions](calendar.log): `npm run test:calendar` passed, 46 cases in UTC and 46 in America/Chicago. Calendar gameplay semantics were not changed.
+- [Century recorder refusal](century-refusal.log) and [later-era recorder refusal](later-era-refusal.log): actual ambient Node `v26.7.0` invocations of `compose` exited 1 at the shared runtime gate with the declared `22.23.4` and actionable selection instructions, before Git/input/compilation work.
+- [Freeze mutation](freeze-mutation.log): the intentional `responseShare: 3.01` mutation failed the frozen-artifact case; reverted before the targeted and full checks above.
+- Targeted iteration after the fix and mutation revert: `npm test -- tools/calibration-evidence.test.ts tools/century.test.ts tools/runtime.test.ts tools/runtime-preflight.test.ts tools/run-supported.test.ts tools/recording-entrypoints.test.ts` passed; the named behavioral mappings above, not the count, establish each fix.
+
+Browser evidence is not applicable: no player-facing UI surface changed. **The explicit multi-hour boundary-aware calibration remains unavailable as stated above; these passing checks do not close that gap.**

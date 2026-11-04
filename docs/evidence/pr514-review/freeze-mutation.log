@@ -1,0 +1,40 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run tools/century.test.ts -t matches every frozen figure
+
+
+ RUN  v4.1.12 /tmp/flowsynth-review514-checkout
+
+ ❯ |engine| tools/century.test.ts (19 tests | 1 failed | 18 skipped) 18ms
+     × matches every frozen figure to the committed save-translation baseline 17ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| tools/century.test.ts > the frozen baseline > matches every frozen figure to the committed save-translation baseline
+AssertionError: frozen responseSupport: re-record and explicitly re-freeze before changing: expected { share: 3.01, saturation: 20 } to deeply equal { share: 3, saturation: 20 }
+
+- Expected
++ Received
+
+  {
+    "saturation": 20,
+-   "share": 3,
++   "share": 3.01,
+  }
+
+ ❯ tools/century.test.ts:272:90
+    270|     expect(Object.keys(compiled).length).toBeGreaterThan(0);
+    271|     for (const [key, value] of Object.entries(compiled)) {
+    272|       expect(value, `frozen ${key}: re-record and explicitly re-freeze…
+       |                                                                                          ^
+    273|     }
+    274|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 18 skipped (19)
+   Start at  14:56:18
+   Duration  1.19s (transform 641ms, setup 0ms, import 796ms, tests 18ms, environment 0ms)
+
