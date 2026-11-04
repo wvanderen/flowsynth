@@ -130,3 +130,86 @@ docs/century-slice-60-prompt.json: recordingEnvironment present = False
       Tests  46 passed (46)
 calendar regressions passed under UTC and America/Chicago.
 ```
+
+## 6. The fresh-checkout setup and preflight demonstration
+
+A pristine clone of branch `t3/issue-505` from GitHub, in
+`/tmp/fs-fresh-505` — no node_modules, the shell's ambient runtime
+Node 26.7.0. The documented sequence (README): version-manager
+install, npm install, preflight, checks. Commands are prefixed with
+`mise exec node@22.23.4` the way an interactive mise shell selects
+the runtime from .node-version automatically (this capture shell has
+no per-directory hook, so the selection is spelled out); the npm
+scripts guarantee the same runtime without any prefix.
+
+```
+$ cat .node-version
+22.23.4
+
+$ mise exec node@22.23.4 -- npm install   (fresh worktree; installs dependencies)
+
+Run `npm audit` for details.
+
+$ mise exec node@22.23.4 -- npm run preflight
+
+> flowsynth@0.1.0 preflight
+> node tools/runtime-preflight.mjs
+
+
+FlowSynth runtime preflight
+
+  declared   22.23.4 (.node-version)
+  effective  v22.23.4
+  timezone   America/Chicago (UTC-06:00)
+  storage    ok — happy-dom localStorage roundtrip
+  calendar   the host's local calendar — goal days and schedule days follow this zone
+
+  ACCEPT — runtime, calendar zone, and UI storage are ready for checks and evidence.
+
+exit code: 0
+
+$ mise exec node@22.23.4 -- npm run check
+> node tools/run-supported.mjs node_modules/typescript/bin/tsc --noEmit
+
+exit code: 0
+
+$ npm test -- src/engine/calendar.test.ts   (ambient Node 26 shell — the scripts select 22.23.4)
+      Tests  7 passed (7)
+   Start at  12:34:02
+   Duration  1.19s (transform 610ms, setup 0ms, import 755ms, tests 80ms, environment 0ms)
+
+
+$ npm run test:calendar   (ambient Node 26 shell)
+=== calendar regressions under TZ=UTC ===
+      Tests  46 passed (46)
+=== calendar regressions under TZ=America/Chicago ===
+      Tests  46 passed (46)
+calendar regressions passed under UTC and America/Chicago.
+```
+
+And the preflight run from the unselected ambient runtime in the same
+fresh clone refuses, with the fix (demonstration 1's behavior holds in
+a fresh checkout):
+
+```
+  declared   22.23.4 (.node-version)
+  effective  v26.7.0
+  REJECT (version-mismatch) — fix the environment before running checks or recording evidence.
+  supported runtime mismatch: effective v26.7.0, declared 22.23.4 (.node-version).
+    select the declared runtime with your version manager, then rerun:
+    npm scripts select the declared runtime automatically (npm test, npm run check,
+exit code: 1
+```
+
+## Completion record: acceptance criteria → named verification
+
+| Criterion (issue #505) | Verification | Class |
+| --- | --- | --- |
+| The project pins its CI-compatible supported Node runtime; a fresh checkout has a documented, reproducible way to select it; CI consumes the same declaration | `.node-version` (one concrete semver, `22.23.4`) is the single declaration: CI installs it via `actions/setup-node` `node-version-file` (`.github/workflows/ci.yml`); version managers read it; `tools/runtime.test.ts` "reads the one authoritative declaration, trimmed" and "refuses a malformed declaration by name"; the fresh-checkout demonstration (section 6) selects and installs from it | automated + manual |
+| A cheap preflight reports the effective runtime and timezone, checks the UI harness's storage capabilities, and fails an incompatible environment before expensive work with actionable diagnostics | `tools/runtime-preflight.mjs` via `tools/dev/runtime.mjs`; `tools/runtime-preflight.test.ts` (acceptance, version-mismatch refusal with the fix, missing-declaration refusal, unknown-argument usage); storage probe: `tools/runtime.test.ts` "refuses when the UI harness's storage capability is unavailable" + the real-probe case; demonstrations 1 (Node 26 → REJECT, exit 1) and 2 (ACCEPT) above; the suite guard repeats the check (`tools/dev/runtime-guard.mjs`, wired as vitest `globalSetup`), shown in demonstration 1's bare-invocation refusal | automated + manual |
+| Ordinary supported-runtime checks work without a private PATH override or the Node 26 file-backed-storage workaround; any remaining workaround has an explicit supported purpose | `.npmrc` deleted (the workaround is gone, none remains); `tools/run-supported.mjs` selects the declared runtime for every npm script — `tools/run-supported.test.ts` (layout coverage, override, located-binary verification, refusal diagnostics) + demonstration 3 (`npm test` from the Node 26 shell passing, wrapper self-demo answering `v22.23.4`) + demonstration 6 (fresh clone, ambient 26 shell, scripts pass) | automated + manual |
+| New balance recording metadata identifies the runtime and timezone actually used; legacy recordings remain identifiable as legacy; missing metadata is not fabricated | `recordingEnvironment()` (`tools/runtime.test.ts` "names the runtime and timezone actually used — never fabricated values"); wired into every writer: `tools/balance-growth.test.ts`, `tools/first-prestige.test.ts`, `tools/response-comparison.test.ts`, `tools/record-century.mjs` (slices, fixture, composed results), `tools/record-later-eras.mjs` (slices, composed results); demonstration 4 shows a real recording carrying `{node, timeZone, utcOffsetMinutes}` and the legacy results files carrying no field | automated + manual |
+| Targeted calendar-sensitive regressions run under UTC and a DST-observing zone and establish intended calendar behavior without a duplicate full suite | `src/engine/calendar.test.ts` (zone-invariant cases: offset-derived midnights including the fall-back day's two-midnight pick, the Monday start, a DST-shortened-day midnight split, host-calendar recipe declaration/rejection, DST day-length fit/refusal, a real walk's day-boundary stamps); `tools/calendar-regression.test.ts` pins the targeting (two files, UTC + a DST zone); demonstration 5: both legs green (46 + 46 cases); the pin bites — a UTC-day mutation of `localDayStart` fails the daily-occurrence case (mutation checked and reverted during development) | automated + manual |
+| The calendar basis is declared rather than silently changed | Gameplay semantics unchanged (local calendar); the declaration lives in `docs/adr/0080-the-supported-runtime-and-calendar-basis-are-declared-not-discovered.md`, the glossary's "Host calendar" entry, the preflight's `calendar` report line (demonstrations 1–2, 6), and `src/engine/calendar.test.ts`'s header | manual (documentation) |
+
+Executed checks at the offered revision (`9175b66` source + evidence-only additions): `npm run check` passed; `npm test` passed (113 files, 2,155 tests, 7 explicit long-recording gates skipped); `npm run test:calendar` passed under both zones. Browser evidence: not applicable — no game UI surface changed (development-tooling, CI, and documentation only; no panel, sheet, readout, or control copy touched).
