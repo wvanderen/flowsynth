@@ -51,8 +51,11 @@ try {
       assert.equal(row.numeric.finiteSnapshots, true);
       assert.equal(row.numeric.serializedChecks > 0, true);
       assert.equal(row.numeric.serializedOk, row.numeric.serializedChecks);
-      // The policy's own faces.
-      if (policy === "prompt") assert.equal(row.claims[0], 0, "the prompt door's honest zero");
+      // The policy's own faces. The prompt door's first crossing banks
+      // the honest zero on the baseline schedule; a single long session
+      // can carry an era past the entry depth before its first door, so
+      // the long-session slices assert only the door-banking shape.
+      if (policy === "prompt" && minutes === 25) assert.equal(row.claims[0], 0, "the prompt door's honest zero");
       if (policy === "ignoring") {
         assert.deepEqual(row.defeats, []);
         for (const era of row.eras) assert.equal(era.placements, 0);
