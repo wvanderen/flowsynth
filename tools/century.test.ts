@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
 import { BALANCE, WORLD_ENEMIES } from "../src/engine/constants";
 import {
@@ -265,6 +266,19 @@ describe("the frozen baseline", () => {
     expect(baseline.responseSupport!.share).toBe(BALANCE.responseShare);
     expect(baseline.openingGrant).toBe(BALANCE.openingGrant);
     expect(baseline.saveVersion).toBeGreaterThan(0);
+  });
+});
+
+describe("the recorded century evaluation", { skip: !process.env.FLOWSYNTH_CENTURY_REPORT && !process.env.FLOWSYNTH_CENTURY_SLICE, timeout: 7_200_000 }, () => {
+  // The explicit tier compiles through Vite's real raw/glob transform,
+  // avoiding #503's vitest fingerprint. One recorder owns the provenance
+  // checks and assertions for direct CLI and env-gated invocations alike.
+  const slice = process.env.FLOWSYNTH_CENTURY_SLICE;
+  it(slice ? `walks the ${slice} century slice and records it` : "composes the full declared matrix, the fixture pair, and the frozen baseline", () => {
+    execFileSync(process.execPath, ["tools/record-century.mjs", ...(slice ? ["slice", slice] : ["compose"])], {
+      stdio: "inherit",
+      timeout: 7_200_000,
+    });
   });
 });
 
