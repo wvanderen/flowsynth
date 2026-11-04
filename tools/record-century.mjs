@@ -110,8 +110,13 @@ try {
     const runs = [];
     for (const minutes of [25, 60]) for (const policy of m.CENTURY_POLICIES) {
       const recorded = JSON.parse(await readFile(slicePath(minutes, policy), "utf8"));
-      assert.equal(recorded.recordingCommit, commit);
+      // Each slice carries its own recording commit and the compiled
+      // engine fingerprint. Composition verifies the fingerprint byte for
+      // byte and the commit's ancestry: a slice recorded on an ancestor
+      // whose engine source compiled identically is the same evidence
+      // (the recorder-fix commits landed between slices).
       assert.deepEqual(recorded.source, source);
+      execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
       assertRows(recorded.rows, minutes, policy);
       runs.push(...recorded.rows);
     }
