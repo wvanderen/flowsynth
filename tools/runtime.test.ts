@@ -8,6 +8,7 @@ import {
   DECLARATION_FILE,
   declaredRuntimeVersion,
   recordingEnvironment,
+  recordingPayload,
 } from "./dev/runtime.mjs";
 import { probeStorageCapability } from "./dev/runtime.mjs";
 
@@ -113,6 +114,16 @@ describe("recordingEnvironment (issue #505)", () => {
     expect(env.timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
     expect(env.utcOffsetMinutes).toBe(-new Date().getTimezoneOffset());
     expect(Object.keys(env).sort()).toEqual(["node", "timeZone", "utcOffsetMinutes"]);
+  });
+
+  it("recordingPayload attaches the environment to a writer's payload", () => {
+    const payload = recordingPayload({ model: "probe", rows: [1, 2, 3] });
+    expect(payload.model).toBe("probe");
+    expect(payload.rows).toEqual([1, 2, 3]);
+    expect(payload.recordingEnvironment).toEqual(recordingEnvironment());
+    // The field rides every payload the writers compose — a writer cannot
+    // forget it without bypassing the helper.
+    expect(Object.keys(payload).sort()).toEqual(["model", "recordingEnvironment", "rows"]);
   });
 });
 

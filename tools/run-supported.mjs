@@ -11,14 +11,12 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { DECLARATION_FILE, declaredRuntimeVersion } from "./dev/runtime.mjs";
+import { DECLARATION_FILE, declaredRuntimeVersion, normalizeVersion } from "./dev/runtime.mjs";
 
 const repoRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const USAGE =
   "Usage: node tools/run-supported.mjs [--root <checkout-dir>] [--print-runtime] <entry> [args...]\n" +
   "  <entry> is a script path relative to the checkout root, run under the declared runtime.";
-
-const normalizeVersion = (version) => version.replace(/^v/, "");
 
 // Where each supported version manager installs the declared version. The
 // first existing `node` binary wins; an explicit FLOWSYNTH_NODE override

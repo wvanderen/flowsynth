@@ -8,7 +8,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "vite";
-import { recordingEnvironment } from "./dev/runtime.mjs";
+import { recordingPayload } from "./dev/runtime.mjs";
 
 const [command, slice] = process.argv.slice(2);
 if (command !== "compose" && !(command === "slice" && /^(25|60):(support|combat|ignoring)$/.test(slice ?? ""))) {
@@ -73,7 +73,7 @@ try {
     }
     assertRows(rows, minutes, policy);
     // Issue #505: every recording names the runtime and timezone it ran on.
-    await writeFile(slicePath(minutes, policy), JSON.stringify({ source, recordingCommit: commit, recordingEnvironment: recordingEnvironment(), minutes, policy, rows }, null, 2));
+    await writeFile(slicePath(minutes, policy), JSON.stringify(recordingPayload({ source, recordingCommit: commit, minutes, policy, rows }), null, 2));
   } else {
     const runs = [];
     for (const minutes of [25, 60]) for (const policy of m.WORLD_POLICIES) {
@@ -124,7 +124,7 @@ try {
       runs.some(row => row.policy === "support" && row.defeats.length > 0),
       "the support walks demonstrate fighting configurations",
     );
-    await writeFile(process.env.FLOWSYNTH_LATER_ERA_REPORT || "docs/later-era-results.json", JSON.stringify({ ...report, recordingCommit: commit, recordingEnvironment: recordingEnvironment(), routeProbes }, null, 2));
+    await writeFile(process.env.FLOWSYNTH_LATER_ERA_REPORT || "docs/later-era-results.json", JSON.stringify(recordingPayload({ ...report, recordingCommit: commit, routeProbes }), null, 2));
     console.log(`Recorded ${runs.length} matrix walks and ${routeProbes.reduce((n, probe) => n + probe.orders.length, 0)} directly continued purchase orders.`);
   }
 } finally {

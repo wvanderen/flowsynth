@@ -39,7 +39,9 @@ export function effectiveRuntime() {
 }
 
 // Normalize "v22.23.4" and "22.23.4" to one comparison basis.
-const normalizeVersion = (version) => version.replace(/^v/, "");
+export function normalizeVersion(version) {
+  return version.replace(/^v/, "");
+}
 
 // The storage capability the UI harness requires: the vitest UI project's
 // happy-dom environment must provide a working localStorage — the fixtures
@@ -155,6 +157,13 @@ export function checkRuntimeEnvironment(input = {}) {
 // field — they stay identifiable as legacy, and no reader fabricates a value
 // for them.
 export function recordingEnvironment() {
-  const effective = effectiveRuntime();
-  return { node: effective.version, timeZone: effective.timeZone, utcOffsetMinutes: effective.utcOffsetMinutes };
+  const { version, timeZone, utcOffsetMinutes } = effectiveRuntime();
+  return { node: version, timeZone, utcOffsetMinutes };
+}
+
+// A recording's payload with its environment attached (issue #505): every
+// balance writer composes its results through this one helper, so a future
+// writer cannot forget the field and the convention lives in one place.
+export function recordingPayload(payload) {
+  return { ...payload, recordingEnvironment: recordingEnvironment() };
 }

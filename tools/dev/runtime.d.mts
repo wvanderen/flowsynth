@@ -27,7 +27,7 @@ export interface RuntimeReport {
   storage: RuntimeProbeResult;
   ok: boolean;
   /** "missing-declaration" | "bad-declaration" | "version-mismatch" | "storage-unavailable" | null */
-  reason: string | null;
+  reason: "missing-declaration" | "bad-declaration" | "version-mismatch" | "storage-unavailable" | null;
   /** Actionable fix lines; every refusal names the fix. */
   diagnostics: string[];
 }
@@ -51,4 +51,9 @@ export declare function checkRuntimeEnvironment(input?: {
   storage?: RuntimeProbeResult;
 }): RuntimeReport;
 
+export declare function normalizeVersion(version: string): string;
+
 export declare function recordingEnvironment(): RecordingEnvironment;
+
+/** A recording's payload with `recordingEnvironment` attached — every balance writer composes through this. */
+export declare function recordingPayload<T extends object>(payload: T): T & { recordingEnvironment: RecordingEnvironment };

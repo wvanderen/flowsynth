@@ -17,7 +17,10 @@ function walk(dir: string): string[] {
 // development provenance endpoint — the launcher, its log, and /-/dev/provenance
 // belong to the dev server only.
 describe("production build purity (issue #253)", () => {
-  it("dist carries no absolute local paths and no provenance endpoint", async () => {
+  // The build runs inside the parallel engine forks, where a heavy
+  // allocation-stress worker can starve it past vitest's default 5 s;
+  // give the real build its own explicit budget (issue #505's suite runs).
+  it("dist carries no absolute local paths and no provenance endpoint", { timeout: 120_000 }, async () => {
     await build({ root: repoRoot, logLevel: "error" });
     const dist = path.join(repoRoot, "dist");
     const files = walk(dist);
