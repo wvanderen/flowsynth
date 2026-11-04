@@ -116,7 +116,7 @@ try {
   };
 
   if (command === "slice") {
-    const [raw, policy] = slice.split(":");
+    const [raw, policy] = arg.split(":");
     const minutes = Number(raw);
     const rows = [];
     for (const seed of m.CENTURY_SEEDS) {
@@ -132,7 +132,7 @@ try {
         if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
       }
       rows.push(m.centuryRow(seed, minutes, record));
-      console.log(`${slice} seed ${seed}: ${record.claims.length} banks, frontier ${record.state.world.frontier}, ${record.days}d, ${dt(t0)} — ${record.stop.kind}`);
+      console.log(`${arg} seed ${seed}: ${record.claims.length} banks, frontier ${record.state.world.frontier}, ${record.days}d, ${dt(t0)} — ${record.stop.kind}`);
     }
     assertRows(rows, minutes, policy);
     await writeFile(slicePath(minutes, policy), JSON.stringify({ source, recordingCommit: commit, minutes, policy, rows }, null, 2));
