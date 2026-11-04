@@ -22,7 +22,7 @@ const [command, arg] = process.argv.slice(2);
 const SLICE_PATTERN = /^(25|60):(prompt|pushing|support|combat|ignoring)$/;
 const FIXTURE_VARIANTS = ["raw", "collection-reset"];
 if (
-  (command !== "compose" && command !== "compose-matrix") &&
+  command !== "compose" &&
   !(command === "slice" && SLICE_PATTERN.test(arg ?? "")) &&
   !(command === "fixture" && FIXTURE_VARIANTS.includes(arg ?? ""))
 ) {
@@ -30,6 +30,31 @@ if (
 }
 execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
 const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+// The recorded fixture row's shared checks: currency integrity, finite
+// snapshots, intact serialized round trips, and the variant's own strand
+// or bank shape (the raw position's strand is the recorded limitation the
+// save translation, issue #493, exists to repair — never silently
+// repaired here).
+const assertFixtureRecord = (variant) => (row) => {
+  assert.equal(row.kind, "continuation");
+  assert.equal(row.noGrant, true);
+  assert.equal(row.numeric.finiteSnapshots, true);
+  assert.equal(row.numeric.serializedOk, row.numeric.serializedChecks);
+  assert.equal(row.eras.filter(era => era.claim !== null).length, row.claims.length);
+  if (variant === "raw") {
+    assert.ok(row.claims[0] > 12, `raw fixture's first claim ${row.claims[0]}`);
+    assert.ok(row.eras.at(-1).claim === null, "the raw position's later era stays open at the mark");
+  } else {
+    assert.ok(row.claims.length >= 1, "the collection-reset position banks calibrated claims");
+    let frontier = 0;
+    for (const era of row.eras) {
+      if (era.claim === null) continue;
+      assert.ok(era.frontierAfter > frontier);
+      frontier = era.frontierAfter;
+    }
+  }
+};
+
 const output = await mkdtemp(join(tmpdir(), "flowsynth-century-"));
 try {
   await build({ configFile: false, logLevel: "error", build: {
@@ -168,26 +193,7 @@ try {
       assert.deepEqual(recorded.source, source);
       execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
       assert.equal(recorded.variant, variant);
-      assert.equal(recorded.row.kind, "continuation");
-      assert.equal(recorded.row.noGrant, true);
-      assert.equal(recorded.row.numeric.finiteSnapshots, true);
-      assert.equal(recorded.row.numeric.serializedOk, recorded.row.numeric.serializedChecks);
-      if (variant === "raw") {
-        // The retained levels bank a frontier the calibrated curve cannot
-        // re-reach: the stranding the save translation (issue #493)
-        // exists to repair. Recorded, never silently repaired here.
-        assert.ok(recorded.row.claims[0] > 12, `raw fixture's first claim ${recorded.row.claims[0]}`);
-        assert.equal(recorded.row.eras.filter(era => era.claim !== null).length, recorded.row.claims.length);
-        assert.ok(recorded.row.eras.at(-1).claim === null, "the raw position's later era stays open at the mark");
-      } else {
-        assert.ok(recorded.row.claims.length >= 1, "the collection-reset position banks calibrated claims");
-        let frontier = 0;
-        for (const era of recorded.row.eras) {
-          if (era.claim === null) continue;
-          assert.ok(era.frontierAfter > frontier);
-          frontier = era.frontierAfter;
-        }
-      }
+      assertFixtureRecord(variant)(recorded.row);
       fixtures[variant] = recorded.row;
       console.log(`fixture ${variant}: ${recorded.row.claims.length} bank(s), ${recorded.row.creditedHours} credited h`);
     }

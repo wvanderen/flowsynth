@@ -322,8 +322,9 @@ export interface Balance {
     // findings.md's flagged hypothesis, never selected balance. The
     // century walks priced it against the board's demonstrated production
     // growth — a mature board compounds its rate roughly ×3–4 per
-    // productive era, so each banked advance now demands two fifths of a
-    // decade (×3.16) instead of a full decade (×10). On the baseline
+    // productive era, so each banked claim (the declared two-Arete
+    // target) now demands two fifths of a decade (×3.16) of era-earned
+    // depth instead of a full decade (×10). On the baseline
     // schedule the century's productive eras then hold the 5–10
     // credited-hour window, the century banks roughly twice the claimed
     // frontiers, and no bankless stretch passes two credited hours

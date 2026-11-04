@@ -99,7 +99,7 @@ describe("the declared century matrix", () => {
     for (const seed of SPARSE_ACQUISITION_SEEDS) {
       expect(CENTURY_SEEDS, `sparse seed ${seed} declared from the matrix`).toContain(seed);
     }
-    expect(LONG_GAP_CREDITED).toBe(4 * CENTURY_SESSION_MINUTES.baseline * 60);
+    expect(LONG_GAP_CREDITED).toBe(2 * 3600);
   });
 });
 
@@ -191,11 +191,13 @@ describe("the anonymized supplied-board fixture", () => {
 
   it("records the raw position's shape through its construction, levels at the finite boundary", () => {
     // The full raw and collection-reset century walks — and the stranding
-    // the raw position records — ride the FLOWSYNTH_CENTURY_FIXTURE gate
-    // in the recording tier: the certified allocator over the retained
-    // board's 36 voices costs fractions of a second per read, so a walk
-    // through the real manage seam is multi-minute work no always-on case
-    // should pay. The construction itself is the always-on check.
+    // the raw position records — ride the recording tier's `fixture`
+    // command (`node tools/record-century.mjs fixture <variant>`), which
+    // the FLOWSYNTH_CENTURY_REPORT compose reads: the certified allocator
+    // over the retained board's 36 voices costs fractions of a second per
+    // read, so a walk through the real manage seam is a multi-minute walk
+    // no always-on case should pay. The construction itself is the
+    // always-on check.
     const state = suppliedBoardState();
     const supplied = state.modules.filter((module) => module.id.startsWith("supplied-"));
     for (const module of supplied) expect(module.level).toBe(SUPPLIED_BOARD_LEVEL);

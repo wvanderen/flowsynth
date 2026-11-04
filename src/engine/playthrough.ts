@@ -116,7 +116,7 @@ export const PROMPT_POLICY: PlaythroughPolicy = {
   rules: [
     "Accept the first oscillator a roll offers, else a generator, else the first candidate; mutator rolls take their first candidate.",
     "Buy every unowned shelf module it can afford — generator, infusor, then forge.",
-    "Buy board cells while affordable, nearest first along the compact frontier; after the World's entry, a locked octave row the board reaches opens through the Catalog's Row unlock before the expansion continues (issue #492).",
+    "Buy board cells while affordable, nearest first along the compact frontier; after the World's entry, a locked octave row the board reaches opens through the Catalog's Rack Extenders before the expansion continues (issue #492).",
     "Place every tray module on the vacancy the authoritative preview scores highest.",
     "Buy every affordable Poly Expander, then sweep five-level upgrades over the deployed voices, cheapest first, while the bank covers the next gesture.",
     "Bank the Catalog entry when affordable, then the discount and ceiling offerings.",
@@ -1113,7 +1113,8 @@ function manage(ctx: RunContext, state: GameState): void {
   }
 
   // Board cells, nearest first along the compact frontier. A locked
-  // octave row the board reaches opens through the Catalog's Row unlock
+  // octave row the board reaches opens through the Catalog's Rack
+  // Extenders
   // before the expansion continues (issue #492's calibration: the
   // six-row cap is part of the board's production ceiling, so every
   // policy reads the same expansion rule, declared here once). The
@@ -1128,7 +1129,7 @@ function manage(ctx: RunContext, state: GameState): void {
     const unlockPrice = rowUnlockCost(state);
     if (unlockRow !== undefined && unlockPrice !== null && state.arete >= unlockPrice) {
       const result = buyRowUnlock(state, unlockRow);
-      record(ctx, { kind: "arete", label: `Row unlock — row ${unlockRow}`, ...outcome(result) });
+      record(ctx, { kind: "arete", label: `Rack Extenders — row ${unlockRow}`, ...outcome(result) });
       if (!result.ok) {
         decline(ctx, `row unlock ${unlockRow}`, result.reason ?? "declined");
         break;
@@ -2210,6 +2211,8 @@ function* walkPlaythrough(
   // that stop exactly, with the missing journey marks and open eras left
   // explicitly null/open. A century walk (issue #492) — pushing or
   // prompt, banked or not — names its unreached credited mark instead.
+  // The credited-hour read at one-decimal granularity — the same /360
+  // tenth-of-an-hour rounding the trajectory and gap reads use.
   const bankedHours = Math.round((ctx.credited / 360)) / 10;
   const bankedCount = ctx.eras.filter((era) => era.claim !== null).length;
   if (!complete && !checkpointStop && ctx.claims.length > 0 &&
@@ -2328,7 +2331,7 @@ function spendingNote(spent: PlaythroughAreteSpent): string {
     spent.discounts > 0 ? `${spent.discounts}× Chord Catalysts` : null,
     spent.ceilings > 0 ? `${spent.ceilings}× Expansion Bays` : null,
     spent.columns > 0 ? `${spent.columns}× Charge Column` : null,
-    spent.rowUnlocks > 0 ? `${spent.rowUnlocks}× Row unlock` : null,
+    spent.rowUnlocks > 0 ? `${spent.rowUnlocks}× Rack Extenders` : null,
     ...Object.entries(spent.hone).filter(([, ranks]) => ranks > 0).map(([type, ranks]) => `${ranks}× Hone (${type})`),
   ].filter((entry): entry is string => entry !== null);
   return entries.length > 0 ? `spent ${entries.join(" + ")}` : "no Arete spent";

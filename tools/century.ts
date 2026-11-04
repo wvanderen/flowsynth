@@ -96,11 +96,14 @@ export function classifyCenturyEra(era: PlaythroughEraLedger): CenturyEraClass {
 
 // A "long period with no new decisions" is a recorded failure, not a
 // finite-numbers pass. The declared threshold: a credited gap longer than
-// two session lengths — twice the baseline session — between meaningful
-// decisions. The declared decision rule is #490's: acquisitions,
-// purchases, placements, Arete and World products, capacity rungs, feats,
-// World finds; level sweeps and session stamps close no gap.
-export const LONG_GAP_CREDITED = 2 * 2 * CENTURY_SESSION_MINUTES.baseline * 60;
+// two credited hours between meaningful decisions. The declared decision
+// rule is #490's: acquisitions, purchases, placements, Arete and World
+// products, capacity rungs, feats, World finds; level sweeps and session
+// stamps close no gap. The policies act whenever the engine prices an
+// action affordable, so a recorded gap is exactly a stretch where nothing
+// was affordable and nothing was found — the affordability wait the
+// century criterion names.
+export const LONG_GAP_CREDITED = 2 * 3600;
 
 export interface CenturyEraView {
   readonly index: number;
@@ -108,6 +111,10 @@ export interface CenturyEraView {
   readonly hours: number | null;
   readonly claim: number | null;
   readonly frontierAfter: number | null;
+  // The era's closing rate — the pre-reset read its bank captured (null
+  // while open, and for the walk's last open era). The productive-prestige
+  // read per era: claim, frontier advanced, and the rate the reset erased.
+  readonly rateAtBank: number | null;
   readonly priorDepth: number | null;
   // Depth growth this era delivered against the era it inherited — the
   // read behind "the claim curve's depth demand vs the board's production
@@ -255,12 +262,14 @@ export function centuryEraView(
   const gapRead = gapsOf(decisions);
   const hours = eraHoursOf(era);
   const totalCredited = era.familiarCredited + era.newCredited;
+  const nextEra = record.eras[index + 1];
   return {
     index: era.index,
     eraClass: classifyCenturyEra(era),
     hours: hours === null ? null : Math.round(hours * 100) / 100,
     claim: era.claim,
     frontierAfter: era.frontierAfter,
+    rateAtBank: nextEra?.priorRate ?? null,
     priorDepth: era.priorDepth,
     depthGrowth:
       index === 0 || era.priorDepth === null || era.priorDepth <= 0 || previous?.priorDepth == null || previous.priorDepth <= 0
@@ -734,7 +743,7 @@ export function suppliedBoardState(): GameState {
   // The retained development's row unlocks: the launch band's six-row cap
   // open both sides — 35 owned modules cannot fit inside the four-row
   // launch band beside the nine enemy cells, so the reported position
-  // carries both Row unlocks, and the fixture declares them.
+  // carries both Rack Extenders purchases, and the fixture declares them.
   state.unlockedRows = [-2, 3];
   // Finite, mature-board balances consistent with the reported aggregate
   // history — never the lost nulls, and never invented history beyond the
