@@ -24,8 +24,10 @@ import { deepFreeze, type PlaythroughRecord } from "./playthrough";
 // separate session/management accounting (issue #490); version 2 records
 // predate it and are rejected by name. Version 4 adds the walked eras'
 // ledgers and the frontier stop (issue #491); version 3 records predate
-// it and are rejected by name.
-export const PLAYTHROUGH_ARTIFACT_VERSION = 4;
+// it and are rejected by name. Version 5 adds the recipe's declared
+// credited-flow stop and the century stop kind (issue #492); version 4
+// records predate it and are rejected by name.
+export const PLAYTHROUGH_ARTIFACT_VERSION = 5;
 
 // The format marker, distinct from the ordinary save's `app: "flowsynth"`:
 // a save pasted into the run importer is not an artifact, and an artifact
@@ -114,7 +116,10 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
     ["elapsed", "credited", "rate", "forgeRate", "eraEarned", "nous", "arete"]) || !index(item.snapshot))) return "trajectory";
   const recipe = record.recipe as Record<string, unknown>;
   const schedule = recipe.schedule;
-  if (!finiteFields(recipe, ["seed", "claimTarget", "budgetDays", "eras"]) || !Number.isInteger(recipe.eras) || Number(recipe.eras) < 1 || Number(recipe.eras) > 12 || !isRecord(recipe.overrides) ||
+  if (!finiteFields(recipe, ["seed", "claimTarget", "budgetDays", "eras", "stopCreditedHours"]) ||
+    !Number.isInteger(recipe.eras) || Number(recipe.eras) < 1 || Number(recipe.eras) > 12 ||
+    !Number.isInteger(recipe.stopCreditedHours) || Number(recipe.stopCreditedHours) < 0 || Number(recipe.stopCreditedHours) > 800 ||
+    !isRecord(recipe.overrides) ||
     !Object.values(recipe.overrides).every(item => typeof item === "number" && Number.isFinite(item)) ||
     !isRecord(schedule) || !finiteFields(schedule, ["sessionsPerDay", "sessionMinutes", "breatherMinutes", "goalMinutes", "startAt"]) ||
     typeof schedule.habitName !== "string" || typeof schedule.timeZone !== "string") return "recipe";
@@ -124,7 +129,7 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
     !strings(record.achievements) || !strings(record.worldDiscoveries) || !strings(record.worldDefeats) ||
     ![record.lastMilestone, record.bottleneck].every(item => item === null || typeof item === "string")) return "run summary";
   const spent = record.areteSpent;
-  if (!isRecord(spent) || !finiteFields(spent, ["entry", "discounts", "ceilings", "columns"]) || !isRecord(spent.hone) ||
+  if (!isRecord(spent) || !finiteFields(spent, ["entry", "discounts", "ceilings", "columns", "rowUnlocks"]) || !isRecord(spent.hone) ||
     !Object.values(spent.hone).every(item => typeof item === "number" && Number.isFinite(item))) return "Arete spending";
   const recovery = record.recovery;
   if (recovery !== null && (!isRecord(recovery) || !finiteFields(recovery, ["preResetRate", "claim"]) ||
@@ -148,7 +153,7 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
   };
   if (!Array.isArray(eras) || !eras.every(eraLedger)) return "era ledger";
   const stop = record.stop as Record<string, unknown>;
-  if (!["prestige", "recovered", "budget", "checkpoint", "frontier"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
+  if (!["prestige", "recovered", "budget", "checkpoint", "frontier", "century"].includes(String(stop.kind)) || typeof stop.reason !== "string") return "stop status";
   return null;
 }
 

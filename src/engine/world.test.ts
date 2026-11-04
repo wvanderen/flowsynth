@@ -82,9 +82,10 @@ describe("the frontier entitlement curve (issue #425)", () => {
   });
 
   it("pays its slope per decade past the entry, fractionally valued", () => {
-    expect(frontierEntitlement(BALANCE.world.entryNous * 10)).toBe(4);
-    expect(frontierEntitlement(BALANCE.world.entryNous * 1e8)).toBe(18);
-    expect(frontierEntitlement(BALANCE.world.entryNous * Math.sqrt(10))).toBeCloseTo(3, 10);
+    const slope = BALANCE.world.claimDepthSlope;
+    expect(frontierEntitlement(BALANCE.world.entryNous * 10)).toBe(BALANCE.world.claimBase + slope);
+    expect(frontierEntitlement(BALANCE.world.entryNous * 1e8)).toBe(BALANCE.world.claimBase + slope * 8);
+    expect(frontierEntitlement(BALANCE.world.entryNous * Math.sqrt(10))).toBeCloseTo(BALANCE.world.claimBase + slope / 2, 10);
   });
 
   it("is increasing with diminishing marginal reward per nous", () => {
@@ -111,19 +112,20 @@ describe("the pending claim and its banking (issue #425)", () => {
     const s = fresh();
     expect(pendingClaimOf(s)).toBe(0);
     s.eraEarned = BALANCE.world.entryNous * 10;
-    expect(pendingClaimOf(s)).toBe(4);
-    s.world.frontier = 5;
+    expect(pendingClaimOf(s)).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
+    s.world.frontier = BALANCE.world.claimBase + BALANCE.world.claimDepthSlope + 1;
     expect(pendingClaimOf(s)).toBe(0);
   });
 
   it("banks whole Arete on prestige and advances the frontier by exactly the banked step", () => {
     const s = fresh();
     s.mode = "upgrade";
-    s.eraEarned = BALANCE.world.entryNous * Math.sqrt(10); // E = 3
+    s.eraEarned = BALANCE.world.entryNous * Math.sqrt(10); // E = claimBase + slope/2
     s.eraEarned = Math.max(s.eraEarned, ARETE_HORIZON);
+    const whole = Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope / 2);
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(3);
-    expect(s.world.frontier).toBe(3);
+    expect(s.arete).toBe(whole);
+    expect(s.world.frontier).toBe(whole);
   });
 
   it("partition independence: arbitrary prestige splittings telescope to the single-climb total, within 1e-10", () => {
@@ -152,23 +154,30 @@ describe("the pending claim and its banking (issue #425)", () => {
   it("fractional entitlement is preserved: the sub-unit remainder stays pending, never lost", () => {
     const s = fresh();
     s.mode = "upgrade";
-    // E = 2.5 at a quarter decade: two whole Arete bank, the half stays.
-    s.eraEarned = BALANCE.world.entryNous * 10 ** 0.25;
-    expect(pendingClaimOf(s)).toBeCloseTo(2.5, 10);
+    // E = claimBase + slope/4 at a quarter decade: the whole part banks,
+    // the fraction stays. The quarter decade's fraction is .25, .5, or .75
+    // — a quarter decade at slope 4 lands exactly whole, so a quarter
+    // decade plus an eighth prices the fractional case.
+    const e = BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * 0.25;
+    const fractional = e % 1;
+    const depth = 10 ** (0.25 + (fractional === 0 ? 0.125 : 0));
+    const wholeBanked = Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * Math.log10(depth));
+    s.eraEarned = BALANCE.world.entryNous * depth;
+    expect(pendingClaimOf(s)).toBeCloseTo(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * Math.log10(depth), 10);
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(2);
-    expect(s.world.frontier).toBe(2);
+    expect(s.arete).toBe(wholeBanked);
+    expect(s.world.frontier).toBe(wholeBanked);
     // Returning to the same depth banks nothing — the remainder alone
     // cannot clear a whole unit.
-    s.eraEarned = BALANCE.world.entryNous * 10 ** 0.25;
-    expect(pendingClaimOf(s)).toBeCloseTo(0.5, 10);
+    s.eraEarned = BALANCE.world.entryNous * depth;
+    expect(pendingClaimOf(s)).toBeCloseTo(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * Math.log10(depth) - wholeBanked, 10);
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(2);
+    expect(s.arete).toBe(wholeBanked);
     // Surpassing the depth completes the fraction exactly: floor sums
     // recombine to the single-climb figure.
     s.eraEarned = BALANCE.world.entryNous * 10;
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(4);
+    expect(s.arete).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
   });
 
   it("repeating a previously reached depth awards nothing, shallower still nothing", () => {
@@ -177,7 +186,7 @@ describe("the pending claim and its banking (issue #425)", () => {
     s.eraEarned = BALANCE.world.entryNous * 100;
     expect(prestige(s).ok).toBe(true);
     const banked = s.arete;
-    expect(banked).toBe(6);
+    expect(banked).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * 2);
     // The exact same depth: high-water, no reward.
     s.eraEarned = BALANCE.world.entryNous * 100;
     expect(pendingClaimOf(s)).toBeCloseTo(0, 10);
@@ -196,12 +205,13 @@ describe("the pending claim and its banking (issue #425)", () => {
     s.mode = "upgrade";
     s.eraEarned = BALANCE.world.entryNous * 10;
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(4);
+    const first = BALANCE.world.claimBase + BALANCE.world.claimDepthSlope;
+    expect(s.arete).toBe(first);
     s.eraEarned = ARETE_HORIZON; // a fresh, shallow era past the door
     expect(bankableClaimOf(s)).toBe(0);
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(4);
-    expect(s.world.frontier).toBe(4);
+    expect(s.arete).toBe(first);
+    expect(s.world.frontier).toBe(first);
     expect(s.prestiges).toBe(2);
   });
 });
@@ -1004,7 +1014,7 @@ describe("no refunds — World purchases are permanent (issue #425, priority 8)"
     expect(s.world.columns.length).toBe(columnsBefore);
     // The reset mints nothing back: the balance only ever grew by the
     // claim, and no refund action exists to reverse a purchase.
-    expect(s.arete).toBe(20 - columnCost(0) - columnCost(1) + 6);
+    expect(s.arete).toBe(20 - columnCost(0) - columnCost(1) + BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * 2);
   });
 
   it("placement is between-sessions only, on owned cells, never on reserved enemy cells", () => {
@@ -1069,7 +1079,7 @@ describe("the prestige round-trip with World persistence (issue #425, priority 9
     s.eraEarned = BALANCE.world.entryNous * 10;
     expect(prestige(s).ok).toBe(true);
     // Persisted: the frontier, the purchase, the copy with its pick.
-    expect(s.world.frontier).toBe(4);
+    expect(s.world.frontier).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
     expect(s.world.columns).toHaveLength(1);
     expect(s.world.hone.chargeBlade).toBe(1);
     expect(s.world.weapons[0]!.id).toBe(weapon.id);
@@ -1151,14 +1161,16 @@ describe("shipped tuning defaults are hypothesis knobs — calibration unavailab
   // records no current-engine calibration and no playtest export). Every
   // figure here is pinned as a hypothesis: changing one must fail this
   // suite and force a fresh citation, never silently claim recoverability.
-  it("the frontier curve ships the calibrated entry and findings.md's log shape, flagged", () => {
+  it("the frontier curve ships the calibrated entry and the century-calibrated slope", () => {
     // The entry depth is the first-worthwhile-prestige calibration (issue
     // #490): a short hold past the horizon banks the first positive claim
-    // around ten credited hours. The slope stays findings.md's flagged
-    // hypothesis — its recoverability re-derivation has not landed.
+    // around ten credited hours. The slope is the century calibration
+    // (issue #492): each advance demands 2/4 of a decade of era-earned
+    // depth, matched against the mature board's demonstrated production
+    // growth through the recorded 100-credited-hour walks.
     expect(BALANCE.world.entryNous).toBe(2e7);
     expect(BALANCE.world.claimBase).toBe(2);
-    expect(BALANCE.world.claimDepthSlope).toBe(2);
+    expect(BALANCE.world.claimDepthSlope).toBe(4);
   });
 
   it("the encounter table ships findings.md's nine fixed enemies, flagged", () => {

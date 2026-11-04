@@ -5,6 +5,11 @@ import { createAppFixture, setVisibility } from "./testing/app-fixture";
 import { STORAGE_KEY, serialize } from "../engine/save";
 import { assertFocusScenario, createFocusScenarioState } from "../engine/focus-scenario";
 import { SCENARIOS, scenarioOf } from "../engine/scenarios";
+import { playthroughCheckpointPreset } from "../engine/playthrough";
+
+// The walked preset's banked claim: the curve's honest figure at the
+// shipped slope, derived once so the launch pins never drift from the walk.
+const AFTER_FIRST_BANK_CLAIM = playthroughCheckpointPreset("after-first-bank").record.claims[0]!;
 import { createInitialState } from "../engine/state";
 import { addPracticeLog, createHabit } from "../engine/habits";
 import { activeGoalOf, deleteGoal } from "../engine/goals";
@@ -206,7 +211,7 @@ describe("the launch command", () => {
     await app.devLaunchScenario("after-first-bank", t);
     expect(app.devScenarioId).toBe("after-first-bank");
     expect(app.state.prestiges).toBe(1);
-    expect(app.state.arete).toBe(3);
+    expect(app.state.arete).toBe(AFTER_FIRST_BANK_CLAIM);
     expect(app.state.eraEarned).toBe(0);
     expect(app.devScenarioNote).toContain("After first bank ✓");
     expect(app.devScenarioNote).toContain("earned Arete unspent");
@@ -450,7 +455,7 @@ describe("the active scenario's assertion", () => {
     expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✗");
 
     await app.devLaunchScenario("after-first-bank", t);
-    expect(app.state.arete).toBe(3);
+    expect(app.state.arete).toBe(AFTER_FIRST_BANK_CLAIM);
     expect(() => app.devScenarioAssert(t)).not.toThrow();
     expect(app.devScenarioNote).toContain("After first bank ✓");
   });
@@ -496,7 +501,7 @@ describe("the dev panel's suite entry", () => {
     relaunched.value = "after-first-bank";
     document.querySelector<HTMLButtonElement>('[data-dev="scenario"]')!.click();
     await vi.waitFor(() => expect(app.devScenarioId).toBe("after-first-bank"));
-    expect(app.state.arete).toBe(3);
+    expect(app.state.arete).toBe(AFTER_FIRST_BANK_CLAIM);
     expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("After first bank ✓");
   });
 

@@ -8,6 +8,7 @@ import {
   buyCell,
   buyChargeColumn,
   buyHoneRank,
+  buyRowUnlock,
   buyShelfModule,
   chooseMutatorRoll,
   chooseRoll,
@@ -28,10 +29,12 @@ import { BALANCE, CATEGORY_OF, isOscillatorType, RESPONSE_CURVES, responseCurveC
 import type { WorldEnemyDef } from "./constants";
 import { chargeLineCells } from "./playthrough-placement";
 import { affordableLevels, syncRates, wholeNous, levelsCost } from "./economy";
+import { rowUnlockCost, unlockableRows } from "./catalog";
 import { activeGoalOf, createGoal, rollGoalOccurrences } from "./goals";
 import { createHabit, selectHabit } from "./habits";
 import { adjacent, hexDistance, sameHex } from "./hex";
-import { cellNoteOf } from "./lattice";
+import { cellNoteOf, octaveRowOf } from "./lattice";
+import { neighbors } from "./hex";
 import { writeNote } from "./notes";
 import { SCENARIOS, scenarioOf } from "./scenarios";
 import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt, hasActiveWorldEnemy, eligibleTargetsOf } from "./world";
@@ -83,8 +86,10 @@ import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, Weapo
 // curve (issue #487) joins them; the worthwhile-prestige journey marks
 // (issue #490) change what the walk measures and when it completes; the
 // later-era ledger, the eras recipe input, and the three World-comparison
-// policies (issue #491) join both.
-export const PLAYTHROUGH_RUNNER_VERSION = 14;
+// policies (issue #491) join both. The declared credited-flow stop
+// (issue #492) — a century walk's terminal and its banking gates — joins
+// them too.
+export const PLAYTHROUGH_RUNNER_VERSION = 15;
 
 // The acceleration step (seconds): production is exact at any step; this
 // only coarsens crossing granularity. 60 matches the calibration walk.
@@ -111,7 +116,7 @@ export const PROMPT_POLICY: PlaythroughPolicy = {
   rules: [
     "Accept the first oscillator a roll offers, else a generator, else the first candidate; mutator rolls take their first candidate.",
     "Buy every unowned shelf module it can afford — generator, infusor, then forge.",
-    "Buy board cells while affordable, nearest first along the compact frontier.",
+    "Buy board cells while affordable, nearest first along the compact frontier; after the World's entry, a locked octave row the board reaches opens through the Catalog's Row unlock before the expansion continues (issue #492).",
     "Place every tray module on the vacancy the authoritative preview scores highest.",
     "Buy every affordable Poly Expander, then sweep five-level upgrades over the deployed voices, cheapest first, while the bank covers the next gesture.",
     "Bank the Catalog entry when affordable, then the discount and ceiling offerings.",
@@ -264,6 +269,17 @@ export interface PlaythroughRecipe {
   // declared era's bank lands. A budget that outlives them leaves the
   // open era explicitly open in the record.
   readonly eras: number;
+  // The declared credited-flow stop (issue #492): a century-scale walk's
+  // terminal. Zero — the default — keeps every stop the walk already
+  // declares: the prompt door, the worthwhile-prestige journey, the era
+  // count, the budget. A positive figure declares the credited-flow mark
+  // in credited hours: the walk completes at the first between-sessions
+  // moment the credited clock reaches it, era ledgers keep closing per
+  // the policy's own banking rule at every door until then, and the era
+  // count stops being a completion gate — a walk that banks its declared
+  // frontiers before the mark keeps walking, and one whose economy stops
+  // banking records the exhausted stretch as evidence, not silence.
+  readonly stopCreditedHours: number;
   // The declared response-curve candidate (issue #487): which supported
   // curve the walk's Chorus/Exciter response grants read — shipped by
   // default, never a silent shipped read for a misspelled candidate. The
@@ -299,6 +315,7 @@ export function defaultPlaythroughRecipe(): PlaythroughRecipe {
     },
     budgetDays: 30,
     eras: 1,
+    stopCreditedHours: 0,
     responseCurve: "shipped",
     overrides: {},
   };
@@ -312,6 +329,7 @@ export interface PlaythroughRecipeInput {
   schedule?: Partial<PlaythroughSchedule>;
   budgetDays?: number;
   eras?: number;
+  stopCreditedHours?: number;
   responseCurve?: ResponseCurveId;
   overrides?: Record<string, number>;
 }
@@ -320,7 +338,7 @@ export interface PlaythroughRecipeInput {
 // an explicit input, validated with named failures. Unknown input keys are
 // rejected — an unsupported request never quietly runs a default.
 export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): PlaythroughRecipe {
-  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays", "eras", "responseCurve", "overrides"]);
+  const known = new Set(["scenarioId", "seed", "policyId", "claimTarget", "schedule", "budgetDays", "eras", "stopCreditedHours", "responseCurve", "overrides"]);
   for (const key of Object.keys(input)) {
     if (!known.has(key)) throw new Error(`Playthrough recipe: unsupported input "${key}".`);
   }
@@ -333,6 +351,7 @@ export function composePlaythroughRecipe(input: PlaythroughRecipeInput = {}): Pl
     ...(input.claimTarget !== undefined ? { claimTarget: input.claimTarget } : {}),
     ...(input.budgetDays !== undefined ? { budgetDays: input.budgetDays } : {}),
     ...(input.eras !== undefined ? { eras: input.eras } : {}),
+    ...(input.stopCreditedHours !== undefined ? { stopCreditedHours: input.stopCreditedHours } : {}),
     ...(input.responseCurve !== undefined ? { responseCurve: input.responseCurve } : {}),
     ...(input.overrides !== undefined ? { overrides: input.overrides } : {}),
     schedule: { ...base.schedule, ...(input.schedule ?? {}) },
@@ -383,6 +402,9 @@ export function validatePlaythroughRecipe(recipe: PlaythroughRecipe): Playthroug
   }
   if (!Number.isInteger(recipe.eras) || recipe.eras < 1 || recipe.eras > 12) {
     fail(`eras must be a whole number 1–12 — found ${recipe.eras}.`);
+  }
+  if (!Number.isInteger(recipe.stopCreditedHours) || recipe.stopCreditedHours < 0 || recipe.stopCreditedHours > 800) {
+    fail(`stopCreditedHours must be a whole number 0–800 — found ${recipe.stopCreditedHours}.`);
   }
   const schedule = recipe.schedule;
   if (!Number.isInteger(schedule.sessionsPerDay) || schedule.sessionsPerDay < 1 || schedule.sessionsPerDay > 8) {
@@ -688,6 +710,7 @@ export interface PlaythroughAreteSpent {
   readonly discounts: number;
   readonly ceilings: number;
   readonly columns: number;
+  readonly rowUnlocks: number;
   readonly hone: Record<WeaponType, number>;
 }
 
@@ -710,7 +733,10 @@ export interface PlaythroughRecord {
   // preset's situation lives. "frontier" is the multi-era walk's declared
   // stop (issue #491): every claimed frontier the recipe declared has
   // banked, each era's ledger closed against a strictly larger frontier.
-  readonly stop: { readonly kind: "prestige" | "recovered" | "budget" | "checkpoint" | "frontier"; readonly reason: string };
+  // "century" is the declared credited-flow stop (issue #492): the
+  // credited clock reached the recipe's mark at a between-sessions
+  // moment — the run is complete, whatever the era ledger shows.
+  readonly stop: { readonly kind: "prestige" | "recovered" | "budget" | "checkpoint" | "frontier" | "century"; readonly reason: string };
   // The pushing policy's configured pending-claim target, carried beside
   // the actual claims so intent and outcome stay distinguishable
   // (stories 19–20).
@@ -772,6 +798,10 @@ interface RunContext {
   // The declared era count (issue #491): the claimed frontiers the walk
   // banks before its completion read.
   eraGoal: number;
+  // The declared credited-flow stop (issue #492): the century mark in
+  // credited seconds, or null when the recipe declares none and the
+  // walk's own stops stand.
+  centuryStopSeconds: number | null;
   continuation: boolean;
   // The declared overrides (issue #472): the run's own tuning, read
   // nowhere else — the candidate state carries them, nothing shared does.
@@ -786,7 +816,7 @@ interface RunContext {
   snapshots: PlaythroughSnapshot[];
   openEvents: number[];
   claims: number[];
-  areteSpent: { entry: number; discounts: number; ceilings: number; columns: number; hone: Record<WeaponType, number> };
+  areteSpent: { entry: number; discounts: number; ceilings: number; columns: number; rowUnlocks: number; hone: Record<WeaponType, number> };
   achievements: string[];
   discovered: string[];
   defeated: string[];
@@ -1082,8 +1112,30 @@ function manage(ctx: RunContext, state: GameState): void {
     }
   }
 
-  // Board cells, nearest first along the compact frontier.
+  // Board cells, nearest first along the compact frontier. A locked
+  // octave row the board reaches opens through the Catalog's Row unlock
+  // before the expansion continues (issue #492's calibration: the
+  // six-row cap is part of the board's production ceiling, so every
+  // policy reads the same expansion rule, declared here once). The
+  // expansion opens after the World's entry — the Catalog door outranks
+  // board space, and no row unlock ever spends the claim that would
+  // first bank the World's entry.
   for (;;) {
+    const unlockRow = state.catalogEntryOwned
+      ? unlockableRows(state).find((row) =>
+        state.cells.some((cell) => neighbors(cell).some((n) => octaveRowOf(n) === row)))
+      : undefined;
+    const unlockPrice = rowUnlockCost(state);
+    if (unlockRow !== undefined && unlockPrice !== null && state.arete >= unlockPrice) {
+      const result = buyRowUnlock(state, unlockRow);
+      record(ctx, { kind: "arete", label: `Row unlock — row ${unlockRow}`, ...outcome(result) });
+      if (!result.ok) {
+        decline(ctx, `row unlock ${unlockRow}`, result.reason ?? "declined");
+        break;
+      }
+      ctx.areteSpent.rowUnlocks++;
+      continue;
+    }
     const pos = frontier(state, "compact")[0];
     if (!pos) break;
     const result = buyCell(state, pos);
@@ -1828,14 +1880,16 @@ function walkComplete(ctx: RunContext): boolean {
 
 function tryPrestige(ctx: RunContext, state: GameState): boolean {
   if (ctx.claimsPushing) {
-    // The journey walk (eras 1, issue #490) banks no more once the
-    // frontier has advanced past the claimed frontier — it observes the
-    // recovered era, it does not farm it. A multi-era walk (issue #491)
-    // banks until every claimed frontier the recipe declared has closed.
-    if (ctx.eraGoal === 1) {
-      if (ctx.frontierAdvanced !== null) return false;
-    } else if (walkComplete(ctx)) {
-      return false;
+    // A century walk (issue #492) declares a credited-flow terminal: the
+    // era count and the journey's frontier mark stop gating the banking,
+    // because the walk banks at every door, per its policy's own rule,
+    // until the mark.
+    if (ctx.centuryStopSeconds === null) {
+      if (ctx.eraGoal === 1) {
+        if (ctx.frontierAdvanced !== null) return false;
+      } else if (walkComplete(ctx)) {
+        return false;
+      }
     }
     if (pendingClaimOf(state, ctx.claimBase) < ctx.claimTarget) return false;
   } else if (!horizonReached(state)) {
@@ -2003,6 +2057,7 @@ function* walkPlaythrough(
     claimTarget: recipe.claimTarget,
     claimsPushing: policy.id !== PROMPT_POLICY.id,
     eraGoal: recipe.eras,
+    centuryStopSeconds: recipe.stopCreditedHours > 0 ? recipe.stopCreditedHours * 3600 : null,
     continuation: initialState !== undefined,
     openingGrant: recipe.overrides.openingGrant,
     claimBase: recipe.overrides.claimBase,
@@ -2012,7 +2067,7 @@ function* walkPlaythrough(
     snapshots: [],
     openEvents: [],
     claims: [],
-    areteSpent: { entry: 0, discounts: 0, ceilings: 0, columns: 0, hone: { chargeBlade: 0 } },
+    areteSpent: { entry: 0, discounts: 0, ceilings: 0, columns: 0, rowUnlocks: 0, hone: { chargeBlade: 0 } },
     achievements: [],
     discovered: [],
     defeated: [],
@@ -2045,12 +2100,11 @@ function* walkPlaythrough(
   let days = 0;
   let complete = false;
   let checkpointStop: PlaythroughRecord["stop"] | null = null;
-  let stop: PlaythroughRecord["stop"] = {
-    kind: "budget",
-    reason: ctx.claimsPushing
-      ? `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the worthwhile-prestige journey behind it.`
-      : `The ${recipe.budgetDays}-day budget ended before the first prestige.`,
-  };
+  let stop: PlaythroughRecord["stop"] = ctx.centuryStopSeconds !== null
+    ? { kind: "budget", reason: `The ${recipe.budgetDays}-day budget ended before the declared ${recipe.stopCreditedHours}-credited-hour mark.` }
+    : ctx.claimsPushing
+      ? { kind: "budget", reason: `The ${recipe.budgetDays}-day budget ended before the ${recipe.claimTarget}-Arete claim or the worthwhile-prestige journey behind it.` }
+      : { kind: "budget", reason: `The ${recipe.budgetDays}-day budget ended before the first prestige.` };
   // A checkpoint's halt (issue #471): the declared moment named, the day
   // counted — the record's stop carries the situation, never a verdict.
   const haltAt = (id: PlaythroughCheckpointId): void => {
@@ -2092,9 +2146,22 @@ function* walkPlaythrough(
     // a mark first reached in the closing session or its breather.
     settleRecovery(ctx, state);
     if (ctx.openEvents.length > 0) snap(ctx, state);
-    if (tryPrestige(ctx, state) && !ctx.claimsPushing) {
+    if (tryPrestige(ctx, state) && !ctx.claimsPushing && ctx.centuryStopSeconds === null) {
       complete = true;
       stop = { kind: "prestige", reason: `First prestige at day ${days}.` };
+      return true;
+    }
+    // The declared credited-flow stop (issue #492): the century walk's
+    // terminal. A bank landing at this same break captured its ledger
+    // first; the mark then closes the walk, with every open era, gap,
+    // and unreached outcome left exactly as the record carries them.
+    if (ctx.centuryStopSeconds !== null && ctx.credited >= ctx.centuryStopSeconds) {
+      complete = true;
+      const closed = ctx.eras.filter((era) => era.claim !== null).length;
+      stop = {
+        kind: "century",
+        reason: `The declared ${ctx.centuryStopSeconds / 3600}-credited-hour mark reached at day ${days} — ${closed} era(s) banked.`,
+      };
       return true;
     }
     const hit = checkpointAfterDoor();
@@ -2121,14 +2188,16 @@ function* walkPlaythrough(
       // marks all carried — the bank, the lasting purchase, the deployed
       // starter rig, both recovery measures, and the frontier advanced
       // past the claimed frontier — and every claimed frontier the recipe
-      // declared has banked. Whatever a mark lacks is the ledger's
+      // declared has banked. A century walk (issue #492) declares a
+      // different terminal — the credited mark — so this stop never fires
+      // for it. Whatever a mark lacks is the ledger's
       // explicit null; there is no pacing threshold to miss. The ignoring
       // policy declares its combat postponed: its eras close without the
       // journey's combat marks. A checkpoint walk has its own declared
       // terminal (issue #471): it rides past this stop so a recovery
       // milestone that lands before its situation — the two thresholds
       // can finish neck and neck — never steals the walk's end.
-      if (ctx.claimsPushing && checkpoint === null && walkComplete(ctx)) {
+      if (ctx.claimsPushing && ctx.centuryStopSeconds === null && checkpoint === null && walkComplete(ctx)) {
         complete = true;
         stop = ctx.continuation || ctx.eraGoal > 1 || ctx.worldOrder === "none"
           ? { kind: "frontier", reason: `The declared ${ctx.eraGoal} claimed frontiers banked at day ${days} — the frontier stands at ${state.world.frontier} Arete${ctx.worldOrder === "none" ? ", combat still postponed" : ""}.` }
@@ -2139,13 +2208,19 @@ function* walkPlaythrough(
   }
   // A pushing run that banked but never finished its declared walk names
   // that stop exactly, with the missing journey marks and open eras left
-  // explicitly null/open.
-  if (!complete && ctx.claimsPushing && ctx.claims.length > 0 && !checkpointStop) {
+  // explicitly null/open. A century walk (issue #492) — pushing or
+  // prompt, banked or not — names its unreached credited mark instead.
+  const bankedHours = Math.round((ctx.credited / 360)) / 10;
+  const bankedCount = ctx.eras.filter((era) => era.claim !== null).length;
+  if (!complete && !checkpointStop && ctx.claims.length > 0 &&
+    (ctx.centuryStopSeconds !== null || ctx.claimsPushing)) {
     stop = {
       kind: "budget",
-      reason: ctx.worldOrder === "none"
-        ? `The ${days}-day budget ended with combat postponed — ${ctx.eras.filter((era) => era.claim !== null).length} of the declared ${ctx.eraGoal} era(s) closed.`
-        : `The ${days}-day budget ended inside the worthwhile-prestige journey.`,
+      reason: ctx.centuryStopSeconds !== null
+        ? `The ${days}-day budget ended at ${bankedHours} credited hours — the declared ${ctx.centuryStopSeconds / 3600}-hour mark unreached; ${bankedCount} era(s) banked.`
+        : ctx.worldOrder === "none"
+          ? `The ${days}-day budget ended with combat postponed — ${bankedCount} of the declared ${ctx.eraGoal} era(s) closed.`
+          : `The ${days}-day budget ended inside the worthwhile-prestige journey.`,
     };
   }
   const lastSessionLabel = [...ctx.events].reverse().find((event) => event.kind === "session")?.label ?? null;
@@ -2253,6 +2328,7 @@ function spendingNote(spent: PlaythroughAreteSpent): string {
     spent.discounts > 0 ? `${spent.discounts}× Chord Catalysts` : null,
     spent.ceilings > 0 ? `${spent.ceilings}× Expansion Bays` : null,
     spent.columns > 0 ? `${spent.columns}× Charge Column` : null,
+    spent.rowUnlocks > 0 ? `${spent.rowUnlocks}× Row unlock` : null,
     ...Object.entries(spent.hone).filter(([, ranks]) => ranks > 0).map(([type, ranks]) => `${ranks}× Hone (${type})`),
   ].filter((entry): entry is string => entry !== null);
   return entries.length > 0 ? `spent ${entries.join(" + ")}` : "no Arete spent";

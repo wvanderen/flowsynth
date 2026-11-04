@@ -307,19 +307,34 @@ export interface Balance {
   world: {
     // The frontier claim curve (accumulator.ts): the era-earned entry —
     // the first enemy's reveal and the first claim's opening — and the log
-    // candidate's two figures, 2 + 2·log₁₀(x) over x = era-earned / entry.
-    // The entry grant pays exactly one weapon plus one Column (findings.md);
-    // curve construction asserts the entry entitlement covers the Column's
-    // price. The shipped figure is the first-worthwhile-prestige
-    // calibration (issue #490): a little under three times the prestige
-    // horizon, so holding the door briefly past first eligibility banks
-    // the first positive claim — around ten credited hours on the baseline
-    // schedule — and the enemy ladder (thresholds ×10ⁱ below) scales with
-    // it. The findings.md hypothesis figure (1e12) sat five decades past
-    // the horizon and banked no claim inside any baseline-budgeted run.
+    // candidate's two figures, claimBase + slope·log₁₀(x) over x =
+    // era-earned / entry. The entry grant pays exactly one weapon plus one
+    // Column (findings.md); curve construction asserts the entry
+    // entitlement covers the Column's price. The shipped entry is the
+    // first-worthwhile-prestige calibration (issue #490): a little under
+    // three times the prestige horizon, so holding the door briefly past
+    // first eligibility banks the first positive claim — around ten
+    // credited hours on the baseline schedule — and the enemy ladder
+    // (thresholds ×10ⁱ below) scales with it. The findings.md hypothesis
+    // figure (1e12) sat five decades past the horizon and banked no claim
+    // inside any baseline-budgeted run.
+    // The depth slope is issue #492's calibration: the shipped 2 was
+    // findings.md's flagged hypothesis, never selected balance. The
+    // century walks priced it against the board's demonstrated production
+    // growth — a mature board compounds its rate roughly ×3–4 per
+    // productive era, so each banked advance now demands two fifths of a
+    // decade (×3.16) instead of a full decade (×10). On the baseline
+    // schedule the century's productive eras then hold the 5–10
+    // credited-hour window, the century banks roughly twice the claimed
+    // frontiers, and no bankless stretch passes two credited hours
+    // without a consequential decision. The slope never touches the
+    // opening: the first worthwhile bank lands at the entry depth
+    // whatever the slope reads.
     entryNous: number;
     claimBase: number;
     claimDepthSlope: number;
+    // Calibrated by the century walks (issue #492): 4. See the curve
+    // comment above for the evidence and the shape of the demand.
     // The Charge Blade's combat figures (findings.md: one copied charge
     // per attack, one attack per minute maximum, storage a hypothesis):
     // the fixed charge cost per attack, the capped cadence, and the
@@ -496,7 +511,7 @@ export const BALANCE: Balance = {
   world: {
     entryNous: 2e7,
     claimBase: 2,
-    claimDepthSlope: 2,
+    claimDepthSlope: 4,
     attackCost: 1,
     attackCadenceSeconds: 60,
     storageCap: 30,

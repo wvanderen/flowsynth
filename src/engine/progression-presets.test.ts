@@ -92,10 +92,11 @@ describe("the walked presets", () => {
     expect(preset.record.stop.reason).toContain("After first bank reached at day 3");
     // The walk banks at the first break the pending claim reaches its
     // target; a 600-minute session carries the era measure well past the
-    // entry depth, so the banked floor is the curve's honest 3, above the
-    // configured 2 — intent and outcome stay distinguishable in the note.
-    expect(preset.record.claims).toEqual([3]);
-    expect(playthroughNote(preset.record)).toContain("claim 3/2 Arete");
+    // entry depth, so the banked floor is the curve's honest 4 at the
+    // century-calibrated slope, above the configured 2 — intent and
+    // outcome stay distinguishable in the note.
+    expect(preset.record.claims).toEqual([4]);
+    expect(playthroughNote(preset.record)).toContain("claim 4/2 Arete");
     expect(playthroughNote(preset.record)).toContain("no Arete spent");
     const state = preset.state;
     // The earned claim sits unspent — banked by the walk's own practice
@@ -114,7 +115,10 @@ describe("the walked presets", () => {
     const preset = playthroughCheckpointPreset("world-enemy-active");
     expect(preset.record.stop.kind).toBe("checkpoint");
     expect(preset.record.stop.reason).toContain("World enemy reached at day 4");
-    expect(playthroughNote(preset.record)).toContain("spent Catalog entry + 1× Charge Column + 1× Hone (chargeBlade)");
+    // The bank's honest 4 pays the entry and the first two Column rungs
+    // (1 + 2 + 1... the pushing order: entry first, then Columns while
+    // affordable) before the checkpoint halts the walk.
+    expect(playthroughNote(preset.record)).toContain("spent Catalog entry + 2× Charge Column");
     const state = preset.state;
     const living = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp > 0);
     expect(living.length).toBeGreaterThanOrEqual(1);

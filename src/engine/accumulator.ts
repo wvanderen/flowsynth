@@ -49,18 +49,17 @@ export function horizonReached(state: GameState): boolean {
 // section): a cumulative entitlement E over era-earned nous depth assigns
 // total Arete entitlement to depth. Zero below the World's entry depth
 // (BALANCE.world.entryNous); the log candidate from
-// research/world-frontier/findings.md — 2 + 2·log₁₀(x) over x = era-earned
-// / entry — ships as the baseline, its discontinuous entry grant paying
-// exactly one weapon plus one Column. The entry depth is the
+// research/world-frontier/findings.md — claimBase + slope·log₁₀(x) over x
+// = era-earned / entry — ships as the baseline, its discontinuous entry
+// grant paying exactly one weapon plus one Column. The entry depth is the
 // first-worthwhile-prestige calibration (issue #490): just under three
 // times ARETE_HORIZON, so the first positive claim sits a short hold past
-// the prestige door instead of five decades above it. HYPOTHESIS KNOBS:
-// findings.md is comparison evidence within a short horizon, its own
-// provenance section records that no current-engine calibration was rerun
-// and the no-refund re-derivation (#425's second blocker) had not landed —
-// the slope's no-recoverability standing stands; the entry depth is
-// calibrated. The curve is increasing with
-// diminishing marginal reward; fractionally valued, always.
+// the prestige door instead of five decades above it. The slope was the
+// last findings.md hypothesis knob; the century calibration (issue #492)
+// shipped it at 4, priced against the mature board's demonstrated
+// production growth through the recorded 100-credited-hour walks. The
+// curve is increasing with diminishing marginal reward; fractionally
+// valued, always.
 // The curve's optional claimBase (issue #472): the playtesting recipe's
 // declared override — an isolated run's curve carries its own base while
 // ordinary play and every other reader keep the shipped constant. The

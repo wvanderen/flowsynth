@@ -337,7 +337,8 @@ describe("the ladder on the save surface (#259)", () => {
     const sessionsBefore = loaded.sessionsCompleted;
     const cellsBefore = loaded.cells.length;
     expect(prestige(loaded).ok).toBe(true);
-    expect(loaded.arete).toBe(33);
+    // ~15.7 decades past the calibrated entry: E = claimBase + slope·15.7.
+    expect(loaded.arete).toBe(Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * Math.log10(1e23 / BALANCE.world.entryNous)));
     expect(loaded.eraEarned).toBe(0);
     expect(horizonReached(loaded)).toBe(false);
     expect(loaded.cells.length).toBe(cellsBefore);
@@ -371,15 +372,15 @@ describe("the ladder on the save surface (#259)", () => {
     expect(shallow.cells.some((c) => c.q === 5 && c.r === 0)).toBe(true);
     expect(shallow.modules.some((m) => m.type === "additive" && m.pos !== null)).toBe(true);
     expect(shallow.achievements["first-light"]).toBe(1);
-    // The old 1e23 bank: ~15.7 decades past the calibrated entry, E = 33.
+    // The old 1e23 bank: ~15.7 decades past the calibrated entry.
     const legacy = build(1e23);
     expect(prestige(legacy).ok).toBe(true);
-    expect(legacy.arete).toBe(33);
-    // Half a decade floors: E = 2 + 2·16.2 = 34 — the same whole-step
+    expect(legacy.arete).toBe(Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * Math.log10(1e23 / BALANCE.world.entryNous)));
+    // Half a decade floors: E = claimBase + slope·16.2 — the same whole-step
     // frontier advance every claim takes.
     const half = build(1e23 * Math.sqrt(10));
     expect(prestige(half).ok).toBe(true);
-    expect(half.arete).toBe(34);
+    expect(half.arete).toBe(Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * Math.log10(1e23 * Math.sqrt(10) / BALANCE.world.entryNous)));
   });
 
   it("corrupt counts degrade to zero, over-purchased rungs clamp at the ceiling, and over-owned offerings clamp at the ladder", () => {
