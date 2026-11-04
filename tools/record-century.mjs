@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "vite";
+import { recordingEnvironment } from "./dev/runtime.mjs";
 
 const [command, arg] = process.argv.slice(2);
 const SLICE_PATTERN = /^(25|60):(prompt|pushing|support|combat|ignoring)$/;
@@ -135,7 +136,8 @@ try {
       console.log(`${arg} seed ${seed}: ${record.claims.length} banks, frontier ${record.state.world.frontier}, ${record.days}d, ${dt(t0)} — ${record.stop.kind}`);
     }
     assertRows(rows, minutes, policy);
-    await writeFile(slicePath(minutes, policy), JSON.stringify({ source, recordingCommit: commit, minutes, policy, rows }, null, 2));
+    // Issue #505: every recording names the runtime and timezone it ran on.
+    await writeFile(slicePath(minutes, policy), JSON.stringify({ source, recordingCommit: commit, recordingEnvironment: recordingEnvironment(), minutes, policy, rows }, null, 2));
   } else if (command === "fixture") {
     // The anonymized supplied-board fixture's declared walks are their own
     // recording unit: the retained board's certified-allocation cost makes
@@ -165,7 +167,7 @@ try {
         frontier = era.frontierAfter;
       }
     }
-    await writeFile(`docs/century-fixture-${variant}.json`, JSON.stringify({ source, recordingCommit: commit, variant, row }, null, 2));
+    await writeFile(`docs/century-fixture-${variant}.json`, JSON.stringify({ source, recordingCommit: commit, recordingEnvironment: recordingEnvironment(), variant, row }, null, 2));
     console.log(`fixture ${variant}: ${row.claims.length} bank(s), ${row.creditedHours} credited h, ${dt(t0)}`);
   } else {
     const runs = [];
@@ -204,6 +206,7 @@ try {
     const results = {
       ...report,
       recordingCommit: commit,
+      recordingEnvironment: recordingEnvironment(),
       fixtures: {
         raw: { ...fixtures.raw, trajectory: fixtures.raw.trajectory.filter((_, index) => index % 4 === 0) },
         collectionReset: { ...fixtures["collection-reset"], trajectory: fixtures["collection-reset"].trajectory.filter((_, index) => index % 4 === 0) },

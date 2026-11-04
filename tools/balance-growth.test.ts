@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { recordingEnvironment } from "./dev/runtime.mjs";
 import { pendingClaimOf } from "../src/engine/accumulator";
 import { composePlaythroughRecipe, runPlaythrough } from "../src/engine/playthrough";
 import { growthReport, logRigRate, responsePower, RIGS } from "./balance-growth";
@@ -14,7 +15,10 @@ describe("balance growth experiment (ADR-0078)", () => {
     const chorusOnly = report.rows.find((r) => r.rig === "exciter-tail" && r.curve === "chorus-bounded")!;
     expect(chorusOnly.milestones.at(-1)!.nextWaitRatio).toBeLessThan(1);
     if (process.env.FLOWSYNTH_BALANCE_REPORT) {
-      writeFileSync(process.env.FLOWSYNTH_BALANCE_REPORT, JSON.stringify(report, null, 2) + "\n");
+      // Issue #505: a recording names the runtime and timezone it actually
+      // ran on; recordings made before this metadata carry no field and
+      // stay identifiable as legacy.
+      writeFileSync(process.env.FLOWSYNTH_BALANCE_REPORT, JSON.stringify({ ...report, recordingEnvironment: recordingEnvironment() }, null, 2) + "\n");
     }
   });
 
@@ -55,6 +59,7 @@ describe("balance growth experiment (ADR-0078)", () => {
     }
     writeFileSync(process.env.FLOWSYNTH_BASELINE_REPORT!, JSON.stringify({
       model: "real-engine fresh-start pushing policy, four credited hours (25-minute schedule rounds to 4.167); shipped tuning only",
+      recordingEnvironment: recordingEnvironment(),
       rows,
     }, null, 2) + "\n");
   });

@@ -433,6 +433,12 @@ A stretch of consecutive days on which any credited practice was logged for a ha
 **Practice calendar**:
 The per-habit day-grid of logged practice minutes in the Habit app's development summary. Joins post-launch. _Avoid_: heatmap
 
+**Host calendar**:
+The runtime zone whose local day boundaries gameplay reads — the declared calendar basis (ADR-0080). Daily goal occurrences begin at the host's local midnight (the first midnight on a fall-back day), weekly occurrences at the local Monday, and a playthrough schedule's day strides follow local days across daylight-saving transitions; `npm run preflight` reports the zone and `npm run test:calendar` establishes the intended behavior under UTC and a DST-observing zone. Never a settings choice or a UTC read: the basis is the host, declared rather than discovered.
+
+**Supported runtime**:
+The one Node version the repository's checks, evidence, and recordings run on, pinned in `.node-version` and consumed by CI, version managers, and the npm scripts alike (ADR-0080). The preflight refuses an environment whose effective runtime differs, and balance recordings carry the runtime and timezone they actually ran on; recordings made before that metadata carry no field and stay identifiable as legacy.
+
 **Time app**:
 The focus app providing planned targets and timing tools, and the home of session history; active from the very first session, with no economy coupling.
 

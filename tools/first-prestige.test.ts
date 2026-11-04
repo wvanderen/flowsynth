@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { recordingEnvironment } from "./dev/runtime.mjs";
 import {
   BASELINE_BUDGET_DAYS,
   BASELINE_SESSION_MINUTES,
@@ -192,7 +193,7 @@ describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_FIRST_
         }
       }
     }
-    const text = JSON.stringify(report, null, 2);
+    const text = JSON.stringify({ ...report, recordingEnvironment: recordingEnvironment() }, null, 2);
     writeFileSync(process.env.FLOWSYNTH_FIRST_PRESTIGE_REPORT!, text);
   });
 });
