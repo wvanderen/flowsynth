@@ -220,7 +220,7 @@ try {
       representative: results.representative,
       limitations: [
         "The claim curve's entry depth and the opening era's 8-12 credited-hour window are #490's calibration, unchanged here.",
-        "The enemy ladder's two upper decades (w7, w8) sit past the 100-credited-hour horizon on every recorded walk; the roster's reachable span is w0-w6.",
+        "On the fresh-start matrix walks the roster's reachable span is w0-w6: the enemy ladder's two upper decades (w7, w8) sit past the 100-credited-hour horizon at opening-era production. The retained collection-reset fixture, whose mature tiers compound faster, reaches the whole roster (w0-w8) inside its 100 credited hours.",
         "Later eras lengthen as the board matures: the recorded distributions carry every over-window and open era explicitly.",
         "The prompt door policy banks the honest zero at every early crossing and cannot sustain century-scale progression; its runs are recorded, not repaired.",
         "The raw supplied-board position strands its frontier past the calibrated curve's reach; the translation that repairs it is issue #493's work, grounded in the baseline's frozen figures.",
