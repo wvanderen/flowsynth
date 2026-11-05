@@ -27,19 +27,17 @@ describe("engine source provenance", () => {
   it("moves the digest when a scratch copy's content changes", () => {
     // The pinned sensitivity (issue #503): edit a scratch copy of the
     // exact hash input — no real engine file is touched — and the digest
-    // must move.
+    // must move. Both boundaries: another engine module, and
+    // playthrough.ts itself, whose bytes vite's importGlob once dropped
+    // from the set entirely.
     const entries = playthroughSourceEntries();
     const baseline = playthroughSourceDigest(entries);
-    const edited = entries.map(([path, content]) =>
-      path === "./advance.ts" ? [path, `${content}\n// scratch edit`] as const : [path, content] as const,
-    );
-    expect(playthroughSourceDigest(edited)).not.toBe(baseline);
-    // The self file is no exception: an edit inside playthrough.ts moves
-    // the digest just the same.
-    const editedSelf = entries.map(([path, content]) =>
-      path === "./playthrough.ts" ? [path, `${content}\n// scratch edit`] as const : [path, content] as const,
-    );
-    expect(playthroughSourceDigest(editedSelf)).not.toBe(baseline);
+    const edit = (target: string) =>
+      entries.map(([path, content]) =>
+        path === target ? [path, `${content}\n// scratch edit`] as const : [path, content] as const,
+      );
+    expect(playthroughSourceDigest(edit("./advance.ts"))).not.toBe(baseline);
+    expect(playthroughSourceDigest(edit("./playthrough.ts"))).not.toBe(baseline);
   });
 
   it("moves the digest when the file set changes", () => {
