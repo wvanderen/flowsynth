@@ -3893,7 +3893,7 @@ function renderRecoveryModal(app: App, content: HTMLElement): void {
     ["Lost", `The monetary figures below are unreadable — they ride the retained original only, and recovery starts them at their calibrated values, never invented ones`],
     ["Stands", `Practice history, ${termTipHtml("Habit class", "class development")}, ${termTipHtml("goals")}, notes, and feats`],
     ["Stands", `Your collection and its board — designs, ${termTipHtml("merge tier", "tiers")}, placement, and every earned ${termTipHtml("module rolls", "roll")}`],
-    ["Stands", `${termTipHtml("memorized", "Memorized")} purchases — ${termTipHtml("Catalog")} unlocks, the ${termTipHtml("Arete")}-bought World purchases, the ${termTipHtml("Warp Beam")}'s rungs`],
+    ["Stands", `<span class="recovery-purchases">${termTipHtml("memorized", "Memorized")} purchases — ${termTipHtml("Catalog")} unlocks, the ${termTipHtml("Arete")}-bought World purchases, the ${termTipHtml("Warp Beam")}'s rungs</span>`],
     ["Rebases", `The economy opens calibrated: levels return to base, ${termTipHtml("nous")} at the opening grant, purchased ${termTipHtml("Harmonic capacity", "capacity")} to one voice, every ${termTipHtml("Enemy", "enemy")}'s era state restores, and the ${termTipHtml("Claimed frontier")} clears — claims bank against what you earn from here`],
     ["Original", `Your save stays on this device, byte for byte`],
   ] as const;
