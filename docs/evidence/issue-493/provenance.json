@@ -1,0 +1,59 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-05T17:28:01.986Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "t3/issue-493",
+  "commit": "d852d436044fe6302efb52169722f83f7b6c88ec",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-493/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/capture.sh",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/desktop-import-explainer.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/desktop-migrated-board.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/desktop-migration-disclosure.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/desktop-migration-explainer.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/phone-migrated-board.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/phone-migration-disclosure.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/phone-migration-explainer.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/seed-v12.json",
+        "state": "??"
+      }
+    ]
+  }
+}
