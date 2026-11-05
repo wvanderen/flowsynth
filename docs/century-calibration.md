@@ -94,7 +94,9 @@ node tools/record-century.mjs slice 60:pushing
 node tools/record-century.mjs slice 60:support
 node tools/record-century.mjs slice 60:combat
 node tools/record-century.mjs slice 60:ignoring
-# The fixture pair, the composed report, and the frozen baseline
+# Record both fixture continuations before composing the report and frozen baseline
+node tools/record-century.mjs fixture raw
+node tools/record-century.mjs fixture collection-reset
 node tools/record-century.mjs compose
 ```
 
