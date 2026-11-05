@@ -98,6 +98,24 @@ describe("the calibrated migration's flow (issue #493)", () => {
     expect(files.get(ORIGINAL_SAVE_KEY)).toBe(corrupt);
   });
 
+  it("a canceled import migrates nothing: the stored save and its retained original stand untouched", () => {
+    const stored = serialize({ ...createInitialState(), nous: 9 }, 500);
+    localStorage.setItem(STORAGE_KEY, stored);
+    app = boot(undefined, false, new SharedSave(localStorage));
+    const afterBoot = localStorage.getItem(STORAGE_KEY);
+    app.openModal("import");
+    // The walk's cancel: closing the import modal without applying. No
+    // conversion ran, nothing was adopted, and neither slot moved.
+    app.closeModal();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(afterBoot);
+    expect(JSON.parse(afterBoot!).state.nous).toBe(9);
+    // The boot retained the first-seen bytes once; the cancel moved
+    // neither slot.
+    expect(localStorage.getItem(ORIGINAL_SAVE_KEY)).toBe(stored);
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.migration).toBeNull();
+  });
+
   it("the explanation names what was kept and what moved, and offers the retained original", () => {
     const files = new Map<string, string>([[STORAGE_KEY, overpoweredV12()]]);
     app = boot(undefined, false, new SharedSave(mapStorage(files)));
