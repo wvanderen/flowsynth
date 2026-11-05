@@ -1,7 +1,8 @@
 // Explicit, long-running evidence tier for the century calibration
-// (issue #492). Compile with Vite's real glob/raw transforms (rather than
-// vitest's insensitive fingerprint, issue #503), then record the same
-// functions the tests exercise. No listening server.
+// (issue #492). Compile with Vite's real glob/raw transforms so a
+// recording's fingerprint certifies the compiled engine — one identity
+// with the suite, dev server, and build since #503's fix — then record
+// the same functions the tests exercise. No listening server.
 //
 //   node tools/record-century.mjs slice <25|60>:<prompt|pushing|support|combat|ignoring>
 //   node tools/record-century.mjs compose

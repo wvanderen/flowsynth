@@ -1,6 +1,8 @@
 // Explicit, long-running evidence tier. Compile with Vite's real glob/raw
-// transforms (rather than vitest's insensitive fingerprint, issue #503),
-// then record the same functions the tests exercise. No listening server.
+// transforms so a recording's fingerprint certifies the compiled engine —
+// one identity with the suite, dev server, and build since #503's fix
+// made that fingerprint content-sensitive in every path — then record the
+// same functions the tests exercise. No listening server.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
