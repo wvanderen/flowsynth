@@ -118,9 +118,15 @@ describe("the calibrated translation's recoverability (issue #493)", () => {
   // engine actions. The recorded run banked a 6-Arete claim inside four
   // credited hours — the frontier past the translated zero — with the
   // century stop reached and every figure finite. Recorded run:
-  // docs/evidence/issue-493/converted-walk.json.
+  // docs/evidence/issue-493/converted-walk.json — recorded from the same
+  // seed the captures document (banked Arete 6, one claimed frontier
+  // step), so the artifact and the journey are one position.
   it("the scheduled walk banks calibrated claims past the translated frontier", { skip: !process.env.FLOWSYNTH_SAVE_MIGRATION_WALK, timeout: 3_600_000 }, () => {
-    const { state } = migrated();
+    const file = JSON.parse(overpoweredV12Text());
+    file.state.arete = 6;
+    file.state.world.frontier = 1;
+    const loaded = deserialize(JSON.stringify(file));
+    const state = loaded.state!;
     const recipe = composePlaythroughRecipe({
       seed: 42,
       policyId: "support",

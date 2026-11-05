@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { advance } from "./advance";
 import { endSession, startSession } from "./actions";
 import { fresh, give, giveHabit, stubRng } from "./fixtures";
-import { createHabit, selectHabit } from "./habits";
+import { createHabit, selectHabit, addPracticeLog } from "./habits";
 import { BALANCE, SAVE_VERSION } from "./constants";
 import { longGoalCost, mutatorSlotCost } from "./economy";
 import { activeGoals, accrueGoalProgress, createGoal, deleteGoal, editGoal, retainGoalChoice, rollGoalOccurrences } from "./goals";
@@ -846,6 +846,81 @@ describe("the v12 → v13 migration (issue #493)", () => {
     expect(state.world.columns.map((c) => c.id)).toEqual(["col1"]);
     expect(state.world.hone.chargeBlade).toBe(2);
     expect(loaded.migration).toBeDefined();
+  });
+
+  it("the whole stands list rides the boundary untouched", () => {
+    // The ticket's retention list, field for field, at the boundary: the
+    // life record, practice history, goals, notes, feats, the discovery
+    // ledger, every memorized meter, and every purchase — built through
+    // the engine's own seams, then each asserted as carried.
+    const before = overpowered();
+    before.unstructuredSessions = 3;
+    before.plannedSessionsCompleted = 9;
+    before.combinations = 7;
+    before.breathersCompleted = 4;
+    before.breatherSeconds = 1_800;
+    before.goalFuel = 3.5;
+    before.forge = { progress: 41, earned: 2 };
+    before.mutatorForge = { progress: 33, earned: 2 };
+    before.mutatorSlots.push(hex(0, 1));
+    before.mutators.push({ id: "mu1", family: "power", rarity: "uncommon", pos: null });
+    before.bankedMutatorRolls.push({
+      id: "mo1",
+      candidates: [
+        { id: "mc1", family: "power", rarity: "common" },
+        { id: "mc2", family: "charge", rarity: "rare" },
+      ],
+    });
+    before.scrap = 15;
+    before.draftTierBonus = 1;
+    before.specialDrafts.rare = 1;
+    before.mergeCapPurchases = 1;
+    before.unlockedRows.push(3);
+    before.gatedRows.push(2);
+    before.capacityCeilings = 1;
+    before.capacityDiscounts = 2;
+    before.catalogEntryOwned = true;
+    before.rollPoolJoined = true;
+    const { habit } = giveHabit(before, "Piano");
+    selectHabit(before, habit.id);
+    addPracticeLog(before, habit.id, 10, 5_000);
+    createGoal(before, { habitId: habit.id, minutes: 25, schedule: "daily", now: 500 });
+    writeNote(before, "keep the fifth", 4_000);
+    startSession(before, 600);
+    endSession(before, 6_000);
+    before.achievements["first-prestige"] = 900;
+    before.chordDiscovery["octave"] = { formed: true, firstFormedAt: 800, rootsHeard: 2, roots: [0, 7] };
+
+    const state = deserialize(asV12(before)).state!;
+    expect(state.unstructuredSessions).toBe(3);
+    expect(state.plannedSessionsCompleted).toBe(9);
+    expect(state.combinations).toBe(7);
+    expect(state.breathersCompleted).toBe(4);
+    expect(state.breatherSeconds).toBe(1_800);
+    expect(state.goalFuel).toBe(3.5);
+    expect(state.practiceLog).toEqual(before.practiceLog);
+    expect(state.sessionRecords).toEqual(before.sessionRecords);
+    expect(state.notes).toEqual(before.notes);
+    // The goal's live slices are the loaded shape's own addition (the
+    // lenient default); the carried row stands beneath them.
+    expect(state.goals[0]).toMatchObject(before.goals[0]!);
+    expect(state.achievements).toEqual(before.achievements);
+    expect(state.chordDiscovery["octave"]).toEqual({ formed: true, firstFormedAt: 800, rootsHeard: 2, roots: [0, 7] });
+    expect(state.forge).toEqual({ progress: 41, earned: 2 });
+    expect(state.mutatorForge).toEqual({ progress: 33, earned: 2 });
+    expect(state.mutatorSlots).toEqual(before.mutatorSlots);
+    expect(state.mutators).toEqual(before.mutators);
+    expect(state.bankedMutatorRolls).toEqual(before.bankedMutatorRolls);
+    expect(state.scrap).toBe(15);
+    expect(state.draftTierBonus).toBe(1);
+    expect(state.specialDrafts).toMatchObject({ rare: 1 });
+    expect(state.mergeCapPurchases).toBe(1);
+    expect(state.unlockedRows).toEqual(before.unlockedRows);
+    expect(state.gatedRows).toEqual(before.gatedRows);
+    expect(state.capacityCeilings).toBe(1);
+    expect(state.capacityDiscounts).toBe(2);
+    expect(state.catalogEntryOwned).toBe(true);
+    expect(state.rollPoolJoined).toBe(true);
   });
 
   it("the conversion grants no entitlement: no Arete mints, no instant claim waits, no roll banks", () => {

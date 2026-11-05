@@ -3740,6 +3740,21 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
   wireClose(app);
 }
 
+// A text file's one download mechanism: the object-URL anchor dance the
+// export surfaces share (the save export, the migration's retained
+// original, the dev panel's run exports).
+function downloadText(text: string, filename: string): void {
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function renderExportModal(app: App, content: HTMLElement): void {
   // The export refusal (issue #486): a state whose figures cannot land in
   // a file refuses here, in the modal, without offering a download — and
@@ -3778,17 +3793,7 @@ function renderExportModal(app: App, content: HTMLElement): void {
       app.say("Save selected — copy it with ⌘C / Ctrl+C.");
     }
   });
-  app.listen(byId("export-download"), "click", () => {
-    const blob = new Blob([text], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "flowsynth-save.json";
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  });
+  app.listen(byId("export-download"), "click", () => downloadText(text, "flowsynth-save.json"));
   wireClose(app);
 }
 
@@ -3844,7 +3849,6 @@ function renderMigrationModal(app: App, content: HTMLElement): void {
     : "";
   content.innerHTML = `
     ${modalTop("SAVE MIGRATION", "modal-title")}
-    <h2 id="modal-title" class="sr-only">Your save joined the calibrated economy</h2>
     <p class="lead">Your save predates the calibrated economy — it converted once, on load.</p>
     <div class="folio-rows">
       <div class="folio-row"><span class="folio-key">Stands</span><span class="folio-main">${areteLine}</span></div>
@@ -3869,15 +3873,7 @@ function renderMigrationModal(app: App, content: HTMLElement): void {
       app.say("No retained original is available.");
       return;
     }
-    const blob = new Blob([text], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "flowsynth-original.json";
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadText(text, "flowsynth-original.json");
   });
   wireClose(app);
 }
@@ -4427,16 +4423,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
         });
       } else if (key === "export-run") {
         try {
-          const artifact = app.devExportPlaythrough();
-          const blob = new Blob([artifact], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const anchor = document.createElement("a");
-          anchor.href = url;
-          anchor.download = `flowsynth-run-${app.devSelectedRunId ?? "run"}.json`;
-          document.body.append(anchor);
-          anchor.click();
-          anchor.remove();
-          URL.revokeObjectURL(url);
+          downloadText(app.devExportPlaythrough(), `flowsynth-run-${app.devSelectedRunId ?? "run"}.json`);
         } catch {
           // The named failure stands in the panel's note.
         }

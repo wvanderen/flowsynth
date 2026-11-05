@@ -18,6 +18,7 @@ One schema-version boundary, one pass. A save at v10 or v11 first runs its own p
 | `scrap`, `draftTierBonus`, `specialDrafts` | The scrap economy and its permanent purchases | Memorized with the scrap that paid for them |
 | `mutatorSlots`, `mutators`, `bankedMutatorRolls`, `mutatorForge` | The whole Mutator layer, tray and placed | Persists through prestige |
 | `forge` | The Forge's fill and earned count | Memorized progress, like prestige leaves it |
+| `forge`, `mutatorForge`, and the habit classes' practice-roll meters | Every memorized meter — fill and earned counts — stands | Meters earned by real time are never un-earned at the moment prestige pays off; the conversion is that same reset |
 | `bankedRolls` | Every earned, unchosen module roll | Earned rolls are on the retention list |
 | `habits[].classes` (and `classId`) | Class development: experience, levels, tree points, allocations, practice-roll meters | Nothing class-side resets; prestige explicitly keeps it |
 | `habits` (names, seconds, colors, archived), `activeHabitId`, `practiceLog`, `sessionRecords`, `goals`, `goalFuel`, `notes`, `achievements`, `chordDiscovery`, `combinations`, `sessionsCompleted`, `sessionIndex`, `unstructuredSessions`, `plannedSessionsCompleted` | The life record: practice history, goals, notes, feats, discovery ledger, session history | The ticket's retention list, field for field |
@@ -34,7 +35,7 @@ One schema-version boundary, one pass. A save at v10 or v11 first runs its own p
 | `nous` | `openingGrant()` (12) | The era reset's fresh opening; the opening grant affords the first upgrade |
 | `eraEarned` | 0 | The per-era measure rebases; lifetime `totalEarned` stands |
 | `capacityBought` | 0 | Purchased capacity is era progress — the voices return to one; the Arete offerings above stand |
-| `modules[].reserve` | 0 | Reserves are charge state; the era reset takes everything charge-shaped |
+| `modules[].reserve` | 0 | The era's temporary charge meters empty with everything else charge-shaped (ADR-0047); the memorized meters above stand |
 | `world.enemies` | Fresh at authored stats | Discoveries, damage, and defeated-state era bonuses clear with the era |
 | `world.weapons[].store`, `.cooldown` | 0 | Stored World charge and cadence clocks empty with the era |
 
@@ -54,10 +55,10 @@ A scalar the runaway era left nonfinite (the parent save's null monetary fields)
 
 | Behavior | Named verification |
 | --- | --- |
-| Reset half lands, retention half stands, report figures | `src/engine/save.test.ts`, "the v12 → v13 migration (issue #493)" |
+| Reset half lands, retention half stands, report figures | `src/engine/save.test.ts`, "the v12 → v13 migration (issue #493)" — "a finite overpowered save lands on the calibrated economy…" and "the whole stands list rides the boundary untouched" |
 | No entitlement mints; claims bank against new depth only | `save.test.ts` "the conversion grants no entitlement…", "future claims bank against newly earned depth alone…" |
 | Old-version chain pins every boundary, one pass | `save.test.ts` "the whole chain runs once…"; the v10/v11 suites beside it |
 | Idempotence (save → reload converts nothing again) | `save.test.ts` "the converted save reloads as v13 and nothing runs again" |
-| Original bytes retained; cancel/failure preserves; the flow explains once | `src/ui/app.migration.test.ts` |
+| Original bytes retained; cancel/failure preserves; the flow explains once | `src/ui/app.migration.test.ts` — "a canceled import migrates nothing…", "a rejected v12 save adopts nothing and its exact bytes stay retained", "booting a stored v12 save explains the migration, retains the original bytes…", "an imported v12 save retains its source bytes and explains the economy it landed on" |
 | Converted play: engine actions, purchases, the tiered scheduled walk | `tools/save-migration.test.ts`; recorded run `docs/evidence/issue-493/converted-walk.json` |
 | Desktop/phone evidence of the explanation and outcomes | `docs/evidence/issue-493/` (README beside the captures) |

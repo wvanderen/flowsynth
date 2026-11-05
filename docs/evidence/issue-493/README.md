@@ -3,8 +3,9 @@
 Captured from the verified checkout: served by `npm run dev` at
 `http://localhost:5173/`, gated by the capture preflight —
 `provenance.json` records worktree `/home/lem/dev/flowsynth`, branch
-`t3/issue-493`, commit `d852d436` (the translation commit), clean
-source. All captures are headless-Chromium screenshots of that server
+`t3/issue-493`, commit `d852d436` (the HEAD the preflight verified; the
+translation itself is `1bc08fe`, contained in it), clean source. All
+captures are headless-Chromium screenshots of that server
 (chromedriver session, window 1280×1200 desktop / 390×987 phone,
 screenshots at the viewport's CSS pixels: 1280×1057 and 390×844).
 
