@@ -3,8 +3,8 @@
 Captured from the verified checkout: served by `npm run dev` at
 `http://localhost:5173/`, gated by the capture preflight —
 `provenance.json` records worktree `/home/lem/dev/flowsynth`, branch
-`t3/issue-494`, commit `1886d24` (the copy corrections commit; the
-recovery itself is `f939b2c`, contained in it), clean source. All
+`t3/issue-494`, commit `1ead928` (the review-fixes commit; the recovery
+itself is `f939b2c`, contained in it), clean source. All
 captures are headless-Chromium screenshots of that server (chromedriver
 session, window 1280×1200 desktop / 390×987 phone, screenshots at the
 viewport's CSS pixels).
