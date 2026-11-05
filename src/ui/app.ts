@@ -271,6 +271,17 @@ export interface HexDetail {
   face: DetailFace;
 }
 
+// The lost-money recovery's pending offer (issue #494): the exact source
+// bytes, the named lost paths, and where the save arrived. The choice
+// applies at the save/import destination; cleared on apply or decline.
+// Never saved — the offer re-presents until the choice.
+export interface RecoveryOffer {
+  raw: string;
+  lost: string[];
+  from: "boot" | "import";
+  error: string | null;
+}
+
 export interface UiState {
   inventory: InventoryState;
   // The focus app whose console popover is open, if any (ADR-0012).
@@ -297,11 +308,9 @@ export interface UiState {
   // adoption converted the save, cleared when its explanation is read.
   // Never saved — the conversion itself is structural at the boundary.
   migration: MigrationReport | null;
-  // The lost-money recovery's pending offer (issue #494): the exact
-  // source bytes, the named lost paths, and where the save arrived. The
-  // choice applies at the save/import destination; cleared on apply or
-  // decline. Never saved — the offer re-presents until the choice.
-  recovery: { raw: string; lost: string[]; from: "boot" | "import"; error: string | null } | null;
+  // The lost-money recovery's pending offer (issue #494): never saved —
+  // it re-presents until the choice.
+  recovery: RecoveryOffer | null;
   forgeFace: "modules" | "mutators";
   importText: string;
   importError: string | null;
@@ -630,14 +639,22 @@ export class App {
       // notice rides beside it. The fresh instrument stands beneath until
       // the choice, and the protected source cannot be replaced.
       if (parsed.recoveryRequired) {
-        this.ui.recovery = { raw: parsed.raw ?? "", lost: parsed.lost ?? [], from: "boot", error: null };
-        this.ui.modal = "recovery";
+        this.offerRecovery(parsed.raw ?? "", parsed.lost ?? [], "boot");
         return null;
       }
       this.loadNotice = `Could not load the local save: ${parsed.error}`;
       return null;
     }
     return parsed;
+  }
+
+  // The recovery offer's one construction (issue #494): boot's load and
+  // the import walk both land here, so the two doors cannot drift. The
+  // caller renders — boot's constructor renders once, after the offer
+  // stands.
+  private offerRecovery(raw: string, lost: string[], from: "boot" | "import"): void {
+    this.ui.recovery = { raw, lost, from, error: null };
+    this.ui.modal = "recovery";
   }
 
   // The board-surface overlays (§5): the Hex detail panel and the Upgrade
@@ -878,8 +895,7 @@ export class App {
       // (issue #494): the choice is the modal's to carry, the import
       // adopts nothing until it applies.
       if (parsed.recoveryRequired) {
-        this.ui.recovery = { raw: text, lost: parsed.lost ?? [], from: "import", error: null };
-        this.ui.modal = "recovery";
+        this.offerRecovery(text, parsed.lost ?? [], "import");
         this.render();
         return false;
       }
@@ -2839,7 +2855,9 @@ export class App {
     this.ui.recovery = null;
     if (offer.from === "import") {
       this.ui.modal = "import";
-      this.ui.importError = "This save needs explicit recovery: its monetary figures are unreadable. The original file is unchanged.";
+      // The refusal's own phrasing, over the same named paths — the
+      // decline never rewords what the boundary refused.
+      this.ui.importError = `This save needs explicit recovery: unreadable monetary state (${offer.lost.join(", ")}). The original save is unchanged.`;
       this.render();
       this.restoreModalInvoker();
       return;

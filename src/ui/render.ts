@@ -3899,7 +3899,7 @@ function renderRecoveryModal(app: App, content: HTMLElement): void {
   ] as const;
   content.innerHTML = `
     ${modalTop("SAVE RECOVERY", "modal-title")}
-    <p class="lead">This save's monetary figures are unavailable — it cannot load as it stands. Recovery is the one way it plays.</p>
+    <p class="lead">This save's monetary figures are unavailable — recovery is the one way it plays.</p>
     <div class="folio-rows">${rows.map(([key, line]) => `<div class="folio-row"><span class="folio-key">${key}</span><span class="folio-main"><span>${line}</span></span></div>`).join("")}</div>
     <p class="lead muted mono">${offer.lost.join(", ")}</p>
     ${offer.error ? `<p class="import-error">${offer.error}</p>` : ""}

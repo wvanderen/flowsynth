@@ -253,8 +253,11 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
   // the explicit recovery choice (issue #494) owns what happens next.
   // The recovery door itself reads any supported version's bytes — a v13
   // source has no boundary conversion, and its repair rides the recovery
-  // alone.
-  const lost = parsed.version < 13 || recovery ? lostMonetaryFigures(raw) : [];
+  // alone. Detection and repair are one walk: with the merged state
+  // passed, the lost figures repair as they are found.
+  const lost = parsed.version < 13 || recovery
+    ? lostMonetaryFigures(raw, recovery ? merged : undefined)
+    : [];
   if (lost.length && !recovery) {
     return {
       error: `This save needs explicit recovery: unreadable monetary state (${lost.join(", ")}). The original save is unchanged; loading repairs nothing — recovery is its own explained choice.`,
@@ -262,7 +265,6 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
       lost,
     };
   }
-  if (lost.length) lostMonetaryFigures(raw, merged);
   // The octave-row gate ledger (ADR-0022): lenient default — a save written
   // before it exists owes no gates it can't know about. The check reads the
   // raw save, not the merge: a fresh state's granted opening rows must not
