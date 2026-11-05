@@ -175,7 +175,9 @@ describe("chord discovery sync", () => {
       app: "flowsynth",
       version: 10,
       state: {
-        mode: "upgrade",
+        // A finite save with an old ledger entry, not a missing-money
+        // recovery fixture: #493 now refuses that separate class.
+        ...fresh(),
         chordDiscovery: { "Major triad": { formed: true, firstFormedAt: 1000, rootsHeard: 2 } },
       },
     };
