@@ -46,6 +46,7 @@ function mapStorage(files: Map<string, string>): SaveStorage {
   return {
     getItem: (key: string) => files.get(key) ?? null,
     setItem: (key: string, value: string) => files.set(key, value),
+    removeItem: (key: string) => { files.delete(key); },
   };
 }
 
@@ -87,7 +88,7 @@ describe("the calibrated migration's flow (issue #493)", () => {
     const earlier = serialize(createInitialState(), 100);
     const files = new Map<string, string>([[STORAGE_KEY, source], [ORIGINAL_SAVE_KEY, earlier]]);
     const storage: SaveStorage = {
-      getItem: (key) => files.get(key) ?? null,
+      ...mapStorage(files),
       setItem: (key, value) => {
         if (key === deniedKey) throw new Error("quota exceeded");
         files.set(key, value);
@@ -110,8 +111,13 @@ describe("the calibrated migration's flow (issue #493)", () => {
     const earlier = serialize(createInitialState(), 100);
     const files = new Map<string, string>([[STORAGE_KEY, source], [ORIGINAL_SAVE_KEY, earlier]]);
     app = boot(undefined, false, new SharedSave(mapStorage(files)));
+    // The recovery offer (issue #494) stands where the save arrived; the
+    // migration never claims it, and no duplicate load notice rides
+    // beside the offer.
     expect(app.ui.migration).toBeNull();
-    expect(document.getElementById("status")!.textContent).toContain("recovery");
+    expect(app.ui.recovery).toMatchObject({ from: "boot" });
+    expect(app.ui.modal).toBe("recovery");
+    expect(document.getElementById("status")!.textContent).not.toContain("Could not load");
     app.save();
     app.save(Date.now(), true);
     expect(files.get(STORAGE_KEY)).toBe(source);
@@ -126,6 +132,10 @@ describe("the calibrated migration's flow (issue #493)", () => {
     const file = JSON.parse(overpoweredV12());
     file.state.eraEarned = null;
     expect(app.importText(JSON.stringify(file))).toBe(false);
+    // The recovery offer (issue #494) stands at the import destination;
+    // declining is what returns the message, and nothing was adopted.
+    expect(app.ui.recovery).toMatchObject({ from: "import" });
+    app.declineRecovery();
     expect(app.ui.importError).toContain("recovery");
     expect(serialize(app.state, 1000)).toBe(before);
     expect(localStorage.getItem(STORAGE_KEY)).toBe(primary);

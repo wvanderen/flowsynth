@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAVE_VERSION } from "../engine/constants";
-import { serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY } from "../engine/save";
+import { serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY } from "../engine/save";
 import { createInitialState } from "../engine/state";
 import { SharedSave, memorySaveStorage } from "./shared-save";
 
@@ -9,6 +9,7 @@ function memoryStorage() {
   return {
     getItem: (key: string) => files.get(key) ?? null,
     setItem: (key: string, value: string) => { files.set(key, value); },
+    removeItem: (key: string) => { files.delete(key); },
   };
 }
 function scenario() {
@@ -57,7 +58,7 @@ describe("shared-save ownership (ADR-0032)", () => {
     ["non-finite stamp", '{"savedAt":1e999}'],
   ])("a slot with %s never blocks an attempted write", (_label, raw) => {
     const { state } = scenario();
-    const storage = { getItem: () => raw, setItem: (_key: string, value: string) => { saved = value; } };
+    const storage = { getItem: () => raw, setItem: (_key: string, value: string) => { saved = value; }, removeItem: () => {} };
     let saved = "";
     const owner = new SharedSave(storage, () => 1000);
     expect(owner.isNewer()).toBe(false);
@@ -129,6 +130,7 @@ describe("shared-save ownership (ADR-0032)", () => {
     let saved = "";
     const owner = new SharedSave({
       getItem: () => { throw new Error("denied read"); },
+      removeItem: () => { throw new Error("denied removal"); },
       setItem: (_key, value) => { saved = value; },
     }, () => 1000);
     expect(owner.load()).toBeNull();
@@ -141,6 +143,7 @@ describe("shared-save ownership (ADR-0032)", () => {
     const { storage, state } = scenario();
     const owner = new SharedSave({
       getItem: storage.getItem,
+      removeItem: storage.removeItem,
       setItem: () => { throw new Error("quota exceeded"); },
     }, () => 3000);
     owner.incorporate(1000);
@@ -237,6 +240,7 @@ describe("review regressions: retain before replacement (#486)", () => {
     let denyBackup = true;
     const storage = {
       getItem: files.getItem,
+      removeItem: files.removeItem,
       setItem: (key: string, value: string) => {
         if (key === ORIGINAL_SAVE_KEY && denyBackup) throw new Error("quota exceeded");
         files.setItem(key, value);
@@ -268,5 +272,148 @@ describe("review regressions: retain before replacement (#486)", () => {
     storage.setItem(ORIGINAL_SAVE_KEY, "original");
     expect(storage.getItem(STORAGE_KEY)).toBe("primary");
     expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe("original");
+  });
+});
+
+// The lost-money recovery's persistence seam (issue #494): the load that
+// detects lost money names the paths and carries the exact bytes, and
+// the explicit adoption retains those bytes as the new lineage's
+// original before anything replaces the slot.
+describe("the lost-money recovery's adoption (issue #494)", () => {
+  // A v12 save whose monetary figures serialized to null — the recovery
+  // class's own shape.
+  function lostMoneyText(): string {
+    const file = JSON.parse(serialize(createInitialState(), 750));
+    file.version = 12;
+    file.state.nous = null;
+    file.state.arete = null;
+    return JSON.stringify(file);
+  }
+
+  it("load names the lost paths and carries the exact raw bytes for the recovery choice", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage, () => 1000);
+    const parsed = owner.load();
+    expect(parsed).toHaveProperty("recoveryRequired", true);
+    expect((parsed as { lost?: string[] }).lost).toEqual(["nous", "arete"]);
+    expect((parsed as { raw?: string }).raw).toBe(raw);
+    // The protection stands: the owner cannot replace the source until
+    // the explicit adoption succeeds.
+    expect(owner.write(createInitialState(), 1000, true)).toBe("refused");
+    expect(storage.getItem(STORAGE_KEY)).toBe(raw);
+  });
+
+  it("adoptRecovered retains the exact source bytes as the original and lifts the protection", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage, () => 1000);
+    owner.load();
+    expect(owner.adoptRecovered(raw, createInitialState(), 1000)).toBe(true);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+    // The recovered lineage writes normally: the slot takes the v13
+    // bytes, the original stands untouched.
+    expect(owner.write(createInitialState(), 1000, true)).toBe("written");
+    expect(JSON.parse(storage.getItem(STORAGE_KEY)!).version).toBe(SAVE_VERSION);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it("adoptRecovered archives an earlier lineage's backup before retaining the source", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    const earlier = serialize(createInitialState(), 100);
+    storage.setItem(STORAGE_KEY, raw);
+    storage.setItem(ORIGINAL_SAVE_KEY, earlier);
+    const owner = new SharedSave(storage, () => 1000);
+    owner.load();
+    expect(owner.adoptRecovered(raw, createInitialState(), 1000)).toBe(true);
+    expect(storage.getItem(PRE_V13_ORIGINAL_SAVE_KEY)).toBe(earlier);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it.each(["absent", "original", "archive", "same source"])("primary denial restores %s backup slots including absent keys, without advancing ownership", (backups) => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    storage.setItem(STORAGE_KEY, raw);
+    if (backups !== "absent") storage.setItem(ORIGINAL_SAVE_KEY, backups === "same source" ? raw : "earlier original");
+    if (backups === "archive") storage.setItem(PRE_V13_ORIGINAL_SAVE_KEY, "earlier archive");
+    const keys = [STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY];
+    const before = keys.map((key) => storage.getItem(key));
+    let deny = true;
+    const owner = new SharedSave({
+      ...storage,
+      setItem: (key, value) => {
+        if (key === STORAGE_KEY && deny) throw new Error("primary denied");
+        storage.setItem(key, value);
+      },
+    });
+    owner.load();
+    expect(owner.adoptRecovered(raw, createInitialState(), 1000)).toBe(false);
+    expect(keys.map((key) => storage.getItem(key))).toEqual(before);
+    expect(owner.isNewer()).toBe(true);
+    expect(owner.write(createInitialState(), 1000, true)).toBe("refused");
+    deny = false;
+    expect(owner.adoptRecovered(raw, createInitialState(), 1000)).toBe(true);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+    expect(owner.isNewer()).toBe(false);
+    expect(JSON.parse(storage.getItem(STORAGE_KEY)!).version).toBe(13);
+  });
+
+  it("recovery serialization denial changes no slot and retains protection", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage);
+    owner.load();
+    const broken = createInitialState();
+    broken.nous = Infinity;
+    expect(owner.adoptRecovered(raw, broken, 1000)).toBe(false);
+    expect(storage.getItem(STORAGE_KEY)).toBe(raw);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBeNull();
+    expect(storage.getItem(PRE_V13_ORIGINAL_SAVE_KEY)).toBeNull();
+    expect(owner.write(createInitialState(), 1000, true)).toBe("refused");
+  });
+
+  it("rollback denial reports its limit honestly and leaves the primary protected", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave({
+      ...storage,
+      setItem: (key, value) => {
+        if (key === STORAGE_KEY) throw new Error("primary denied");
+        storage.setItem(key, value);
+      },
+      removeItem: () => { throw new Error("removal denied"); },
+    });
+    owner.load();
+    expect(() => owner.adoptRecovered(raw, createInitialState(), 1000)).toThrow("backup restoration was denied");
+    expect(storage.getItem(STORAGE_KEY)).toBe(raw);
+    expect(owner.write(createInitialState(), 1000, true)).toBe("refused");
+  });
+
+  it("adoptRecovered denied keeps the protection: neither slot moves", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    const earlier = serialize(createInitialState(), 100);
+    storage.setItem(STORAGE_KEY, raw);
+    storage.setItem(ORIGINAL_SAVE_KEY, earlier);
+    const denied = {
+      getItem: (key: string) => storage.getItem(key),
+      removeItem: storage.removeItem,
+      setItem: (key: string, value: string) => {
+        if (key === PRE_V13_ORIGINAL_SAVE_KEY) throw new Error("quota exceeded");
+        storage.setItem(key, value);
+      },
+    };
+    const owner = new SharedSave(denied, () => 1000);
+    owner.load();
+    expect(owner.adoptRecovered(raw, createInitialState(), 1000)).toBe(false);
+    expect(storage.getItem(STORAGE_KEY)).toBe(raw);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(earlier);
+    // The protection stands: no save replaces the source.
+    expect(owner.write(createInitialState(), 1000, true)).toBe("refused");
   });
 });

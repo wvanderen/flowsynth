@@ -20,10 +20,30 @@ export interface LoadResult {
   // Lost money is not a rejected-version fresh start. Persistence must
   // leave the source in place until the explicit recovery choice (#494).
   recoveryRequired?: boolean;
+  // The paths the refusal names, when recoveryRequired: the recovery
+  // offer presents the same list, so the explanation can never disagree
+  // with the detection about what was lost.
+  lost?: string[];
   // The calibrated-economy translation (issue #493): present exactly when
   // this load performed the v12 → v13 conversion — the one-time fact the
   // save/import flow explains. A v13 save reloads without it.
   migration?: MigrationReport;
+  // The explicit lost-money recovery (issue #494): present exactly when
+  // this load repaired unreadable monetary state. The choice was the
+  // player's at the save/import destination; this report names what was
+  // unavailable. A recovered save reloads without it.
+  recovered?: RecoveryReport;
+}
+
+// What the recovery replaced, stated as the paths it could not read
+// (issue #494). Every replaced figure took its field's calibrated
+// starting value — the opening grant for the wallet, zero for the
+// unreadable ledgers — never an invented balance. Readable figures rode
+// the same retention/reset transition the finite conversion uses; the
+// recovery names no figures for those, because none were replaced.
+export interface RecoveryReport {
+  fromVersion: number;
+  lost: string[];
 }
 
 // What the calibrated translation moved, stated as figures the save/import
@@ -81,32 +101,81 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 // Read before normalization and older refunds can hide missing money.
-// Required balances existed at every supported boundary. Optional fields
-// keep their historical absent-field defaults, but an explicitly lost
-// figure never takes that default.
-function lostMonetaryFigures(raw: Partial<GameState> & Record<string, unknown>): string[] {
+// Detection reads the raw save — required balances existed at every
+// boundary the gate converts, so absence is loss, never a fresh default.
+// The gate runs at the pre-v13 boundary: those are the bytes whose
+// monetary state the pre-integrity builds could corrupt (the refusing
+// serializer only writes v13, whose corrupt figures keep the established
+// lenient schema resilience). A whole meter shape that is missing or not
+// a record is not a lost figure: it follows the established shape
+// handling (the Mutator layer's whole-object default). An explicit lost
+// figure inside a present shape is the recovery class. With
+// `repairInto`, the same walk writes each lost figure's calibrated
+// starting value — zero for every monetary ledger; the boundary
+// conversion lands nous at the opening grant — into the merged state's
+// scalars and the raw save's own nested objects, which the merge still
+// shares at this point. Detection and repair can never disagree about
+// what was lost.
+function lostMonetaryFigures(
+  raw: Partial<GameState> & Record<string, unknown>,
+  repairInto?: GameState,
+): string[] {
   const lost: string[] = [];
-  const check = (value: unknown, path: string, required = true): void => {
+  const check = (value: unknown, path: string, required = true, fix?: () => void): void => {
     if (!required && value === undefined) return;
-    if (typeof value !== "number" || !Number.isFinite(value)) lost.push(path);
+    if (typeof value === "number" && Number.isFinite(value)) return;
+    lost.push(path);
+    if (repairInto) fix?.();
   };
-  for (const field of ["nous", "totalEarned", "eraEarned", "arete"] as const) check(raw[field], field);
-  check(raw.scrap, "scrap", false);
+  for (const field of ["nous", "totalEarned", "eraEarned", "arete"] as const) {
+    check(raw[field], field, true, () => {
+      (repairInto as unknown as Record<string, unknown>)[field] = 0;
+    });
+  }
+  check(raw.scrap, "scrap", false, () => {
+    repairInto!.scrap = 0;
+  });
+  // Purchased capacity predates its ladder: absent is the historical
+  // default, an explicitly lost figure never silently becomes it.
+  check(raw.capacityBought, "capacityBought", false, () => {
+    repairInto!.capacityBought = 0;
+  });
   raw.modules?.forEach((module, index) => {
-    check(module?.invested, `modules[${index}].invested`);
-    check(module?.reserve, `modules[${index}].reserve`, false);
+    check(module?.invested, `modules[${index}].invested`, true, () => {
+      if (module) module.invested = 0;
+    });
+    check(module?.reserve, `modules[${index}].reserve`, false, () => {
+      if (module) module.reserve = 0;
+    });
   });
   if (isRecord(raw.world)) {
-    check(raw.world.frontier, "world.frontier", false);
+    check(raw.world.frontier, "world.frontier", false, () => {
+      (raw.world as unknown as Record<string, unknown>).frontier = 0;
+    });
     if (Array.isArray(raw.world.weapons)) {
       raw.world.weapons.forEach((weapon, index) => {
-        check(weapon?.store, `world.weapons[${index}].store`);
+        check(weapon?.store, `world.weapons[${index}].store`, true, () => {
+          if (weapon) weapon.store = 0;
+        });
       });
     }
   }
-  if (raw.session) check(raw.session.accounting?.bucketNous, "session.accounting.bucketNous");
+  if (isRecord(raw.session)) {
+    check(
+      raw.session.accounting?.bucketNous,
+      "session.accounting.bucketNous",
+      true,
+      () => {
+        (raw.session!.accounting as unknown as Record<string, unknown>).bucketNous = 0;
+      },
+    );
+  }
   for (const field of ["forge", "mutatorForge"] as const) {
-    if (raw[field]) check(raw[field].progress, `${field}.progress`);
+    const meter = raw[field];
+    if (!isRecord(meter)) continue;
+    check(meter.progress, `${field}.progress`, true, () => {
+      (meter as Record<string, unknown>).progress = 0;
+    });
   }
   return lost;
 }
@@ -122,6 +191,24 @@ function lostMonetaryFigures(raw: Partial<GameState> & Record<string, unknown>):
 // issue #493), each writing the next schema once so a re-run cannot
 // exist.
 export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
+  return readSave(text, rng, false);
+}
+
+// The lost-money recovery's one door (issue #494): the same boundary
+// read, with the explicit choice applied. Each unreadable figure takes
+// its field's calibrated starting value — named in the returned report,
+// never invented — and the same retention/reset transition the finite
+// conversion uses lands the save on the calibrated economy; a v13
+// source, which has no boundary conversion to ride, gets the era reset
+// applied here once. The result reloads clean: the recovered figures are
+// finite, the written schema is v13, and neither the report nor the
+// repair can run twice. Bytes that need no repair read exactly as an
+// ordinary load reads them.
+export function recoverLostSave(text: string, rng: Rng = Math.random): LoadResult {
+  return readSave(text, rng, true);
+}
+
+function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -160,14 +247,29 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   ) {
     return { error: "The save data is incomplete." };
   }
-  if (parsed.version < 13) {
-    const lost = lostMonetaryFigures(raw);
-    if (lost.length) {
-      return {
-        error: `This save needs explicit recovery: unreadable monetary state (${lost.join(", ")}). The original save is unchanged; recovery is not applied by ordinary migration.`,
-        recoveryRequired: true,
-      };
-    }
+  // A missing accounting object also lost practice-time facts. Ordinary
+  // loading still names its unreadable bucket, but recovery must not
+  // invent the minutes needed to rebuild the rest of that object.
+  if (recovery && isRecord(raw.session) && !isRecord(raw.session.accounting)) {
+    return { error: "The session's practice accounting is incomplete; recovery cannot reconstruct it. The original save is unchanged." };
+  }
+  // Lost money refuses before normalization, older refunds, or lenient
+  // defaults can hide the loss — at the pre-v13 boundary the gate
+  // converts. The refusal names the paths and carries them structurally;
+  // the explicit recovery choice (issue #494) owns what happens next.
+  // The recovery door itself reads any supported version's bytes — a v13
+  // source has no boundary conversion, and its repair rides the recovery
+  // alone. Detection and repair are one walk: with the merged state
+  // passed, the lost figures repair as they are found.
+  const lost = parsed.version < 13 || recovery
+    ? lostMonetaryFigures(raw, recovery ? merged : undefined)
+    : [];
+  if (lost.length && !recovery) {
+    return {
+      error: `This save needs explicit recovery: unreadable monetary state (${lost.join(", ")}). The original save is unchanged; loading repairs nothing — recovery is its own explained choice.`,
+      recoveryRequired: true,
+      lost,
+    };
   }
   // The octave-row gate ledger (ADR-0022): lenient default — a save written
   // before it exists owes no gates it can't know about. The check reads the
@@ -396,6 +498,13 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   if (parsed.version < 11) migrateV10ToV11(raw, merged, rng);
   if (parsed.version < 12) migrateV11ToV12(merged);
   const migration = parsed.version < 13 ? migrateV12ToV13(merged, parsed.version) : undefined;
+  // The recovery's own reset for a source the version gate never
+  // converted: a v13 file has no boundary conversion to ride, so the
+  // explicit recovery applies the calibrated era reset here — the same
+  // pass the boundary runs, once, never repeated (the figures it wrote
+  // are finite). For pre-v13 sources the conversion above already did it.
+  if (recovery && lost.length > 0 && !migration) migrateV12ToV13(merged, parsed.version);
+  const recovered = recovery && lost.length > 0 ? { fromVersion: parsed.version, lost } : undefined;
   // The goals' live-share surface (ADR-0047, wave 5) lenient-defaults the
   // same way: a goal saved before the generators wave carries no live
   // slice, which reads — honestly — as a manual-only history that banks
@@ -423,6 +532,7 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   // cannot make shipped play read a comparison curve.
   delete (merged as unknown as Record<string, unknown>).candidates;
   merged.purchased = { ...fresh.purchased, ...merged.purchased };
+  if (recovered) return { state: merged, recovered };
   return migration ? { state: merged, migration } : { state: merged };
 }
 

@@ -4126,6 +4126,9 @@ select { background: var(--panel); color: var(--ink); border: 1px solid var(--li
   text-decoration-skip-ink: none;
 }
 .term-trigger:hover, .term-trigger:focus-visible { color: var(--nous); text-decoration-color: var(--nous); background: transparent; }
+/* This recovery row co-lists disclosures on wrapped lines. Reserve the
+   full hit height in the line box instead of overlapping the next term. */
+.recovery-purchases .term-trigger { min-height: 44px; margin-block: 0; padding-block: 0; }
 
 /* Readout figures themselves open the shared disclosure layer. */
 .readout-tip .readout-tip-trigger {

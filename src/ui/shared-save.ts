@@ -1,4 +1,4 @@
-import { deserialize, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY, type MigrationReport } from "../engine/save";
+import { deserialize, recoverLostSave, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY, type MigrationReport, type RecoveryReport } from "../engine/save";
 import type { GameState } from "../engine/types";
 
 export interface LoadedSave {
@@ -8,16 +8,24 @@ export interface LoadedSave {
   // this parse performed the one-time conversion — the fact the flow
   // explains at the save/import destination.
   migration?: MigrationReport;
+  // The explicit lost-money recovery (issue #494): present exactly when
+  // this parse performed the player's chosen recovery — the choice was
+  // explained before it applied, so this rides without a second surface.
+  recovered?: RecoveryReport;
 }
-export type ParsedSave = LoadedSave | { error: string; recoveryRequired?: boolean };
+// A failed parse: the recovery-required shape names the lost paths and —
+// from load() — carries the exact stored bytes, so the app can offer the
+// explicit recovery without reading the slot again.
+export type ParsedSave = LoadedSave | { error: string; recoveryRequired?: boolean; lost?: string[]; raw?: string };
 export type WriteOutcome = "written" | "failed" | "refused";
-export type SaveStorage = Pick<Storage, "getItem" | "setItem">;
+export type SaveStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 // Access stays lazy: denied localStorage access is a read/write failure,
 // rather than an exception while creating the instrument.
 export const browserSaveStorage: SaveStorage = {
   getItem: (key) => localStorage.getItem(key),
   setItem: (key, value) => localStorage.setItem(key, value),
+  removeItem: (key) => localStorage.removeItem(key),
 };
 
 // A private in-memory slot: the storage shape SharedSave reads and writes,
@@ -26,7 +34,11 @@ export const browserSaveStorage: SaveStorage = {
 // never read, resurrect, or overwrite the player's save (issue #456).
 export function memorySaveStorage(): SaveStorage {
   const files = new Map<string, string>();
-  return { getItem: (key) => files.get(key) ?? null, setItem: (key, next) => { files.set(key, next); } };
+  return {
+    getItem: (key) => files.get(key) ?? null,
+    setItem: (key, next) => { files.set(key, next); },
+    removeItem: (key) => { files.delete(key); },
+  };
 }
 
 function savedAtOf(raw: string): number | null {
@@ -54,7 +66,7 @@ export class SharedSave {
     const result = deserialize(text);
     if (result.error || !result.state) {
       return result.recoveryRequired
-        ? { error: result.error ?? "Explicit recovery required.", recoveryRequired: true }
+        ? { error: result.error ?? "Explicit recovery required.", recoveryRequired: true, lost: result.lost ?? [] }
         : { error: result.error ?? "unknown error" };
     }
     return result.migration
@@ -62,13 +74,32 @@ export class SharedSave {
       : { state: result.state, savedAt: savedAtOf(text) ?? this.now() };
   }
 
+  // The recovery choice's parse (issue #494): the same bytes through the
+  // recovery door. A recovery-required parse rides load()'s raw copy;
+  // an import carries its own text.
+  parseRecovered(text: string): ParsedSave {
+    const result = recoverLostSave(text);
+    if (result.error || !result.state) return { error: result.error ?? "The recovery could not read this save." };
+    return {
+      state: result.state,
+      savedAt: savedAtOf(text) ?? this.now(),
+      ...(result.recovered ? { recovered: result.recovered } : {}),
+    };
+  }
+
   load(): ParsedSave | null {
     try {
       const raw = this.storage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = this.parse(raw);
-      this.sourceProtected = "error" in parsed && parsed.recoveryRequired === true;
-      if (this.sourceProtected) return parsed;
+      if ("error" in parsed && parsed.recoveryRequired === true) {
+        // The offer's material: the exact stored bytes and the named
+        // paths, without a second slot read. The protection stands: no
+        // save — even forced — replaces these bytes.
+        this.sourceProtected = true;
+        return { ...parsed, raw, lost: parsed.lost ?? [] };
+      }
+      this.sourceProtected = false;
       if ("migration" in parsed && parsed.migration) {
         try {
           // This boundary needs today's exact bytes, not a first-seen
@@ -106,6 +137,49 @@ export class SharedSave {
       this.sourceProtected = false;
       return true;
     } catch {
+      return false;
+    }
+  }
+
+  // Recovery commits persistence before App adopts anything. Serialize
+  // first, retain the source, then write the recovered primary last.
+  // Storage.setItem is atomic per key: a failed final write leaves the
+  // primary intact, and only completed backup writes need undoing.
+  // Keep the source timestamp so a reload can still reconcile its gap
+  // if the normal post-adoption session save fails.
+  adoptRecovered(raw: string, state: GameState, savedAt: number): boolean {
+    const changed: { key: string; previous: string | null }[] = [];
+    try {
+      const text = serialize(state, savedAt);
+      const earlier = this.storage.getItem(ORIGINAL_SAVE_KEY);
+      const archive = this.storage.getItem(PRE_V13_ORIGINAL_SAVE_KEY);
+      const replace = (key: string, value: string, previous: string | null): void => {
+        if (previous === value) return;
+        this.storage.setItem(key, value);
+        changed.push({ key, previous });
+      };
+      if (earlier !== null && earlier !== raw) replace(PRE_V13_ORIGINAL_SAVE_KEY, earlier, archive);
+      replace(ORIGINAL_SAVE_KEY, raw, earlier);
+      this.storage.setItem(STORAGE_KEY, text);
+      this.sourceProtected = false;
+      this.knownSavedAt = savedAt;
+      return true;
+    } catch {
+      let rollbackFailed = false;
+      for (const { key, previous } of changed.reverse()) {
+        try {
+          if (previous === null) this.storage.removeItem(key);
+          else this.storage.setItem(key, previous);
+        } catch {
+          rollbackFailed = true;
+        }
+      }
+      if (rollbackFailed) {
+        // Storage can become unavailable between any two operations. Do
+        // not claim unchanged backups when even rollback was denied.
+        this.sourceProtected = true;
+        throw new Error("The recovered save could not be saved and backup restoration was denied. The primary save is unchanged; download the original before retrying.");
+      }
       return false;
     }
   }
