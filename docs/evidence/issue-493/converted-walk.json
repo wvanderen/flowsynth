@@ -1,0 +1,53 @@
+{
+  "ticket": "https://github.com/wvanderen/flowsynth/issues/493",
+  "what": "the migrated supplied-board position's scheduled continuation: the capture journey's own seed (banked Arete 6, one claimed frontier step) as v12 bytes, converted at the boundary, then the support policy's four-credited-hour walk",
+  "recordedAt": "2026-11-05T17:57:35.634Z",
+  "saveVersion": 13,
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 13,
+    "runnerVersion": 15,
+    "engineSource": "61f2fd4b"
+  },
+  "runId": "fresh-start-s42-e9205999-from-f821e2aa",
+  "recipe": {
+    "scenarioId": "fresh-start",
+    "seed": 42,
+    "policyId": "support",
+    "claimTarget": 2,
+    "schedule": {
+      "sessionsPerDay": 2,
+      "sessionMinutes": 60,
+      "breatherMinutes": 5,
+      "habitName": "Practice",
+      "goalMinutes": 25,
+      "startAt": 1767603600000,
+      "timeZone": "America/Chicago"
+    },
+    "budgetDays": 40,
+    "eras": 1,
+    "stopCreditedHours": 4,
+    "responseCurve": "shipped",
+    "overrides": {}
+  },
+  "migrationReport": {
+    "fromVersion": 12,
+    "modulesCleared": 35,
+    "eraEarnedCleared": 400000000000000,
+    "nousCleared": 8200000000,
+    "capacityCleared": 0,
+    "frontierCleared": 1,
+    "areteRetained": 6,
+    "lostFigures": []
+  },
+  "stop": {
+    "kind": "century",
+    "reason": "The declared 4-credited-hour mark reached at day 2 — 1 era(s) banked."
+  },
+  "claims": [
+    9
+  ],
+  "creditedHours": 4,
+  "days": 2,
+  "numbersFinite": true
+}

@@ -8,3 +8,6 @@ dist/
 .env*
 .DS_Store
 .dev/
+
+# A browser profile's local database, left by evidence captures.
+.localstorage

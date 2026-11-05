@@ -2734,6 +2734,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "import") renderImportModal(app, content);
   else if (kind === "reset") renderResetModal(app, content);
   else if (kind === "prestige") renderPrestigeModal(app, content);
+  else if (kind === "migration") renderMigrationModal(app, content);
   else if (kind === "grant") renderGrantModal(app, content);
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
@@ -3739,6 +3740,21 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
   wireClose(app);
 }
 
+// A text file's one download mechanism: the object-URL anchor dance the
+// export surfaces share (the save export, the migration's retained
+// original, the dev panel's run exports).
+function downloadText(text: string, filename: string): void {
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(url);
+}
+
 function renderExportModal(app: App, content: HTMLElement): void {
   // The export refusal (issue #486): a state whose figures cannot land in
   // a file refuses here, in the modal, without offering a download — and
@@ -3777,17 +3793,7 @@ function renderExportModal(app: App, content: HTMLElement): void {
       app.say("Save selected — copy it with ⌘C / Ctrl+C.");
     }
   });
-  app.listen(byId("export-download"), "click", () => {
-    const blob = new Blob([text], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = "flowsynth-save.json";
-    document.body.append(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
-  });
+  app.listen(byId("export-download"), "click", () => downloadText(text, "flowsynth-save.json"));
   wireClose(app);
 }
 
@@ -3814,6 +3820,52 @@ function renderImportModal(app: App, content: HTMLElement): void {
   });
   app.listen(byId("import-apply"), "click", () => {
     if (textarea) app.importText(textarea.value);
+  });
+  wireClose(app);
+}
+
+// The calibrated migration's one-time explanation (issue #493): the
+// save that just arrived rode the v12 → v13 translation, and this modal
+// is where the save/import flow accounts for it — what stood, what the
+// calibrated era reset moved, and where the retained original lives. The
+// figures ride the migration report; the copy carries no promise the
+// table doesn't back (docs/save-migration.md).
+function renderMigrationModal(app: App, content: HTMLElement): void {
+  const report = app.ui.migration;
+  if (!report) {
+    app.closeModal();
+    return;
+  }
+  const rows = [
+    ["Stands", `<strong class="mono">${formatNumber(report.areteRetained)}</strong> ${termTipHtml("Arete")} banked — ${termTipHtml("World layer", "World purchases")}, ${termTipHtml("Hone")} ranks, and your ${termTipHtml("Catalog")} unlocks stand`],
+    ["Stands", `Your collection and its board — designs, ${termTipHtml("merge tier", "tiers")}, placement, and every earned ${termTipHtml("module rolls", "roll")}`],
+    ["Stands", `Practice history, ${termTipHtml("Habit class", "class development")}, ${termTipHtml("goals")}, notes, and feats`],
+    ["Rebased", `<strong class="mono">${report.modulesCleared}</strong> module${report.modulesCleared === 1 ? "" : "s"} return${report.modulesCleared === 1 ? "s" : ""} to base — the tiers and placement stay`],
+    ["Rebased", `${termTipHtml("nous", "Nous")} opens at the opening grant, in place of <strong class="mono">${formatNumber(report.nousCleared)} ν</strong>`],
+    ["Rebased", `The era's <strong class="mono">${formatNumber(report.eraEarnedCleared)} ν</strong> earned rebased, purchased ${termTipHtml("Harmonic capacity", "capacity")} returns to one voice, ${termTipHtml("charge")} empties, and the ${termTipHtml("Enemy", "enemies")}' era state restores`],
+    ["Rebased", `The ${termTipHtml("Claimed frontier")} restarts at the calibrated curve — your next claims bank against what you earn from here`],
+  ];
+  if (report.bucketNousCleared > 0) {
+    rows.push(["Rebased", `<strong class="mono">${formatNumber(report.bucketNousCleared)} ν</strong> held from the old economy cleared — practice-time accounting stays`]);
+  }
+  content.innerHTML = `
+    ${modalTop("SAVE MIGRATION", "modal-title")}
+    <p class="lead">Your save predates the calibrated economy — it converted once, on load.</p>
+    <div class="folio-rows">${rows.map(([key, line]) => `<div class="folio-row"><span class="folio-key">${key}</span><span class="folio-main"><span>${line}</span></span></div>`).join("")}</div>
+    <p class="lead muted">Your pre-conversion save is retained on this device, byte for byte.</p>
+    <div class="modal-actions">
+      <button id="migration-original">Download the original</button>
+      <button id="migration-continue" class="primary">Continue</button>
+    </div>`;
+  wireTooltips(content, app.signal);
+  app.listen(byId("migration-continue"), "click", () => app.finishMigration());
+  app.listen(byId("migration-original"), "click", () => {
+    const text = app.retainedOriginal();
+    if (text === null) {
+      app.say("No retained original is available.");
+      return;
+    }
+    downloadText(text, "flowsynth-original.json");
   });
   wireClose(app);
 }
@@ -4363,16 +4415,7 @@ function renderDev(app: App, stage: ReturnType<typeof devStageBox> | null): void
         });
       } else if (key === "export-run") {
         try {
-          const artifact = app.devExportPlaythrough();
-          const blob = new Blob([artifact], { type: "application/json" });
-          const url = URL.createObjectURL(blob);
-          const anchor = document.createElement("a");
-          anchor.href = url;
-          anchor.download = `flowsynth-run-${app.devSelectedRunId ?? "run"}.json`;
-          document.body.append(anchor);
-          anchor.click();
-          anchor.remove();
-          URL.revokeObjectURL(url);
+          downloadText(app.devExportPlaythrough(), `flowsynth-run-${app.devSelectedRunId ?? "run"}.json`);
         } catch {
           // The named failure stands in the panel's note.
         }
