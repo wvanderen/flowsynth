@@ -1,0 +1,93 @@
+{
+  "ticket": "https://github.com/wvanderen/flowsynth/issues/494",
+  "what": "the recovered supplied-board position's scheduled continuation: the lost-money recovery's affordable route past the cleared frontier, four credited hours on the support policy",
+  "recordedAt": "2026-11-05T20:27:30.673Z",
+  "saveVersion": 13,
+  "runId": "fresh-start-s42-d9c1a8d9-from-7419ab3b",
+  "recipe": {
+    "scenarioId": "fresh-start",
+    "seed": 42,
+    "policyId": "support",
+    "claimTarget": 2,
+    "schedule": {
+      "sessionsPerDay": 2,
+      "sessionMinutes": 60,
+      "breatherMinutes": 5,
+      "habitName": "Practice",
+      "goalMinutes": 25,
+      "startAt": 1767603600000,
+      "timeZone": "America/Chicago"
+    },
+    "budgetDays": 40,
+    "eras": 1,
+    "stopCreditedHours": 4,
+    "responseCurve": "shipped",
+    "overrides": {}
+  },
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 13,
+    "runnerVersion": 15,
+    "engineSource": "f7fddf1e"
+  },
+  "recoveryReport": {
+    "fromVersion": 12,
+    "lost": [
+      "nous",
+      "totalEarned",
+      "eraEarned",
+      "arete",
+      "modules[0].invested",
+      "modules[1].invested",
+      "modules[2].invested",
+      "modules[3].invested",
+      "modules[4].invested",
+      "modules[5].invested",
+      "modules[6].invested",
+      "modules[7].invested",
+      "modules[8].invested",
+      "modules[9].invested",
+      "modules[10].invested",
+      "modules[11].invested",
+      "modules[12].invested",
+      "modules[13].invested",
+      "modules[14].invested",
+      "modules[15].invested",
+      "modules[16].invested",
+      "modules[17].invested",
+      "modules[18].invested",
+      "modules[19].invested",
+      "modules[20].invested",
+      "modules[21].invested",
+      "modules[22].invested",
+      "modules[23].invested",
+      "modules[24].invested",
+      "modules[25].invested",
+      "modules[26].invested",
+      "modules[27].invested",
+      "modules[28].invested",
+      "modules[29].invested",
+      "modules[30].invested",
+      "modules[31].invested",
+      "modules[32].invested",
+      "modules[33].invested",
+      "modules[34].invested",
+      "modules[35].invested"
+    ]
+  },
+  "stop": {
+    "kind": "century",
+    "reason": "The declared 4-credited-hour mark reached at day 2 — 1 era(s) banked."
+  },
+  "claims": [
+    6
+  ],
+  "creditedHours": 4,
+  "days": 2,
+  "numbersFinite": true,
+  "recordingEnvironment": {
+    "node": "v22.23.4",
+    "timeZone": "America/Chicago",
+    "utcOffsetMinutes": -360
+  }
+}

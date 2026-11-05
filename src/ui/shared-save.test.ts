@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SAVE_VERSION } from "../engine/constants";
-import { serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY } from "../engine/save";
+import { serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY } from "../engine/save";
 import { createInitialState } from "../engine/state";
 import { SharedSave, memorySaveStorage } from "./shared-save";
 
@@ -268,5 +268,86 @@ describe("review regressions: retain before replacement (#486)", () => {
     storage.setItem(ORIGINAL_SAVE_KEY, "original");
     expect(storage.getItem(STORAGE_KEY)).toBe("primary");
     expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe("original");
+  });
+});
+
+// The lost-money recovery's persistence seam (issue #494): the load that
+// detects lost money names the paths and carries the exact bytes, and
+// the explicit adoption retains those bytes as the new lineage's
+// original before anything replaces the slot.
+describe("the lost-money recovery's adoption (issue #494)", () => {
+  // A v12 save whose monetary figures serialized to null — the recovery
+  // class's own shape.
+  function lostMoneyText(): string {
+    const file = JSON.parse(serialize(createInitialState(), 750));
+    file.version = 12;
+    file.state.nous = null;
+    file.state.arete = null;
+    return JSON.stringify(file);
+  }
+
+  it("load names the lost paths and carries the exact raw bytes for the recovery choice", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage, () => 1000);
+    const parsed = owner.load();
+    expect(parsed).toHaveProperty("recoveryRequired", true);
+    expect((parsed as { lost?: string[] }).lost).toEqual(["nous", "arete"]);
+    expect((parsed as { raw?: string }).raw).toBe(raw);
+    // The protection stands: the owner cannot replace the source until
+    // the explicit adoption succeeds.
+    expect(owner.write(createInitialState(), 1000, true)).toBe("refused");
+    expect(storage.getItem(STORAGE_KEY)).toBe(raw);
+  });
+
+  it("adoptRecovered retains the exact source bytes as the original and lifts the protection", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    storage.setItem(STORAGE_KEY, raw);
+    const owner = new SharedSave(storage, () => 1000);
+    owner.load();
+    expect(owner.adoptRecovered(raw)).toBe(true);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+    // The recovered lineage writes normally: the slot takes the v13
+    // bytes, the original stands untouched.
+    expect(owner.write(createInitialState(), 1000, true)).toBe("written");
+    expect(JSON.parse(storage.getItem(STORAGE_KEY)!).version).toBe(SAVE_VERSION);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it("adoptRecovered archives an earlier lineage's backup before retaining the source", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    const earlier = serialize(createInitialState(), 100);
+    storage.setItem(STORAGE_KEY, raw);
+    storage.setItem(ORIGINAL_SAVE_KEY, earlier);
+    const owner = new SharedSave(storage, () => 1000);
+    owner.load();
+    expect(owner.adoptRecovered(raw)).toBe(true);
+    expect(storage.getItem(PRE_V13_ORIGINAL_SAVE_KEY)).toBe(earlier);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+  });
+
+  it("adoptRecovered denied keeps the protection: neither slot moves", () => {
+    const storage = memoryStorage();
+    const raw = lostMoneyText();
+    const earlier = serialize(createInitialState(), 100);
+    storage.setItem(STORAGE_KEY, raw);
+    storage.setItem(ORIGINAL_SAVE_KEY, earlier);
+    const denied = {
+      getItem: (key: string) => storage.getItem(key),
+      setItem: (key: string, value: string) => {
+        if (key === PRE_V13_ORIGINAL_SAVE_KEY) throw new Error("quota exceeded");
+        storage.setItem(key, value);
+      },
+    };
+    const owner = new SharedSave(denied, () => 1000);
+    owner.load();
+    expect(owner.adoptRecovered(raw)).toBe(false);
+    expect(storage.getItem(STORAGE_KEY)).toBe(raw);
+    expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(earlier);
+    // The protection stands: no save replaces the source.
+    expect(owner.write(createInitialState(), 1000, true)).toBe("refused");
   });
 });

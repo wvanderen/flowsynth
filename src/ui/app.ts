@@ -136,6 +136,7 @@ export type ModalKind =
   | "honesty"
   | "summary"
   | "migration"
+  | "recovery"
   | "rate"
   | "inventory"
   | "combine"
@@ -296,6 +297,11 @@ export interface UiState {
   // adoption converted the save, cleared when its explanation is read.
   // Never saved — the conversion itself is structural at the boundary.
   migration: MigrationReport | null;
+  // The lost-money recovery's pending offer (issue #494): the exact
+  // source bytes, the named lost paths, and where the save arrived. The
+  // choice applies at the save/import destination; cleared on apply or
+  // decline. Never saved — the offer re-presents until the choice.
+  recovery: { raw: string; lost: string[]; from: "boot" | "import"; error: string | null } | null;
   forgeFace: "modules" | "mutators";
   importText: string;
   importError: string | null;
@@ -509,6 +515,7 @@ export class App {
     combineOffer: null,
     modal: null,
     migration: null,
+    recovery: null,
     forgeFace: "modules",
     importText: "",
     importError: null,
@@ -618,6 +625,15 @@ export class App {
   private load(): LoadedSave | null {
     const parsed = this.sharedSave.load();
     if (parsed && "error" in parsed) {
+      // A lost-money source offers its recovery where the save arrived —
+      // the modal is the one surface (issue #494); no duplicate load
+      // notice rides beside it. The fresh instrument stands beneath until
+      // the choice, and the protected source cannot be replaced.
+      if (parsed.recoveryRequired) {
+        this.ui.recovery = { raw: parsed.raw ?? "", lost: parsed.lost ?? [], from: "boot", error: null };
+        this.ui.modal = "recovery";
+        return null;
+      }
       this.loadNotice = `Could not load the local save: ${parsed.error}`;
       return null;
     }
@@ -826,6 +842,7 @@ export class App {
     this.ui.app = null;
     this.ui.focusForm = null;
     this.ui.migration = null;
+    this.ui.recovery = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
     this.ui.chordHover = null;
@@ -857,6 +874,15 @@ export class App {
     if (this.released) return false;
     const parsed = this.sharedSave.parse(text);
     if ("error" in parsed) {
+      // A lost-money import offers its recovery at the same destination
+      // (issue #494): the choice is the modal's to carry, the import
+      // adopts nothing until it applies.
+      if (parsed.recoveryRequired) {
+        this.ui.recovery = { raw: text, lost: parsed.lost ?? [], from: "import", error: null };
+        this.ui.modal = "recovery";
+        this.render();
+        return false;
+      }
       this.ui.importError = parsed.error;
       this.render();
       return false;
@@ -2720,6 +2746,12 @@ export class App {
       this.finishMigration();
       return;
     }
+    // The recovery offer (issue #494) dismisses as its decline: the
+    // choice is real, and dismissing it keeps both slots intact.
+    if (this.ui.modal === "recovery") {
+      this.declineRecovery();
+      return;
+    }
     // Backdrop click or Esc on the loud summary counts as its dismissal, so
     // an unseen summary never silently stays unseen.
     if (this.ui.modal === "summary") {
@@ -2756,6 +2788,65 @@ export class App {
     this.ui.migration = null;
     this.ui.modal = this.state.mode === "upgrade" && this.state.summary && !this.state.summary.seen ? "summary" : null;
     this.render();
+    this.restoreModalInvoker();
+  }
+
+  // The recovery choice's landing (issue #494): the offer explained the
+  // unavailable figures, the retained development, and the reset; this
+  // applies it — the exact source bytes retained as the lineage's
+  // original first, then the recovered state adopted like any load.
+  // Cancel and failure never reach here: the slots stand, the source
+  // stays protected, the offer explains what happened.
+  applyRecovery(): void {
+    const offer = this.ui.recovery;
+    if (!offer || this.released) return;
+    let parsed: ReturnType<SharedSave["parseRecovered"]>;
+    try {
+      parsed = this.sharedSave.parseRecovered(offer.raw);
+    } catch (error) {
+      this.ui.recovery = { ...offer, error: `The recovery could not read this save: ${error instanceof Error ? error.message : String(error)}` };
+      this.render();
+      return;
+    }
+    if ("error" in parsed) {
+      this.ui.recovery = { ...offer, error: parsed.error };
+      this.render();
+      return;
+    }
+    if (!this.sharedSave.adoptRecovered(offer.raw)) {
+      this.ui.recovery = { ...offer, error: "The original save could not be retained. Nothing was recovered." };
+      this.render();
+      return;
+    }
+    this.clearTransientUi();
+    this.ui.modal = null;
+    this.ui.importError = null;
+    this.resumeFromSave(parsed);
+    this.say("Save recovered — the economy opens calibrated; your practice record stands.");
+    this.save(Date.now(), true);
+    this.render();
+    if (this.ui.modal === null) this.restoreModalInvoker();
+  }
+
+  // The choice's other half (issue #494): declining adopts nothing, the
+  // slots stand, and the offer retires — the boot's fresh instrument
+  // plays on, and the next boot offers the same choice. An import's
+  // decline hands the screen back to the import walk, its message
+  // standing.
+  declineRecovery(): void {
+    const offer = this.ui.recovery;
+    if (!offer) return;
+    this.ui.recovery = null;
+    if (offer.from === "import") {
+      this.ui.modal = "import";
+      this.ui.importError = "This save needs explicit recovery: its monetary figures are unreadable. The original file is unchanged.";
+      this.render();
+      this.restoreModalInvoker();
+      return;
+    }
+    this.ui.modal = null;
+    this.render();
+    this.say("Your original save stays on this device, unchanged — recovery is offered again next time.");
     this.restoreModalInvoker();
   }
 

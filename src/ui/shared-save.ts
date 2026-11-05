@@ -1,4 +1,4 @@
-import { deserialize, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY, type MigrationReport } from "../engine/save";
+import { deserialize, recoverLostSave, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY, type MigrationReport, type RecoveryReport } from "../engine/save";
 import type { GameState } from "../engine/types";
 
 export interface LoadedSave {
@@ -8,8 +8,15 @@ export interface LoadedSave {
   // this parse performed the one-time conversion — the fact the flow
   // explains at the save/import destination.
   migration?: MigrationReport;
+  // The explicit lost-money recovery (issue #494): present exactly when
+  // this parse performed the player's chosen recovery — the choice was
+  // explained before it applied, so this rides without a second surface.
+  recovered?: RecoveryReport;
 }
-export type ParsedSave = LoadedSave | { error: string; recoveryRequired?: boolean };
+// A failed parse: the recovery-required shape names the lost paths and —
+// from load() — carries the exact stored bytes, so the app can offer the
+// explicit recovery without reading the slot again.
+export type ParsedSave = LoadedSave | { error: string; recoveryRequired?: boolean; lost?: string[]; raw?: string };
 export type WriteOutcome = "written" | "failed" | "refused";
 export type SaveStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -54,7 +61,7 @@ export class SharedSave {
     const result = deserialize(text);
     if (result.error || !result.state) {
       return result.recoveryRequired
-        ? { error: result.error ?? "Explicit recovery required.", recoveryRequired: true }
+        ? { error: result.error ?? "Explicit recovery required.", recoveryRequired: true, lost: result.lost ?? [] }
         : { error: result.error ?? "unknown error" };
     }
     return result.migration
@@ -62,13 +69,32 @@ export class SharedSave {
       : { state: result.state, savedAt: savedAtOf(text) ?? this.now() };
   }
 
+  // The recovery choice's parse (issue #494): the same bytes through the
+  // recovery door. A recovery-required parse rides load()'s raw copy;
+  // an import carries its own text.
+  parseRecovered(text: string): ParsedSave {
+    const result = recoverLostSave(text);
+    if (result.error || !result.state) return { error: result.error ?? "The recovery could not read this save." };
+    return {
+      state: result.state,
+      savedAt: savedAtOf(text) ?? this.now(),
+      ...(result.recovered ? { recovered: result.recovered } : {}),
+    };
+  }
+
   load(): ParsedSave | null {
     try {
       const raw = this.storage.getItem(STORAGE_KEY);
       if (!raw) return null;
       const parsed = this.parse(raw);
-      this.sourceProtected = "error" in parsed && parsed.recoveryRequired === true;
-      if (this.sourceProtected) return parsed;
+      if ("error" in parsed && parsed.recoveryRequired === true) {
+        // The offer's material: the exact stored bytes and the named
+        // paths, without a second slot read. The protection stands: no
+        // save — even forced — replaces these bytes.
+        this.sourceProtected = true;
+        return { ...parsed, raw, lost: parsed.lost ?? [] };
+      }
+      this.sourceProtected = false;
       if ("migration" in parsed && parsed.migration) {
         try {
           // This boundary needs today's exact bytes, not a first-seen
@@ -108,6 +134,23 @@ export class SharedSave {
     } catch {
       return false;
     }
+  }
+
+  // The recovery choice's adoption (issue #494): the exact lost bytes
+  // become the new lineage's retained original — an earlier lineage's
+  // backup archives first, the migration boundary's own dance — and the
+  // write protection lifts so the recovered state can save. Denial keeps
+  // the protection: nothing was adopted, nothing replaced.
+  adoptRecovered(raw: string): boolean {
+    try {
+      const earlier = this.storage.getItem(ORIGINAL_SAVE_KEY);
+      if (earlier !== null && earlier !== raw) {
+        this.storage.setItem(PRE_V13_ORIGINAL_SAVE_KEY, earlier);
+      }
+    } catch {
+      return false;
+    }
+    return this.retain(raw);
   }
 
   // The retained lineage's exact source bytes (issue #493): what the

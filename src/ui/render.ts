@@ -2698,7 +2698,13 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
                   // #152). The terms are read fresh on rebuild.
                   : kind === "combine"
                     ? [app.ui.combineOffer?.dragId ?? null, app.ui.combineOffer?.targetId ?? null]
-                    : null;
+                    // The recovery offer's identity (issue #494): the named
+                    // paths, the arrival door, and any standing failure
+                    // line — the raw bytes never change under a standing
+                    // offer, and a clock tick must not rebuild the dialog.
+                    : kind === "recovery"
+                      ? [app.ui.recovery?.lost ?? null, app.ui.recovery?.from ?? null, app.ui.recovery?.error ?? null]
+                      : null;
   // The Notes modal's key (issue #332) is its own shape: face, session
   // presence, and the stream — never the mode or the pool. A pause or
   // resume, a boundary, an overrun must never rebuild the dialog out from
@@ -2735,6 +2741,7 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   else if (kind === "reset") renderResetModal(app, content);
   else if (kind === "prestige") renderPrestigeModal(app, content);
   else if (kind === "migration") renderMigrationModal(app, content);
+  else if (kind === "recovery") renderRecoveryModal(app, content);
   else if (kind === "grant") renderGrantModal(app, content);
   else if (kind === "honesty") renderHonestyModal(app, content);
   else if (kind === "summary") renderSummaryModal(app, content);
@@ -3866,6 +3873,46 @@ function renderMigrationModal(app: App, content: HTMLElement): void {
       return;
     }
     downloadText(text, "flowsynth-original.json");
+  });
+  wireClose(app);
+}
+
+// The lost-money recovery's offer (issue #494): the save that cannot load
+// presents its choice where it arrived — boot or import. The folio names
+// the unavailable figures verbatim (the report's own paths, never a
+// reconstructed balance), what stands, what the calibrated reset moves,
+// and the original's backup — all before the choice applies. Declining
+// and dismissal keep both slots; the next boot offers again.
+function renderRecoveryModal(app: App, content: HTMLElement): void {
+  const offer = app.ui.recovery;
+  if (!offer) {
+    app.closeModal();
+    return;
+  }
+  const rows = [
+    ["Unavailable", `The monetary figures below are unreadable — they ride the retained original only, and recovery starts them at their calibrated values, never invented ones`],
+    ["Stands", `Practice history, ${termTipHtml("Habit class", "class development")}, ${termTipHtml("goals")}, notes, and feats`],
+    ["Stands", `Your collection and its board — designs, ${termTipHtml("merge tier", "tiers")}, placement, and every earned ${termTipHtml("module rolls", "roll")}`],
+    ["Stands", `Memorized purchases — ${termTipHtml("Catalog")} unlocks, the ${termTipHtml("Arete")}-bought World purchases, the Warp Beam's rungs`],
+    ["Rebases", `The economy opens calibrated: levels return to base, ${termTipHtml("nous")} at the opening grant, purchased ${termTipHtml("Harmonic capacity", "capacity")} to one voice, every ${termTipHtml("Enemy", "enemies")}' era state restores, and the ${termTipHtml("Claimed frontier")} clears — claims bank against what you earn from here`],
+    ["Original", `Your save stays on this device, byte for byte`],
+  ] as const;
+  content.innerHTML = `
+    ${modalTop("SAVE RECOVERY", "modal-title")}
+    <p class="lead">This save's monetary figures are unavailable — it cannot load as it stands. Recovery is the one way it plays.</p>
+    <div class="folio-rows">${rows.map(([key, line]) => `<div class="folio-row"><span class="folio-key">${key}</span><span class="folio-main"><span>${line}</span></span></div>`).join("")}</div>
+    <p class="lead muted mono">${offer.lost.join(", ")}</p>
+    ${offer.error ? `<p class="import-error">${offer.error}</p>` : ""}
+    <div class="modal-actions">
+      <button id="recovery-original">Download the original</button>
+      <button id="recovery-decline">Not now</button>
+      <button id="recovery-apply" class="primary">Recover</button>
+    </div>`;
+  wireTooltips(content, app.signal);
+  app.listen(byId("recovery-apply"), "click", () => app.applyRecovery());
+  app.listen(byId("recovery-decline"), "click", () => app.declineRecovery());
+  app.listen(byId("recovery-original"), "click", () => {
+    downloadText(offer.raw, "flowsynth-original.json");
   });
   wireClose(app);
 }
