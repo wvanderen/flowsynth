@@ -6,10 +6,10 @@ import { createHabit, selectHabit } from "./habits";
 import { BALANCE, SAVE_VERSION } from "./constants";
 import { longGoalCost, mutatorSlotCost } from "./economy";
 import { activeGoals, accrueGoalProgress, createGoal, deleteGoal, editGoal, retainGoalChoice, rollGoalOccurrences } from "./goals";
-import { deserialize, serialize, SaveRefusedError, GOAL_CAPACITY_REFUND_CAP } from "./save";
-import { freshWorld } from "./state";
+import { deserialize, serialize, SaveRefusedError, GOAL_CAPACITY_REFUND_CAP, type MigrationReport } from "./save";
+import { freshEnemyStates, freshWorld, openingGrant } from "./state";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
-import { ARETE_HORIZON } from "./accumulator";
+import { ARETE_HORIZON, bankableClaimOf, frontierEntitlement, pendingClaimOf } from "./accumulator";
 import { writeNote } from "./notes";
 import { hex } from "./hex";
 import type { GameState, Habit } from "./types";
@@ -69,7 +69,7 @@ describe("persistence", () => {
   it("saves carry the current version", () => {
     const parsed = JSON.parse(serialize(fresh()));
     expect(parsed.version).toBe(SAVE_VERSION);
-    expect(parsed.version).toBe(12);
+    expect(parsed.version).toBe(13);
   });
 
   it("the load boundary strips a run-candidates key — an ordinary save never reads a comparison curve (issue #487)", () => {
@@ -325,7 +325,7 @@ describe("the version gate (ADR-0017's pattern)", () => {
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9,"state":{"mode":"weird"}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":13,"state":{}}').error).toMatch(/newer than this build/i);
+    expect(deserialize('{"app":"flowsynth","version":14,"state":{}}').error).toMatch(/newer than this build/i);
   });
 
   it("exported saves load unchanged", () => {
@@ -388,7 +388,11 @@ describe("the v10 boundary (issue #423)", () => {
     expect(state.habits[0]!.classes.engineer).toMatchObject({ experience: 0, level: 0, points: 0 });
     expect(state.habits[0]!.classes.engineer!.rollMeter).toEqual({ progress: 0, earned: 0 });
     expect(state.goalFuel).toBe(0);
-    expect(state.modules.find((m) => m.id === gen.id)!.reserve).toBe(60);
+    // The reserve stood as stored through the v10 boundary; the chained
+    // v13 translation then took it with the era reset (issue #493) — the
+    // reserve is era charge state, and the calibrated economy opens with
+    // none banked.
+    expect(state.modules.find((m) => m.id === gen.id)!.reserve).toBe(0);
     // Nothing retired, nothing paid: the balances stand.
     expect(state.arete).toBe(0);
     expect(state.nous).toBe(fresh().nous);
@@ -439,6 +443,12 @@ describe("the v10 → v11 migration (issue #427)", () => {
     expect(result.error).toBeUndefined();
     return result.state!;
   };
+  // The full load result — the chained translation's report included.
+  const loadResult = (text = fixtureText) => {
+    const result = deserialize(text, stubRng(new Array(32).fill(0.4)));
+    expect(result.error).toBeUndefined();
+    return { state: result.state!, migration: result.migration! };
+  };
   // A fixture variant with named JSON edits — the file stays the oracle,
   // the edit names the difference.
   const withEdits = (edit: (state: Record<string, unknown>) => void): string => {
@@ -466,29 +476,38 @@ describe("the v10 → v11 migration (issue #427)", () => {
   });
 
   it("refunds the retired goal-slot economy exactly through the long-goal ladder, one whole-nous refund", () => {
-    const state = loadFixture();
+    const { state, migration } = loadResult();
+    // The chained contract (issue #493): the refund lands, then the era
+    // reset takes the whole balance onto the calibrated opening. The
+    // translation's cleared figure is what remains observable — and it
+    // carries the refund ladder exactly: the stored 150 plus the two
+    // rungs' long-goal costs.
     const expected = 150 + longGoalCost(0) + longGoalCost(1);
-    expect(state.nous).toBe(expected);
-    expect(Number.isInteger(state.nous)).toBe(true);
+    expect(migration!.nousCleared).toBe(expected);
+    expect(Number.isInteger(migration!.nousCleared)).toBe(true);
+    expect(state.nous).toBe(openingGrant());
     // The retired count retires with its economy.
     expect(state.goalCapacityBought).toBe(0);
   });
 
   it("a corrupt goal-capacity figure refunds the ladder's plausible head and never spins", () => {
-    const state = loadFixture(
+    const { state, migration } = loadResult(
       withEdits((s) => {
         s.goalCapacityBought = 1e9;
       }),
     );
     let expected = 150;
     for (let bought = 0; bought < GOAL_CAPACITY_REFUND_CAP; bought++) expected += longGoalCost(bought);
-    expect(state.nous).toBe(expected);
+    // The clamp bounds the walk (a corrupt figure can never spin the
+    // chained migration) and the cleared figure carries the clamped sum.
+    expect(migration.nousCleared).toBe(expected);
+    expect(state.nous).toBe(openingGrant());
     expect(state.goalCapacityBought).toBe(0);
   });
 
   it("a retired purchase never owned refunds nothing, and zero flow progress pays nothing", () => {
-    const baseline = loadFixture();
-    const state = loadFixture(
+    const baseline = loadResult();
+    const { state, migration } = loadResult(
       withEdits((s) => {
         s.catalogEntryOwned = false;
         s.rollPoolJoined = false;
@@ -498,9 +517,12 @@ describe("the v10 → v11 migration (issue #427)", () => {
       }),
     );
     expect(state.arete).toBe(
-      baseline.arete - BALANCE.catalogEntryCost - (mutatorSlotCost(1) + mutatorSlotCost(2)) - BALANCE.rollPoolJoinCost - BALANCE.horizonBreakCost,
+      baseline.state.arete - BALANCE.catalogEntryCost - (mutatorSlotCost(1) + mutatorSlotCost(2)) - BALANCE.rollPoolJoinCost - BALANCE.horizonBreakCost,
     );
-    expect(state.nous).toBe(baseline.nous - longGoalCost(0) - longGoalCost(1));
+    // Owning none of the retired economy, the chained translation clears
+    // exactly the stored balance — no goal-slot refund rides the report.
+    expect(migration.nousCleared).toBe(baseline.migration.nousCleared! - longGoalCost(0) - longGoalCost(1));
+    expect(state.nous).toBe(openingGrant());
     expect(state.bankedRolls).toHaveLength(1);
   });
 
@@ -737,5 +759,182 @@ describe("the v11 → v12 migration (issue #445)", () => {
     expect(serialize(twice, 1_000)).toBe(text);
     expect(twice.habits[0]!.color).toBe("amber");
     expect(twice.goals[0]!.pendingChoice).toBeUndefined();
+  });
+});
+
+// ── The v12 → v13 migration (issue #493, the calibrated economy) ───────
+//
+// One version-gated translation at the save boundary: every save written
+// before the calibrated economy converts exactly once. The era side takes
+// the shipped prestige rule's own reset (the collection-reset grounding in
+// the century record); the retention side keeps everything the calibration
+// never re-prices. The published table lives in docs/save-migration.md —
+// these cases assert the behavior, not the prose.
+
+// Fabricate a v12 save from a live state: force the version. The v13
+// transition changes no field shapes — the calibrated economy reads the
+// same state schema — so the bytes a v12 writer produced for this state
+// are exactly what this helper writes.
+function asV12(state: GameState, savedAt = 1_000): string {
+  const file = JSON.parse(serialize(state, savedAt));
+  file.version = 12;
+  return JSON.stringify(file);
+}
+
+describe("the v12 → v13 migration (issue #493)", () => {
+  // A finite overpowered save in the parent's shape: runaway levels, a
+  // deep era, purchased capacity, live charge, enemies mid-era, one banked
+  // frontier step — every figure representable.
+  function overpowered(): GameState {
+    const s = fresh();
+    const runaway = give(s, "additive", hex(1, 0));
+    runaway.level = 1504;
+    runaway.invested = 1.6e308;
+    runaway.reserve = 40;
+    const tiered = give(s, "blaster", hex(0, 1));
+    tiered.tier = 3;
+    tiered.level = 900;
+    s.nous = 8.2e9;
+    s.totalEarned = 4.5e11;
+    s.eraEarned = 4e14;
+    s.capacityBought = 3;
+    s.prestiges = 1;
+    s.arete = 4;
+    s.world.frontier = 1;
+    s.world.starterWeaponGranted = true;
+    s.world.columns.push({ id: "col1", pos: null });
+    s.world.weapons.push({ id: "w1", type: "chargeBlade", pos: null, store: 25, cooldown: 2, targetPriority: [] });
+    s.world.hone.chargeBlade = 2;
+    const enemies = freshEnemyStates();
+    const first = Object.keys(enemies)[0]!;
+    enemies[first] = { discovered: true, hp: 0 };
+    s.world.enemies = enemies;
+    return s;
+  }
+
+  it("a finite overpowered save lands on the calibrated economy: the era resets, the collection and its board stand", () => {
+    const before = overpowered();
+    const loaded = deserialize(asV12(before));
+    expect(loaded.error).toBeUndefined();
+    const state = loaded.state!;
+    // The era reset (the shipped prestige rule's own list): levels and
+    // investment to base, nous to the opening grant, the era measure
+    // rebased, purchased capacity returned to one voice, reserves and
+    // stored combat charge emptied, every enemy restored, the claimed
+    // frontier translated onto the calibrated curve's ledger.
+    const runaway = state.modules.find((m) => m.type === "additive")!;
+    expect(runaway.level).toBe(0);
+    expect(runaway.invested).toBe(0);
+    expect(runaway.reserve).toBe(0);
+    expect(state.nous).toBe(openingGrant());
+    expect(state.eraEarned).toBe(0);
+    expect(state.capacityBought).toBe(0);
+    expect(state.world.enemies).toEqual(freshEnemyStates());
+    expect(state.world.weapons[0]).toMatchObject({ store: 0, cooldown: 0 });
+    expect(state.world.frontier).toBe(0);
+    // The retention side: lifetime truths, the collection with its tiers
+    // and placement, earned rolls, purchases, and the life record stand.
+    expect(state.totalEarned).toBe(4.5e11);
+    expect(state.modules.find((m) => m.type === "blaster")!.tier).toBe(3);
+    expect(state.cells).toEqual(before.cells);
+    expect(state.cellsBought).toBe(before.cellsBought);
+    expect(state.arete).toBe(4);
+    expect(state.prestiges).toBe(1);
+    expect(state.capacityCeilings).toBe(before.capacityCeilings);
+    expect(state.capacityDiscounts).toBe(before.capacityDiscounts);
+    expect(state.world.starterWeaponGranted).toBe(true);
+    expect(state.world.columns.map((c) => c.id)).toEqual(["col1"]);
+    expect(state.world.hone.chargeBlade).toBe(2);
+    expect(loaded.migration).toBeDefined();
+  });
+
+  it("the conversion grants no entitlement: no Arete mints, no instant claim waits, no roll banks", () => {
+    const before = overpowered();
+    before.bankedRolls.push({
+      id: "held",
+      candidates: [
+        { id: "c1", type: "additive", tier: 0 },
+        { id: "c2", type: "spacer", tier: 2 },
+        { id: "c3", type: "infusor", tier: 0 },
+      ],
+    });
+    const state = deserialize(asV12(before)).state!;
+    expect(state.arete).toBe(4);
+    expect(bankableClaimOf(state)).toBe(0);
+    expect(state.bankedRolls).toHaveLength(1);
+    expect(state.bankedMutatorRolls).toHaveLength(0);
+  });
+
+  it("future claims bank against newly earned depth alone — no historical depth re-pays, no debt strands", () => {
+    // The runaway save's frontier (1) does not bank against the calibrated
+    // curve: re-earning the entry depth banks the curve's full entry claim,
+    // and the route past the translated frontier is the calibrated ladder
+    // itself — reachable where the un-translated position's was not.
+    const state = deserialize(asV12(overpowered())).state!;
+    state.eraEarned = BALANCE.world.entryNous;
+    expect(pendingClaimOf(state)).toBeCloseTo(frontierEntitlement(BALANCE.world.entryNous), 10);
+    expect(Math.floor(pendingClaimOf(state))).toBe(2);
+  });
+
+  it("the report states what moved, and names figures the old save could no longer represent", () => {
+    const report = deserialize(asV12(overpowered())).migration!;
+    const expected: MigrationReport = {
+      fromVersion: 12,
+      modulesCleared: 2,
+      eraEarnedCleared: 4e14,
+      nousCleared: 8.2e9,
+      capacityCleared: 3,
+      frontierCleared: 1,
+      areteRetained: 4,
+      lostFigures: [],
+    };
+    expect(report).toEqual(expected);
+    // A save whose runaway had already destroyed a figure: the field is
+    // distinguishable as lost — never silently read as zero — and the
+    // working state still lands on the calibrated opening.
+    const file = JSON.parse(asV12(overpowered()));
+    file.state.nous = null;
+    file.state.arete = "lost";
+    const lost = deserialize(JSON.stringify(file));
+    expect(lost.migration!.nousCleared).toBeNull();
+    expect(lost.migration!.areteRetained).toBeNull();
+    expect(lost.migration!.lostFigures).toEqual(["nous", "arete"]);
+    expect(lost.state!.nous).toBe(openingGrant());
+    expect(lost.state!.arete).toBe(0);
+  });
+
+  it("the converted save reloads as v13 and nothing runs again", () => {
+    const first = deserialize(asV12(overpowered())).state!;
+    const text = serialize(first, 1_000);
+    const second = deserialize(text);
+    expect(second.error).toBeUndefined();
+    expect(second.migration).toBeUndefined();
+    expect(serialize(second.state!, 1_000)).toBe(text);
+  });
+
+  it("the whole chain runs once: the v10 fixture lands converted, the earlier steps intact", () => {
+    const loaded = deserialize(JSON.stringify(v10MigrationFixture), stubRng(new Array(32).fill(0.4)));
+    const state = loaded.state!;
+    // The earlier conversions stand (the Engineer pair the v10 step wrote),
+    // and the calibrated translation ran exactly once at the end.
+    expect(state.habits[0]!.classes.engineer!.experience).toBeGreaterThan(0);
+    expect(state.modules.every((m) => m.level === 0 && m.invested === 0)).toBe(true);
+    expect(state.eraEarned).toBe(0);
+    expect(state.world.frontier).toBe(0);
+    expect(loaded.migration!.fromVersion).toBe(10);
+    // The converted chain output reloads as v13, untouched.
+    const text = serialize(state, 1_000);
+    expect(deserialize(text).migration).toBeUndefined();
+  });
+
+  it("a mid-flow save converts and keeps its running session", () => {
+    const s = overpowered();
+    startSession(s, null);
+    applyGap(s, 600, "away", 0);
+    const state = deserialize(asV12(s)).state!;
+    expect(state.mode).toBe("flow");
+    expect(state.session).not.toBeNull();
+    expect(state.nous).toBe(openingGrant());
+    expect(state.eraEarned).toBe(0);
   });
 });

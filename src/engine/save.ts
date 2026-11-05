@@ -1,4 +1,4 @@
-import { createInitialState, createModule, normalizeChordDiscovery, normalizeModules, normalizeWorld } from "./state";
+import { createInitialState, createModule, freshEnemyStates, normalizeChordDiscovery, normalizeModules, normalizeWorld, openingGrant } from "./state";
 import { classDefOf, freshClassPair, normalizeHabitClasses } from "./classes";
 import { activeGoals, normalizeGoals } from "./goals";
 import { DEFAULT_HABIT_COLOR, normalizeHabitColor } from "./habits";
@@ -17,6 +17,29 @@ export interface SaveFile {
 export interface LoadResult {
   state?: GameState;
   error?: string;
+  // The calibrated-economy translation (issue #493): present exactly when
+  // this load performed the v12 → v13 conversion — the one-time fact the
+  // save/import flow explains. A v13 save reloads without it.
+  migration?: MigrationReport;
+}
+
+// What the calibrated translation moved, stated as figures the save/import
+// flow can explain (issue #493). The "cleared" figures read the state as
+// the translation received it — a chained save's earlier steps' payouts
+// included — so the report names the balance the era reset actually
+// replaced. A `null` figure records that the stored value was not a
+// finite number — the runaway class the parent save carried — and is
+// never silently read as zero; the field name rides `lostFigures` and the
+// retained original keeps the bytes.
+export interface MigrationReport {
+  fromVersion: number;
+  modulesCleared: number;
+  eraEarnedCleared: number | null;
+  nousCleared: number | null;
+  capacityCleared: number;
+  frontierCleared: number | null;
+  areteRetained: number | null;
+  lostFigures: string[];
 }
 
 // The serialization refusal (issue #486): JSON.stringify silently writes
@@ -61,9 +84,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 // import path for rejected versions. The explicit steps this build
 // carries run for their own versions alone: `migrateV10ToV11` (the
 // retired purchases' refunds, the Engineer conversion, the flow meter's
-// final payout, the goal retirement — issue #427) and `migrateV11ToV12`
+// final payout, the goal retirement — issue #427), `migrateV11ToV12`
 // (the one-goal narrowing's habit colors and pending choices — issue
-// #445), each writing the next schema once so a re-run cannot exist.
+// #445), and `migrateV12ToV13` (the calibrated-economy translation —
+// issue #493), each writing the next schema once so a re-run cannot
+// exist.
 export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   let parsed: unknown;
   try {
@@ -320,13 +345,16 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   }
   // The one-step migrations (ADR-0017's pattern): each runs for its own
   // version alone — a v10 save passes through the v11 conversion before
-  // the one-goal narrowing, a v11 save skips straight to it — and the
-  // schema each writes is what the next load reads, so no conversion can
-  // ever run twice. The v12 normalization (the goals' live slices and the
-  // per-goal palette key's drop) follows both, since the narrowing's
-  // transfer reads the raw save's goal colors first.
+  // the one-goal narrowing, a v11 save skips straight to it, a v12 save
+  // lands on the calibrated translation alone — and the schema each
+  // writes is what the next load reads, so no conversion can ever run
+  // twice. The v12 normalization (the goals' live slices and the per-goal
+  // palette key's drop) follows the first two, since the narrowing's
+  // transfer reads the raw save's goal colors first; the v13 translation
+  // runs last, over the normalized shape.
   if (parsed.version < 11) migrateV10ToV11(raw, merged, rng);
-  if (parsed.version < SAVE_VERSION) migrateV11ToV12(merged);
+  if (parsed.version < 12) migrateV11ToV12(merged);
+  const migration = parsed.version < SAVE_VERSION ? migrateV12ToV13(raw, merged, parsed.version) : undefined;
   // The goals' live-share surface (ADR-0047, wave 5) lenient-defaults the
   // same way: a goal saved before the generators wave carries no live
   // slice, which reads — honestly — as a manual-only history that banks
@@ -354,7 +382,7 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   // cannot make shipped play read a comparison curve.
   delete (merged as unknown as Record<string, unknown>).candidates;
   merged.purchased = { ...fresh.purchased, ...merged.purchased };
-  return { state: merged };
+  return migration ? { state: merged, migration } : { state: merged };
 }
 
 // ── The v10 → v11 migration (issue #427, ADR-0017's one step) ───────────
@@ -531,6 +559,131 @@ function migrateV11ToV12(merged: GameState): void {
     habit.color = DEFAULT_HABIT_COLOR;
     for (const goal of own) goal.pendingChoice = true;
   }
+}
+
+// ── The v12 → v13 migration (issue #493, the calibrated economy) ──────
+//
+// The transition the parent rebalance gated on the frozen century
+// baseline (ADR-0079, docs/century-calibration-baseline.json): every save
+// written before the calibrated economy converts onto it exactly once,
+// at this boundary. The full field-by-field table lives in
+// docs/save-migration.md; the engine carries its two halves:
+//
+// The era half takes the shipped prestige rule's own reset — the shape
+// the century record's collection-reset fixture grounds (levels and
+// investment to base, nous to the opening grant, the era measure
+// rebased, purchased capacity returned to one voice, reserves and stored
+// combat charge emptied, every enemy restored). The retention half keeps
+// everything the calibration never re-prices: the collection (types,
+// tiers, secondaries) with its board and paid gates, the life record and
+// practice history, class development, earned rolls, and every purchase
+// — Catalog unlocks, the Arete offerings, the Warp Beam's rungs, scrap
+// and the Draft Loom, the Mutator layer — and the World's purchases.
+//
+// The three figures the ticket determines together (banked Arete, World
+// purchases, claimed frontier) resolve as: Arete and World purchases
+// stand as carried — currency and what it bought, neither fabricated nor
+// refunded; the claimed frontier clears to zero. The frontier is the
+// claim curve's own ledger — the entitlement already banked against —
+// and the calibration re-priced that curve (the slope's century
+// recalibration): a frontier carried from the retired pricing can only
+// bank against depths the calibrated economy cannot re-reach, which is
+// exactly the stranding the ticket names a failed recovery. Cleared, it
+// duplicates nothing: the working state grants no Arete and leaves no
+// instant claim (both asserted in save.test.ts), so every future claim
+// banks against newly earned calibrated depth alone, and the historical
+// payout lives on in the retained balance and purchases.
+//
+// Lost figures: a scalar the runaway era left nonfinite (the parent
+// save's null monetary fields) is never silently read as zero. The
+// report names it in `lostFigures`, the working state takes its
+// calibrated value, and the retained original bytes keep the history —
+// the distinction the recovery slice (issue #494) builds on.
+//
+// Idempotence is structural: the version gate routes a v12 save (or a
+// v10/v11 save through its chain) here alone, and the save this pass
+// writes is v13 — the schema every later load reads untouched.
+function migrateV12ToV13(
+  raw: Partial<GameState> & Record<string, unknown>,
+  merged: GameState,
+  fromVersion: number,
+): MigrationReport {
+  const lostFigures: string[] = [];
+  const storedFigure = (value: unknown): number | null =>
+    typeof value === "number" && Number.isFinite(value) ? value : null;
+
+  // The era reset, per the table's reset half. Module figures read the
+  // merged list (positions, tiers, and secondaries are untouched); a
+  // stored invested figure the runaway left nonfinite rides lostFigures —
+  // its reset is the calibration's own, not a silent repair.
+  let modulesCleared = 0;
+  let investedLost = false;
+  for (const module of merged.modules) {
+    if ((module.level !== 0 && module.level !== null && module.level !== undefined) || module.invested) modulesCleared++;
+    if (module.invested !== undefined && module.invested !== null && !Number.isFinite(module.invested)) investedLost = true;
+    module.level = 0;
+    module.invested = 0;
+    module.reserve = 0;
+  }
+  if (investedLost) lostFigures.push("invested");
+
+  const eraEarnedCleared = storedFigure(merged.eraEarned);
+  if (eraEarnedCleared === null) lostFigures.push("eraEarned");
+  merged.eraEarned = 0;
+
+  const nousCleared = storedFigure(merged.nous);
+  if (nousCleared === null) lostFigures.push("nous");
+  merged.nous = openingGrant();
+
+  const capacityCleared = merged.capacityBought;
+  merged.capacityBought = 0;
+
+  // The World's era state: enemies restore at their authored stats and
+  // stored combat charge empties — the prestige rule's own pass. The
+  // purchases above it stand.
+  merged.world.enemies = freshEnemyStates();
+  for (const weapon of merged.world.weapons) {
+    weapon.store = 0;
+    weapon.cooldown = 0;
+  }
+
+  // The claimed frontier's translation: the calibrated curve's ledger
+  // starts at zero (the determination above); the raw figure reports
+  // honestly — absent reads as none carried, corrupt reads as lost.
+  const rawWorld = isRecord(raw.world) ? (raw.world as Record<string, unknown>) : {};
+  const storedFrontier = storedFigure(rawWorld.frontier);
+  let frontierCleared: number | null;
+  if (rawWorld.frontier === undefined) {
+    frontierCleared = 0;
+  } else if (storedFrontier === null) {
+    frontierCleared = null;
+    lostFigures.push("world.frontier");
+  } else {
+    frontierCleared = storedFrontier;
+  }
+  merged.world.frontier = 0;
+
+  // Banked Arete stands as carried — the one retained monetary figure,
+  // read as the chained steps left it. A nonfinite balance cannot stand:
+  // the working state takes the calibrated zero, and the loss is named,
+  // never silently read.
+  const storedArete = storedFigure(merged.arete);
+  const areteRetained = storedArete;
+  if (storedArete === null) {
+    lostFigures.push("arete");
+    merged.arete = 0;
+  }
+
+  return {
+    fromVersion,
+    modulesCleared,
+    eraEarnedCleared,
+    nousCleared,
+    capacityCleared,
+    frontierCleared,
+    areteRetained,
+    lostFigures,
+  };
 }
 
 export const STORAGE_KEY = "flowsynth.save.v1";

@@ -1,13 +1,17 @@
-import { deserialize, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY } from "../engine/save";
+import { deserialize, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, type MigrationReport } from "../engine/save";
 import type { GameState } from "../engine/types";
 
 export interface LoadedSave {
   state: GameState;
   savedAt: number;
+  // The calibrated-economy translation (issue #493): present exactly when
+  // this parse performed the one-time conversion — the fact the flow
+  // explains at the save/import destination.
+  migration?: MigrationReport;
 }
 export type ParsedSave = LoadedSave | { error: string };
 export type WriteOutcome = "written" | "failed" | "refused";
-type SaveStorage = Pick<Storage, "getItem" | "setItem">;
+export type SaveStorage = Pick<Storage, "getItem" | "setItem">;
 
 // Access stays lazy: denied localStorage access is a read/write failure,
 // rather than an exception while creating the instrument.
@@ -45,7 +49,9 @@ export class SharedSave {
   parse(text: string): ParsedSave {
     const result = deserialize(text);
     if (result.error || !result.state) return { error: result.error ?? "unknown error" };
-    return { state: result.state, savedAt: savedAtOf(text) ?? this.now() };
+    return result.migration
+      ? { state: result.state, savedAt: savedAtOf(text) ?? this.now(), migration: result.migration }
+      : { state: result.state, savedAt: savedAtOf(text) ?? this.now() };
   }
 
   load(): ParsedSave | null {
@@ -81,6 +87,17 @@ export class SharedSave {
       return true;
     } catch {
       return false;
+    }
+  }
+
+  // The retained lineage's exact source bytes (issue #493): what the
+  // migration's explanation offers for download — the untouched original
+  // behind whatever the working state now carries.
+  retainedOriginal(): string | null {
+    try {
+      return this.storage.getItem(ORIGINAL_SAVE_KEY);
+    } catch {
+      return null;
     }
   }
 

@@ -938,11 +938,13 @@ export const REFLECTION_SLIDER_MIN = 1;
 export const REFLECTION_SLIDER_POSITIONS = 5;
 export const REFLECTION_SLIDER_NEUTRAL = 3;
 
-// ADR-0017's pattern at the version boundary: SAVE_VERSION 12 — the
-// one-goal-per-habit cut (issue #445). The v10 → v11 conversion (the
-// habit-class cut, issue #423) and the v11 → v12 conversion (habit colors
-// adopted from transferred single goals, multi-goal rows held pending a
-// retain-one choice) run for their own versions alone, and a retired step
-// is gone with its version: nothing below v10 loads, so nothing can still
-// need the dead ones.
-export const SAVE_VERSION = 12;
+// ADR-0017's pattern at the version boundary: SAVE_VERSION 13 — the
+// calibrated-economy translation (issue #493). The v10 → v11 conversion
+// (the habit-class cut, issue #423), the v11 → v12 conversion (habit
+// colors adopted from transferred single goals, multi-goal rows held
+// pending a retain-one choice, issue #445), and the v12 → v13 conversion
+// (the era reset onto the calibrated curves with the retention table's
+// half standing — docs/save-migration.md) each run for their own version
+// alone, and a retired step is gone with its version: nothing below v10
+// loads, so nothing can still need the dead ones.
+export const SAVE_VERSION = 13;

@@ -55,7 +55,7 @@ import { displayedRates, flowLive, deployedAt, syncRates, wholeNous } from "../e
 import { worldEntered, refreshWorldPreview, worldRevealPreview, worldBoardLive } from "./world";
 import { WORLD_ENEMIES, RESPONSE_CURVES } from "../engine/constants";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
-import { serialize, STORAGE_KEY } from "../engine/save";
+import { serialize, STORAGE_KEY, type MigrationReport } from "../engine/save";
 import { SharedSave, browserSaveStorage, memorySaveStorage, type LoadedSave } from "./shared-save";
 import { formatClock } from "../engine/clock";
 import { draftTierChanceOf } from "../engine/rolls";
@@ -135,6 +135,7 @@ export type ModalKind =
   | "grant"
   | "honesty"
   | "summary"
+  | "migration"
   | "rate"
   | "inventory"
   | "combine"
@@ -291,6 +292,10 @@ export interface UiState {
   // and both copies stay untouched. Light furniture — never saved.
   combineOffer: CombineOffer | null;
   modal: ModalKind;
+  // The calibrated migration's one-time report (issue #493): set when an
+  // adoption converted the save, cleared when its explanation is read.
+  // Never saved — the conversion itself is structural at the boundary.
+  migration: MigrationReport | null;
   forgeFace: "modules" | "mutators";
   importText: string;
   importError: string | null;
@@ -503,6 +508,7 @@ export class App {
     buyingCell: false,
     combineOffer: null,
     modal: null,
+    migration: null,
     forgeFace: "modules",
     importText: "",
     importError: null,
@@ -657,9 +663,14 @@ export class App {
     this.lastWall = null;
     this.presence = document.visibilityState === "visible";
     this.exitPending = false;
-    // An unseen loud summary (§5.7) survives a reload: the modal re-opens
-    // until the player dismisses it.
-    if (this.state.mode === "upgrade" && this.state.summary && !this.state.summary.seen) {
+    // The calibrated migration's explanation (issue #493) claims the
+    // screen the moment its conversion rode the load; an unseen summary
+    // waits behind it and re-presents when the explanation is read. The
+    // mandatory honesty report keeps its precedence below.
+    if (loaded.migration) {
+      this.ui.migration = loaded.migration;
+      this.ui.modal = "migration";
+    } else if (this.state.mode === "upgrade" && this.state.summary && !this.state.summary.seen) {
       this.ui.modal = "summary";
     }
     if (this.state.mode === "breather" && this.state.breather) {
@@ -800,6 +811,12 @@ export class App {
     return serialize(this.state);
   }
 
+  // The retained lineage's exact original bytes (issue #493): what the
+  // migration's explanation offers for download.
+  retainedOriginal(): string | null {
+    return this.sharedSave.retainedOriginal();
+  }
+
   // The transient interaction modes are mutually exclusive: every exit path
   // (import, reset, session start, arming another mode) clears them together.
   private clearTransientUi(): void {
@@ -808,6 +825,7 @@ export class App {
     inv.scrapMode = false; inv.scrapReview = false; inv.selected = []; inv.dragOpen = false;
     this.ui.app = null;
     this.ui.focusForm = null;
+    this.ui.migration = null;
     this.ui.placing = null;
     this.ui.dropHover = null;
     this.ui.chordHover = null;
@@ -2581,6 +2599,10 @@ export class App {
       return;
     }
     this.ui.modal = null;
+    // The migration's explanation (issue #493) waits behind the mandatory
+    // report: honesty settles first, then the one-time explanation takes
+    // the screen.
+    if (this.ui.migration) this.ui.modal = "migration";
     const wasExiting = this.exitPending;
     this.exitPending = false;
     const goalNote = resolution.completions && resolution.completions > 0 ? " A goal completed." : "";
@@ -2623,6 +2645,14 @@ export class App {
     this.ui.modal = null;
     this.say("Session banked.");
     this.save();
+    // The migration's explanation waits behind the summary too (issue
+    // #493): the report retires when its screen finally comes.
+    if (this.ui.migration) {
+      this.ui.modal = "migration";
+      this.render();
+      this.restoreModalInvoker();
+      return;
+    }
     this.render();
     this.restoreModalInvoker();
   }
@@ -2683,6 +2713,13 @@ export class App {
     // The honesty report is non-dismissible (ADR-0019): it settles, or the
     // player leaves and the next return re-presents it, recalculated.
     if (this.ui.modal === "honesty") return;
+    // The migration's explanation (issue #493) reads as its Continue:
+    // dismissing it settles the report and hands the screen to an unseen
+    // summary waiting behind it.
+    if (this.ui.modal === "migration") {
+      this.finishMigration();
+      return;
+    }
     // Backdrop click or Esc on the loud summary counts as its dismissal, so
     // an unseen summary never silently stays unseen.
     if (this.ui.modal === "summary") {
@@ -2708,6 +2745,17 @@ export class App {
     // Every dialog hands focus back to the control that opened it
     // (issue #346, generalizing #332's Notes return), after the render
     // has settled the layer.
+    this.restoreModalInvoker();
+  }
+
+  // The migration report's settle (issue #493): the one-time explanation
+  // is read, the report retires, and an unseen summary takes the screen.
+  // The conversion itself was structural at the boundary — this only
+  // retires the explanation.
+  finishMigration(): void {
+    this.ui.migration = null;
+    this.ui.modal = this.state.mode === "upgrade" && this.state.summary && !this.state.summary.seen ? "summary" : null;
+    this.render();
     this.restoreModalInvoker();
   }
 
