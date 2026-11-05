@@ -107,6 +107,7 @@ it("backup denial refuses an import before adopting progress or replacing source
   let denyBackup = false;
   const shared = new SharedSave({
     getItem: (key) => files.get(key) ?? null,
+    removeItem: (key) => { files.delete(key); },
     setItem: (key, value) => {
       if (key === ORIGINAL_SAVE_KEY && denyBackup) throw new Error("quota exceeded");
       files.set(key, value);

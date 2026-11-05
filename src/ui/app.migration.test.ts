@@ -46,6 +46,7 @@ function mapStorage(files: Map<string, string>): SaveStorage {
   return {
     getItem: (key: string) => files.get(key) ?? null,
     setItem: (key: string, value: string) => files.set(key, value),
+    removeItem: (key: string) => { files.delete(key); },
   };
 }
 
@@ -87,7 +88,7 @@ describe("the calibrated migration's flow (issue #493)", () => {
     const earlier = serialize(createInitialState(), 100);
     const files = new Map<string, string>([[STORAGE_KEY, source], [ORIGINAL_SAVE_KEY, earlier]]);
     const storage: SaveStorage = {
-      getItem: (key) => files.get(key) ?? null,
+      ...mapStorage(files),
       setItem: (key, value) => {
         if (key === deniedKey) throw new Error("quota exceeded");
         files.set(key, value);

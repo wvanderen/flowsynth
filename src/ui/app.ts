@@ -2829,8 +2829,14 @@ export class App {
       this.render();
       return;
     }
-    if (!this.sharedSave.adoptRecovered(offer.raw)) {
-      this.ui.recovery = { ...offer, error: "The original save could not be retained. Nothing was recovered." };
+    try {
+      if (!this.sharedSave.adoptRecovered(offer.raw, parsed.state, parsed.savedAt)) {
+        this.ui.recovery = { ...offer, error: "The original could not be retained or the recovered save could not be saved. Nothing was adopted; retry after making storage available." };
+        this.render();
+        return;
+      }
+    } catch (error) {
+      this.ui.recovery = { ...offer, error: error instanceof Error ? error.message : String(error) };
       this.render();
       return;
     }

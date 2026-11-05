@@ -18,13 +18,14 @@ export interface LoadedSave {
 // explicit recovery without reading the slot again.
 export type ParsedSave = LoadedSave | { error: string; recoveryRequired?: boolean; lost?: string[]; raw?: string };
 export type WriteOutcome = "written" | "failed" | "refused";
-export type SaveStorage = Pick<Storage, "getItem" | "setItem">;
+export type SaveStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 
 // Access stays lazy: denied localStorage access is a read/write failure,
 // rather than an exception while creating the instrument.
 export const browserSaveStorage: SaveStorage = {
   getItem: (key) => localStorage.getItem(key),
   setItem: (key, value) => localStorage.setItem(key, value),
+  removeItem: (key) => localStorage.removeItem(key),
 };
 
 // A private in-memory slot: the storage shape SharedSave reads and writes,
@@ -33,7 +34,11 @@ export const browserSaveStorage: SaveStorage = {
 // never read, resurrect, or overwrite the player's save (issue #456).
 export function memorySaveStorage(): SaveStorage {
   const files = new Map<string, string>();
-  return { getItem: (key) => files.get(key) ?? null, setItem: (key, next) => { files.set(key, next); } };
+  return {
+    getItem: (key) => files.get(key) ?? null,
+    setItem: (key, next) => { files.set(key, next); },
+    removeItem: (key) => { files.delete(key); },
+  };
 }
 
 function savedAtOf(raw: string): number | null {
@@ -136,21 +141,47 @@ export class SharedSave {
     }
   }
 
-  // The recovery choice's adoption (issue #494): the exact lost bytes
-  // become the new lineage's retained original — an earlier lineage's
-  // backup archives first, the migration boundary's own dance — and the
-  // write protection lifts so the recovered state can save. Denial keeps
-  // the protection: nothing was adopted, nothing replaced.
-  adoptRecovered(raw: string): boolean {
+  // Recovery commits persistence before App adopts anything. Serialize
+  // first, retain the source, then write the recovered primary last.
+  // Storage.setItem is atomic per key: a failed final write leaves the
+  // primary intact, and only completed backup writes need undoing.
+  // Keep the source timestamp so a reload can still reconcile its gap
+  // if the normal post-adoption session save fails.
+  adoptRecovered(raw: string, state: GameState, savedAt: number): boolean {
+    const changed: { key: string; previous: string | null }[] = [];
     try {
+      const text = serialize(state, savedAt);
       const earlier = this.storage.getItem(ORIGINAL_SAVE_KEY);
-      if (earlier !== null && earlier !== raw) {
-        this.storage.setItem(PRE_V13_ORIGINAL_SAVE_KEY, earlier);
-      }
+      const archive = this.storage.getItem(PRE_V13_ORIGINAL_SAVE_KEY);
+      const replace = (key: string, value: string, previous: string | null): void => {
+        if (previous === value) return;
+        this.storage.setItem(key, value);
+        changed.push({ key, previous });
+      };
+      if (earlier !== null && earlier !== raw) replace(PRE_V13_ORIGINAL_SAVE_KEY, earlier, archive);
+      replace(ORIGINAL_SAVE_KEY, raw, earlier);
+      this.storage.setItem(STORAGE_KEY, text);
+      this.sourceProtected = false;
+      this.knownSavedAt = savedAt;
+      return true;
     } catch {
+      let rollbackFailed = false;
+      for (const { key, previous } of changed.reverse()) {
+        try {
+          if (previous === null) this.storage.removeItem(key);
+          else this.storage.setItem(key, previous);
+        } catch {
+          rollbackFailed = true;
+        }
+      }
+      if (rollbackFailed) {
+        // Storage can become unavailable between any two operations. Do
+        // not claim unchanged backups when even rollback was denied.
+        this.sourceProtected = true;
+        throw new Error("The recovered save could not be saved and backup restoration was denied. The primary save is unchanged; download the original before retrying.");
+      }
       return false;
     }
-    return this.retain(raw);
   }
 
   // The retained lineage's exact source bytes (issue #493): what the

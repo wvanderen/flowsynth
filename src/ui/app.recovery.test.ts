@@ -5,6 +5,7 @@ import { ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY, STORAGE_KEY, serialize } 
 import { bankableClaimOf } from "../engine/accumulator";
 import { createInitialState } from "../engine/state";
 import { BALANCE } from "../engine/constants";
+import { startSession } from "../engine/actions";
 import { SharedSave, memorySaveStorage, type SaveStorage } from "./shared-save";
 import { createAppFixture } from "./testing/app-fixture";
 
@@ -49,6 +50,7 @@ function mapStorage(files: Map<string, string>): SaveStorage {
   return {
     getItem: (key: string) => files.get(key) ?? null,
     setItem: (key: string, value: string) => files.set(key, value),
+    removeItem: (key: string) => { files.delete(key); },
   };
 }
 
@@ -88,7 +90,7 @@ describe("the lost-money recovery's flow (issue #494)", () => {
     expect(content.textContent).toContain("opening grant");
     // The original is offered, not just claimed.
     expect(content.querySelector("#recovery-original")).not.toBeNull();
-    for (const term of ["Arete", "nous", "merge tier", "module rolls", "Claimed frontier"]) {
+    for (const term of ["Arete", "nous", "merge tier", "module rolls", "Claimed frontier", "memorized", "Warp Beam"]) {
       expect(content.querySelector(`.term-trigger[aria-label="${term} — what it means"]`)).not.toBeNull();
     }
   });
@@ -152,7 +154,7 @@ describe("the lost-money recovery's flow (issue #494)", () => {
     const earlier = serialize(createInitialState(), 100);
     const files = new Map<string, string>([[STORAGE_KEY, source], [ORIGINAL_SAVE_KEY, earlier]]);
     const storage: SaveStorage = {
-      getItem: (key) => files.get(key) ?? null,
+      ...mapStorage(files),
       setItem: (key, value) => {
         if (key === PRE_V13_ORIGINAL_SAVE_KEY) throw new Error("quota exceeded");
         files.set(key, value);
@@ -169,6 +171,98 @@ describe("the lost-money recovery's flow (issue #494)", () => {
     expect(files.get(ORIGINAL_SAVE_KEY)).toBe(earlier);
     app.save(Date.now(), true);
     expect(files.get(STORAGE_KEY)).toBe(source);
+  });
+
+  it.each(["boot", "import"] as const)("%s primary-write denial keeps the offer, state, and every slot intact, then retries", (from) => {
+    const source = lostMoneyV12();
+    const earlier = serialize({ ...createInitialState(), nous: 88 }, 100);
+    const archived = "earlier archive";
+    const files = new Map<string, string>([
+      [STORAGE_KEY, from === "boot" ? source : serialize(createInitialState(), 500)],
+      [ORIGINAL_SAVE_KEY, earlier],
+      [PRE_V13_ORIGINAL_SAVE_KEY, archived],
+    ]);
+    let denyPrimary = false;
+    const storage = {
+      ...mapStorage(files),
+      setItem: (key: string, value: string) => {
+        if (key === STORAGE_KEY && denyPrimary) throw new Error("primary quota denied");
+        files.set(key, value);
+      },
+    };
+    app = boot(undefined, false, new SharedSave(storage));
+    if (from === "import") app.importText(source);
+    const beforeState = serialize(app.state, 1000);
+    const beforeFiles = new Map(files);
+    denyPrimary = true;
+    app.applyRecovery();
+    expect(app.ui.modal).toBe("recovery");
+    expect(app.ui.recovery?.error).toContain("could not be saved");
+    expect(serialize(app.state, 1000)).toBe(beforeState);
+    expect(files).toEqual(beforeFiles);
+    if (from === "boot") {
+      app.save(Date.now(), true);
+      expect(files).toEqual(beforeFiles);
+    }
+    denyPrimary = false;
+    app.applyRecovery();
+    expect(app.ui.recovery).toBeNull();
+    expect(app.ui.modal).toBeNull();
+    expect(files.get(ORIGINAL_SAVE_KEY)).toBe(source);
+    expect(files.get(PRE_V13_ORIGINAL_SAVE_KEY)).toBe(earlier);
+    expect(JSON.parse(files.get(STORAGE_KEY)!).version).toBe(13);
+    expect(app.state.nous).toBe(BALANCE.openingGrant);
+  });
+
+  it("a failed post-adoption session save leaves committed recovery with its original gap available on reload", () => {
+    vi.spyOn(Date, "now").mockReturnValue(1_000_000);
+    const state = createInitialState();
+    startSession(state, null);
+    const file = JSON.parse(serialize(state, 400_000));
+    file.version = 12;
+    file.state.nous = null;
+    const source = JSON.stringify(file);
+    const files = new Map<string, string>([[STORAGE_KEY, source]]);
+    let writes = 0;
+    const storage = {
+      ...mapStorage(files),
+      setItem: (key: string, value: string) => {
+        if (key === STORAGE_KEY && ++writes > 1) throw new Error("later session write denied");
+        files.set(key, value);
+      },
+    };
+    app = boot(undefined, false, new SharedSave(storage));
+    app.applyRecovery();
+    expect(app.ui.recovery).toBeNull();
+    const reconciledPool = app.state.session!.accounting.poolSeconds;
+    expect(reconciledPool).toBe(600);
+    const committed = JSON.parse(files.get(STORAGE_KEY)!);
+    expect(committed.version).toBe(13);
+    expect(committed.savedAt).toBe(400_000);
+    expect(committed.state.session.accounting.poolSeconds).toBe(0);
+    const reloaded = boot(undefined, false, new SharedSave(mapStorage(files)));
+    expect(reloaded.ui.recovery).toBeNull();
+    expect(reloaded.state.session!.accounting.poolSeconds).toBe(reconciledPool);
+    expect(files.get(ORIGINAL_SAVE_KEY)).toBe(source);
+  });
+
+  it("missing session accounting is offered honestly and cannot be recovered or overwritten", () => {
+    const file = JSON.parse(lostMoneyV12());
+    // All balances are readable: the missing accounting itself must trigger refusal.
+    file.state.nous = file.state.totalEarned = file.state.eraEarned = file.state.arete = 0;
+    file.state.modules[0].invested = 0;
+    file.state.mode = "flow";
+    file.state.session = {};
+    const source = JSON.stringify(file);
+    const files = new Map<string, string>([[STORAGE_KEY, source]]);
+    app = boot(undefined, false, new SharedSave(mapStorage(files)));
+    expect(app.ui.modal).toBe("recovery");
+    expect(app.ui.recovery?.lost).toContain("session.accounting.bucketNous");
+    app.applyRecovery();
+    expect(app.ui.recovery?.error).toContain("practice accounting");
+    expect(app.ui.modal).toBe("recovery");
+    app.save(Date.now(), true);
+    expect(files).toEqual(new Map([[STORAGE_KEY, source]]));
   });
 
   it("an imported lost save offers recovery at the import destination; declining returns there", () => {

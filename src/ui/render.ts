@@ -3893,7 +3893,7 @@ function renderRecoveryModal(app: App, content: HTMLElement): void {
     ["Lost", `The monetary figures below are unreadable — they ride the retained original only, and recovery starts them at their calibrated values, never invented ones`],
     ["Stands", `Practice history, ${termTipHtml("Habit class", "class development")}, ${termTipHtml("goals")}, notes, and feats`],
     ["Stands", `Your collection and its board — designs, ${termTipHtml("merge tier", "tiers")}, placement, and every earned ${termTipHtml("module rolls", "roll")}`],
-    ["Stands", `Memorized purchases — ${termTipHtml("Catalog")} unlocks, the ${termTipHtml("Arete")}-bought World purchases, the Warp Beam's rungs`],
+    ["Stands", `${termTipHtml("memorized", "Memorized")} purchases — ${termTipHtml("Catalog")} unlocks, the ${termTipHtml("Arete")}-bought World purchases, the ${termTipHtml("Warp Beam")}'s rungs`],
     ["Rebases", `The economy opens calibrated: levels return to base, ${termTipHtml("nous")} at the opening grant, purchased ${termTipHtml("Harmonic capacity", "capacity")} to one voice, every ${termTipHtml("Enemy", "enemy")}'s era state restores, and the ${termTipHtml("Claimed frontier")} clears — claims bank against what you earn from here`],
     ["Original", `Your save stays on this device, byte for byte`],
   ] as const;
@@ -3902,7 +3902,7 @@ function renderRecoveryModal(app: App, content: HTMLElement): void {
     <p class="lead">This save's monetary figures are unavailable — recovery is the one way it plays.</p>
     <div class="folio-rows">${rows.map(([key, line]) => `<div class="folio-row"><span class="folio-key">${key}</span><span class="folio-main"><span>${line}</span></span></div>`).join("")}</div>
     <p class="lead muted mono">${offer.lost.join(", ")}</p>
-    ${offer.error ? `<p class="import-error">${offer.error}</p>` : ""}
+    ${offer.error ? `<p class="import-error">${escapeHtml(offer.error)}</p>` : ""}
     <div class="modal-actions">
       <button id="recovery-original">Download the original</button>
       <button id="recovery-decline">Not now</button>

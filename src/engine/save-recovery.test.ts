@@ -292,6 +292,22 @@ describe("the lost-money recovery (issue #494)", () => {
     expect(reloaded.state!.session!.accounting.creditedSeconds).toBe(state.session!.accounting.creditedSeconds);
   });
 
+  it.each([10, 11, 12])("v%s missing session accounting refuses ordinary loading and fails recovery without inventing practice", (version) => {
+    const file = JSON.parse(serialize(overpowered(), 1000));
+    file.version = version;
+    file.state.mode = "flow";
+    file.state.session = {};
+    const source = JSON.stringify(file);
+    const ordinary = deserialize(source);
+    expect(ordinary.recoveryRequired).toBe(true);
+    expect(ordinary.lost).toContain("session.accounting.bucketNous");
+    expect(ordinary.state).toBeUndefined();
+    const recovered = recoverLostSave(source);
+    expect(recovered.error).toContain("practice accounting");
+    expect(recovered.state).toBeUndefined();
+    expect(recovered.recovered).toBeUndefined();
+  });
+
   it("bytes too incomplete to read fail with the ordinary error before any recovery step", () => {
     const file = JSON.parse(lostMoneyV12());
     file.state.modules = "gone";

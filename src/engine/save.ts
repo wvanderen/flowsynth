@@ -160,9 +160,9 @@ function lostMonetaryFigures(
       });
     }
   }
-  if (isRecord(raw.session) && isRecord(raw.session.accounting)) {
+  if (isRecord(raw.session)) {
     check(
-      raw.session.accounting.bucketNous,
+      raw.session.accounting?.bucketNous,
       "session.accounting.bucketNous",
       true,
       () => {
@@ -246,6 +246,12 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
     !Array.isArray(merged.goals)
   ) {
     return { error: "The save data is incomplete." };
+  }
+  // A missing accounting object also lost practice-time facts. Ordinary
+  // loading still names its unreadable bucket, but recovery must not
+  // invent the minutes needed to rebuild the rest of that object.
+  if (recovery && isRecord(raw.session) && !isRecord(raw.session.accounting)) {
+    return { error: "The session's practice accounting is incomplete; recovery cannot reconstruct it. The original save is unchanged." };
   }
   // Lost money refuses before normalization, older refunds, or lenient
   // defaults can hide the loss — at the pre-v13 boundary the gate
