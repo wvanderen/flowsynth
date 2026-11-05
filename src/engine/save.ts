@@ -17,6 +17,9 @@ export interface SaveFile {
 export interface LoadResult {
   state?: GameState;
   error?: string;
+  // Lost money is not a rejected-version fresh start. Persistence must
+  // leave the source in place until the explicit recovery choice (#494).
+  recoveryRequired?: boolean;
   // The calibrated-economy translation (issue #493): present exactly when
   // this load performed the v12 → v13 conversion — the one-time fact the
   // save/import flow explains. A v13 save reloads without it.
@@ -27,19 +30,17 @@ export interface LoadResult {
 // flow can explain (issue #493). The "cleared" figures read the state as
 // the translation received it — a chained save's earlier steps' payouts
 // included — so the report names the balance the era reset actually
-// replaced. A `null` figure records that the stored value was not a
-// finite number — the runaway class the parent save carried — and is
-// never silently read as zero; the field name rides `lostFigures` and the
-// retained original keeps the bytes.
+// replaced. Lost monetary figures refuse before conversion: this report
+// describes only a finite save, never an implicit corrupt-save recovery.
 export interface MigrationReport {
   fromVersion: number;
   modulesCleared: number;
-  eraEarnedCleared: number | null;
-  nousCleared: number | null;
+  eraEarnedCleared: number;
+  nousCleared: number;
+  bucketNousCleared: number;
   capacityCleared: number;
-  frontierCleared: number | null;
-  areteRetained: number | null;
-  lostFigures: string[];
+  frontierCleared: number;
+  areteRetained: number;
 }
 
 // The serialization refusal (issue #486): JSON.stringify silently writes
@@ -77,6 +78,37 @@ export function serialize(state: GameState, savedAt: number = Date.now()): strin
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+// Read before normalization and older refunds can hide missing money.
+// Required balances existed at every supported boundary. Optional fields
+// keep their historical absent-field defaults, but an explicitly lost
+// figure never takes that default.
+function lostMonetaryFigures(raw: Partial<GameState> & Record<string, unknown>): string[] {
+  const lost: string[] = [];
+  const check = (value: unknown, path: string, required = true): void => {
+    if (!required && value === undefined) return;
+    if (typeof value !== "number" || !Number.isFinite(value)) lost.push(path);
+  };
+  for (const field of ["nous", "totalEarned", "eraEarned", "arete"] as const) check(raw[field], field);
+  check(raw.scrap, "scrap", false);
+  raw.modules?.forEach((module, index) => {
+    check(module?.invested, `modules[${index}].invested`);
+    check(module?.reserve, `modules[${index}].reserve`, false);
+  });
+  if (isRecord(raw.world)) {
+    check(raw.world.frontier, "world.frontier", false);
+    if (Array.isArray(raw.world.weapons)) {
+      raw.world.weapons.forEach((weapon, index) => {
+        check(weapon?.store, `world.weapons[${index}].store`);
+      });
+    }
+  }
+  if (raw.session) check(raw.session.accounting?.bucketNous, "session.accounting.bucketNous");
+  for (const field of ["forge", "mutatorForge"] as const) {
+    if (raw[field]) check(raw[field].progress, `${field}.progress`);
+  }
+  return lost;
 }
 
 // ADR-0017's pattern at the version boundary: every version older than
@@ -127,6 +159,15 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
     !Array.isArray(merged.goals)
   ) {
     return { error: "The save data is incomplete." };
+  }
+  if (parsed.version < 13) {
+    const lost = lostMonetaryFigures(raw);
+    if (lost.length) {
+      return {
+        error: `This save needs explicit recovery: unreadable monetary state (${lost.join(", ")}). The original save is unchanged; recovery is not applied by ordinary migration.`,
+        recoveryRequired: true,
+      };
+    }
   }
   // The octave-row gate ledger (ADR-0022): lenient default — a save written
   // before it exists owes no gates it can't know about. The check reads the
@@ -354,7 +395,7 @@ export function deserialize(text: string, rng: Rng = Math.random): LoadResult {
   // runs last, over the normalized shape.
   if (parsed.version < 11) migrateV10ToV11(raw, merged, rng);
   if (parsed.version < 12) migrateV11ToV12(merged);
-  const migration = parsed.version < SAVE_VERSION ? migrateV12ToV13(raw, merged, parsed.version) : undefined;
+  const migration = parsed.version < 13 ? migrateV12ToV13(merged, parsed.version) : undefined;
   // The goals' live-share surface (ADR-0047, wave 5) lenient-defaults the
   // same way: a goal saved before the generators wave carries no live
   // slice, which reads — honestly — as a manual-only history that banks
@@ -594,46 +635,29 @@ function migrateV11ToV12(merged: GameState): void {
 // banks against newly earned calibrated depth alone, and the historical
 // payout lives on in the retained balance and purchases.
 //
-// Lost figures: a scalar the runaway era left nonfinite (the parent
-// save's null monetary fields) is never silently read as zero. The
-// report names it in `lostFigures`, the working state takes its
-// calibrated value, and the retained original bytes keep the history —
-// the distinction the recovery slice (issue #494) builds on.
+// Lost money refuses before normalization: this finite-only migration
+// cannot make the recovery choice that belongs to issue #494. The live
+// provisional bucket is era money too; its minutes and history stand,
+// but settling honesty must not resurrect the retired economy's nous.
 //
 // Idempotence is structural: the version gate routes a v12 save (or a
 // v10/v11 save through its chain) here alone, and the save this pass
 // writes is v13 — the schema every later load reads untouched.
-function migrateV12ToV13(
-  raw: Partial<GameState> & Record<string, unknown>,
-  merged: GameState,
-  fromVersion: number,
-): MigrationReport {
-  const lostFigures: string[] = [];
-  const storedFigure = (value: unknown): number | null =>
-    typeof value === "number" && Number.isFinite(value) ? value : null;
-
-  // The era reset, per the table's reset half. Module figures read the
-  // merged list (positions, tiers, and secondaries are untouched); a
-  // stored invested figure the runaway left nonfinite rides lostFigures —
-  // its reset is the calibration's own, not a silent repair.
+function migrateV12ToV13(merged: GameState, fromVersion: number): MigrationReport {
   let modulesCleared = 0;
-  let investedLost = false;
   for (const module of merged.modules) {
-    if ((module.level !== 0 && module.level !== null && module.level !== undefined) || module.invested) modulesCleared++;
-    if (module.invested !== undefined && module.invested !== null && !Number.isFinite(module.invested)) investedLost = true;
+    if (module.level !== 0 || module.invested) modulesCleared++;
     module.level = 0;
     module.invested = 0;
     module.reserve = 0;
   }
-  if (investedLost) lostFigures.push("invested");
 
-  const eraEarnedCleared = storedFigure(merged.eraEarned);
-  if (eraEarnedCleared === null) lostFigures.push("eraEarned");
+  const eraEarnedCleared = merged.eraEarned;
   merged.eraEarned = 0;
-
-  const nousCleared = storedFigure(merged.nous);
-  if (nousCleared === null) lostFigures.push("nous");
+  const nousCleared = merged.nous;
   merged.nous = openingGrant();
+  const bucketNousCleared = merged.session?.accounting.bucketNous ?? 0;
+  if (merged.session) merged.session.accounting.bucketNous = 0;
 
   const capacityCleared = merged.capacityBought;
   merged.capacityBought = 0;
@@ -647,42 +671,19 @@ function migrateV12ToV13(
     weapon.cooldown = 0;
   }
 
-  // The claimed frontier's translation: the calibrated curve's ledger
-  // starts at zero (the determination above); the raw figure reports
-  // honestly — absent reads as none carried, corrupt reads as lost.
-  const rawWorld = isRecord(raw.world) ? (raw.world as Record<string, unknown>) : {};
-  const storedFrontier = storedFigure(rawWorld.frontier);
-  let frontierCleared: number | null;
-  if (rawWorld.frontier === undefined) {
-    frontierCleared = 0;
-  } else if (storedFrontier === null) {
-    frontierCleared = null;
-    lostFigures.push("world.frontier");
-  } else {
-    frontierCleared = storedFrontier;
-  }
+  const frontierCleared = merged.world.frontier;
   merged.world.frontier = 0;
-
-  // Banked Arete stands as carried — the one retained monetary figure,
-  // read as the chained steps left it. A nonfinite balance cannot stand:
-  // the working state takes the calibrated zero, and the loss is named,
-  // never silently read.
-  const storedArete = storedFigure(merged.arete);
-  const areteRetained = storedArete;
-  if (storedArete === null) {
-    lostFigures.push("arete");
-    merged.arete = 0;
-  }
+  const areteRetained = merged.arete;
 
   return {
     fromVersion,
     modulesCleared,
     eraEarnedCleared,
     nousCleared,
+    bucketNousCleared,
     capacityCleared,
     frontierCleared,
     areteRetained,
-    lostFigures,
   };
 }
 
@@ -692,3 +693,6 @@ export const STORAGE_KEY = "flowsynth.save.v1";
 // bytes, retained before anything can replace them — the foundation the
 // future migration and recovery reads.
 export const ORIGINAL_SAVE_KEY = "flowsynth.save.original.v1";
+// Preserve a lineage's earlier backup when v13 retains the exact bytes
+// it is about to convert as the downloadable original.
+export const PRE_V13_ORIGINAL_SAVE_KEY = "flowsynth.save.original.pre-v13";

@@ -4,7 +4,7 @@ Status: **published with the v12 → v13 conversion** (issue #493, parent [#484]
 
 ## The transition
 
-One schema-version boundary, one pass. A save at v10 or v11 first runs its own pinned conversion (issues #427, #445), then lands here; a v12 save lands here directly; the file the game writes next is **v13**, which every later load reads untouched. The version gate is the whole idempotence story: a converted save reloads with no report, no second reset, no duplicated anything. The load that performed the conversion returns a report (what moved, named figures, which stored figures were unreadable) and the save/import flow explains it exactly once, at the destination where the save arrived — boot or import. The exact original stored/imported bytes are retained in the original-save slot before anything replaces them (issue #486's foundation); canceling an import, or any load or write failure, leaves both the stored save and the retained original intact.
+One schema-version boundary, one pass. A save at v10 or v11 first runs its own pinned conversion (issues #427, #445), then lands here; a v12 save lands here directly; the file the game writes next is **v13**, which every later load reads untouched. The version gate is the whole idempotence story: a converted save reloads with no report, no second reset, no duplicated anything. The load that performed the finite conversion returns a report (what moved, including any cleared provisional nous) and the save/import flow explains it exactly once, at the destination where the save arrived — boot or import. The exact pre-conversion stored bytes replace the downloadable original only after any earlier lineage backup has been archived separately (`flowsynth.save.original.pre-v13`); an import retains its exact source as the new lineage's original. Backup denial prevents adoption and replacement. Lost monetary state refuses before normalization or older refund steps: boot's fallback is unsaved, and neither ordinary nor forced saves overwrite the protected source. A valid applied import can adopt a new lineage; the explicit recovery choice remains issue #494.
 
 ## Stands — everything the calibration never re-prices
 
@@ -25,7 +25,7 @@ One schema-version boundary, one pass. A save at v10 or v11 first runs its own p
 | `totalEarned` | Lifetime earned ν — the monotonic truth under every era | Prestige keeps it; only the per-era measure rebases |
 | `breathersCompleted`, `breatherSeconds`, `lastSessionClock`, `breather`, `summary` | Breather facts and any standing session-end report | Life-record state; an incoherent breather falls back per the existing load rule |
 | `prestiges` | The era count | History, not currency — and the Catalog's lock reads it (`catalogOpen`) |
-| `mode`, `session`, `activeChords`, `nextId`, `muted`, `notificationAsked`, `arcCardSeen`, `purchased` | Mode (a mid-flow save resumes mid-flow on the rebased economy), the allocation retention hint, id continuity, preferences, shelf purchases | Working state the calibrated economy reads unchanged |
+| `mode`, `session` except `session.accounting.bucketNous`, `activeChords`, `nextId`, `muted`, `notificationAsked`, `arcCardSeen`, `purchased` | Mode, session history and practice-time accounting (a mid-flow/paused save resumes on the rebased economy), the allocation retention hint, id continuity, preferences, shelf purchases | Monetary reset does not discard provisional minutes, credited practice, or settled honesty events |
 
 ## Rebased — the calibrated era reset
 
@@ -34,6 +34,7 @@ One schema-version boundary, one pass. A save at v10 or v11 first runs its own p
 | `modules[].level`, `.invested` | 0 | The prestige rule's own reset; the collection-reset grounding walks a calibrated century from exactly here |
 | `nous` | `openingGrant()` (12) | The era reset's fresh opening; the opening grant affords the first upgrade |
 | `eraEarned` | 0 | The per-era measure rebases; lifetime `totalEarned` stands |
+| `session.accounting.bucketNous` | 0 | Provisional nous is old-era money; honesty can still credit its minutes but cannot resurrect the retired economy's wallet or entitlement |
 | `capacityBought` | 0 | Purchased capacity is era progress — the voices return to one; the Arete offerings above stand |
 | `modules[].reserve` | 0 | The era's temporary charge meters empty with everything else charge-shaped (ADR-0047); the memorized meters above stand |
 | `world.enemies` | Fresh at authored stats | Discoveries, damage, and defeated-state era bonuses clear with the era |
@@ -49,7 +50,7 @@ The ticket requires these three to resolve **together**, from the calibrated eco
 
 ## Unreadable figures
 
-A scalar the runaway era left nonfinite (the parent save's null monetary fields) is never silently read as zero. The migration names it in the report's `lostFigures`, the working state takes its calibrated value, and the retained original keeps the bytes exactly as they were — the distinction the recovery slice (issue #494) builds on. No historical currency is invented, and practice credit is never rewritten.
+Missing, null, nonnumeric, or nonfinite required monetary balances refuse ordinary migration before normalization or older refunds can hide the loss. Explicitly lost investment, reserves, frontier, stored combat charge, forge fill, or provisional nous likewise require recovery. Historical optional fields may still take their documented absent-field defaults. The refusal names the lost paths, returns no adopted state or migration report, and protects the stored bytes and any earlier original from boot's fallback saves. A rejected import changes neither state nor slot. No monetary replacement or recovery choice is applied here; issue #494 owns that explicit flow.
 
 ## Evidence map
 
@@ -59,6 +60,9 @@ A scalar the runaway era left nonfinite (the parent save's null monetary fields)
 | No entitlement mints; claims bank against new depth only | `save.test.ts` "the conversion grants no entitlement…", "future claims bank against newly earned depth alone…" |
 | Old-version chain pins every boundary, one pass | `save.test.ts` "the whole chain runs once…"; the v10/v11 suites beside it |
 | Idempotence (save → reload converts nothing again) | `save.test.ts` "the converted save reloads as v13 and nothing runs again" |
+| Exact pre-conversion bytes and earlier backup both retained; retention denial protects both slots | `src/ui/app.migration.test.ts` — "an existing lineage backup survives beside the exact pre-conversion bytes", "migration backup denial at … replaces neither…" |
+| Provisional money clears without losing honesty credit; flow/paused conversion and reload | `src/engine/save.test.ts` — "a flow/paused conversion clears old provisional nous…"; `src/ui/app.migration.test.ts` — "honesty credits the retained minutes without resurrecting old money…" |
+| Lost money refuses ordinary migration/import; boot cannot overwrite either slot | `save.test.ts` — "missing, null, and nonfinite … require recovery…", "lost investment, frontier, and provisional money…"; `app.migration.test.ts` — "lost-money v… boot preserves both slots…", "a lost-money import adopts nothing…" |
 | Original bytes retained; cancel/failure preserves; the flow explains once | `src/ui/app.migration.test.ts` — "a canceled import migrates nothing…", "a rejected v12 save adopts nothing and its exact bytes stay retained", "booting a stored v12 save explains the migration, retains the original bytes…", "an imported v12 save retains its source bytes and explains the economy it landed on" |
 | Converted play: engine actions, purchases, the tiered scheduled walk | `tools/save-migration.test.ts`; recorded run `docs/evidence/issue-493/converted-walk.json` |
 | Desktop/phone evidence of the explanation and outcomes | `docs/evidence/issue-493/` (README beside the captures) |

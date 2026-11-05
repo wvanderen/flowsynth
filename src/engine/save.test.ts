@@ -951,31 +951,19 @@ describe("the v12 → v13 migration (issue #493)", () => {
     expect(Math.floor(pendingClaimOf(state))).toBe(2);
   });
 
-  it("the report states what moved, and names figures the old save could no longer represent", () => {
+  it("the finite migration report states what moved", () => {
     const report = deserialize(asV12(overpowered())).migration!;
     const expected: MigrationReport = {
       fromVersion: 12,
       modulesCleared: 2,
       eraEarnedCleared: 4e14,
       nousCleared: 8.2e9,
+      bucketNousCleared: 0,
       capacityCleared: 3,
       frontierCleared: 1,
       areteRetained: 4,
-      lostFigures: [],
     };
     expect(report).toEqual(expected);
-    // A save whose runaway had already destroyed a figure: the field is
-    // distinguishable as lost — never silently read as zero — and the
-    // working state still lands on the calibrated opening.
-    const file = JSON.parse(asV12(overpowered()));
-    file.state.nous = null;
-    file.state.arete = "lost";
-    const lost = deserialize(JSON.stringify(file));
-    expect(lost.migration!.nousCleared).toBeNull();
-    expect(lost.migration!.areteRetained).toBeNull();
-    expect(lost.migration!.lostFigures).toEqual(["nous", "arete"]);
-    expect(lost.state!.nous).toBe(openingGrant());
-    expect(lost.state!.arete).toBe(0);
   });
 
   it("the converted save reloads as v13 and nothing runs again", () => {
@@ -1000,6 +988,65 @@ describe("the v12 → v13 migration (issue #493)", () => {
     // The converted chain output reloads as v13, untouched.
     const text = serialize(state, 1_000);
     expect(deserialize(text).migration).toBeUndefined();
+  });
+
+  it.each(["flow", "paused"] as const)("a %s conversion clears old provisional nous but preserves honesty credit and history", (mode) => {
+    const before = fresh();
+    const { habit } = giveHabit(before, "Piano");
+    selectHabit(before, habit.id);
+    before.modules[0]!.level = 100;
+    startSession(before, null);
+    const produced = advance(before, 600, () => 0.4, "provisional");
+    expect(produced.fault).toBeUndefined();
+    const bucket = before.session!.accounting.bucketNous;
+    expect(bucket).toBeGreaterThan(BALANCE.world.entryNous);
+    before.mode = mode;
+    const loaded = deserialize(asV12(before));
+    const state = loaded.state!;
+    expect(state.mode).toBe(mode);
+    expect(state.session!.accounting).toEqual({ ...before.session!.accounting, bucketNous: 0 });
+    expect(state.session!.earned).toBe(before.session!.earned);
+    expect(loaded.migration).toMatchObject({ bucketNousCleared: bucket });
+    // Pausing changes no accounting: settle through the ordinary resumed seam.
+    state.mode = "flow";
+    expect(resolveHonestyReport(state, "full").ok).toBe(true);
+    expect(state.habits[0]!.seconds).toBe(600);
+    expect(state.session!.accounting.creditedSeconds).toBe(600);
+    expect(state.eraEarned).toBe(0);
+    expect(state.nous).toBe(openingGrant());
+    expect(bankableClaimOf(state)).toBe(0);
+    const reloaded = deserialize(serialize(state));
+    expect(reloaded.migration).toBeUndefined();
+    expect(reloaded.state!.session!.accounting).toEqual(state.session!.accounting);
+  });
+
+  it.each(["nous", "arete", "eraEarned", "totalEarned"])("missing, null, and nonfinite %s require recovery instead of migration", (field) => {
+    for (const value of [undefined, null, "lost", Infinity]) {
+      const file = JSON.parse(asV12(overpowered()));
+      file.state[field] = value;
+      const text = value === Infinity
+        ? JSON.stringify(file).replace(`\"${field}\":null`, `\"${field}\":1e999`)
+        : JSON.stringify(file);
+      const loaded = deserialize(text);
+      expect(loaded.state).toBeUndefined();
+      expect(loaded.migration).toBeUndefined();
+      expect(loaded.error).toMatch(/recovery/i);
+      expect(loaded.error).toContain(field);
+    }
+  });
+
+  it("lost investment, frontier, and provisional money are detected before normalization", () => {
+    const source = overpowered();
+    startSession(source, null);
+    const file = JSON.parse(asV12(source));
+    file.state.modules[0].invested = null;
+    file.state.world.frontier = null;
+    file.state.session.accounting.bucketNous = null;
+    const loaded = deserialize(JSON.stringify(file));
+    expect(loaded.state).toBeUndefined();
+    expect(loaded.error).toContain("modules[0].invested");
+    expect(loaded.error).toContain("world.frontier");
+    expect(loaded.error).toContain("session.accounting.bucketNous");
   });
 
   it("a mid-flow save converts and keeps its running session", () => {

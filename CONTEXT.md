@@ -511,7 +511,7 @@ The portion of a flow session during which the player is present. Always trusted
 The portion of a flow session during which the player is away, including whole-system sleep. Toward the target on planned sessions; provisional past it; all provisional on open-ended. Brief absences credit silently as present.
 
 **Provisional bucket**:
-The visibly flagged nous counter for provisional time; the minutes behind it form the provisional pool. Banked or dropped in one move when the honesty report resolves. Nothing already banked is ever taken back.
+The visibly flagged nous counter for provisional time; the minutes behind it form the provisional pool. Banked or dropped in one move when the honesty report resolves. Nothing already banked is ever taken back. The one-time calibrated-economy transition clears the old era's provisional nous while retaining its minutes and honesty accounting; practice credit never depends on retaining retired-economy money.
 
 **Provisional pool**:
 The minutes owed honesty behind the provisional bucket: away time past a planned target, and all away time on open-ended sessions beyond the reconciliation floor. The honesty report settles it together with the bucket.

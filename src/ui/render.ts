@@ -3836,31 +3836,23 @@ function renderMigrationModal(app: App, content: HTMLElement): void {
     app.closeModal();
     return;
   }
-  const cleared = (figure: number | null, fallback: string): string =>
-    figure === null ? fallback : formatNumber(figure);
-  const areteLine = report.areteRetained === null
-    ? `Arete unreadable in the original — the calibrated zero stands, the retained bytes keep the figures`
-    : `<strong class="mono">${formatNumber(report.areteRetained)} Arete</strong> banked — World purchases, Hone ranks, and your Catalog unlocks stand`;
-  const eraLine = report.eraEarnedCleared === null
-    ? `The era's unreadable figures came off with it`
-    : `The era's <strong class="mono">${formatNumber(report.eraEarnedCleared)}</strong> earned ν rebased`;
-  const lostLine = report.lostFigures.length
-    ? `<p class="lead muted">Figures the old save could no longer represent (${report.lostFigures.join(", ")}) were never read as zero — the retained original keeps them as they were.</p>`
-    : "";
+  const rows = [
+    ["Stands", `<strong class="mono">${formatNumber(report.areteRetained)}</strong> ${termTipHtml("Arete")} banked — ${termTipHtml("World layer", "World purchases")}, ${termTipHtml("Hone")} ranks, and your ${termTipHtml("Catalog")} unlocks stand`],
+    ["Stands", `Your collection and its board — designs, ${termTipHtml("merge tier", "tiers")}, placement, and every earned ${termTipHtml("module rolls", "roll")}`],
+    ["Stands", `Practice history, ${termTipHtml("Habit class", "class development")}, ${termTipHtml("goals")}, notes, and feats`],
+    ["Rebased", `<strong class="mono">${report.modulesCleared}</strong> module${report.modulesCleared === 1 ? "" : "s"} return${report.modulesCleared === 1 ? "s" : ""} to base — the tiers and placement stay`],
+    ["Rebased", `${termTipHtml("nous", "Nous")} opens at the opening grant, in place of <strong class="mono">${formatNumber(report.nousCleared)} ν</strong>`],
+    ["Rebased", `The era's <strong class="mono">${formatNumber(report.eraEarnedCleared)} ν</strong> earned rebased, purchased ${termTipHtml("Harmonic capacity", "capacity")} returns to one voice, ${termTipHtml("charge")} empties, and the ${termTipHtml("Enemy", "enemies")}' era state restores`],
+    ["Rebased", `The ${termTipHtml("Claimed frontier")} restarts at the calibrated curve — your next claims bank against what you earn from here`],
+  ];
+  if (report.bucketNousCleared > 0) {
+    rows.push(["Rebased", `<strong class="mono">${formatNumber(report.bucketNousCleared)} ν</strong> held from the old economy cleared — practice-time accounting stays`]);
+  }
   content.innerHTML = `
     ${modalTop("SAVE MIGRATION", "modal-title")}
     <p class="lead">Your save predates the calibrated economy — it converted once, on load.</p>
-    <div class="folio-rows">
-      <div class="folio-row"><span class="folio-key">Stands</span><span class="folio-main">${areteLine}</span></div>
-      <div class="folio-row"><span class="folio-key">Stands</span><span class="folio-main">Your collection and its board — designs, tiers, placement, and every earned roll</span></div>
-      <div class="folio-row"><span class="folio-key">Stands</span><span class="folio-main">Practice history, class development, goals, notes, and feats</span></div>
-      <div class="folio-row"><span class="folio-key">Rebased</span><span class="folio-main">${report.modulesCleared} module${report.modulesCleared === 1 ? "" : "s"} return${report.modulesCleared === 1 ? "s" : ""} to base — the tiers and placement stay</span></div>
-      <div class="folio-row"><span class="folio-key">Rebased</span><span class="folio-main">Nous opens at the opening grant, in place of <strong class="mono">${cleared(report.nousCleared, "an unreadable balance")}</strong></span></div>
-      <div class="folio-row"><span class="folio-key">Rebased</span><span class="folio-main">${eraLine}, purchased capacity returns to one voice, charge empties, and the enemies' era state restores</span></div>
-      <div class="folio-row"><span class="folio-key">Rebased</span><span class="folio-main">The ${termTipHtml("Claimed frontier")} restarts at the calibrated curve — your next claims bank against what you earn from here</span></div>
-    </div>
-    ${lostLine}
-    <p class="lead muted">Your original save is retained on this device, byte for byte.</p>
+    <div class="folio-rows">${rows.map(([key, line]) => `<div class="folio-row"><span class="folio-key">${key}</span><span class="folio-main"><span>${line}</span></span></div>`).join("")}</div>
+    <p class="lead muted">Your pre-conversion save is retained on this device, byte for byte.</p>
     <div class="modal-actions">
       <button id="migration-original">Download the original</button>
       <button id="migration-continue" class="primary">Continue</button>

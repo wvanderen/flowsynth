@@ -1,4 +1,4 @@
-import { deserialize, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, type MigrationReport } from "../engine/save";
+import { deserialize, serialize, STORAGE_KEY, ORIGINAL_SAVE_KEY, PRE_V13_ORIGINAL_SAVE_KEY, type MigrationReport } from "../engine/save";
 import type { GameState } from "../engine/types";
 
 export interface LoadedSave {
@@ -9,7 +9,7 @@ export interface LoadedSave {
   // explains at the save/import destination.
   migration?: MigrationReport;
 }
-export type ParsedSave = LoadedSave | { error: string };
+export type ParsedSave = LoadedSave | { error: string; recoveryRequired?: boolean };
 export type WriteOutcome = "written" | "failed" | "refused";
 export type SaveStorage = Pick<Storage, "getItem" | "setItem">;
 
@@ -43,12 +43,20 @@ function savedAtOf(raw: string): number | null {
 // session reconciliation and save-attempt throttling remain in App.
 export class SharedSave {
   private knownSavedAt = 0;
+  // A lost-money or unbacked migration source is not a fresh-start slot.
+  // Boot may show an unsaved opening, but no save (even forced) replaces
+  // these bytes. A successful import or load is the only new adoption.
+  private sourceProtected = false;
 
   constructor(private storage: SaveStorage, private now: () => number = () => Date.now()) {}
 
   parse(text: string): ParsedSave {
     const result = deserialize(text);
-    if (result.error || !result.state) return { error: result.error ?? "unknown error" };
+    if (result.error || !result.state) {
+      return result.recoveryRequired
+        ? { error: result.error ?? "Explicit recovery required.", recoveryRequired: true }
+        : { error: result.error ?? "unknown error" };
+    }
     return result.migration
       ? { state: result.state, savedAt: savedAtOf(text) ?? this.now(), migration: result.migration }
       : { state: result.state, savedAt: savedAtOf(text) ?? this.now() };
@@ -58,21 +66,32 @@ export class SharedSave {
     try {
       const raw = this.storage.getItem(STORAGE_KEY);
       if (!raw) return null;
-      // The original-bytes backup (issue #486): the first-seen bytes are
-      // retained before anything — a later save, a future migration, a
-      // recovery reset — can replace them, and no ordinary load or save
-      // overwrites the retained original again. A rejected save's bytes
-      // are retained too: the corrupt original is what a recovery reads.
-      // Only an applied import replaces the retained source — the player
-      // adopting a new lineage.
-      try {
-        this.retainOnce(raw);
-      } catch {
-        // A later write retries before replacing the source.
-      }
       const parsed = this.parse(raw);
-      // A rejected file is ours to replace, even if its stamp is in the
-      // future. Successful reads are incorporated when App adopts them.
+      this.sourceProtected = "error" in parsed && parsed.recoveryRequired === true;
+      if (this.sourceProtected) return parsed;
+      if ("migration" in parsed && parsed.migration) {
+        try {
+          // This boundary needs today's exact bytes, not a first-seen
+          // snapshot from an earlier release. Archive that older original
+          // before replacing the download slot, then permit adoption.
+          const earlier = this.storage.getItem(ORIGINAL_SAVE_KEY);
+          if (earlier !== null && earlier !== raw) {
+            this.storage.setItem(PRE_V13_ORIGINAL_SAVE_KEY, earlier);
+          }
+          this.storage.setItem(ORIGINAL_SAVE_KEY, raw);
+        } catch {
+          this.sourceProtected = true;
+          return { error: "The pre-migration save could not be retained. The stored save is unchanged; retry after making storage available." };
+        }
+      } else {
+        try {
+          this.retainOnce(raw);
+        } catch {
+          // A later write retries before replacing the source.
+        }
+      }
+      // Ordinary rejected versions still permit a fresh start. Lost
+      // money and failed migration retention above never do.
       if ("error" in parsed) this.knownSavedAt = savedAtOf(raw) ?? this.knownSavedAt;
       return parsed;
     } catch {
@@ -84,6 +103,7 @@ export class SharedSave {
   retain(raw: string): boolean {
     try {
       this.storage.setItem(ORIGINAL_SAVE_KEY, raw);
+      this.sourceProtected = false;
       return true;
     } catch {
       return false;
@@ -125,7 +145,7 @@ export class SharedSave {
   }
 
   write(state: GameState, now: number = this.now(), force = false): WriteOutcome {
-    if (!force && this.isNewer()) return "refused";
+    if (this.sourceProtected || (!force && this.isNewer())) return "refused";
     try {
       const text = serialize(state, now);
       const raw = this.storage.getItem(STORAGE_KEY);
