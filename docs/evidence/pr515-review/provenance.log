@@ -1,0 +1,27 @@
+
+ RUN  v4.1.12 /tmp/flowsynth-pr515-YKMWPp
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  09:08:50
+   Duration  1.06s (transform 577ms, setup 0ms, import 714ms, tests 14ms, environment 0ms)
+
+
+{
+  "sourceCommit": "71d530e58301065a9591a05f1ab934bafbded0c6",
+  "runtime": "v22.23.4",
+  "modules": 44,
+  "checked": [
+    "all raw entries equal disk",
+    "independent disk digest",
+    "Vite dev SSR",
+    "recorder-style SSR build",
+    "Vitest"
+  ],
+  "engineSource": "5315c3b3",
+  "unavailable": [
+    "browser client/HMR parity not exercised by this server-side probe",
+    "multi-hour calibration not rerun"
+  ]
+}

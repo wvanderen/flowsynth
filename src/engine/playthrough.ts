@@ -531,12 +531,22 @@ export interface PlaythroughSource {
   readonly engineSource: string;
 }
 
-// Vite tracks these raw dependencies in dev and embeds the exact engine
-// content in builds/tests. Changes to actions, balance, and scenarios all
-// change provenance, including during hot reload; test files are excluded.
-const engineFiles = import.meta.glob<string>(["./**/*.ts", "!./**/*.test.ts"], {
-  query: "?raw", import: "default", eager: true,
-});
+// Vite's importGlob never matches the importing module itself (its
+// `file !== id` filter, issue #503) — and that holds in dev, build, and
+// test alike, so the glob below alone never carried playthrough.ts's own
+// bytes: edits to this file left the fingerprint flat. The explicit raw
+// twin restores the self entry. `?raw` serves the file's exact bytes in
+// every path — the dev watcher invalidates it with the file under hot
+// reload, builds embed the content, and vitest reads disk per run — so
+// one identity holds across all three. Test files are excluded.
+import engineSelfSource from "./playthrough.ts?raw";
+
+const engineFiles: Record<string, string> = {
+  ...import.meta.glob<string>(["./**/*.ts", "!./**/*.test.ts"], {
+    query: "?raw", import: "default", eager: true,
+  }),
+  "./playthrough.ts": engineSelfSource,
+};
 
 function fingerprint(text: string): string {
   let hash = 0x811c9dc5;
@@ -547,11 +557,24 @@ function fingerprint(text: string): string {
   return hash.toString(16).padStart(8, "0");
 }
 
+// The digest's exact input: every engine module's path beside its raw
+// bytes, sorted. Exported so the sensitivity test can edit a scratch copy
+// of this input and watch the digest move without touching real files
+// (issue #503) — editing a real engine file mid-suite would leak a
+// different fingerprint into every other test file in the run.
+export function playthroughSourceEntries(): Array<readonly [string, string]> {
+  return Object.keys(engineFiles).sort().map((path) => [path, engineFiles[path]!] as const);
+}
+
+export function playthroughSourceDigest(entries: ReadonlyArray<readonly [string, string]>): string {
+  return fingerprint(JSON.stringify(entries));
+}
+
 export function playthroughSource(): PlaythroughSource {
-  const content = JSON.stringify(Object.keys(engineFiles).sort().map((path) => [path, engineFiles[path]]));
   return {
     game: "flowsynth", saveVersion: SAVE_VERSION,
-    runnerVersion: PLAYTHROUGH_RUNNER_VERSION, engineSource: fingerprint(content),
+    runnerVersion: PLAYTHROUGH_RUNNER_VERSION,
+    engineSource: playthroughSourceDigest(playthroughSourceEntries()),
   };
 }
 

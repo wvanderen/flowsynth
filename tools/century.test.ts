@@ -328,7 +328,8 @@ describe("decision gaps at observation boundaries", () => {
 
 describe("the recorded century evaluation", { skip: !process.env.FLOWSYNTH_CENTURY_REPORT && !process.env.FLOWSYNTH_CENTURY_SLICE, timeout: 7_200_000 }, () => {
   // The explicit tier compiles through Vite's real raw/glob transform,
-  // avoiding #503's vitest fingerprint. One recorder owns the provenance
+  // certifying the compiled engine under the identity #503's fix made
+  // content-sensitive everywhere. One recorder owns the provenance
   // checks and assertions for direct CLI and env-gated invocations alike.
   const slice = process.env.FLOWSYNTH_CENTURY_SLICE;
   it(slice ? `walks the ${slice} century slice and records it` : "composes the full declared matrix, the fixture pair, and the frozen baseline", () => {
