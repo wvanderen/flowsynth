@@ -433,6 +433,12 @@ A stretch of consecutive days on which any credited practice was logged for a ha
 **Practice calendar**:
 The per-habit day-grid of logged practice minutes in the Habit app's development summary. Joins post-launch. _Avoid_: heatmap
 
+**Host calendar**:
+The runtime zone whose local day boundaries gameplay reads — the declared calendar basis (ADR-0080). Daily goal occurrences begin at the host's local midnight (the first midnight on a fall-back day), weekly occurrences at the local Monday, and a playthrough schedule's day strides follow local days across daylight-saving transitions; `npm run preflight` reports the zone and `npm run test:calendar` establishes the intended behavior under UTC and a DST-observing zone. Never a settings choice or a UTC read: the basis is the host, declared rather than discovered.
+
+**Supported runtime**:
+The one Node version the repository's checks, evidence, and recordings run on, pinned in `.node-version` and consumed by CI, version managers, and the npm scripts alike (ADR-0080). The preflight refuses an environment whose effective runtime differs, and balance recordings carry the runtime and timezone they actually ran on; recordings made before that metadata carry no field and stay identifiable as legacy.
+
 **Time app**:
 The focus app providing planned targets and timing tools, and the home of session history; active from the very first session, with no economy coupling.
 
@@ -594,7 +600,7 @@ The greatest era-earned entitlement whose Arete has already been claimed through
 _Avoid_: high-water mark (the implementation reads entitlement, never depth), banked depth
 
 **Frontier entitlement**:
-The cumulative curve E assigning total Arete entitlement to era-earned nous depth: zero below the World entry depth (`BALANCE.world.entryNous`, calibrated at 20M era-earned — issue #490 — a short hold past the prestige horizon so the first positive claim banks around ten credited hours), then the log candidate's `2 + 2·log₁₀(x)` over x = era-earned ÷ entry — the discontinuous entry grant paying exactly one weapon plus one Column. Fractionally valued, always; increasing with diminishing marginal reward per nous. The entry depth is the first-worthwhile-prestige calibration; the slope remains a hypothesis knob citing `research/world-frontier/findings.md`, pending the re-derivation.
+The cumulative curve E assigning total Arete entitlement to era-earned nous depth: zero below the World entry depth (`BALANCE.world.entryNous`, calibrated at 20M era-earned — issue #490 — a short hold past the prestige horizon so the first positive claim banks around ten credited hours), then the calibrated curve's `2 + 4·log₁₀(x)` over x = era-earned ÷ entry — the discontinuous entry grant paying exactly one weapon plus one Column. Fractionally valued, always; increasing with diminishing marginal reward per nous. The entry depth is the first-worthwhile-prestige calibration (#490); the slope is the century calibration (#492, ADR-0079).
 _Avoid_: claim formula (the pending difference is the claim; the curve is the entitlement), accumulator claim (the retired prestige-count sense)
 
 **Pending claim**:
@@ -655,7 +661,7 @@ _Avoid_: blade upgrade, sharpening, power up
 The World layer's unplaced-occupant browser, sharing the tray column's switch like the Mutator tray: click inspects, Place arms, drag places, drag out retrieves; collapsed, it keeps the symbol and stored count.
 _Avoid_: weapon rack, armory, second inventory
 
-The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; the engine and economy of the class layer (#423) and the two-layer World (#425) are shipped. Every World figure — the claim curve, prices, HP and thresholds, cadence, storage — is a hypothesis knob citing `research/world-frontier/findings.md` (commit `4eaac5f`), pending the no-refund recoverability re-derivation; the pinned fixtures in `world.test.ts` mark each as such, and no shipped default claims recoverability. Existing progression entries below describe shipped behavior; the habit-build entries record the retirement (issue #444, ADR-0076).
+The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; the engine and economy of the class layer (#423) and the two-layer World (#425) are shipped. The claim curve's entry depth and slope are calibrated by #490 and #492 and frozen for save translation in ADR-0079. Other World figures — prices, HP and thresholds, cadence, storage — retain their hypothesis provenance in `research/world-frontier/findings.md` (commit `4eaac5f`); the pinned fixtures in `world.test.ts` distinguish them from the calibrated curve. Calibration evidence has explicit limits, including the boundary-wait re-recording gap in `docs/century-calibration.md`; a frozen figure alone does not establish recoverability. Existing progression entries below describe shipped behavior; the habit-build entries record the retirement (issue #444, ADR-0076).
 
 ### Progression
 

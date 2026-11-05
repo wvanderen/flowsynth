@@ -1,0 +1,21 @@
+file:///tmp/flowsynth-pr514-final/tools/dev/runtime.mjs:160
+    throw new Error([
+          ^
+
+Error: runtime preflight failed — checks and recordings require the supported environment.
+  declared 22.23.4 · effective v26.7.0 · timezone America/Chicago · storage not probed
+supported runtime mismatch: effective v26.7.0, declared 22.23.4 (.node-version).
+  select the declared runtime with your version manager, then rerun:
+    mise install node@22.23.4 && mise exec node@22.23.4 -- npm test
+    nvm install 22.23.4 && nvm use 22.23.4
+    fnm install 22.23.4 && fnm use 22.23.4
+  npm scripts select the declared runtime automatically (npm test, npm run check,
+  npm run dev, npm run build) — run checks through them, not through a hand-built PATH.
+    at requireRuntimeEnvironment (file:///tmp/flowsynth-pr514-final/tools/dev/runtime.mjs:160:11)
+    at file:///tmp/flowsynth-pr514-final/tools/record-later-eras.mjs:13:7
+    at ModuleJob.run (node:internal/modules/esm/module_job:569:25)
+    at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+    at async node:internal/modules/esm/loader:650:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5)
+
+Node.js v26.7.0

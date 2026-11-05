@@ -1,4 +1,5 @@
 import { BALANCE, SAVE_VERSION, WORLD_ENEMIES } from "../src/engine/constants";
+import { ARETE_HORIZON } from "../src/engine/accumulator";
 import {
   PLAYTHROUGH_RUNNER_VERSION,
   composePlaythroughRecipe,
@@ -219,16 +220,23 @@ function eraIndexOfEvent(record: PlaythroughRecord, event: PlaythroughEvent): nu
   return era;
 }
 
-function gapsOf(decisions: readonly PlaythroughEvent[]): {
+function gapsOf(decisions: readonly PlaythroughEvent[], startCredited: number, endCredited: number): {
   count: number;
   maxCredited: number;
   meanCredited: number;
   gaps: DecisionGap[];
 } {
   const gaps: DecisionGap[] = [];
-  for (let i = 1; i < decisions.length; i++) {
-    gaps.push({ credited: Math.max(0, decisions[i]!.credited - decisions[i - 1]!.credited), closedBy: decisions[i]!.label });
+  let previous = startCredited;
+  for (const decision of decisions) {
+    const credited = Math.max(0, decision.credited - previous);
+    if (credited > 0) gaps.push({ credited, closedBy: decision.label });
+    previous = decision.credited;
   }
+  // The terminal is a censoring boundary, not a decision. Include its wait
+  // even if no decision ever arrives to close it. A decision-free span is
+  // one gap, not an empty (and therefore apparently successful) reading.
+  if (endCredited > previous) gaps.push({ credited: endCredited - previous, closedBy: "Observation ended" });
   return {
     count: gaps.length,
     maxCredited: gaps.length > 0 ? Math.max(...gaps.map((gap) => gap.credited)) : 0,
@@ -259,7 +267,7 @@ export function centuryEraView(
   const span = eraSpanEvents(record, era);
   const consequential = new Set(meaningfulDecisions(record));
   const decisions = span.filter((event) => consequential.has(event));
-  const gapRead = gapsOf(decisions);
+  const gapRead = gapsOf(decisions, era.startCredited, era.endCredited ?? record.creditedSeconds);
   const hours = eraHoursOf(era);
   const totalCredited = era.familiarCredited + era.newCredited;
   const nextEra = record.eras[index + 1];
@@ -433,7 +441,14 @@ export function acquisitionRead(record: PlaythroughRecord): AcquisitionRead {
 // One run's row: the clocks, the banks, every era's view, the investment
 // timeline, the acquisition read, the numeric read, the coarse
 // trajectory, and the honest stop.
+// Version 1 omitted observation-boundary waits. Never compose its
+// summaries as if they demonstrated the version 2 decision-gap criterion.
+export const CENTURY_MEASUREMENT_VERSION = 2;
+
 export interface CenturyRow {
+  readonly measurementVersion: number;
+  // Completion says the walk reached its stop, not that its economy passed.
+  readonly decisionGapsOk: boolean;
   readonly seed: number;
   readonly sessionMinutes: number;
   readonly policy: string;
@@ -475,7 +490,10 @@ export function centuryRow(
     views.push(centuryEraView(record, index, views[index - 1] ?? null));
   }
   const decisions = meaningfulDecisions(record);
-  const gapRead = gapsOf(decisions);
+  // Whole-run gaps do not reset at banks; per-era gaps are clipped to
+  // their observation windows. A wait spanning a bank may therefore be
+  // long globally without either clipped half being long.
+  const gapRead = gapsOf(decisions, 0, record.creditedSeconds);
   // The currency-integrity read: the state's whole intake against what
   // the walk earned. A continuation's intake includes the branch input's
   // balance — the first recorded state — so the walk's own earnings read
@@ -483,6 +501,8 @@ export function centuryRow(
   const startTotal = record.kind === "continuation" ? (record.snapshots[0]?.state.totalEarned ?? 0) : 0;
   const drift = Math.abs((record.state.totalEarned - startTotal) - record.earnedNous);
   return {
+    measurementVersion: CENTURY_MEASUREMENT_VERSION,
+    decisionGapsOk: gapRead.gaps.every((gap) => gap.credited <= LONG_GAP_CREDITED),
     seed,
     sessionMinutes,
     policy: record.policy.id,
@@ -845,7 +865,7 @@ export function calibrationBaseline(): Record<string, unknown> {
       growth: `${BALANCE.upgradeCostGrowthNumerator}/${BALANCE.upgradeCostGrowthDenominator}`,
     },
     claimCurve: {
-      horizon: 7e6,
+      horizon: ARETE_HORIZON,
       entryNous: BALANCE.world.entryNous,
       claimBase: BALANCE.world.claimBase,
       claimDepthSlope: BALANCE.world.claimDepthSlope,

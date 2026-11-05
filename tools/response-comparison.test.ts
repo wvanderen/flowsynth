@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { recordingPayload } from "./dev/runtime.mjs";
 import {
   CAPACITY_SWEEP,
   CURVES,
@@ -356,7 +357,7 @@ describe("the recorded comparison report", { skip: !process.env.FLOWSYNTH_RESPON
     // explicit nulls carry the beyond-representable figures.
     expect(report.findings.length).toBeGreaterThanOrEqual(10);
     expect(report.certificationProbes.some((probe) => !probe.certified)).toBe(true);
-    const text = JSON.stringify(report, null, 2) + "\n";
+    const text = JSON.stringify(recordingPayload(report), null, 2) + "\n";
     expect(text).not.toMatch(/Infinity|NaN/);
     if (process.env.FLOWSYNTH_RESPONSE_REPORT) {
       writeFileSync(process.env.FLOWSYNTH_RESPONSE_REPORT, text);

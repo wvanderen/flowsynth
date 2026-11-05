@@ -46,6 +46,10 @@ export default defineConfig({
     },
   ],
   test: {
+    // Issue #505: the supported-runtime guard runs before any test file —
+    // a wrong runtime or a broken UI-storage capability fails the run
+    // immediately with the fix, instead of deep fixture failures.
+    globalSetup: "./tools/dev/runtime-guard.mjs",
     projects: [
       {
         extends: true,
