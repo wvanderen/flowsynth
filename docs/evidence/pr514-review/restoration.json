@@ -1,0 +1,99 @@
+{
+  "restoredFrom": "a6349820e80d4e2e399f54cd320d7e210e8aca28",
+  "scope": "Historical artifact restoration, not a new calibration recording",
+  "files": [
+    {
+      "path": "docs/century-calibration-baseline.json",
+      "sha256": "02faf397c18239568aa793c4d9a0ee3090f49b50f703cecf4906c6e1df94bd06"
+    },
+    {
+      "path": "docs/century-calibration-results.json",
+      "sha256": "f8b5f07de35da4e3a090adfbec2f65be863cb68a33133d2c8e0387bb4c6a5279"
+    },
+    {
+      "path": "docs/century-fixture-collection-reset.json",
+      "sha256": "098b965d096198980ed586a5a0de3aad018048fe3ff81f3e9023f77b01ca9c01"
+    },
+    {
+      "path": "docs/century-fixture-raw.json",
+      "sha256": "3acde5bc188c05c8390fc036904fd1d4cf42010f27e70fe044a29a240aace870"
+    },
+    {
+      "path": "docs/century-slice-25-combat.json",
+      "sha256": "73af503eb0ea85a22b24fb766e51c04ff0607936f778521886391cdc8066f65a"
+    },
+    {
+      "path": "docs/century-slice-25-ignoring.json",
+      "sha256": "ba1487e0e7d51b3358d64ee6dad01d66b4558324694515336491b1223bbca6e3"
+    },
+    {
+      "path": "docs/century-slice-25-prompt.json",
+      "sha256": "f41333d2bcda244ef6ed47a314843ec06b0f11d2d3a1e0b4fe776a0a22387eb2"
+    },
+    {
+      "path": "docs/century-slice-25-pushing.json",
+      "sha256": "d416e0e37c919171377c38ca4c1c622850a42d60683324ad8baa8443a33f1002"
+    },
+    {
+      "path": "docs/century-slice-25-support.json",
+      "sha256": "c3540482f45daca53c05aded87a1c74a40f739223871ac3dacfaa41d3de3ef63"
+    },
+    {
+      "path": "docs/century-slice-60-combat.json",
+      "sha256": "2c3f69e8488a74e3000286fbdc39c19f8054d3e918e4453bfee2836a6c97a924"
+    },
+    {
+      "path": "docs/century-slice-60-ignoring.json",
+      "sha256": "66d80d5ac08db30de374ba47e0f74a3f568c866448229208905247ad8ba0bf36"
+    },
+    {
+      "path": "docs/century-slice-60-prompt.json",
+      "sha256": "d1e546f1803edbd2b7b21dbe42c935da6ae0631de8f83b912431364183a6377e"
+    },
+    {
+      "path": "docs/century-slice-60-pushing.json",
+      "sha256": "6d020d586bac39d54bcee4f3ae3f8ecacca34c9863c11aceb9b92f2c46cc97d3"
+    },
+    {
+      "path": "docs/century-slice-60-support.json",
+      "sha256": "5a4bee6659e19bd033c8597514aed40c5e2b0b62dd5fb47be5077d4c4f0eff7f"
+    },
+    {
+      "path": "docs/first-prestige-results.json",
+      "sha256": "487e32a8c606ce74a312d89d87a21bdf13271a52eaff60cf34484491e8d89a06"
+    },
+    {
+      "path": "docs/later-era-results.json",
+      "sha256": "0517f68977ba2fb910b0d084136c7a7eef4570fc819ccd6690f21cf13d3cef1d"
+    },
+    {
+      "path": "docs/later-era-slice-25-combat.json",
+      "sha256": "b73afdc6e4a87855e4aa80fd197057267ddcffa559dd88e909502acf6eaa3f81"
+    },
+    {
+      "path": "docs/later-era-slice-25-ignoring.json",
+      "sha256": "d3d386c156a906ad6b4cd80028ea0d63c736bf1044a3c09b480c73ef433757b1"
+    },
+    {
+      "path": "docs/later-era-slice-25-support.json",
+      "sha256": "83787c6e4991001c7e131e5e13c5d730a68901025dc87aee93558d5015554797"
+    },
+    {
+      "path": "docs/later-era-slice-60-combat.json",
+      "sha256": "1e22994e131feadbf0a37d7d9d65aef4f9efafd75914d8cae559fde4c3e18782"
+    },
+    {
+      "path": "docs/later-era-slice-60-ignoring.json",
+      "sha256": "1f5b475e192d3162ee0e862af83ba575eb04644d67023c874a8811d136a157df"
+    },
+    {
+      "path": "docs/later-era-slice-60-support.json",
+      "sha256": "bd44e520922eab4ea70dc34cc0635192110e032bfaca9968857bc564faac8bcc"
+    }
+  ],
+  "preservedPRHeadSlice": {
+    "path": "docs/evidence/pr514-review/century-slice-60-prompt-at-71d3ad5.json",
+    "from": "71d3ad5932112b37803bde05fec64b5634a1e09d",
+    "sha256": "70a976d89fa8d28241de6f386853aa0f1f4d9625e2bfe81205541f7544a7622f"
+  }
+}

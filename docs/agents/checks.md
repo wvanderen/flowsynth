@@ -2,12 +2,16 @@
 
 The failure this closes: implementations and reviews ran the full suite and then the entire UI project again on an unchanged revision ([#458](https://github.com/wvanderen/flowsynth/issues/458)). The evidence READMEs record the pattern — a green `npm test`, which already executes every UI file, followed by `npx vitest run --project ui` re-executing those same files with no source change in between. The rerun proves nothing the first run didn't: vitest's projects partition one suite, and `npm test` runs both of them. Required coverage was never the problem; the duplicate execution is. This file is the authoritative description of check selection. The AGENTS.md Checks section summarizes it for the always-loaded context, and related guidance points here rather than restating the rules.
 
+A second failure this closes: checks ran on whatever Node the shell happened to resolve ([#491](https://github.com/wvanderen/flowsynth/issues/491)'s evidence records a private PATH override and a Node 26 file-backed-storage workaround; [#505](https://github.com/wvanderen/flowsynth/issues/505) closed the pattern). The supported runtime is declared once in `.node-version` — CI installs exactly it, version managers read the same file, and the npm scripts select it through `tools/run-supported.mjs` — so ordinary checks never depend on which node started them, and the preflight or the suite's guard refuses an incompatible environment with the fix, in milliseconds. Run the npm scripts; don't reconstruct PATHs.
+
 ## What each command establishes
 
 | Command | Establishes |
 | --- | --- |
+| `npm run preflight` | The environment gate: the effective runtime matches the declared supported runtime (`.node-version`), the host's calendar zone is reported, and the storage capability the UI harness needs works. Cheap — milliseconds — and every refusal names the fix. Run before expensive work whenever the environment is unknown; the suite's globalSetup guard repeats the check so a bare `npx vitest` on the wrong runtime fails before any test file loads. |
 | `npm run check` | Typecheck: the repository compiles under strict tsc. |
 | `npm test` | Every automated regression in the repository, in one run. Vitest executes two projects: `engine` (`src/engine` and `tools`, parallel forks) and `ui` (`src/ui`, serially with file isolation). The UI project is inside this run — a green full run is a green UI run. |
+| `npm run test:calendar` | The calendar-sensitive regressions (`src/engine/calendar.test.ts`, `src/engine/goals.test.ts`) under UTC and a DST-observing zone — the two calendar bases the repository declares. Targeted: two files, twice, never a duplicated full suite. Owed when touching calendar-adjacent engine behavior; CI runs it on every push. |
 | `npx vitest run --project ui` | The same UI files, alone. A targeting tool for iteration; not an additional required suite. |
 | `npx vitest run <file> -t '<name>'` | One named test in one file. The narrowest targeting tool. |
 | `npm run build` | Typecheck plus the static bundle. CI runs it on pushes to main and on every pull request (`.github/workflows/ci.yml`: check → test → build), and deploys run it locally; it is not a separate per-revision local obligation beyond that. |

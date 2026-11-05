@@ -1,6 +1,10 @@
 # The first worthwhile prestige around ten credited hours
 
+PR #514 provenance correction: the linked JSON is a byte-for-byte restoration of the historical artifact from `9601386^`, not a new run at the review-fix revision. It retains fingerprint `8790c6cb` and its original absence of recording environment/commit metadata; no values have been inferred. See [the review completion record](evidence/pr514-review/README.md).
+
 Status: recorded evaluation, 2026-11-01 (issue #490, parent #484 stories 1–4, 22–24, 28–31, and 42–43). The accepted direction lives in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md); the four-hour experiments this evaluation supersedes as a baseline remain recorded in [the balance plan](balance-implementation-plan.md) as early baselines, not failures against the revised target.
+
+**The #492 recalibration recheck (2026-11-04).** The claim slope's century calibration (issue #492, slope 2 → 4) re-recorded this evaluation's matrix ([results](first-prestige-results.json), runner 15). The opening's door reads are identical — eligibility hours 5.4–16.7 on the baseline schedule, median ~11, exactly as calibrated — confirming the slope never touches the opening era, whose first worthwhile bank lands at the entry depth. The worthwhile-prestige journeys still complete, faster on the claim-pushing cadence: pushing 25m lands 1 in-window (8.33h), 2 under (7.92, 6.25), 2 over (17.08, 16.25), 3 bank-only (12.5–21.67); pushing 60m lands 2 in-window (11h, 8h), 4 over, 1 unreached, 1 bank-only. The over-window journeys remain door variance on the sparse seeds, not curve drift. The 8–12-hour window's standing read is unchanged by the recalibration.
 
 ## What was evaluated
 

@@ -5,12 +5,14 @@
   "type": "module",
   "description": "FlowSynth first playable: a modular focus instrument driven by real practice.",
   "scripts": {
-    "dev": "node tools/dev-server.mjs",
-    "build": "tsc --noEmit && vite build",
-    "preview": "vite preview",
-    "test": "vitest run",
-    "test:watch": "vitest",
-    "check": "tsc --noEmit",
+    "dev": "node tools/run-supported.mjs tools/dev-server.mjs",
+    "build": "node tools/run-supported.mjs node_modules/typescript/bin/tsc --noEmit && node tools/run-supported.mjs node_modules/vite/bin/vite.js build",
+    "preview": "node tools/run-supported.mjs node_modules/vite/bin/vite.js preview",
+    "test": "node tools/run-supported.mjs node_modules/vitest/vitest.mjs run",
+    "test:watch": "node tools/run-supported.mjs node_modules/vitest/vitest.mjs",
+    "test:calendar": "node tools/run-supported.mjs tools/calendar-regression.mjs",
+    "check": "node tools/run-supported.mjs node_modules/typescript/bin/tsc --noEmit",
+    "preflight": "node tools/runtime-preflight.mjs",
     "deploy:vercel": "vercel build --prod && vercel deploy --prebuilt --prod"
   },
   "devDependencies": {

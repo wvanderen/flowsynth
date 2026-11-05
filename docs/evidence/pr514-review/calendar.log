@@ -1,0 +1,30 @@
+
+> flowsynth@0.1.0 test:calendar
+> node tools/run-supported.mjs tools/calendar-regression.mjs
+
+
+=== calendar regressions under TZ=UTC ===
+
+
+ RUN  v4.1.12 /tmp/flowsynth-pr514-final
+
+
+ Test Files  2 passed (2)
+      Tests  46 passed (46)
+   Start at  21:11:27
+   Duration  1.42s (transform 1.01s, setup 0ms, import 1.29s, tests 208ms, environment 0ms)
+
+
+=== calendar regressions under TZ=America/Chicago ===
+
+
+ RUN  v4.1.12 /tmp/flowsynth-pr514-final
+
+
+ Test Files  2 passed (2)
+      Tests  46 passed (46)
+   Start at  15:11:29
+   Duration  1.39s (transform 1.05s, setup 0ms, import 1.31s, tests 210ms, environment 0ms)
+
+
+calendar regressions passed under UTC and America/Chicago.

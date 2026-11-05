@@ -60,7 +60,7 @@ describe("the prestige action", () => {
     // reset's depth and the next door banks the difference.
     s.eraEarned = BALANCE.world.entryNous * 10;
     prestige(s);
-    expect(s.arete).toBe(4);
+    expect(s.arete).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
   });
 
   it("resets module levels to base while keeping every owned module", () => {

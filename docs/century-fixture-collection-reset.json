@@ -1,0 +1,1428 @@
+{
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 12,
+    "runnerVersion": 15,
+    "engineSource": "8790c6cb"
+  },
+  "recordingCommit": "8d75f861322be35ec6c5e2c1eb3ce50f13063765",
+  "variant": "collection-reset",
+  "row": {
+    "seed": 42,
+    "sessionMinutes": 60,
+    "policy": "support",
+    "kind": "continuation",
+    "complete": true,
+    "stopKind": "century",
+    "stopReason": "The declared 100-credited-hour mark reached at day 50 — 8 era(s) banked.",
+    "days": 50,
+    "elapsedHours": 1178.17,
+    "creditedHours": 100,
+    "manageBreaks": 100,
+    "claims": [
+      11,
+      4,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2
+    ],
+    "claimTarget": 2,
+    "frontiers": [
+      11,
+      15,
+      17,
+      19,
+      21,
+      23,
+      25,
+      27
+    ],
+    "eras": [
+      {
+        "index": 0,
+        "eraClass": "under",
+        "hours": 1,
+        "claim": 11,
+        "frontierAfter": 11,
+        "priorDepth": null,
+        "depthGrowth": null,
+        "familiarHours": 0,
+        "newHours": 1,
+        "newShare": 1,
+        "rebuildingShare": null,
+        "purchases": [],
+        "nousPurchases": 24,
+        "placements": 3,
+        "defeats": [],
+        "gaps": {
+          "count": 50,
+          "maxCredited": 3600,
+          "meanCredited": 72
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 1,
+        "eraClass": "in-window",
+        "hours": 5,
+        "claim": 4,
+        "frontierAfter": 15,
+        "priorDepth": 5640807143.460957,
+        "depthGrowth": null,
+        "familiarHours": 4.03,
+        "newHours": 0.97,
+        "newShare": 0.193,
+        "rebuildingShare": 0.6,
+        "purchases": [
+          "World Column",
+          "World Column",
+          "World Column",
+          "Hone rank — chargeBlade",
+          "Hone rank — chargeBlade"
+        ],
+        "nousPurchases": 0,
+        "placements": 20,
+        "defeats": [],
+        "gaps": {
+          "count": 76,
+          "maxCredited": 3600,
+          "meanCredited": 237
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 2,
+        "eraClass": "in-window",
+        "hours": 6,
+        "claim": 2,
+        "frontierAfter": 17,
+        "priorDepth": 36854418769.27236,
+        "depthGrowth": 6.53,
+        "familiarHours": 5,
+        "newHours": 1,
+        "newShare": 0.167,
+        "rebuildingShare": 0.667,
+        "purchases": [
+          "Hone rank — chargeBlade"
+        ],
+        "nousPurchases": 2,
+        "placements": 2,
+        "defeats": [],
+        "gaps": {
+          "count": 29,
+          "maxCredited": 3600,
+          "meanCredited": 621
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 3,
+        "eraClass": "in-window",
+        "hours": 8,
+        "claim": 2,
+        "frontierAfter": 19,
+        "priorDepth": 119466554341.03113,
+        "depthGrowth": 3.24,
+        "familiarHours": 6.03,
+        "newHours": 1.97,
+        "newShare": 0.246,
+        "rebuildingShare": 0.5,
+        "purchases": [
+          "Arete — Chord Catalysts"
+        ],
+        "nousPurchases": 2,
+        "placements": 2,
+        "defeats": [],
+        "gaps": {
+          "count": 32,
+          "maxCredited": 3600,
+          "meanCredited": 788
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 4,
+        "eraClass": "in-window",
+        "hours": 9,
+        "claim": 2,
+        "frontierAfter": 21,
+        "priorDepth": 585204453745.634,
+        "depthGrowth": 4.9,
+        "familiarHours": 7,
+        "newHours": 2,
+        "newShare": 0.222,
+        "rebuildingShare": 0.667,
+        "purchases": [],
+        "nousPurchases": 1,
+        "placements": 1,
+        "defeats": [],
+        "gaps": {
+          "count": 32,
+          "maxCredited": 3600,
+          "meanCredited": 900
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 5,
+        "eraClass": "over",
+        "hours": 12,
+        "claim": 2,
+        "frontierAfter": 23,
+        "priorDepth": 1829897347856.1968,
+        "depthGrowth": 3.13,
+        "familiarHours": 8.43,
+        "newHours": 3.57,
+        "newShare": 0.297,
+        "rebuildingShare": 0.667,
+        "purchases": [],
+        "nousPurchases": 1,
+        "placements": 1,
+        "defeats": [],
+        "gaps": {
+          "count": 38,
+          "maxCredited": 3600,
+          "meanCredited": 1042
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 6,
+        "eraClass": "over",
+        "hours": 15,
+        "claim": 2,
+        "frontierAfter": 25,
+        "priorDepth": 5001325820512.876,
+        "depthGrowth": 2.73,
+        "familiarHours": 11.18,
+        "newHours": 3.82,
+        "newShare": 0.254,
+        "rebuildingShare": 0.933,
+        "purchases": [],
+        "nousPurchases": 1,
+        "placements": 1,
+        "defeats": [],
+        "gaps": {
+          "count": 42,
+          "maxCredited": 3600,
+          "meanCredited": 1200
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 7,
+        "eraClass": "over",
+        "hours": 19,
+        "claim": 2,
+        "frontierAfter": 27,
+        "priorDepth": 12653237887291.67,
+        "depthGrowth": 2.53,
+        "familiarHours": 12.85,
+        "newHours": 6.15,
+        "newShare": 0.324,
+        "rebuildingShare": 0.632,
+        "purchases": [
+          "World Column"
+        ],
+        "nousPurchases": 1,
+        "placements": 1,
+        "defeats": [],
+        "gaps": {
+          "count": 54,
+          "maxCredited": 3600,
+          "meanCredited": 1200
+        },
+        "longGaps": [],
+        "finite": true
+      },
+      {
+        "index": 8,
+        "eraClass": "open",
+        "hours": null,
+        "claim": null,
+        "frontierAfter": null,
+        "priorDepth": 36466429466894.27,
+        "depthGrowth": 2.88,
+        "familiarHours": 21.3,
+        "newHours": 3.7,
+        "newShare": 0.148,
+        "rebuildingShare": null,
+        "purchases": [],
+        "nousPurchases": 0,
+        "placements": 0,
+        "defeats": [],
+        "gaps": {
+          "count": 60,
+          "maxCredited": 3600,
+          "meanCredited": 1440
+        },
+        "longGaps": [],
+        "finite": null
+      }
+    ],
+    "investments": [
+      {
+        "key": "world — enemy w0",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w1",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w2",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w3",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w4",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w5",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w6",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w7",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "world — enemy w8",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "shelf generator",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "shelf infusor",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "shelf forge",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "board cells",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "Poly Expander rung 1",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "Poly Expander rung 2",
+        "creditedHour": 0,
+        "era": 0
+      },
+      {
+        "key": "feat mutator-entry",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat first-prestige",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat first-row",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat shelf-complete",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat first-light",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat kept-promise",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat marginalia",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat on-the-clock",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat room-to-grow",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat power-chord",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat fine-china",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat eyes-on-the-horizon",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "feat spark",
+        "creditedHour": 1,
+        "era": 0
+      },
+      {
+        "key": "module square",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module release",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module amplifier",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module infusor",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module triangle",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module blaster",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module additive",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module saw",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module noteKeyed",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module spacer",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module field",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "module goalKeyed",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "Charge Column 1",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "Charge Column 2",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "Charge Column 3",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "Hone ladder 1",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "Hone ladder 2",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "feat roll-credit",
+        "creditedHour": 1,
+        "era": 1
+      },
+      {
+        "key": "feat time-in-the-seat",
+        "creditedHour": 2,
+        "era": 1
+      },
+      {
+        "key": "module forge",
+        "creditedHour": 6,
+        "era": 2
+      },
+      {
+        "key": "module focusKeyed",
+        "creditedHour": 6,
+        "era": 2
+      },
+      {
+        "key": "Hone ladder 3",
+        "creditedHour": 6,
+        "era": 2
+      },
+      {
+        "key": "module standby",
+        "creditedHour": 7,
+        "era": 2
+      },
+      {
+        "key": "feat keeping-time",
+        "creditedHour": 10,
+        "era": 2
+      },
+      {
+        "key": "feat marathoner",
+        "creditedHour": 10,
+        "era": 2
+      },
+      {
+        "key": "Chord Catalysts 1",
+        "creditedHour": 12,
+        "era": 3
+      },
+      {
+        "key": "module spotlight",
+        "creditedHour": 17,
+        "era": 3
+      },
+      {
+        "key": "module harmonizer",
+        "creditedHour": 23,
+        "era": 4
+      },
+      {
+        "key": "feat commonplace-book",
+        "creditedHour": 25,
+        "era": 4
+      },
+      {
+        "key": "module bend",
+        "creditedHour": 36,
+        "era": 5
+      },
+      {
+        "key": "module ritual",
+        "creditedHour": 43,
+        "era": 6
+      },
+      {
+        "key": "Charge Column 4",
+        "creditedHour": 56,
+        "era": 7
+      },
+      {
+        "key": "module echo",
+        "creditedHour": 61,
+        "era": 7
+      },
+      {
+        "key": "module pulsewell",
+        "creditedHour": 62,
+        "era": 7
+      },
+      {
+        "key": "module afterglow",
+        "creditedHour": 63,
+        "era": 7
+      }
+    ],
+    "trajectory": [
+      {
+        "hour": 0,
+        "rate": 2373600.83,
+        "eraEarned": 0,
+        "nous": 10169637,
+        "frontier": 0,
+        "bankCount": 0
+      },
+      {
+        "hour": 1,
+        "rate": 8.25,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 11,
+        "bankCount": 1
+      },
+      {
+        "hour": 2,
+        "rate": 288.11,
+        "eraEarned": 34907,
+        "nous": 6,
+        "frontier": 11,
+        "bankCount": 1
+      },
+      {
+        "hour": 3,
+        "rate": 30670.32,
+        "eraEarned": 1345576,
+        "nous": 3496,
+        "frontier": 11,
+        "bankCount": 1
+      },
+      {
+        "hour": 4,
+        "rate": 2119920.64,
+        "eraEarned": 116356166,
+        "nous": 78714,
+        "frontier": 11,
+        "bankCount": 1
+      },
+      {
+        "hour": 5,
+        "rate": 15974366.04,
+        "eraEarned": 3873778433,
+        "nous": 5460704,
+        "frontier": 11,
+        "bankCount": 1
+      },
+      {
+        "hour": 6,
+        "rate": 8.48,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 15,
+        "bankCount": 2
+      },
+      {
+        "hour": 7,
+        "rate": 284.98,
+        "eraEarned": 35791,
+        "nous": 2,
+        "frontier": 15,
+        "bankCount": 2
+      },
+      {
+        "hour": 8,
+        "rate": 30280.18,
+        "eraEarned": 1379335,
+        "nous": 6097,
+        "frontier": 15,
+        "bankCount": 2
+      },
+      {
+        "hour": 9,
+        "rate": 2114218.88,
+        "eraEarned": 112948457,
+        "nous": 45943,
+        "frontier": 15,
+        "bankCount": 2
+      },
+      {
+        "hour": 10,
+        "rate": 16426009.4,
+        "eraEarned": 3877894112,
+        "nous": 1515944,
+        "frontier": 15,
+        "bankCount": 2
+      },
+      {
+        "hour": 11,
+        "rate": 20404800.21,
+        "eraEarned": 37467120164,
+        "nous": 13500392,
+        "frontier": 15,
+        "bankCount": 2
+      },
+      {
+        "hour": 12,
+        "rate": 8.86,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 13,
+        "rate": 453.7,
+        "eraEarned": 37352,
+        "nous": 78,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 14,
+        "rate": 66152.75,
+        "eraEarned": 2128765,
+        "nous": 6854,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 15,
+        "rate": 3308889.53,
+        "eraEarned": 218535232,
+        "nous": 54686,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 16,
+        "rate": 25228118.33,
+        "eraEarned": 7787852099,
+        "nous": 6775333,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 17,
+        "rate": 13137297.12,
+        "eraEarned": 51463516584,
+        "nous": 2961525,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 18,
+        "rate": 104765654.94,
+        "eraEarned": 104067073566,
+        "nous": 127729516,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 19,
+        "rate": 67711097.51,
+        "eraEarned": 315719692081,
+        "nous": 4119136,
+        "frontier": 17,
+        "bankCount": 3
+      },
+      {
+        "hour": 20,
+        "rate": 8.86,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 21,
+        "rate": 562.82,
+        "eraEarned": 37361,
+        "nous": 74,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 22,
+        "rate": 52198.79,
+        "eraEarned": 2487350,
+        "nous": 9283,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 23,
+        "rate": 3605789.5,
+        "eraEarned": 177294613,
+        "nous": 1085321,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 24,
+        "rate": 15778171.15,
+        "eraEarned": 5843483143,
+        "nous": 3256493,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 25,
+        "rate": 38308796.66,
+        "eraEarned": 37810984708,
+        "nous": 91703034,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 26,
+        "rate": 295768407.23,
+        "eraEarned": 191343867490,
+        "nous": 857565683,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 27,
+        "rate": 113581771.95,
+        "eraEarned": 613242384429,
+        "nous": 243022127,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 28,
+        "rate": 192070150.81,
+        "eraEarned": 1069795537630,
+        "nous": 459242441,
+        "frontier": 19,
+        "bankCount": 4
+      },
+      {
+        "hour": 29,
+        "rate": 9.19,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 30,
+        "rate": 634.8,
+        "eraEarned": 38649,
+        "nous": 85,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 31,
+        "rate": 60412.36,
+        "eraEarned": 2770000,
+        "nous": 2186,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 32,
+        "rate": 2817146.82,
+        "eraEarned": 203414333,
+        "nous": 619539,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 33,
+        "rate": 20793340.11,
+        "eraEarned": 6807875437,
+        "nous": 10590453,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 34,
+        "rate": 44673703.45,
+        "eraEarned": 44669298601,
+        "nous": 31508066,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 35,
+        "rate": 123185375.51,
+        "eraEarned": 208240516410,
+        "nous": 329217747,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 36,
+        "rate": 181879204.95,
+        "eraEarned": 704246713843,
+        "nous": 650181406,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 37,
+        "rate": 255355527.57,
+        "eraEarned": 1431438787774,
+        "nous": 258337578,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 38,
+        "rate": 108490977.9,
+        "eraEarned": 2156796831439,
+        "nous": 919686892,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 39,
+        "rate": 112627142.52,
+        "eraEarned": 2594002389032,
+        "nous": 416980971,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 40,
+        "rate": 488355492.67,
+        "eraEarned": 3044885925588,
+        "nous": 6612455186,
+        "frontier": 21,
+        "bankCount": 5
+      },
+      {
+        "hour": 41,
+        "rate": 9.19,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 42,
+        "rate": 577.52,
+        "eraEarned": 38647,
+        "nous": 81,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 43,
+        "rate": 52455.82,
+        "eraEarned": 2558084,
+        "nous": 102,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 44,
+        "rate": 3663732.98,
+        "eraEarned": 180819390,
+        "nous": 1094492,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 45,
+        "rate": 17835661.43,
+        "eraEarned": 5921787166,
+        "nous": 10136675,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 46,
+        "rate": 38274165.87,
+        "eraEarned": 40189447579,
+        "nous": 97515293,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 47,
+        "rate": 295672266.59,
+        "eraEarned": 193492197378,
+        "nous": 355705937,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 48,
+        "rate": 154089104.03,
+        "eraEarned": 614484480902,
+        "nous": 182970381,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 49,
+        "rate": 355956466.92,
+        "eraEarned": 1229136965437,
+        "nous": 558132271,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 50,
+        "rate": 302580180.41,
+        "eraEarned": 2227585467859,
+        "nous": 5385175955,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 51,
+        "rate": 332469800.01,
+        "eraEarned": 3445757876587,
+        "nous": 12150509528,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 52,
+        "rate": 332518992.45,
+        "eraEarned": 4772933312612,
+        "nous": 8997216425,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 53,
+        "rate": 428303037.83,
+        "eraEarned": 6099823965061,
+        "nous": 5559139746,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 54,
+        "rate": 428340785.09,
+        "eraEarned": 7809577651168,
+        "nous": 9111741157,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 55,
+        "rate": 794271858.85,
+        "eraEarned": 9519744148682,
+        "nous": 7983378045,
+        "frontier": 23,
+        "bankCount": 6
+      },
+      {
+        "hour": 56,
+        "rate": 9.3,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 57,
+        "rate": 639.66,
+        "eraEarned": 39135,
+        "nous": 43,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 58,
+        "rate": 61394.51,
+        "eraEarned": 2743187,
+        "nous": 2174,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 59,
+        "rate": 2823759.04,
+        "eraEarned": 206594565,
+        "nous": 203035,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 60,
+        "rate": 20083685.81,
+        "eraEarned": 6817519285,
+        "nous": 3787330,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 61,
+        "rate": 44576612.61,
+        "eraEarned": 43839563099,
+        "nous": 40652272,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 62,
+        "rate": 123135539.54,
+        "eraEarned": 208054005923,
+        "nous": 29684467,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 63,
+        "rate": 251859026.96,
+        "eraEarned": 703419928503,
+        "nous": 1171874911,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 64,
+        "rate": 355053353.92,
+        "eraEarned": 1708003013313,
+        "nous": 2143889842,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 65,
+        "rate": 533882406.29,
+        "eraEarned": 2395491576573,
+        "nous": 2469115042,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 66,
+        "rate": 619784006.27,
+        "eraEarned": 4516347394590,
+        "nous": 3380941484,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 67,
+        "rate": 663505248.64,
+        "eraEarned": 6989341254427,
+        "nous": 13715766948,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 68,
+        "rate": 980055269.81,
+        "eraEarned": 9634517946342,
+        "nous": 15153751379,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 69,
+        "rate": 985541543.68,
+        "eraEarned": 13530337859176,
+        "nous": 1339696123,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 70,
+        "rate": 991419514.59,
+        "eraEarned": 17507805858425,
+        "nous": 24822080345,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 71,
+        "rate": 346997044.81,
+        "eraEarned": 20483483260911,
+        "nous": 23345454951,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 72,
+        "rate": 598893633.4,
+        "eraEarned": 21870439135476,
+        "nous": 94018204009,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 73,
+        "rate": 1532663276.53,
+        "eraEarned": 24265101525347,
+        "nous": 21066533110,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 74,
+        "rate": 1532668293.14,
+        "eraEarned": 30365757309612,
+        "nous": 102747486115,
+        "frontier": 25,
+        "bankCount": 7
+      },
+      {
+        "hour": 75,
+        "rate": 9.3,
+        "eraEarned": 0,
+        "nous": 2,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 76,
+        "rate": 638.08,
+        "eraEarned": 39068,
+        "nous": 27,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 77,
+        "rate": 60378.82,
+        "eraEarned": 2769616,
+        "nous": 3682,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 78,
+        "rate": 2816787.67,
+        "eraEarned": 203910148,
+        "nous": 50546,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 79,
+        "rate": 20752819,
+        "eraEarned": 6799430913,
+        "nous": 4272709,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 80,
+        "rate": 44482752.88,
+        "eraEarned": 43954022553,
+        "nous": 57731811,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 81,
+        "rate": 122959939.15,
+        "eraEarned": 207793949389,
+        "nous": 210027098,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 82,
+        "rate": 179172957.58,
+        "eraEarned": 702380579455,
+        "nous": 572925028,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 83,
+        "rate": 449559838.79,
+        "eraEarned": 1420390109175,
+        "nous": 842508182,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 84,
+        "rate": 360395646.85,
+        "eraEarned": 2421425023528,
+        "nous": 776775714,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 85,
+        "rate": 387779588.83,
+        "eraEarned": 3870701298448,
+        "nous": 2396462896,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 86,
+        "rate": 489914874.14,
+        "eraEarned": 5424755380104,
+        "nous": 8360329047,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 87,
+        "rate": 900681263.31,
+        "eraEarned": 7388951983180,
+        "nous": 3655701058,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 88,
+        "rate": 1223814562.11,
+        "eraEarned": 10957260029295,
+        "nous": 7526238656,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 89,
+        "rate": 1271493435.6,
+        "eraEarned": 15853916183727,
+        "nous": 9543659087,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 90,
+        "rate": 426026385.88,
+        "eraEarned": 20340028987711,
+        "nous": 21033906636,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 91,
+        "rate": 505380594.06,
+        "eraEarned": 22039140925117,
+        "nous": 46319003686,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 92,
+        "rate": 505631034.19,
+        "eraEarned": 24065753080551,
+        "nous": 23120989858,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 93,
+        "rate": 740420893.27,
+        "eraEarned": 26091642260054,
+        "nous": 43390796318,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 94,
+        "rate": 817844895.43,
+        "eraEarned": 29063611578818,
+        "nous": 57051453120,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 95,
+        "rate": 817864934.52,
+        "eraEarned": 32313815142975,
+        "nous": 27558746463,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 96,
+        "rate": 817865148.05,
+        "eraEarned": 35564201225988,
+        "nous": 158942363088,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 97,
+        "rate": 884811746.86,
+        "eraEarned": 38813667133803,
+        "nous": 38723469610,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 98,
+        "rate": 941540198.07,
+        "eraEarned": 42348123251121,
+        "nous": 42800981209,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 99,
+        "rate": 850203754.14,
+        "eraEarned": 46094875909126,
+        "nous": 2064946413,
+        "frontier": 27,
+        "bankCount": 8
+      },
+      {
+        "hour": 100,
+        "rate": 850203754.14,
+        "eraEarned": 49507007570070,
+        "nous": 3414196607356,
+        "frontier": 27,
+        "bankCount": 8
+      }
+    ],
+    "acquisition": {
+      "rollsAccepted": 257,
+      "distinctTypes": 22,
+      "rollsPerCreditedHour": 2.57
+    },
+    "numeric": {
+      "maxNous": 6203419643397.52,
+      "maxEraEarned": 49507007570069.83,
+      "maxTotalEarned": 106655064326624.73,
+      "maxRate": 1532668293.14,
+      "maxArete": 11,
+      "maxLevel": 55,
+      "maxReserve": 55422449.03,
+      "finiteSnapshots": true,
+      "serializedChecks": 41,
+      "serializedOk": 41
+    },
+    "gaps": {
+      "count": 421,
+      "maxCredited": 3600,
+      "meanCredited": 847,
+      "longCount": 0
+    },
+    "noGrant": true,
+    "defeats": [],
+    "bottleneck": null,
+    "note": "collection-reset: Support-seeking ✓ 50d · 6000m credited of 70690m elapsed · claim 11, 4, 2, 2, 2, 2, 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-e5b98f24-from-a0d3f5d2 · spent 1× Chord Catalysts + 4× Charge Column + 3× Hone (chargeBlade) · recovery — bank 11, purchase 0.0d/0m (a Charge Column), blade 1.0d/180m, column 0.0d/0m, rate 1.0d/180m, door 1.0d/180m, frontier 2.0d/300m (1518733.66ν/s pre-reset) · The declared 100-credited-hour mark reached at day 50 — 8 era(s) banked."
+  }
+}

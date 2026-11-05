@@ -34,6 +34,7 @@ function sampleRecord(): PlaythroughRecord {
     },
     budgetDays: 1,
     eras: 1,
+    stopCreditedHours: 0,
     responseCurve: "shipped",
     overrides: {},
   });

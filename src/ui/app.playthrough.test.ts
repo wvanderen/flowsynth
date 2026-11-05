@@ -370,28 +370,28 @@ describe("the pushing policy", () => {
     expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
 
     // The claims: the pushing policy held the first-eligibility door (where
-    // the prompt run banks zero) and banked the first worthwhile claim at
-    // the World's entry depth — 3 Arete, the curve's honest floor where
-    // the 600-minute session carried the era measure past the entry — then
-    // banked again to advance the frontier beyond the claimed frontier.
-    // The second bank reads 3 now: the rig's first kill pays its era
-    // bonus, and the deeper era measure the walk reaches by the next door
-    // banks the curve's honest figure there.
+    // the prompt run banks zero) and banked the first worthwhile claim —
+    // 4 Arete, the curve's honest floor where the 600-minute session
+    // carried the era measure past the entry at the century-calibrated
+    // slope (issue #492) — then banked again to advance the frontier
+    // beyond the claimed frontier. The second bank reads 3: the rig's
+    // first kill pays its era bonus, and the next door banks the curve's
+    // honest figure there.
     expect(record.complete).toBe(true);
     expect(record.stop.kind).toBe("recovered");
-    expect(record.stop.reason).toContain("worthwhile-prestige journey completed at day 10");
+    expect(record.stop.reason).toContain("worthwhile-prestige journey completed at day 9");
     expect(record.claimTarget).toBe(2);
-    expect(record.claims).toEqual([3, 3]);
+    expect(record.claims).toEqual([4, 3]);
     expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
-    // The earned spending: the Catalog entry, the first Charge Column,
-    // and a Hone rank — nothing granted, nothing minted. The starter
-    // Charge Blade is the first World-eligible claim's own grant.
-    expect(record.areteSpent).toEqual({ entry: 1, discounts: 0, ceilings: 0, columns: 1, hone: { chargeBlade: 1 } });
+    // The earned spending: the Catalog entry with the first claim and the
+    // first two Charge Columns — nothing granted, nothing minted. The
+    // starter Charge Blade is the first World-eligible claim's own grant.
+    expect(record.areteSpent).toEqual({ entry: 1, discounts: 0, ceilings: 0, columns: 2, rowUnlocks: 0, hone: { chargeBlade: 0 } });
     expect(record.state.world.starterWeaponGranted).toBe(true);
     expect(record.state.arete).toBe(3);
-    expect(record.state.world.frontier).toBe(6);
+    expect(record.state.world.frontier).toBe(7);
     // No grants: every ν the state ever banked is what the run earned —
     // the sessions and their breathers, each recorded separately. At this
     // scale the summations drift by float rounding alone, so the
@@ -412,12 +412,14 @@ describe("the pushing policy", () => {
     expect(record.state.cells.some((cell) => cell.q === column.pos!.q && cell.r === column.pos!.r)).toBe(true);
     // The rig fought: the defeat ledger carries w0, killed on the blade's
     // own cadence — the final state's w0 is the second prestige's fresh
-    // enemy, so the defeat lives in the ledger, not the last board. And
-    // the fight moved: with w0 dead the blade relocated beside the next
-    // living discovered enemy and killed w1 too — the route the later
-    // frontiers owe, demonstrated inside this same walk.
-    expect(record.worldDefeats).toEqual(["w0", "w1"]);
+    // enemy, so the defeat lives in the ledger, not the last board. The
+    // journey completes at its frontier advance before the relocated
+    // blade's second fight resolves, so w1 stands discovered but alive —
+    // the route the later frontiers owe, demonstrated walk-wide in the
+    // recorded matrices.
+    expect(record.worldDefeats).toEqual(["w0"]);
     expect(record.worldDiscoveries).toContain("w0");
+    expect(record.worldDiscoveries).toContain("w1");
     // The Column stands on a charge line: a module beneath it, receiving
     // what the line copies — the lift's own requirement, read at the
     // placement rule too.
@@ -426,7 +428,6 @@ describe("the pushing policy", () => {
     expect(worldEvents.map((event) => event.label)).toContain("World Column");
     expect(worldEvents.some((event) => event.label.startsWith("Placed the chargeBlade at"))).toBe(true);
     expect(worldEvents.some((event) => event.label.startsWith("Placed a Charge Column at"))).toBe(true);
-    expect(worldEvents.some((event) => event.label.startsWith("Relocated the chargeBlade to"))).toBe(true);
 
     // The worthwhile-prestige ledger, both clocks, every mark measured
     // from the first bank: the Catalog entry landed the moment the walk
@@ -437,7 +438,7 @@ describe("the pushing policy", () => {
     // its simulated elapsed time.
     expect(record.recovery).not.toBeNull();
     const recovery = record.recovery!;
-    expect(recovery.claim).toBe(3);
+    expect(recovery.claim).toBe(4);
     expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0 });
     expect(recovery.lastingPurchaseLabel).toBe("Catalog entry");
     // The Column lands the moment it is bought: the opening board already
@@ -447,7 +448,7 @@ describe("the pushing policy", () => {
     expect(recovery.weaponDeployed).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
     expect(recovery.productionRegained).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
     expect(recovery.eligibilityReached).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
-    expect(recovery.frontierAdvanced).toEqual({ elapsed: 5 * 86_400, credited: 5 * 600 * 60 });
+    expect(recovery.frontierAdvanced).toEqual({ elapsed: 4 * 86_400, credited: 4 * 600 * 60 });
     expect(recovery.preResetRate).toBeGreaterThan(0);
     for (const mark of [recovery.lastingPurchase!, recovery.weaponDeployed!, recovery.columnDeployed!,
       recovery.eligibilityReached!, recovery.productionRegained!, recovery.frontierAdvanced!]) {
@@ -458,18 +459,18 @@ describe("the pushing policy", () => {
     expect(record.events.some((event) => event.milestone && event.label.includes("next prestige eligibility reached"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label.includes("pre-reset production regained"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Catalog entry)")).toBe(true);
-    expect(record.events.some((event) => event.milestone && event.label === "Recovery — frontier advanced to 6 Arete")).toBe(true);
+    expect(record.events.some((event) => event.milestone && event.label === "Recovery — frontier advanced to 7 Arete")).toBe(true);
 
     // The readable record: the discoveries rode era 1 (the claim's depth),
     // the prestige lines name their banks, and the note carries the
     // journey's read.
     const prestiges = record.events.filter((event) => event.kind === "prestige");
-    expect(prestiges.map((event) => event.label)).toEqual(["Prestige 1 — banked 3 Arete", "Prestige 2 — banked 3 Arete"]);
+    expect(prestiges.map((event) => event.label)).toEqual(["Prestige 1 — banked 4 Arete", "Prestige 2 — banked 3 Arete"]);
     for (const event of prestiges) expect(event.milestone).toBe(true);
-    expect(app.devPlaythroughNote).toContain("claim 3, 3/2 Arete");
-    expect(app.devPlaythroughNote).toContain("recovery — bank 3, purchase 0.0d/0m (Catalog entry)");
-    expect(app.devPlaythroughNote).toContain("frontier 5.0d/3000m");
-    expect(app.devPlaythroughNote).toContain("The worthwhile-prestige journey completed at day 10");
+    expect(app.devPlaythroughNote).toContain("claim 4, 3/2 Arete");
+    expect(app.devPlaythroughNote).toContain("recovery — bank 4, purchase 0.0d/0m (Catalog entry)");
+    expect(app.devPlaythroughNote).toContain("frontier 4.0d/2400m");
+    expect(app.devPlaythroughNote).toContain("The worthwhile-prestige journey completed at day 9");
   });
 
   it("treats an unreached claim target as an explicit incomplete outcome, never a fabricated bank", { timeout: 120_000 }, () => {
@@ -488,7 +489,7 @@ describe("the pushing policy", () => {
     expect(record.lastMilestone).toBeTruthy();
     expect(record.bottleneck).toContain("36-Arete");
     // Nothing was spent, because nothing was ever banked.
-    expect(record.areteSpent).toEqual({ entry: 0, discounts: 0, ceilings: 0, columns: 0, hone: { chargeBlade: 0 } });
+    expect(record.areteSpent).toEqual({ entry: 0, discounts: 0, ceilings: 0, columns: 0, rowUnlocks: 0, hone: { chargeBlade: 0 } });
     expect(app.devPlaythroughNote).toContain("Pushing ✗");
     expect(app.devPlaythroughNote).toContain("claim none/36 Arete");
   });
@@ -497,19 +498,19 @@ describe("the pushing policy", () => {
     app = boot(undefined, true);
     const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 6, schedule: PUSHING_SCHEDULE });
     // The bank landed at the World's entry depth and the next morning's
-    // manage spent it — Catalog entry, a Charge Column, a Hone rank. The
-    // Column lands immediately: the opening board's charge line is
-    // topological (a receiving module beside the generator), so the
-    // purchase functions from its first read. The next era was still
-    // rebuilding when the budget ended — blade, rate, and door are all
-    // explicitly unreached, a slower recovery being valid evidence no
-    // fabricated mark may replace.
+    // manage spent it — Catalog entry and Charge Columns. The Column
+    // lands immediately: the opening board's charge line is topological
+    // (a receiving module beside the generator), so the purchase
+    // functions from its first read. The next era was still rebuilding
+    // when the budget ended — blade, rate, and door are all explicitly
+    // unreached, a slower recovery being valid evidence no fabricated
+    // mark may replace.
     expect(record.complete).toBe(false);
     expect(record.stop.kind).toBe("budget");
     expect(record.stop.reason).toContain("worthwhile-prestige journey");
-    expect(record.claims).toEqual([3]);
+    expect(record.claims).toEqual([4]);
     expect(record.recovery).not.toBeNull();
-    expect(record.recovery!.claim).toBe(3);
+    expect(record.recovery!.claim).toBe(4);
     expect(record.recovery!.lastingPurchase).not.toBeNull();
     expect(record.recovery!.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
     expect(record.recovery!.weaponDeployed).toBeNull();
@@ -927,8 +928,10 @@ describe("historical snapshots and inspection", () => {
     expect(inspection.elapsed).toBe(eligibility.at);
     expect(inspection.credited).toBe(eligibility.credited);
     // The settle read the era measure the first bank's refill left — the
-    // entry depth a held frontier above, well past the horizon.
-    expect(inspection.state.eraEarned).toBe(BALANCE.world.entryNous * 100);
+    // entry depth a held frontier above, well past the horizon. The
+    // refill's figure rides the banked frontier and the calibrated slope.
+    expect(inspection.state.eraEarned).toBe(
+      BALANCE.world.entryNous * 10 ** (record.claims[0]! / BALANCE.world.claimDepthSlope + 1));
     expect(inspection.events).toContain(eligibility);
     for (const event of record.events) {
       expect(event.snapshot).toBeGreaterThanOrEqual(0);
