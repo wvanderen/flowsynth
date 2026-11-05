@@ -1,0 +1,21 @@
+{
+  "url": "http://localhost:5173/",
+  "seedBytes": 6988,
+  "checks": [
+    "Boot presented the recovery offer at the load destination; both slots kept their exact bytes and no load-failure notice rode beside the offer.",
+    "The offer named the lost paths verbatim; the Arete disclosure opened with keyboard focus and dismissed with Escape without closing the offer.",
+    "Download the original produced a file exactly equal to the stored source bytes.",
+    "Recovery landed the calibrated economy (opening grant, levels cleared, finite v13 bytes) and retained the exact source bytes as the original.",
+    "Reload of the recovered v13 save presented neither the recovery offer nor the migration again.",
+    "Declining kept both slots intact over the fresh instrument, and the next boot offered the same choice again.",
+    "A pasted lost save offered recovery at the import destination; declining returned to the import walk with its message, adopting nothing.",
+    "The import's recovery retained its exact source bytes before the recovered v13 state saved.",
+    "Phone viewport verified at 390×844, with reduced motion active and no running animation on the offer.",
+    "The offer's disclosure opened by emulated touch and dismissed by tap-away.",
+    "Phone recovery landed the calibrated economy and wrote finite v13 bytes."
+  ],
+  "unavailable": [
+    "Physical-device touch was not exercised; Chromium touch emulation was used.",
+    "The backup-denial failure path is covered by automated cases (app.recovery.test.ts); it was not reproduced in-browser, which would require denying storage writes to the origin."
+  ]
+}

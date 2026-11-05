@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-05T21:07:29.427Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "t3/issue-494",
+  "commit": "f939b2c90b2fd16ecda78b03f16fdca3d19cbab7",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}
