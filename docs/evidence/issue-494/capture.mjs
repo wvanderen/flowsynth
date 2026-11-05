@@ -71,6 +71,15 @@ try {
   assert.equal(await evaluate(`return !!document.getElementById('recovery-apply');`), true);
   checks.push("The offer named the lost paths verbatim; the Arete disclosure opened with keyboard focus and dismissed with Escape without closing the offer.");
 
+  for (const [term, name] of [["memorized", "memorized"], ["Warp Beam", "warp-beam"]]) {
+    await evaluate(`document.querySelector('[aria-label="' + args[0] + ' — what it means"]').focus();`, term);
+    await wait(`return document.querySelector('[aria-label="${term} — what it means"]').getAttribute('aria-expanded') === 'true';`);
+    await shot(`desktop-recovery-${name}`);
+    await cmd("/actions", { actions: [{ type: "key", id: "keyboard", actions: [{ type: "keyDown", value: "\uE00C" }, { type: "keyUp", value: "\uE00C" }] }] });
+    assert.equal(await evaluate(`return document.querySelector('[aria-label="' + args[0] + ' — what it means"]').getAttribute('aria-expanded');`, term), "false");
+  }
+  checks.push("Memorized and Warp Beam both disclose their glossary meanings on keyboard focus and dismiss with Escape.");
+
   // Download the original: the file is the exact source bytes.
   await click("#recovery-original");
   for (let i = 0; i < 40 && !(await readdir(downloadPath)).includes("flowsynth-original.json"); i++) await pause(100);
@@ -110,6 +119,37 @@ try {
   await go();
   await wait(`return !!document.getElementById('recovery-apply');`);
   checks.push("Declining kept both slots intact over the fresh instrument, and the next boot offered the same choice again.");
+
+  // Primary-only quota denial must undo the backup writes and leave
+  // both working state and the offer available for retry.
+  await seedBoot();
+  await go("?dev=1");
+  await wait(`return !!document.getElementById('recovery-apply');`);
+  await evaluate(`
+    localStorage.setItem(args[0], 'earlier original');
+    localStorage.setItem(args[1], 'earlier archive');
+    window.__recoveryBefore = JSON.stringify(window.__flowsynth.state);
+    window.__recoverySetItem = Storage.prototype.setItem;
+    Storage.prototype.setItem = function(key, value) {
+      if (key === args[2]) throw new DOMException('Injected primary quota denial', 'QuotaExceededError');
+      return window.__recoverySetItem.call(this, key, value);
+    };
+  `, original, archive, primary);
+  await click("#recovery-apply");
+  assert.equal(await evaluate(`return window.__flowsynth.ui.modal;`), "recovery");
+  assert.equal(await evaluate(`return JSON.stringify(window.__flowsynth.state) === window.__recoveryBefore;`), true);
+  assert.equal(await evaluate(`return localStorage.getItem(args[0]);`, primary), seed);
+  assert.equal(await evaluate(`return localStorage.getItem(args[0]);`, original), "earlier original");
+  assert.equal(await evaluate(`return localStorage.getItem(args[0]);`, archive), "earlier archive");
+  assert.ok(await evaluate(`return document.querySelector('.import-error').textContent.includes('could not be saved');`));
+  await evaluate(`document.getElementById('recovery-apply').scrollIntoView({block:'center'});`);
+  await shot("desktop-recovery-write-failed");
+  await evaluate(`Storage.prototype.setItem = window.__recoverySetItem;`);
+  await click("#recovery-apply");
+  await wait(`return !document.getElementById('recovery-apply');`);
+  assert.equal(await evaluate(`return localStorage.getItem(args[0]);`, original), seed);
+  assert.equal(await evaluate(`return JSON.parse(localStorage.getItem(args[0])).version;`, primary), 13);
+  checks.push("Injected primary-write denial preserved the offer, working state, primary, original, and archive byte-for-byte; restoring storage and retrying committed v13 successfully.");
 
   // The import destination: a pasted lost save offers recovery there;
   // declining hands the screen back to the import walk, adopting nothing.
@@ -153,7 +193,10 @@ try {
   assert.equal(viewport.width, 390);
   checks.push(`Phone viewport verified at ${viewport.width}×${viewport.height}, with reduced motion active and no running animation on the offer.`);
   await shot("phone-recovery-offer");
-  const rect = await evaluate(`const el=document.querySelector('[aria-label="Arete — what it means"]'); el.scrollIntoView({block:'center'}); const r=el.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2};`);
+  await evaluate(`document.querySelector('[aria-label="Arete — what it means"]').scrollIntoView({block:'center',behavior:'instant'});`);
+  await pause(200);
+  const rect = await evaluate(`const el=document.querySelector('[aria-label="Arete — what it means"]'); const r=el.getBoundingClientRect(); const x=r.x+r.width/2,y=r.y+r.height/2; return {x,y,hit:document.elementFromPoint(x,y)?.getAttribute('aria-label')};`);
+  assert.equal(rect.hit, "Arete — what it means");
   await cdp("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: rect.x, y: rect.y }] });
   await cdp("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   await wait(`return document.querySelector('[aria-label="Arete — what it means"]').getAttribute('aria-expanded') === 'true';`);
@@ -162,6 +205,17 @@ try {
   await cdp("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   assert.equal(await evaluate(`return document.querySelector('[aria-label="Arete — what it means"]').getAttribute('aria-expanded');`), "false");
   checks.push("The offer's disclosure opened by emulated touch and dismissed by tap-away.");
+  for (const [term, name] of [["memorized", "memorized"], ["Warp Beam", "warp-beam"]]) {
+    const position = await evaluate(`const el=document.querySelector('[aria-label="' + args[0] + ' — what it means"]'); el.scrollIntoView({block:'center'}); const r=el.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2};`, term);
+    await cdp("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [position] });
+    await cdp("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    await wait(`return document.querySelector('[aria-label="${term} — what it means"]').getAttribute('aria-expanded') === 'true';`);
+    await shot(`phone-recovery-${name}`);
+    await cdp("Input.dispatchTouchEvent", { type: "touchStart", touchPoints: [{ x: 20, y: 200 }] });
+    await cdp("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
+    assert.equal(await evaluate(`return document.querySelector('[aria-label="' + args[0] + ' — what it means"]').getAttribute('aria-expanded');`, term), "false");
+  }
+  checks.push("Memorized and Warp Beam both opened by emulated touch and dismissed by tap-away at phone width.");
   await evaluate(`document.getElementById('recovery-apply').scrollIntoView({block:'center'});`);
   await shot("phone-recovery-actions");
   await click("#recovery-apply");

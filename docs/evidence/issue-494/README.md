@@ -3,8 +3,8 @@
 Captured from the verified checkout: served by `npm run dev` at
 `http://localhost:5173/`, gated by the capture preflight —
 `provenance.json` records worktree `/home/lem/dev/flowsynth`, branch
-`t3/issue-494`, commit `1ead928` (the review-fixes commit; the recovery
-itself is `f939b2c`, contained in it), clean source. All
+`t3/issue-494`, commit `fd9a952` (the persistence corrections at
+`b742663` plus non-overlapping disclosure targets), clean source. All
 captures are headless-Chromium screenshots of that server (chromedriver
 session, window 1280×1200 desktop / 390×987 phone, screenshots at the
 viewport's CSS pixels).
@@ -27,6 +27,9 @@ byte-for-byte.
 | File | What it shows |
 | --- | --- |
 | `desktop-recovery-offer.png` | The boot offer at desktop width: the SAVE RECOVERY modal's composition — the lost/stands/rebased/original folio rows with hoverable terms, and the unavailable figures verbatim (`nous`, `totalEarned`, `eraEarned`, `arete`, every `modules[i].invested`) in the mono block. The Arete disclosure stands open under keyboard focus. |
+| `desktop-recovery-memorized.png`, `desktop-recovery-warp-beam.png` | Both newly disclosed terms under keyboard focus; Escape dismisses each without closing the offer (asserted). |
+| `desktop-recovery-write-failed.png` | Primary-only quota denial: the error and retry/download actions remain in the recovery destination, working state and all three persistence slots unchanged; a subsequent retry succeeds (asserted). |
+| `phone-recovery-memorized.png`, `phone-recovery-warp-beam.png` | Both newly disclosed terms opened through emulated touch, with tap-away dismissal asserted. Wrapped controls reserve their full vertical hit space. |
 | `desktop-recovery-disclosure.png` | The disclosure standard: the Arete term trigger under keyboard focus (visible outline) with its tooltip layer open — plain floating text, no card. Escape dismisses the disclosure without closing the offer (asserted). |
 | `desktop-recovered-board.png` | The outcome after Recover: the calibrated economy on the retained collection — every module at Lv. 0 with its merge tier (Roman numerals) and placement standing, nous at the opening grant (12 ν, 4.15 ν/s), Arete 0 (lost in this seed), Harmonic capacity returned to 1/3. The run asserted the slot carries finite v13 bytes and the exact source bytes stand as the original. |
 | `desktop-recovery-declined.png` | The declined choice: the offer retired, the fresh instrument beneath, both slots intact — the next boot re-offers (asserted). |
@@ -45,10 +48,23 @@ landed the opening grant with levels cleared and wrote finite v13 bytes;
 the recovered save reloaded with neither the offer nor the migration;
 declining and the next boot's re-offer behaved as the contract states;
 the import path adopted nothing on decline and retained its exact source
-before applying. Reduced motion was emulated active on the phone pass
-with zero running animations on the offer.
+before applying. Primary-only write denial was injected through the browser's
+Storage prototype: the app kept its working state and offer, restored the exact
+primary/original/archive bytes, and succeeded after storage was restored.
+Memorized and Warp Beam were opened and dismissed by keyboard and emulated
+touch. Reduced motion was emulated active on the phone pass with zero running
+animations on the offer.
 
-Recorded alongside: `recovered-walk.json` — the recovered supplied-board
+The first capture attempt timed out opening Arete on phone. After a successful
+server health check and preflight, the second attempt's hit-test assertion
+identified Warp Beam intercepting Arete's center point: the newly disclosed
+wrapped controls overlapped. A local row rule now reserves each control's full
+44px height; the complete recapture at `fd9a952` passed the hit test and every
+touch interaction. These are successful final captures, not claims based on
+the failed attempts.
+
+Recorded alongside (the original engine-era evidence, not rerun for these
+persistence-only corrections): `recovered-walk.json` — the recovered supplied-board
 position's scheduled continuation (the same seed/policy/stop the #493
 converted walk recorded), run from the recovered fixture: a 6-Arete claim
 banked inside four credited hours past the cleared frontier, every

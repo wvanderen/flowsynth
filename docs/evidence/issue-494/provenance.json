@@ -1,14 +1,51 @@
 {
   "app": "flowsynth",
   "check": "capture-preflight",
-  "acceptedAt": "2026-11-05T21:15:11.014Z",
+  "acceptedAt": "2026-11-05T21:45:53.019Z",
   "url": "http://localhost:5173/",
   "worktree": "/home/lem/dev/flowsynth",
   "branch": "t3/issue-494",
-  "commit": "1ead9282cc759dcdb84faa115e31df501656d5a1",
+  "commit": "fd9a952e402b3062f39330bb650d48efab117e2d",
   "source": {
     "clean": true,
     "changes": [],
-    "evidence": []
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-494/capture.mjs",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/issue-494/desktop-import-recovery.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/issue-494/desktop-recovery-disclosure.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/issue-494/desktop-recovery-offer.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/issue-494/phone-recovery-offer.png",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/issue-494/provenance.json",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/issue-494/desktop-recovery-memorized.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-494/desktop-recovery-warp-beam.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-494/desktop-recovery-write-failed.png",
+        "state": "??"
+      }
+    ]
   }
 }
