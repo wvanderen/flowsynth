@@ -1,0 +1,79 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-05T19:10:15.617Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "t3/issue-493",
+  "commit": "484812db42ee047bafedeb0d1d86387618103851",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-493/README.md",
+        "state": " M"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/capture.mjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/checks.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/desktop-catalog-keyboard.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/desktop-cleared-bucket.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/desktop-import-migration.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/desktop-migration.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/desktop-outcome.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/desktop-recovery-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/phone-hone-touch.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/phone-migration-actions.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/phone-migration.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/phone-outcome.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/phone-recovery-refusal.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-493/review-fixes/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

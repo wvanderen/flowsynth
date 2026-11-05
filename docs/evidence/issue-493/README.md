@@ -1,5 +1,14 @@
 # The calibrated save migration's flow — issue #493
 
+Historical captures at `de51fe7`. The current review corrections and
+replacement desktop/phone evidence are in [review-fixes](review-fixes/README.md)
+at `484812d`, including exact downloaded bytes, a pre-existing backup,
+keyboard/touch disclosure, reduced motion, provisional-money settlement,
+and lost-money refusal. The committed seed below actually carries frontier
+0, not the frontier 1 described in this historical record; the new capture
+explicitly sets it to 1. Earlier unavailable-check statements below describe
+only the historical run.
+
 Captured from the verified checkout: served by `npm run dev` at
 `http://localhost:5173/`, gated by the capture preflight —
 `provenance.json` records worktree `/home/lem/dev/flowsynth`, branch
