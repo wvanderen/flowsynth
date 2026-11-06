@@ -128,3 +128,18 @@ export declare function assertSmokeTier(recorded: unknown, label: string): void;
 
 /** Refuses when the recording is smoke-tier evidence. */
 export declare function assertNotSmokeTier(recorded: unknown, label: string): void;
+
+/**
+ * Serializes, writes a uniquely named temporary sibling, fsyncs, then
+ * renames over the target (issue #507): the target only ever changes by
+ * one atomic rename, so any reader — or a kill at any point — sees the
+ * previous bytes or the complete new ones, never a partial write that
+ * could pass for completed evidence.
+ */
+export declare function writeJsonAtomic(filePath: string, payload: unknown): Promise<void>;
+
+/**
+ * Removes a directory's stale atomic-write temporaries; only called while
+ * the caller holds the directory's supervision lock.
+ */
+export declare function clearStaleTemporaries(directory: string): Promise<void>;

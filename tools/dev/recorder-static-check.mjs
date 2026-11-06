@@ -13,7 +13,14 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import ts from "typescript";
 
-export const RECORDER_SCRIPTS = ["tools/record-century.mjs", "tools/record-later-eras.mjs"];
+export const RECORDER_SCRIPTS = [
+  "tools/record-century.mjs",
+  "tools/record-later-eras.mjs",
+  // Issue #507: the resumable job boundary and its worker — plain .mjs
+  // outside tsc's program, so the gate covers them with the CLIs.
+  "tools/dev/job-recorder.mjs",
+  "tools/dev/job-worker.mjs",
+];
 
 const repoRoot = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 

@@ -391,7 +391,7 @@ describe("the recorded evaluation report", { skip: !process.env.FLOWSYNTH_LATER_
   // checks and assertions for direct CLI and env-gated invocations alike.
   const slice = process.env.FLOWSYNTH_LATER_ERA_SLICE;
   it(slice ? `walks the ${slice} slice and records it` : "composes the full declared matrix from the recorded slices", () => {
-    execFileSync(process.execPath, ["tools/record-later-eras.mjs", ...(slice ? ["slice", slice] : ["compose"])], {
+    execFileSync(process.execPath, ["tools/record-later-eras.mjs", ...(slice ? ["run", slice] : ["compose"])], {
       stdio: "inherit",
       timeout: 7_200_000,
     });

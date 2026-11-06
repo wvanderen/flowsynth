@@ -1,11 +1,11 @@
 {
   "source": {
     "game": "flowsynth",
-    "saveVersion": 12,
+    "saveVersion": 13,
     "runnerVersion": 15,
-    "engineSource": "8790c6cb"
+    "engineSource": "ccab0a92"
   },
-  "recordingCommit": "983ab58c397f0f5380c42f1e6b4049704172f4cb",
+  "recordingCommit": "dd0170158044eedf38480eccbd184d1e8195a628",
   "minutes": 60,
   "policy": "support",
   "rows": [
@@ -77,7 +77,7 @@
           "rebuildingShare": 0.667,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [
@@ -107,7 +107,7 @@
           "priorDepthPassedHours": 6.72,
           "rebuildingShare": 0.75,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 2,
           "placements": [],
@@ -161,7 +161,7 @@
         "w1"
       ],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 25d · 2940m credited of 34625m elapsed · claim 2, 2, 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-3d39edcd · spent Catalog entry + 1× Charge Column + 2× Row unlock + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/540m, column 10.0d/1200m, rate 4.0d/480m, door 4.0d/420m, frontier 6.0d/720m (1625.47ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 25 — the frontier stands at 8 Arete."
+      "note": "Support-seeking ✓ 25d · 2940m credited of 34625m elapsed · claim 2, 2, 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-754e3f5b · spent Catalog entry + 1× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 5.0d/540m, column 10.0d/1200m, rate 4.0d/480m, door 4.0d/420m, frontier 6.0d/720m (1625.47ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 25 — the frontier stands at 8 Arete."
     },
     {
       "seed": 468,
@@ -231,7 +231,7 @@
           "rebuildingShare": 0.667,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [
@@ -251,7 +251,7 @@
           "hours": 7,
           "claim": 2,
           "frontierAfter": 6,
-          "priorDepth": 88307518.15732835,
+          "priorDepth": 88307518.15732837,
           "familiarHours": 5.98,
           "newHours": 1.02,
           "newShare": 0.145,
@@ -261,7 +261,7 @@
           "priorDepthPassedHours": 5.98,
           "rebuildingShare": 0.571,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -315,7 +315,7 @@
         "w1"
       ],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 16d · 1920m credited of 21730m elapsed · claim 2, 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-bbf40605 · spent Catalog entry + 1× Charge Column + 2× Row unlock + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 6.0d/780m, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/360m (3642.00ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 16 — the frontier stands at 8 Arete."
+      "note": "Support-seeking ✓ 16d · 1920m credited of 21730m elapsed · claim 2, 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-2da2a663 · spent Catalog entry + 1× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 6.0d/780m, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/360m (3642.00ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 16 — the frontier stands at 8 Arete."
     },
     {
       "seed": 157,
@@ -379,7 +379,7 @@
           "rebuildingShare": null,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 0,
           "placements": [],
@@ -395,7 +395,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy.",
-      "note": "Support-seeking ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 157 · fresh-start · fresh-start-s157-9a164618 · spent Catalog entry + 1× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate unreached, door unreached, frontier unreached (193.93ν/s pre-reset) · eras 1/4 closed · Poly Expander 2 — 9.07ν/s → 11.60ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
+      "note": "Support-seeking ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 157 · fresh-start · fresh-start-s157-b44b3552 · spent Catalog entry + 1× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate unreached, door unreached, frontier unreached (193.93ν/s pre-reset) · eras 1/4 closed · Poly Expander 2 — 9.07ν/s → 11.60ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — the chargeBlade — no free World cell beside a living discovered enemy."
     },
     {
       "seed": 2026,
@@ -465,7 +465,7 @@
           "rebuildingShare": 0.636,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [
@@ -495,7 +495,7 @@
           "priorDepthPassedHours": 10.18,
           "rebuildingShare": 0.846,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -513,7 +513,7 @@
           "hours": 17,
           "claim": 2,
           "frontierAfter": 8,
-          "priorDepth": 231808190.66697437,
+          "priorDepth": 231808190.6669737,
           "familiarHours": 13,
           "newHours": 4,
           "newShare": 0.235,
@@ -542,7 +542,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 30d · 3540m credited of 41825m elapsed · claim 2, 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-d77d7175 · spent Catalog entry + 1× Charge Column + 2× Row unlock + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 4.0d/480m, column 12.0d/1440m, rate 4.0d/420m, door 4.0d/420m, frontier 6.0d/660m (2480.46ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 30 — the frontier stands at 8 Arete."
+      "note": "Support-seeking ✓ 30d · 3540m credited of 41825m elapsed · claim 2, 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-4256c153 · spent Catalog entry + 1× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 4.0d/480m, column 12.0d/1440m, rate 4.0d/420m, door 4.0d/420m, frontier 6.0d/660m (2480.46ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 30 — the frontier stands at 8 Arete."
     },
     {
       "seed": 7,
@@ -612,7 +612,7 @@
           "rebuildingShare": 0.571,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [
@@ -632,7 +632,7 @@
           "hours": 9,
           "claim": 2,
           "frontierAfter": 7,
-          "priorDepth": 128024164.7702514,
+          "priorDepth": 128024164.77025138,
           "familiarHours": 6.5,
           "newHours": 2.5,
           "newShare": 0.278,
@@ -642,7 +642,7 @@
           "priorDepthPassedHours": 6.5,
           "rebuildingShare": 0.667,
           "purchases": [
-            "Row unlock — row -2",
+            "Rack Extenders — row -2",
             "World Column"
           ],
           "nousPurchases": 2,
@@ -691,7 +691,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 23d · 2700m credited of 31745m elapsed · claim 2, 3, 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-6ee74292 · spent Catalog entry + 2× Charge Column + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 3.0d/420m, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/420m (3776.61ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 23 — the frontier stands at 9 Arete."
+      "note": "Support-seeking ✓ 23d · 2700m credited of 31745m elapsed · claim 2, 3, 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-bc1a3ef8 · spent Catalog entry + 2× Charge Column + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/300m, column 3.0d/420m, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/420m (3776.61ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 23 — the frontier stands at 9 Arete."
     },
     {
       "seed": 99,
@@ -761,7 +761,7 @@
           "rebuildingShare": 0.625,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 2,
           "placements": [
@@ -791,7 +791,7 @@
           "priorDepthPassedHours": 7.15,
           "rebuildingShare": 0.6,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -846,7 +846,7 @@
         "w1"
       ],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 25d · 3000m credited of 34690m elapsed · claim 2, 2, 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-72c1ba39 · spent Catalog entry + 1× Charge Column + 2× Row unlock + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/360m, column 9.0d/1080m, rate 3.0d/300m, door 3.0d/300m, frontier 4.0d/480m (2535.26ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 25 — the frontier stands at 8 Arete."
+      "note": "Support-seeking ✓ 25d · 3000m credited of 34690m elapsed · claim 2, 2, 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-37868c67 · spent Catalog entry + 1× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 3.0d/360m, column 9.0d/1080m, rate 3.0d/300m, door 3.0d/300m, frontier 4.0d/480m (2535.26ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 25 — the frontier stands at 8 Arete."
     },
     {
       "seed": 11,
@@ -912,7 +912,7 @@
           "rebuildingShare": 0.654,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 2,
           "placements": [
@@ -932,7 +932,7 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
-          "priorDepth": 95779204.55166365,
+          "priorDepth": 95779204.55166337,
           "familiarHours": 4,
           "newHours": 0,
           "newShare": 0,
@@ -942,7 +942,7 @@
           "priorDepthPassedHours": null,
           "rebuildingShare": null,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 0,
           "placements": [],
@@ -958,7 +958,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Support-seeking ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2 Arete · seed 11 · fresh-start · fresh-start-s11-72004259 · spent Catalog entry + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 10.0d/1140m, column unreached, rate 9.0d/1020m, door 7.0d/780m, frontier 13.0d/1560m (450.86ν/s pre-reset) · eras 2/4 closed · Poly Expander 2 — 12.04ν/s → 18.92ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Support-seeking ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2 Arete · seed 11 · fresh-start · fresh-start-s11-9b2e7407 · spent Catalog entry + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 10.0d/1140m, column unreached, rate 9.0d/1020m, door 7.0d/780m, frontier 13.0d/1560m (450.86ν/s pre-reset) · eras 2/4 closed · Poly Expander 2 — 12.04ν/s → 18.92ν/s · The 30-day budget ended inside the worthwhile-prestige journey. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 23,
@@ -1028,7 +1028,7 @@
           "rebuildingShare": 0.6,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 2,
           "placements": [
@@ -1058,7 +1058,7 @@
           "priorDepthPassedHours": 4.7,
           "rebuildingShare": 0.667,
           "purchases": [
-            "Row unlock — row -2",
+            "Rack Extenders — row -2",
             "World Column",
             "Hone rank — chargeBlade"
           ],
@@ -1080,7 +1080,7 @@
           "hours": 8,
           "claim": 2,
           "frontierAfter": 11,
-          "priorDepth": 1341469018.0994754,
+          "priorDepth": 1341475362.9722743,
           "familiarHours": 6,
           "newHours": 2,
           "newShare": 0.25,
@@ -1108,7 +1108,374 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 14d · 1620m credited of 18785m elapsed · claim 2, 4, 3, 2 Arete · seed 23 · fresh-start · fresh-start-s23-efb41870 · spent Catalog entry + 2× Charge Column + 2× Row unlock + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/240m, column 3.0d/300m, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete."
+      "note": "Support-seeking ✓ 14d · 1620m credited of 18785m elapsed · claim 2, 4, 3, 2 Arete · seed 23 · fresh-start · fresh-start-s23-44909dda · spent Catalog entry + 2× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/240m, column 3.0d/300m, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete."
     }
-  ]
+  ],
+  "unitProvenance": {
+    "seed-60-support-42": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 42,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "seed-60-support-468": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 468,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "seed-60-support-157": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 157,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "seed-60-support-2026": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 2026,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "seed-60-support-7": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 7,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "seed-60-support-99": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 99,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "seed-60-support-11": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 11,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "seed-60-support-23": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 23,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    }
+  },
+  "recordingEnvironment": {
+    "node": "v22.23.4",
+    "timeZone": "America/Chicago",
+    "utcOffsetMinutes": -360
+  }
 }

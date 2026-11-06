@@ -1,0 +1,2474 @@
+{
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 13,
+    "runnerVersion": 15,
+    "engineSource": "ccab0a92"
+  },
+  "recordingCommit": "dd0170158044eedf38480eccbd184d1e8195a628",
+  "seed": 23,
+  "minutes": 60,
+  "policy": "support",
+  "walk": {
+    "recipe": {
+      "scenarioId": "fresh-start",
+      "seed": 23,
+      "policyId": "support",
+      "claimTarget": 2,
+      "schedule": {
+        "sessionsPerDay": 2,
+        "sessionMinutes": 60,
+        "breatherMinutes": 5,
+        "habitName": "Practice",
+        "goalMinutes": 25,
+        "startAt": 1767603600000,
+        "timeZone": "America/Chicago"
+      },
+      "budgetDays": 30,
+      "eras": 4,
+      "stopCreditedHours": 0,
+      "responseCurve": "shipped",
+      "overrides": {}
+    },
+    "row": {
+      "seed": 23,
+      "sessionMinutes": 60,
+      "policy": "support",
+      "complete": true,
+      "stopKind": "frontier",
+      "stopReason": "The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete.",
+      "days": 14,
+      "elapsedHours": 313.08,
+      "creditedHours": 27,
+      "manageBreaks": 27,
+      "claims": [
+        2,
+        4,
+        3,
+        2
+      ],
+      "claimTarget": 2,
+      "frontiers": [
+        2,
+        6,
+        9,
+        11
+      ],
+      "eras": [
+        {
+          "index": 0,
+          "eraClass": "opening",
+          "hours": 8,
+          "claim": 2,
+          "frontierAfter": 2,
+          "priorDepth": null,
+          "familiarHours": 0,
+          "newHours": 8,
+          "newShare": 1,
+          "familiarFaster": null,
+          "priorSpanHours": null,
+          "productionRegainedHours": null,
+          "priorDepthPassedHours": null,
+          "rebuildingShare": null,
+          "purchases": [],
+          "nousPurchases": 16,
+          "placements": [],
+          "defeats": [],
+          "gaps": {
+            "count": 58,
+            "maxCredited": 3600,
+            "meanCredited": 434
+          },
+          "finite": true
+        },
+        {
+          "index": 1,
+          "eraClass": "in-window",
+          "hours": 5,
+          "claim": 4,
+          "frontierAfter": 6,
+          "priorDepth": 28813930.03751924,
+          "familiarHours": 3.72,
+          "newHours": 1.28,
+          "newShare": 0.257,
+          "familiarFaster": true,
+          "priorSpanHours": 8,
+          "productionRegainedHours": 3,
+          "priorDepthPassedHours": 3.72,
+          "rebuildingShare": 0.6,
+          "purchases": [
+            "Catalog entry",
+            "Rack Extenders — row 3"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed the chargeBlade at -2,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 26,
+            "maxCredited": 3600,
+            "meanCredited": 692
+          },
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "in-window",
+          "hours": 6,
+          "claim": 3,
+          "frontierAfter": 9,
+          "priorDepth": 242156477.15511763,
+          "familiarHours": 4.7,
+          "newHours": 1.3,
+          "newShare": 0.217,
+          "familiarFaster": true,
+          "priorSpanHours": 5,
+          "productionRegainedHours": 4,
+          "priorDepthPassedHours": 4.7,
+          "rebuildingShare": 0.667,
+          "purchases": [
+            "Rack Extenders — row -2",
+            "World Column",
+            "Hone rank — chargeBlade"
+          ],
+          "nousPurchases": 2,
+          "placements": [
+            "Placed a Charge Column at -2,2"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 48,
+            "maxCredited": 3600,
+            "meanCredited": 375
+          },
+          "finite": true
+        },
+        {
+          "index": 3,
+          "eraClass": "in-window",
+          "hours": 8,
+          "claim": 2,
+          "frontierAfter": 11,
+          "priorDepth": 1341475362.9722743,
+          "familiarHours": 6,
+          "newHours": 2,
+          "newShare": 0.25,
+          "familiarFaster": false,
+          "priorSpanHours": 6,
+          "productionRegainedHours": 6,
+          "priorDepthPassedHours": 6,
+          "rebuildingShare": 0.75,
+          "purchases": [
+            "World Column"
+          ],
+          "nousPurchases": 3,
+          "placements": [
+            "Placed a Charge Column at -1,1"
+          ],
+          "defeats": [],
+          "gaps": {
+            "count": 51,
+            "maxCredited": 3600,
+            "meanCredited": 494
+          },
+          "finite": true
+        }
+      ],
+      "noGrant": true,
+      "defeats": [],
+      "bottleneck": null,
+      "note": "Support-seeking ✓ 14d · 1620m credited of 18785m elapsed · claim 2, 4, 3, 2 Arete · seed 23 · fresh-start · fresh-start-s23-44909dda · spent Catalog entry + 2× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/240m, column 3.0d/300m, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete."
+    }
+  },
+  "banks": [
+    {
+      "frontier": 2,
+      "claim": 2,
+      "budget": 2,
+      "pieces": [
+        {
+          "piece": "entry",
+          "price": 1
+        },
+        {
+          "piece": "column",
+          "price": 1
+        },
+        {
+          "piece": "hone",
+          "price": 1
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-52dfb33c",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "entry"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-adef16d2",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "entry",
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-5b29d67c",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "entry",
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-96fff5a9",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-ece27210",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column",
+            "entry"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-c586dd32",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column",
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-adceee0a",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-86679f60",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone",
+            "entry"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-148c183d",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone",
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s23-a69682a4-from-adceee0a",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767870600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 3,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        }
+      ],
+      "routeDemonstrated": true
+    },
+    {
+      "frontier": 6,
+      "claim": 4,
+      "budget": 4,
+      "pieces": [
+        {
+          "piece": "column",
+          "price": 1
+        },
+        {
+          "piece": "hone",
+          "price": 1
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s24-6412a058-from-7fb5199e",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 24,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 9,
+            "creditedHours": 6,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s24-6412a058-from-b9813a53",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 24,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 9,
+            "creditedHours": 6,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column",
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s24-6412a058-from-f49218d3",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 24,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 9,
+            "creditedHours": 6,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s24-6412a058-from-5ad53ab8",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 24,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 9,
+            "creditedHours": 6,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone",
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s24-6412a058-from-f49218d3",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 24,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 9,
+            "creditedHours": 6,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        }
+      ],
+      "routeDemonstrated": true
+    },
+    {
+      "frontier": 9,
+      "claim": 3,
+      "budget": 3,
+      "pieces": [
+        {
+          "piece": "column",
+          "price": 2
+        },
+        {
+          "piece": "hone",
+          "price": 2
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-20f18867-from-af0aab96",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768385100000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 10,
+            "creditedHours": 7,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-20f18867-from-bbd5fb45",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768385100000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 10,
+            "creditedHours": 7,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-20f18867-from-5bd3317f",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768385100000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 10,
+            "creditedHours": 7,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        }
+      ],
+      "routeDemonstrated": true
+    },
+    {
+      "frontier": 11,
+      "claim": 2,
+      "budget": 3,
+      "pieces": [
+        {
+          "piece": "column",
+          "price": 4
+        },
+        {
+          "piece": "hone",
+          "price": 2
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s26-497aa620-from-d0dab790",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 26,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768730700000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 12,
+            "creditedHours": 8,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s26-497aa620-from-330fba61",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 26,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768730700000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 12,
+            "creditedHours": 8,
+            "defeats": [],
+            "noGrant": true,
+            "noRefund": true,
+            "finite": true
+          }
+        }
+      ],
+      "routeDemonstrated": true
+    }
+  ],
+  "unitProvenance": {
+    "probe-walk": {
+      "recordingCommit": "6c6dc864503d1dba31152d29641bc33ea78f0bc2",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 23,
+          "policyId": "support",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 60,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 30,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
+      }
+    },
+    "forward-b0-o0": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o1": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "entry"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o2": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "entry",
+            "column"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o3": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "entry",
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o4": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "column"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o5": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "column",
+            "entry"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o6": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "column",
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o7": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o8": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "hone",
+            "entry"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b0-o9": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 0,
+          "order": [
+            "hone",
+            "column"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b1-o0": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 1,
+          "order": [],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b1-o1": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 1,
+          "order": [
+            "column"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b1-o2": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 1,
+          "order": [
+            "column",
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b1-o3": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 1,
+          "order": [
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b1-o4": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 1,
+          "order": [
+            "hone",
+            "column"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b2-o0": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 2,
+          "order": [],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b2-o1": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 2,
+          "order": [
+            "column"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b2-o2": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 2,
+          "order": [
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b3-o0": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 3,
+          "order": [],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b3-o1": {
+      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 3,
+          "order": [
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ccab0a92"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    }
+  },
+  "recordingEnvironment": {
+    "node": "v22.23.4",
+    "timeZone": "America/Chicago",
+    "utcOffsetMinutes": -360
+  }
+}

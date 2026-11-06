@@ -2,6 +2,8 @@
 
 PR #514 provenance correction: the linked results and all six slices are byte-for-byte restorations from `9601386^`, with their historical fingerprint `8790c6cb` and original recording commits. Missing environment metadata stays missing. These are not new measurements at the review-fix revision; see [the review completion record](evidence/pr514-review/README.md).
 
+**The #507 re-record (2026-11-06).** Issue #507 rebuilt the recording as one resumable job, and the whole evaluation was re-recorded through it at the current engine — fingerprint `ccab0a92`, runner 15, recording commit `6727d04` — as 69 persisted work units (48 seed walks, the probe walk, and 20 derived route forwards). The distribution reproduces the #492 recheck's recording: 64 of 119 closed later eras in the 5–10 credited-hour window, 7 under, 48 over, 12 open, and 35 of 48 walks complete all four declared banks. The per-era reads, recomputed from this report: 105 of 119 closed eras re-walk the previous bank's depth in less credited time than its first development; 107 spend more than half their era rebuilding; 0 of 119 carry a new-territory majority. **The new-frontier-effort criterion therefore remains unmet**, on the same recorded trade the recheck paragraph below documents. [The demonstration record](evidence/issue-507/README.md) shows the job surviving three real interruptions with every completed unit reused.
+
 **Status: evaluation recorded; #491 is not complete.** The second acceptance criterion remains a merge blocker: later eras do not yet spend most of their effort on new territory. This is not an accepted deferral to #492. Completion requires either a validated balance repair or an explicit maintainer decision to change this ticket's scope. No such scope decision is recorded here.
 
 **The #492 recalibration recheck (2026-11-04).** The claim slope's century calibration (issue #492, slope 2 → 4) required re-recording this evaluation at the calibrated engine. The re-recorded [results](later-era-results.json) (48 walks, recording commit `0d17f824`, runner 15) hold the evaluation's shape and move its distribution: 64 of 119 closed later eras land in the 5–10 credited-hour window (against 31 of 86), 7 under, 48 over, and 35 of 48 walks complete all four declared banks (against 15). The route probes at the walk's exact bank states (frontiers 2, 6, 9, 11) all advanced through real purchase orders with no grants or refunds. Two honest readings at the steeper banking cadence: a route continuation can bank its claim by depth growth before its weapon's fight resolves, so the fighting configurations are demonstrated by the support walks' defeats rather than by every probed order; and the fixed rebuild ramp now consumes more than half of most closed eras — the new-territory-majority count fell to 0 of 119. **The new-frontier-effort criterion above therefore remains unmet, now with the steeper-cadence trade recorded:** the century calibration was chosen for horizon coverage (the slope-2 economy's bankless tails reached 39 credited hours inside 100), and serving the effort criterion would take a steeper curve that breaks it. The trade is recorded in [the century calibration](century-calibration.md) for the maintainer's scope decision this doc already calls for. The faster-return mark itself holds: 104 of 119 closed eras re-walk the previous bank's depth in less credited time than its first development.
@@ -37,67 +39,73 @@ A real seed-23, 60-minute support walk now attributes w0 to era 1, w0/w1 to era 
 
 ## Reproduction and source provenance
 
-The six slice files and [composed results](later-era-results.json) were re-recorded from source commit `3181bebf6e8e0fb0153b90ed507e0d0ae7478654`, runner 14. Each carries that recording commit and the compiled engine fingerprint `1ae24261`. The explicit recorder compiles through Vite's real raw/glob transform; it does not rely on the content-insensitive vitest fingerprint reported in #503. Composition verifies the source and recording commit of every slice, the full seed matrix, and the branch results.
+The six slice files, [the probe evidence](later-era-probe.json), and the [composed results](later-era-results.json) were re-recorded at source commit `6727d04`, runner 15, fingerprint `ccab0a92`, on the declared runtime (v22.23.4, `America/Chicago`). Each artifact carries its publication's recording commit and fingerprint; each slice and the probe evidence additionally carry `unitProvenance` — every unit's original recording commit, environment, and full behavior-affecting identity. Composition verifies those identities against current inputs (including evaluation versions and forward-only budgets), the compiled source byte for byte, that every unit's commit is an ancestor of the composing checkout, the full seed matrix and exact affordable-order set without duplicates, and every persisted forward, and it runs no walks: the route continuations are persisted work units, never hidden composition steps.
 
-After `npm install`, with committed source:
+One supported interface records the evaluation (issue #507, [ADR-0083](adr/0083-the-later-era-evaluation-records-as-one-resumable-job.md)). After `npm install`, with committed source:
 
 ```sh
-node tools/record-later-eras.mjs slice 25:support
-node tools/record-later-eras.mjs slice 25:combat
-node tools/record-later-eras.mjs slice 25:ignoring
-node tools/record-later-eras.mjs slice 60:support
-node tools/record-later-eras.mjs slice 60:combat
-node tools/record-later-eras.mjs slice 60:ignoring
+# Launch the whole declared evaluation (48 seed walks + probe walk + forwards).
+# --detach hands it to a detached supervisor and returns immediately; --notify
+# runs once at the terminal state. Omit --detach to watch it in the foreground.
+node tools/record-later-eras.mjs run --detach --jobs 5 \
+  --notify 'notify-send "later-era evaluation" "$FLOWSYNTH_JOB_STATUS"'
+
+# Observe completed/remaining units, failures, elapsed time, worker memory.
+node tools/record-later-eras.mjs status
+
+# After the job completes: verify completeness and provenance, publish the report.
 node tools/record-later-eras.mjs compose
 ```
 
-The equivalent `FLOWSYNTH_LATER_ERA_SLICE` / `FLOWSYNTH_LATER_ERA_REPORT` vitest gates invoke this same recorder. Ordinary suite runs skip the multi-hour evaluation. In this re-recording the independent forward-route recording ran alongside the matrix slices, then composed with them after matching the compiled source and recording commit; the commands above reproduce the same measurements without requiring parallel execution.
+`run 25:support` (any `<25|60>:<support|combat|ignoring>`) records only that slice's units; `status --dir` points at a specific job directory. Every completed unit is persisted atomically under its own identity — the compiled engine and runner source, the full recipe (seed, schedule shape, calendar basis, budgets, stops), the evaluation-logic version, the allocation solver's declared budget, and the runtime — so a relaunch reuses exactly the units whose behavior-affecting inputs still match and re-executes missing, failed, or invalidated ones. Report-format changes never discard completed evidence. Corrupt or duplicate-shaped units are rejected, their bytes preserved under the job's `logs/corrupt/`. Workers run in separate processes with bounded concurrency (`--jobs`) and an explicit per-worker heap budget (`--worker-mb`); SIGTERM cancels active supervision cleanly (status `cancelled`, workers stopped). After a supervisor-only crash, the next launch takes its stale lock and waits for all registered old workers to finish before recompiling, cleaning temporaries, scanning, or starting replacements. Worker pid leases are durable before IPC authorizes computation. Cancelling that recovery records `cancelled` and notifies, leaving the old workers registered for the next resume rather than signalling possibly recycled pids. Detached preflight never writes the live job's bundle; relative `--dir` paths work for foreground and detached launches.
 
-All 48 rows read `noGrant: true`. The recorder checks finite state and rates at every recorded snapshot, not only after resets. Every closed era advances the frontier strictly; closing-session facts, repeated kills, snapshot clocks, and crossing/split agreement are checked during recording.
+**Published-evidence migration (#519).** Composition now requires `unitProvenance[id].identity`, not just commit/environment stamps. The seven #507 input artifacts were enriched from their original 69 verified persisted units: every row, route-forward result, recording commit, and environment was compared unchanged. This was metadata recovery, not a new measurement or a current-identity restamp. For another identity-less publication, re-publish from its verified original job units; if they are unavailable, re-record. Before upgrading a pre-lease working directory, stop its old workers; completed units still reuse normally.
+
+The smoke tier drives the same pipeline in seconds (`node tools/record-later-eras.mjs smoke slice|run|compose`, isolated output only). The `FLOWSYNTH_LATER_ERA_REPORT` / `FLOWSYNTH_LATER_ERA_SLICE` vitest gates invoke the same recorder; ordinary suite runs skip the multi-hour evaluation.
+
+All 48 rows read `noGrant: true`. The recorder checks finite state and rates at every recorded snapshot, not only after resets. Every closed era advances the frontier strictly; closing-session facts, repeated kills, snapshot clocks, and crossing/split agreement are checked during recording and again at composition.
 
 ## Durations and the unresolved effort criterion
 
-Later eras classify against roughly 5–10 credited hours; era 0 has its own 8–12-hour opening target and is not classified here. The report retains each seed's durations, routes, gaps, and incomplete outcome, not an average alone.
+Later eras classify against roughly 5–10 credited hours; era 0 has its own 8–12-hour opening target and is not classified here. The report retains each seed's durations, routes, gaps, and incomplete outcome, not an average alone. Figures below are the #507 re-record at fingerprint `ccab0a92` (recording commit `6727d04`); the distributions reproduce the #492 recheck's recording within reading noise.
 
-| Policy / session length | In 5–10h | Under | Over | Actually open at budget stop |
+| Policy / session length | In 5–10h | Under | Over | Open at stop |
 | --- | ---: | ---: | ---: | ---: |
-| support / 25m | 7 | 2 | 9 | 4 |
-| combat / 25m | 7 | 1 | 8 | 4 |
-| ignoring / 25m | 4 | 1 | 9 | 6 |
-| support / 60m | 5 | 0 | 8 | 6 |
-| combat / 60m | 4 | 0 | 9 | 6 |
-| ignoring / 60m | 4 | 0 | 8 | 6 |
-| **Total** | **31** | **4** | **51** | **32** |
+| support / 25m | 9 | 3 | 9 | 1 |
+| combat / 25m | 10 | 2 | 9 | 2 |
+| ignoring / 25m | 10 | 2 | 8 | 2 |
+| support / 60m | 12 | 0 | 7 | 2 |
+| combat / 60m | 12 | 0 | 7 | 3 |
+| ignoring / 60m | 11 | 0 | 8 | 2 |
+| **Total** | **64** | **7** | **48** | **12** |
 
-Fifteen of 48 walks complete all four banks. The earlier report counted 48 open later eras because it included 16 empty successors: 15 at completed terminal banks and one at seed 99's 60-minute ignoring bank exactly at the budget stop. The latter walk is still incomplete at three banks, but it never attempted its next era. These unattempted successors are no longer presented as open attempted eras.
+Thirty-five of 48 walks complete all four banks. Across 119 closed later eras:
 
-Across 86 closed later eras:
+- **Faster familiar return:** 105 re-walk the previous bank's depth in less credited time than its first development; 14 do not. Faster return alone does not establish a majority of effort on new territory.
+- **Rebuilding:** 12 regain the previous production within half their era, while 107 spend more than half rebuilding. The latter are explicit failures of the rebuilding bar, not passes rescued by the majority.
+- **New territory:** 0 eras have a recorded new-territory share above one half. Familiar territory still dominates every walk. The corrected crossing-step accounting does not repair this gameplay shortfall.
+- **Cadence:** 48 closed later eras exceed ten hours. The record evaluates the requested window honestly; it does not establish that the shipped deeper eras generally meet it.
 
-- **Faster familiar return:** 78 re-walk the previous bank's depth in less credited time than its first development; eight do not. Faster return alone does not establish a majority of effort on new territory.
-- **Rebuilding:** 62 regain the previous production within half their era, while 24 spend more than half rebuilding. The latter are explicit failures of the rebuilding bar, not passes rescued by the majority.
-- **New territory:** only 22 eras have a recorded new-territory share above one half. Familiar territory still dominates most walks. The corrected crossing-step accounting does not repair this gameplay shortfall.
-- **Cadence:** 51 closed later eras exceed ten hours. The record evaluates the requested window honestly; it does not establish that the shipped deeper eras generally meet it.
+**These results do not satisfy the new-frontier-effort requirement.** The review fixes preserve the current entitlement curve, reset boundary, first-prestige calibration, enemy thresholds/stats, and purchase prices. Quietly changing any of these merely to make this recording green would not be a validated calibration and could strand existing saves. #492 is related calibration work, but its existence does not waive #491's requirement. This evaluation must not close #491 as complete without a balance repair or an explicit scope decision.
 
-**These results do not satisfy the new-frontier-effort requirement.** The review fixes preserve the current entitlement curve, reset boundary, first-prestige calibration, enemy thresholds/stats, and purchase prices. Quietly changing any of these merely to make this recording green would not be a validated calibration and could strand existing saves. #492 is related calibration work, but its existence does not waive #491's requirement. This PR must not close #491 as complete without a balance repair or an explicit scope decision.
+## Direct no-refund routes at the probed frontiers
 
-## Direct no-refund routes, including frontier 8
+The probe enumerates the affordable entry/Column/Hone purchase orders at the exact unspent bank states of the declared seed-23, 60-minute support walk: frontiers **2, 6, 9, and 11**, 20 orders in total. Each order rides real irreversible purchase actions. A structural placement attempt runs on a separate clone, so the probe does not impose its candidate seats on the policy it is testing. Each order's continuation is its own persisted work unit (issue #507): the walk's worker enumerates cheaply with no continuation, and every order's forward executes on a worker process under its own identity before composition reads it — composition runs no walks.
 
-The probe enumerates the affordable entry/Column/Hone purchase orders at the exact unspent bank states of the declared seed-23, 60-minute support walk: frontiers **2, 4, 6, and 8**, 17 orders in total. Each order rides real irreversible purchase actions. A structural placement attempt runs on a separate clone, so the probe does not impose its candidate seats on the policy it is testing. An order with no Column correctly fails the immediate rig read; that does not by itself prove a progression trap.
+Each branch continues its own exact purchased state through `continuePlaythrough`, the same session/management/advance/prestige walk, using a declared support policy, its remaining currency, a 30-day budget, and a target of one positive Arete. One real positive bank suffices to surpass the starting frontier; no reward is forced at a clock threshold. The continuation's recipe and resulting run identity are carried under that order's `forward` record.
 
-Each branch then continues its own exact purchased state through `continuePlaythrough`, the same session/management/advance/prestige walk, using a declared support policy, its remaining currency, a 30-day budget, and a target of one positive Arete. One real positive bank suffices to surpass the starting frontier; no reward is forced at a clock threshold. The continuation is labelled `kind: "continuation"`, captures its initial state, includes that state in its run identity, and is not fresh-start acquisition evidence. Its recipe and resulting run identity are carried under that order's `forward` record.
+All 20 directly continued orders bank a strictly greater frontier within budget, and every tested frontier demonstrates its route (`routeDemonstrated` true at each bank). Every branch carries its actual defeats, credited duration, `noGrant`, `noRefund`, and finite-state result. This establishes routes for these tested states and policies, not universal recoverability for every future build or a guarantee of short recovery.
 
-All 17 directly continued orders bank a strictly greater frontier within budget. Every tested frontier has a directly demonstrated fighting route, including the route from frontier 8 past frontier 8; every branch carries its actual defeats, credited duration, `noGrant`, `noRefund`, and finite-state result. The last frontier is no longer certified by placement alone. This establishes routes for these tested states and policies, not universal recoverability for every future build or a guarantee of short recovery.
-
-The policy comparison remains material: in the 60-minute matrix support defeats enemies on seven of eight seeds (w2 on three), combat on one of eight, and ignoring on none. Seed 23's later eras take 5/7/10h under support, 5/9/15h under combat, and 5/8/15h under ignoring. Hone-first spending can leave combat unfed; ignoring still banks positive claims without defeats, paying for postponement in longer eras. Per-era routes now show repeated kills and relocations in their actual eras instead of shifting or suppressing them.
+The policy comparison remains material: in the 25-minute matrix support defeats enemies on six of eight seeds, combat on five, and ignoring on none; at 60 minutes support and combat each defeat on three of eight seeds (42, 468, 99), ignoring on none — the longer session reaches the World later and fights less. Seed 23's closed later eras take 5/6/8h under support and combat and 5/6/9h under ignoring at 60 minutes. Hone-first spending can leave combat unfed; ignoring still banks positive claims without defeats, paying for postponement in longer eras. Per-era routes show repeated kills and relocations in their actual eras instead of shifting or suppressing them.
 
 ## Every acceptance criterion beside its evidence
 
 | #491 criterion | Named verification / recorded evidence | Class and outcome |
 | --- | --- | --- |
-| Repeated productive eras; banked claims, purchases, deployment, recovery, strictly larger frontiers | `closes the first era at its bank and reads the familiar/new split`; all 48 slice rows, 15 four-bank completions; recorder asserts each bank's frontier and finite state; per-era route/marks retain unreached outcomes | automated + recorded; repeated eras demonstrated |
-| Faster familiar return, measured new territory, rebuilding not most of later eras | `keeps crossing events, inspection clocks, and the familiar span in agreement`; per-era `familiarFaster`, `newShare`, and `rebuildingShare`; 78/86 faster, 24/86 rebuilding misses, only 22/86 new-territory majorities | automated + recorded; **UNMET / merge blocker**, no accepted deferral |
+| Repeated productive eras; banked claims, purchases, deployment, recovery, strictly larger frontiers | `closes the first era at its bank and reads the familiar/new split`; all 48 slice rows, 35 four-bank completions; the recorder asserts each bank's frontier and finite state in every worker; per-era route/marks retain unreached outcomes | automated + recorded; repeated eras demonstrated |
+| Faster familiar return, measured new territory, rebuilding not most of later eras | `keeps crossing events, inspection clocks, and the familiar span in agreement`; per-era `familiarFaster`, `newShare`, and `rebuildingShare`; 105/119 faster, 107/119 rebuilding misses, 0/119 new-territory majorities | automated + recorded; **UNMET / merge blocker**, no accepted deferral |
 | Evaluate the 5–10h window across policies/seeds/schedules; misses and incomplete runs explicit | `classifies eras: the opening is not a later era, and an open era stays open`; all six distributions above and every per-seed era in the composed results | automated + recorded; evaluation complete, timing misses explicit |
-| Enumerate affordable no-refund routes; demonstrate configurations surpassing resistance; detect/repair traps without grants/refunds | `enumerates orders without mistaking seats or another branch for forward progress`; negative real continuation and positive labelled-fixture cases; recorded 17 real continuations over frontiers 2/4/6/8, all advanced with currency/finite checks; actual defeats establish fighting configurations | automated + recorded; demonstrated at the tested states, not extrapolated universally |
+| Enumerate affordable no-refund routes; demonstrate configurations surpassing resistance; detect/repair traps without grants/refunds | `enumerates orders without mistaking seats or another branch for forward progress`; negative real continuation and positive labelled-fixture cases; 20 persisted forward units over frontiers 2/6/9/11, all advanced with currency/finite checks; actual defeats establish fighting configurations | automated + recorded; demonstrated at the tested states, not extrapolated universally |
 | Support/combat/ignoring comparison; material benefit and possible postponement | `support buys its charge line before its blade; combat its blade before its charge line`; `ignoring never buys or deploys a World occupant, and still banks its claims`; the six recorded slices' durations and defeats | automated + recorded; comparison demonstrated |
 | Consequential opportunities and finite state per era; reset/readout preservation; every criterion mapped | Per-era routes/gaps; `keeps facts before a tied bank in the closing era and facts after it in the next`; `owns closing-session defeats and repeated kills in the era that fought them`; recorder checks every snapshot; existing prestige/World/accumulator/app readout tests; artifact round trips including continuations | automated + recorded; mapping is this table, not a suite count |
 

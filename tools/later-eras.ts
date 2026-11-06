@@ -1,4 +1,6 @@
 import { BALANCE, WORLD_ENEMIES } from "../src/engine/constants";
+import { DEFAULT_ALLOCATION_BUDGET } from "../src/engine/allocation";
+import assert from "node:assert/strict";
 import {
   composePlaythroughRecipe,
   continuePlaythrough,
@@ -428,10 +430,15 @@ export function affordableOrdersAt(state: GameState): readonly RoutePiece[][] {
     const price = routePiecePriceAt(state, piece);
     return price === null ? [] : [{ piece, price }];
   });
+  return affordableOrdersFor(priced, state.arete);
+}
+
+// The same enumeration verifies persisted evidence without running a walk.
+function affordableOrdersFor(priced: readonly { readonly piece: RoutePiece; readonly price: number }[], budget: number): RoutePiece[][] {
   const orders: RoutePiece[][] = [[]];
   const walk = (prefix: RoutePiece[], left: typeof priced, spent: number): void => {
     for (const { piece, price } of left) {
-      if (spent + price > state.arete) continue;
+      if (spent + price > budget) continue;
       const next = [...prefix, piece];
       orders.push(next);
       walk(next, left.filter((entry) => entry.piece !== piece), spent + price);
@@ -528,26 +535,14 @@ export function routeProbes(record: PlaythroughRecord, forward?: { budgetDays: n
     });
     const orders: RouteProbeOrder[] = [];
     for (const order of affordableOrdersAt(base)) {
-      const state = cloneState(base);
-      const rng = seededRng(record.recipe.seed + bank);
-      let purchasesOk = true;
-      let spend = 0;
-      for (const piece of order) {
-        const price = routePiecePriceAt(state, piece);
-        if (price === null || !probeBuy(state, piece, rng)) {
-          purchasesOk = false;
-          break;
-        }
-        spend += price;
-      }
-      const placementsOk = probePlace(cloneState(state));
+      const prepared = prepareProbeOrder(record, bank, order);
       orders.push({
         order,
-        spend,
-        purchasesOk,
-        placementsOk,
-        finite: stateNumbersFinite(state),
-        forward: forward && purchasesOk ? walkRouteForward(record, banks[bank]!.event, bank, state, forward.budgetDays) : null,
+        spend: prepared.spend,
+        purchasesOk: prepared.purchasesOk,
+        placementsOk: prepared.placementsOk,
+        finite: prepared.finite,
+        forward: forward && prepared.purchasesOk ? probeForwardFor(record, prepared, forward.budgetDays) : null,
       });
     }
     probes.push({
@@ -560,6 +555,76 @@ export function routeProbes(record: PlaythroughRecord, forward?: { budgetDays: n
     });
   }
   return probes;
+}
+
+// One enumerated order's cheap preparation: the bank's exact unspent state
+// cloned, the order's purchases made through the engine's own actions, and
+// the purchases/seat/finite reads. No walk runs here — this is the
+// persisted-work-unit boundary (issue #507): enumeration is cheap and
+// shared, and each order's forward continuation is its own unit.
+export interface PreparedProbeOrder {
+  readonly bankIndex: number;
+  readonly order: readonly RoutePiece[];
+  readonly spend: number;
+  // Every purchase in the order landed through the engine's own action.
+  readonly purchasesOk: boolean;
+  // The rig's seats existed and the placements landed: the weapon beside
+  // the first enemy's cell, the Column beside the charge line.
+  readonly placementsOk: boolean;
+  // The finite read over the state the order left.
+  readonly finite: boolean;
+  // The bought clone the forward continues; null when purchases failed.
+  readonly state: GameState | null;
+  readonly bankEvent: PlaythroughEvent;
+}
+
+export function prepareProbeOrder(
+  record: PlaythroughRecord,
+  bankIndex: number,
+  order: readonly RoutePiece[],
+): PreparedProbeOrder {
+  const banks = record.events
+    .map((event, index) => ({ event, index }))
+    .filter(({ event }) => event.kind === "prestige" && event.ok);
+  if (banks.length === 0) throw new Error("Route probe: the walk never banked its first claim — extend the budget.");
+  const bank = banks[bankIndex];
+  if (!bank) throw new Error(`Route probe: the walk carries no bank ${bankIndex}.`);
+  const base = record.snapshots[bank.event.snapshot]!.state;
+  if (base.arete < 0) throw new Error("Route probe: the bank state's Arete is unreadable.");
+  const state = cloneState(base);
+  const rng = seededRng(record.recipe.seed + bankIndex);
+  let purchasesOk = true;
+  let spend = 0;
+  for (const piece of order) {
+    const price = routePiecePriceAt(state, piece);
+    if (price === null || !probeBuy(state, piece, rng)) {
+      purchasesOk = false;
+      break;
+    }
+    spend += price;
+  }
+  return {
+    bankIndex,
+    order,
+    spend,
+    purchasesOk,
+    placementsOk: probePlace(cloneState(state)),
+    finite: stateNumbersFinite(state),
+    state: purchasesOk ? state : null,
+    bankEvent: bank.event,
+  };
+}
+
+// The order's forward continuation — the expensive walk that used to hide
+// inside composition (issue #507) and now executes as its own persisted
+// work unit, on a worker process, under the unit's own identity.
+export function probeForwardFor(
+  parent: PlaythroughRecord,
+  prepared: PreparedProbeOrder,
+  budgetDays: number,
+): RouteForward {
+  if (!prepared.state) throw new Error("Route forward: the order's purchases did not land — no state to continue.");
+  return walkRouteForward(parent, prepared.bankEvent, prepared.bankIndex, prepared.state, budgetDays);
 }
 
 // No second simulator: use the same runner on a clone of the exact bank
@@ -599,4 +664,415 @@ export function walkRouteForward(
       (!state.catalogEntryOwned || continuation.state.catalogEntryOwned),
     finite: continuation.snapshots.every((snapshot) => stateNumbersFinite(snapshot.state) && Number.isFinite(snapshot.rate)),
   };
+}
+
+// ── The resumable evaluation job (issue #507) ──────────────────────────────
+//
+// One supported interface records this evaluation as a job of persisted
+// work units: every completed seed walk (and the probe walk and each of
+// its route forwards) lands atomically in the job directory under its own
+// identity, so an interruption loses in-flight work only. Relaunching
+// reuses a stored unit exactly when its identity — the behavior-affecting
+// inputs, and nothing else — matches the inputs this checkout would run.
+// The identity lives here, beside the evaluation logic it names, so the
+// CLI and the verification exercise one recording boundary.
+
+// Bumped only when the recorded figures' meaning changes — the row and
+// era reads, the report's assertions, the probe reads. A change here
+// invalidates every stored unit (the figures would read differently), and
+// a report-format change that does not touch these semantics must not.
+export const LATER_ERA_EVALUATION_VERSION = 1;
+
+// The probe walk's declared basis (issue #491's recorded probes): the
+// seed-23 long-session support walk whose banks the route probes read.
+export const PROBE_WALK_SEED = 23;
+
+// Each route order's forward continuation budget — the same declared
+// budget composition always used for these continuations.
+export const PROBE_FORWARD_BUDGET_DAYS = LONG_BUDGET_DAYS;
+
+export function laterEraProbeWalkRecipe(): PlaythroughRecipe {
+  return laterEraRecipe(PROBE_WALK_SEED, LONG_SESSION_MINUTES, "support");
+}
+
+// What a stored unit must match to be reused, computed fresh from the
+// inputs this checkout would run. Engine and runner source (the compiled
+// fingerprint), the full recipe — seed, schedule shape, calendar basis,
+// budgets, stops — the evaluation-logic version, the allocation solver's
+// declared settings, and the runtime. Nothing report-shaped appears: a
+// report-format change never discards completed evidence. A forward adds
+// its bank, order, budget, and its parent probe-walk identity, so a
+// changed parent invalidates its forwards by construction.
+export interface LaterEraUnitIdentity {
+  readonly engine: PlaythroughSource;
+  readonly evaluation: number;
+  readonly solver: { readonly maxNodes: number; readonly maxMs: number };
+  readonly runtime: { readonly node: string };
+  readonly recipe: PlaythroughRecipe | null;
+  readonly forward: {
+    readonly bank: number;
+    readonly order: readonly RoutePiece[];
+    readonly budgetDays: number;
+    readonly parent: LaterEraUnitIdentity | null;
+  } | null;
+}
+
+export type LaterEraUnitKey =
+  | { readonly kind: "seed"; readonly seed: number; readonly minutes: number; readonly policy: string }
+  | { readonly kind: "probe-walk" }
+  | { readonly kind: "probe-forward"; readonly bank: number; readonly orderIndex: number };
+
+// One planned work unit: what a worker executes, as plain data. The full
+// recipe rides the descriptor (seed and probe-walk units), so a worker
+// never re-derives anything from the declared matrix — the plan is the
+// whole instruction.
+export interface LaterEraUnitDescriptor {
+  readonly id: string;
+  readonly key: LaterEraUnitKey;
+  readonly recipe: PlaythroughRecipe | null;
+  readonly forward: {
+    readonly bank: number;
+    readonly order: readonly RoutePiece[];
+    readonly budgetDays: number;
+    readonly parentIdentity: LaterEraUnitIdentity;
+  } | null;
+  readonly deps: readonly string[];
+}
+
+export function laterEraUnitId(key: LaterEraUnitKey): string {
+  if (key.kind === "seed") return `seed-${key.minutes}-${key.policy}-${key.seed}`;
+  if (key.kind === "probe-walk") return "probe-walk";
+  return `forward-b${key.bank}-o${key.orderIndex}`;
+}
+
+function seedUnit(seed: number, minutes: number, policy: string, recipe: PlaythroughRecipe): LaterEraUnitDescriptor {
+  return { id: laterEraUnitId({ kind: "seed", seed, minutes, policy }), key: { kind: "seed", seed, minutes, policy }, recipe, forward: null, deps: [] };
+}
+
+function probeWalkUnit(recipe: PlaythroughRecipe): LaterEraUnitDescriptor {
+  return { id: laterEraUnitId({ kind: "probe-walk" }), key: { kind: "probe-walk" }, recipe, forward: null, deps: [] };
+}
+
+function forwardUnit(
+  bank: number,
+  orderIndex: number,
+  order: readonly RoutePiece[],
+  parentIdentity: LaterEraUnitIdentity,
+): LaterEraUnitDescriptor {
+  return {
+    id: laterEraUnitId({ kind: "probe-forward", bank, orderIndex }),
+    key: { kind: "probe-forward", bank, orderIndex },
+    recipe: null,
+    forward: { bank, order, budgetDays: PROBE_FORWARD_BUDGET_DAYS, parentIdentity },
+    deps: [laterEraUnitId({ kind: "probe-walk" })],
+  };
+}
+
+export function laterEraUnitIdentity(descriptor: LaterEraUnitDescriptor): LaterEraUnitIdentity {
+  return {
+    engine: playthroughSource(),
+    evaluation: LATER_ERA_EVALUATION_VERSION,
+    solver: { maxNodes: DEFAULT_ALLOCATION_BUDGET.maxNodes, maxMs: DEFAULT_ALLOCATION_BUDGET.maxMs },
+    runtime: { node: process.version },
+    recipe: descriptor.recipe,
+    forward: descriptor.forward === null ? null : {
+      bank: descriptor.forward.bank,
+      order: descriptor.forward.order,
+      budgetDays: descriptor.forward.budgetDays,
+      parent: descriptor.forward.parentIdentity,
+    },
+  };
+}
+
+// The evaluation job's declared plan: every matrix seed of every slice,
+// then the probe walk. The plan builder asserts id and key uniqueness —
+// two units claiming the same evidence are a plan defect, refused here
+// before any walk. The forward units are not enumerable until the probe
+// walk's banks exist; `derive` builds them from the persisted probe-walk
+// result, under the walk's own identity, so the fan-out rides the job.
+export interface LaterEraJobPlan {
+  readonly units: readonly LaterEraUnitDescriptor[];
+  // Only the full evaluation's plan derives: the forwards are enumerable
+  // once the probe walk's banks exist. Plans without a fan-out omit it.
+  readonly derive?: (banks: readonly RouteBankProbe[], probeWalkIdentity: LaterEraUnitIdentity) => readonly LaterEraUnitDescriptor[];
+}
+
+function assertPlanUnique(units: readonly LaterEraUnitDescriptor[], known: readonly string[] = []): void {
+  const ids = new Set<string>(known);
+  const keys = new Set<string>();
+  for (const unit of units) {
+    if (ids.has(unit.id)) throw new Error(`Later-era job plan: duplicate unit id "${unit.id}".`);
+    const keyText = JSON.stringify(unit.key);
+    if (keys.has(keyText)) throw new Error(`Later-era job plan: duplicate unit key ${keyText} (unit "${unit.id}").`);
+    ids.add(unit.id);
+    keys.add(keyText);
+    for (const dep of unit.deps) {
+      if (!ids.has(dep)) throw new Error(`Later-era job plan: unit "${unit.id}" depends on unplanned unit "${dep}".`);
+    }
+  }
+}
+
+export function laterEraJobPlan(): LaterEraJobPlan {
+  const units = [
+    probeWalkUnit(laterEraProbeWalkRecipe()),
+    ...[BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES].flatMap((minutes) =>
+      WORLD_POLICIES.map((policy) => ({ minutes, policy })),
+    ).flatMap(({ minutes, policy }) =>
+      LATER_ERA_SEEDS.map((seed) => seedUnit(seed, minutes, policy, laterEraRecipe(seed, minutes, policy))),
+    ),
+  ];
+  assertPlanUnique(units);
+  return {
+    units,
+    derive: (banks, probeWalkIdentity) => {
+      // The forwards' declared dependency — the probe walk — is known
+      // from the plan the supervisor already carries; the forwards array
+      // itself is validated against that known id, not alone.
+      const forwards = banks.flatMap((probe, bank) =>
+        probe.orders.map((order, orderIndex) =>
+          forwardUnit(bank, orderIndex, order.order, probeWalkIdentity)),
+      );
+      assertPlanUnique(forwards, [laterEraUnitId({ kind: "probe-walk" })]);
+      return forwards;
+    },
+  };
+}
+
+// One slice's plan (a targeted `run 25:support`): that slice's eight
+// declared seeds — the same units the full evaluation plans, so a
+// targeted run and the full evaluation share evidence.
+export function laterEraSliceJobPlan(minutes: number, policy: string): LaterEraJobPlan {
+  const units = LATER_ERA_SEEDS.map((seed) => seedUnit(seed, minutes, policy, laterEraRecipe(seed, minutes, policy)));
+  assertPlanUnique(units);
+  return { units };
+}
+
+// The smoke tier's plan (issue #506's bounded seam, carried into the job
+// interface): one tiny seed unit on the smoke recipe. Never mixes with
+// the matrix — smoke publishes only into isolated output.
+export function laterEraSmokeJobPlan(): LaterEraJobPlan {
+  const seed = LATER_ERA_SMOKE.seed;
+  const recipe = laterEraSmokeRecipe();
+  const units = [seedUnit(seed, recipe.schedule.sessionMinutes, recipe.policyId, recipe)];
+  assertPlanUnique(units);
+  return { units };
+}
+
+// A tiny multi-unit evaluation (the interruption/resume demonstration
+// seam): three tiny seed units — seconds each — so the real supervisor
+// loop, resume, cancellation, and notification run inside a test. Every
+// seed walks its own recipe: the units' identities must separate them.
+export function laterEraTinyJobPlan(seeds: readonly number[] = [42, 468, 157]): LaterEraJobPlan {
+  const units = seeds.map((seed) => {
+    const recipe = laterEraSmokeRecipe();
+    return seedUnit(seed, recipe.schedule.sessionMinutes, recipe.policyId, { ...recipe, seed });
+  });
+  assertPlanUnique(units);
+  return { units };
+}
+
+// ── The unit checks, shared by worker, supervisor, and composition ────────
+
+// The mechanical per-walk checks both the matrix slices and the smoke
+// walk validate (issue #506): finite state and rate at every snapshot,
+// event credit matching its snapshot, the prior depth's credit carried
+// into the era, and every era's defeats read off its own pre-bank board.
+export function assertLaterEraWalk(record: PlaythroughRecord): void {
+  const banks = record.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
+  for (const [index, bank] of banks.entries()) {
+    const last = record.events.slice(0, bank).reverse().find(event => event.kind === "session" || event.kind === "breather");
+    const state = record.snapshots[last!.snapshot].state;
+    const defeats = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp === 0).map(([key]) => key);
+    assert.deepEqual(laterEraView(record, index, null).defeats, defeats);
+  }
+  for (const snapshot of record.snapshots) {
+    assert.equal(stateNumbersFinite(snapshot.state), true, "the recorded state stayed finite");
+    assert.ok(Number.isFinite(snapshot.rate), "the credited rate stayed finite");
+  }
+  for (const event of record.events) assert.equal(record.snapshots[event.snapshot]!.credited, event.credited);
+  for (const era of record.eras) {
+    if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
+  }
+}
+
+// The row core both the matrix rows and the smoke row validate (issue
+// #506): currency integrity, finite banked state, the familiar/new hour
+// split, and strict frontier advance at every closed era.
+export function assertLaterEraRowCore(row: LaterEraRow): void {
+  assert.equal(row.noGrant, true);
+  let frontier = 0;
+  for (const era of row.eras) {
+    if (era.claim === null) continue;
+    assert.equal(era.finite, true);
+    if (era.index > 0) assert.ok(Math.abs(era.familiarHours + era.newHours - era.hours!) < 0.02);
+    assert.ok(era.frontierAfter! > frontier);
+    frontier = era.frontierAfter!;
+  }
+}
+
+// The smoke row's own checks (issue #506): the walk completed at its
+// declared credited bound and stays under the later-era window's floor —
+// the bounded seam cannot pass a smoke row off as later-era evidence.
+export function assertLaterEraSmokeRow(row: LaterEraRow): void {
+  assertLaterEraRowCore(row);
+  assert.equal(row.complete, true, "the smoke walk completes at its declared bound");
+  assert.equal(row.stopKind, "century", "the smoke walk completes at its declared credited stop");
+  assert.ok(row.creditedHours >= LATER_ERA_SMOKE.stopCreditedHours, `credited ${row.creditedHours} below the smoke bound`);
+  assert.ok(row.creditedHours < LATER_ERA_MIN_HOURS, "a smoke row stays under the later-era window — it is not later-era evidence");
+}
+
+// What one kind's stored unit must carry. The supervisor and the worker
+// both run this: the worker before persisting (a unit never persists in
+// a shape its own module cannot read back), the supervisor when a worker
+// exits (a worker that claimed success without a readable unit is a
+// named failure, never silent reuse).
+export function validateLaterEraUnit(descriptor: LaterEraUnitDescriptor, payload: {
+  readonly unit?: unknown;
+  readonly key?: unknown;
+  readonly identity?: unknown;
+  readonly result?: Record<string, unknown>;
+}): void {
+  assert.equal(payload.unit, descriptor.id, "the stored unit names its own id");
+  assert.deepEqual(payload.key, descriptor.key, "the stored unit's key matches its plan key");
+  assertLaterEraUnitShape(descriptor, payload);
+  const result = payload.result;
+  if (descriptor.key.kind === "seed") {
+    const row = result?.row as LaterEraRow | undefined;
+    assert.ok(row, "the seed unit carries its row");
+    assertLaterEraRowCore(row!);
+    assert.equal(row!.seed, descriptor.key.seed);
+    assert.equal(row!.sessionMinutes, descriptor.key.minutes);
+    assert.equal(row!.policy, descriptor.key.policy);
+  } else if (descriptor.key.kind === "probe-walk") {
+    const row = result?.row as LaterEraRow | undefined;
+    const banks = result?.banks as RouteBankProbe[] | undefined;
+    const record = result?.record as PlaythroughRecord | undefined;
+    assert.ok(row, "the probe-walk unit carries its row");
+    assertLaterEraRowCore(row!);
+    assert.ok(banks, "the probe-walk unit carries its banks");
+    assert.ok(banks!.length >= 1, "the probe walk banked at least one claim");
+    assert.ok(record, "the probe-walk unit carries its record");
+    assert.ok(record!.snapshots.length > 0, "the probe-walk record carries snapshots");
+    assert.deepEqual(record!.recipe, descriptor.recipe, "the carried record is the planned walk");
+    assert.equal(row!.seed, PROBE_WALK_SEED);
+  } else {
+    const prepared = result?.prepared as { readonly order?: unknown } | undefined;
+    const forward = result?.forward as RouteForward | undefined;
+    assert.ok(prepared, "the forward unit carries its preparation");
+    assert.deepEqual(prepared!.order, descriptor.forward!.order, "the forward unit's order matches its plan");
+    assert.ok(forward, "the forward unit carries its forward continuation");
+    assert.ok(forward!.outcome === "advanced" || forward!.outcome === "unreached", "the forward names its outcome");
+    assert.equal(typeof forward!.runId, "string", "the forward names its run");
+  }
+}
+
+function assertLaterEraUnitShape(descriptor: LaterEraUnitDescriptor, payload: { readonly identity?: unknown }): void {
+  assert.ok(payload.identity && typeof payload.identity === "object", "the stored unit carries its identity");
+  const identity = payload.identity as LaterEraUnitIdentity;
+  assert.ok(identity.engine, "the unit identity names the engine source");
+  assert.equal(identity.evaluation, LATER_ERA_EVALUATION_VERSION, "the unit identity names the evaluation version");
+  assert.ok(identity.solver && typeof identity.solver.maxNodes === "number", "the unit identity names the solver budget");
+  assert.ok(identity.runtime && typeof identity.runtime.node === "string", "the unit identity names the runtime");
+  if (descriptor.recipe === null) assert.equal(identity.recipe, null, "a forward unit carries no recipe identity");
+  else assert.deepEqual(identity.recipe, descriptor.recipe, "the unit identity carries the planned recipe");
+}
+
+// A stored unit is reusable exactly when its identity equals the identity
+// this checkout would run — deep equality over the whole identity block.
+export function laterEraUnitMatches(descriptor: LaterEraUnitDescriptor, payload: { readonly identity?: unknown }): boolean {
+  try {
+    assertLaterEraUnitShape(descriptor, payload);
+    assert.deepEqual(payload.identity, laterEraUnitIdentity(descriptor));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ── The persisted probe evidence (issue #507) ──────────────────────────────
+//
+// Composition never runs a walk or a route continuation. The probe walk
+// and every one of its orders' forwards are persisted work units; the
+// job publishes their composed evidence, and composition verifies it.
+
+export interface LaterEraUnitProvenance {
+  readonly recordingCommit: string;
+  readonly recordingEnvironment?: Record<string, unknown>;
+  readonly identity: LaterEraUnitIdentity;
+}
+
+// Published evidence must retain exactly the identities workers measured.
+// An engine fingerprint alone does not cover recipes or evaluation logic.
+export function assertLaterEraUnitProvenance(
+  provenance: Record<string, LaterEraUnitProvenance>,
+  descriptors: readonly LaterEraUnitDescriptor[],
+  label: string,
+): void {
+  assert.ok(provenance && typeof provenance === "object", `${label} carries its units' identity provenance — re-publish from the job`);
+  assert.deepEqual(Object.keys(provenance).sort(), descriptors.map(unit => unit.id).sort(),
+    `${label} carries exactly the declared units' identity provenance`);
+  for (const descriptor of descriptors) {
+    const stored = provenance[descriptor.id]!;
+    assert.equal(typeof stored.recordingCommit, "string", `${label}'s unit ${descriptor.id} names its recording commit`);
+    // Compare the serialized shape: the plan and artifacts are JSON data.
+    assert.deepEqual(stored.identity, JSON.parse(JSON.stringify(laterEraUnitIdentity(descriptor))),
+      `${label}'s unit ${descriptor.id} has a stale or missing identity — re-record it`);
+  }
+}
+
+export interface LaterEraProbeEvidence {
+  readonly source: PlaythroughSource;
+  readonly recordingCommit: string;
+  readonly recordingEnvironment?: Record<string, unknown>;
+  readonly unitProvenance: Record<string, LaterEraUnitProvenance>;
+  readonly seed: number;
+  readonly minutes: number;
+  readonly policy: string;
+  readonly walk: { readonly recipe: PlaythroughRecipe; readonly row: LaterEraRow };
+  readonly banks: readonly RouteBankProbe[];
+}
+
+// Composition's verification of the probe evidence: the declared walk,
+// the banks read off that walk, and every order's forward present and
+// advancing — the same reads the inline composition used to enforce,
+// now against persisted evidence (issue #507).
+export function assertProbeEvidence(payload: unknown, label: string): asserts payload is LaterEraProbeEvidence {
+  const probe = payload as LaterEraProbeEvidence;
+  assert.ok(probe && typeof probe === "object", `${label} carries no probe evidence`);
+  assert.ok(probe.source, `${label} names its engine source`);
+  assert.equal(typeof probe.recordingCommit, "string", `${label} names its recording commit`);
+  assert.deepEqual(probe.walk?.recipe, laterEraProbeWalkRecipe(),
+    `${label} is not the declared probe walk (seed ${PROBE_WALK_SEED}, ${LONG_SESSION_MINUTES}-minute support) — re-record it`);
+  assert.equal(probe.seed, PROBE_WALK_SEED);
+  assert.equal(probe.minutes, LONG_SESSION_MINUTES);
+  assert.equal(probe.policy, "support");
+  assertLaterEraRowCore(probe.walk.row);
+  const banks = probe.banks;
+  assert.ok(Array.isArray(banks), `${label} carries its probed banks`);
+  // The probed frontiers are the walk's own banks — the exact sequence the
+  // walk's row recorded — strictly increasing, at least two to probe.
+  assert.deepEqual(banks.map((bank) => bank.frontier), probe.walk.row.frontiers,
+    `${label}'s probed banks are not the walk's own banks`);
+  assert.ok(banks.length >= 2, `${label} probed enough banks`);
+  for (let i = 1; i < banks.length; i++) assert.ok(banks[i]!.frontier > banks[i - 1]!.frontier);
+  for (const bank of banks) {
+    assert.deepEqual(bank.orders.map((order: RouteProbeOrder) => order.order), affordableOrdersFor(bank.pieces, bank.budget),
+      `${label} carries every affordable order exactly once in declared order`);
+    assert.equal(bank.routeDemonstrated, true, `${label}'s frontier ${bank.frontier} demonstrates no route`);
+    for (const order of bank.orders) {
+      assert.ok(order.forward, `${label}'s frontier ${bank.frontier} carries an order without its persisted forward`);
+      assert.equal(order.purchasesOk, true);
+      assert.equal(order.finite, true);
+      assert.ok(order.spend <= bank.budget);
+      assert.equal(order.forward!.noGrant, true);
+      assert.equal(order.forward!.noRefund, true);
+      assert.equal(order.forward!.finite, true);
+      assert.equal(order.forward!.outcome, "advanced");
+      assert.ok(order.forward!.frontierAfter > bank.frontier);
+    }
+  }
+  const builder = laterEraJobPlan();
+  const walk = builder.units.find(unit => unit.key.kind === "probe-walk")!;
+  assertLaterEraUnitProvenance(probe.unitProvenance,
+    [walk, ...builder.derive!(banks, laterEraUnitIdentity(walk))], label);
 }

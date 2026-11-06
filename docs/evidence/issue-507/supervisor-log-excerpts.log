@@ -1,0 +1,17 @@
+### The unplanned crash: the supervisor died on a plan-validation defect
+2026-11-06T15:19:45.626Z supervisor failed: Later-era job plan: unit "forward-b0-o0" depends on unplanned unit "probe-walk".
+
+### Takeover after the first hard kill (SIGKILL of the detached group)
+2026-11-06T15:40:32.819Z took over the stale lock of pid 685933 (started 2026-11-06T15:29:09.812Z)
+
+### Takeover after the second hard kill
+2026-11-06T15:42:31.652Z took over the stale lock of pid 692299 (started 2026-11-06T15:40:32.819Z)
+
+### The resumed job derived the forwards from the reused probe walk
+2026-11-06T15:42:32.729Z derived 20 follow-on units from probe-walk
+
+### A terminal notification
+2026-11-06T15:26:16.497Z running notification: echo "$(date -Is) $FLOWSYNTH_JOB_STATUS" >> "$FLOWSYNTH_JOB_DIR/notification.log"
+
+### A genuine failure surfaced (premature publication, fixed and re-recorded)
+2026-11-06T15:26:16.497Z job failed: 2 done, 0 failed, 45 not done; publish error: probe could not publish: the probe's bank 0 order 0 has no persisted forward unit
