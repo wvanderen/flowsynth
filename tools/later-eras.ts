@@ -2,6 +2,7 @@ import { BALANCE, WORLD_ENEMIES } from "../src/engine/constants";
 import { DEFAULT_ALLOCATION_BUDGET } from "../src/engine/allocation";
 import assert from "node:assert/strict";
 import {
+  completeSnapshotsOf,
   composePlaythroughRecipe,
   continuePlaythrough,
   playthroughNote,
@@ -521,13 +522,17 @@ function probePlace(state: GameState): boolean {
 // The probe itself, over one recorded walk: one probe per bank the walk
 // landed, each against that bank's own unspent state.
 export function routeProbes(record: PlaythroughRecord, forward?: { budgetDays: number }): RouteBankProbe[] {
+  // The probe boundary reads the exact historical boards — complete
+  // records only (issue #509): the route forwards replay from a bank's
+  // own unspent state.
+  const snapshots = completeSnapshotsOf(record);
   const banks = record.events
     .map((event, index) => ({ event, index }))
     .filter(({ event }) => event.kind === "prestige" && event.ok);
   if (banks.length === 0) throw new Error("Route probe: the walk never banked its first claim — extend the budget.");
   const probes: RouteBankProbe[] = [];
   for (let bank = 0; bank < banks.length; bank++) {
-    const base = record.snapshots[banks[bank]!.event.snapshot]!.state;
+    const base = snapshots[banks[bank]!.event.snapshot]!.state;
     if (base.arete < 0) throw new Error("Route probe: the bank state's Arete is unreadable.");
     const pieces = (["entry", "column", "hone"] as const).flatMap((piece) => {
       const price = routePiecePriceAt(base, piece);
@@ -589,7 +594,7 @@ export function prepareProbeOrder(
   if (banks.length === 0) throw new Error("Route probe: the walk never banked its first claim — extend the budget.");
   const bank = banks[bankIndex];
   if (!bank) throw new Error(`Route probe: the walk carries no bank ${bankIndex}.`);
-  const base = record.snapshots[bank.event.snapshot]!.state;
+  const base = completeSnapshotsOf(record)[bank.event.snapshot]!.state;
   if (base.arete < 0) throw new Error("Route probe: the bank state's Arete is unreadable.");
   const state = cloneState(base);
   const rng = seededRng(record.recipe.seed + bankIndex);
@@ -878,18 +883,19 @@ export function laterEraTinyJobPlan(seeds: readonly number[] = [42, 468, 157]): 
 // event credit matching its snapshot, the prior depth's credit carried
 // into the era, and every era's defeats read off its own pre-bank board.
 export function assertLaterEraWalk(record: PlaythroughRecord): void {
+  const snapshots = completeSnapshotsOf(record);
   const banks = record.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
   for (const [index, bank] of banks.entries()) {
     const last = record.events.slice(0, bank).reverse().find(event => event.kind === "session" || event.kind === "breather");
-    const state = record.snapshots[last!.snapshot].state;
+    const state = snapshots[last!.snapshot].state;
     const defeats = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp === 0).map(([key]) => key);
     assert.deepEqual(laterEraView(record, index, null).defeats, defeats);
   }
-  for (const snapshot of record.snapshots) {
+  for (const snapshot of snapshots) {
     assert.equal(stateNumbersFinite(snapshot.state), true, "the recorded state stayed finite");
     assert.ok(Number.isFinite(snapshot.rate), "the credited rate stayed finite");
   }
-  for (const event of record.events) assert.equal(record.snapshots[event.snapshot]!.credited, event.credited);
+  for (const event of record.events) assert.equal(snapshots[event.snapshot]!.credited, event.credited);
   for (const era of record.eras) {
     if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
   }

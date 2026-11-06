@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { allocateRates, allocationMemoStats, displayedRates, LIVE_ALLOCATION_BUDGET, syncRates, voiceCapacityOf } from "./economy";
+import { allocationBudgetStats } from "./allocation";
 import { advance } from "./advance";
 import { startSession } from "./actions";
 import { createHabit, selectHabit } from "./habits";
@@ -201,5 +202,90 @@ describe("the allocation solve memo (#349)", () => {
     expect([...allocation.capacities.values()]).toEqual([3, 3, 3]);
     expect(allocation.capacity).toBe(voiceCapacityOf(state));
     expect(allocationMemoStats.solves).toBe(2);
+  });
+
+  it("retention stays bounded (issue #509): recent fingerprints hit, deep recurrences re-solve", () => {
+    const state = memoizedBoard();
+    syncRates(state, true);
+    const baseline = state.modules[0]!.level;
+    // Twenty distinct board fingerprints on one live state — the long
+    // walk's shape. The memo must not grow with them.
+    allocationMemoStats.solves = 0;
+    allocationMemoStats.hits = 0;
+    for (let level = 1; level <= 20; level++) {
+      state.modules[0]!.level = level;
+      syncRates(state, true);
+    }
+    const freshSolves = allocationMemoStats.solves;
+    expect(freshSolves).toBe(20);
+    // The most recent fingerprint still hits.
+    syncRates(state, true);
+    expect(allocationMemoStats.hits).toBe(1);
+    expect(allocationMemoStats.solves).toBe(freshSolves);
+    // A recurrence deeper than the bound was evicted: it re-solves to
+    // the identical read, it never serves a stale one.
+    state.modules[0]!.level = baseline;
+    syncRates(state, true);
+    expect(allocationMemoStats.solves).toBe(freshSolves + 1);
+    // And that re-solve is warm again.
+    syncRates(state, true);
+    expect(allocationMemoStats.solves).toBe(freshSolves + 1);
+    expect(allocationMemoStats.hits).toBe(2);
+  });
+});
+
+// The solver's budget outcomes (issue #509): what the recording profiler
+// reports — real solve passes, uncertified results, and which limit
+// tripped. The deterministic node cap and the wall-clock valve count
+// where they fire.
+describe("the solver's budget outcomes (#509)", () => {
+  const reset = () => {
+    allocationBudgetStats.solves = 0;
+    allocationBudgetStats.uncertified = 0;
+    allocationBudgetStats.nodeTrips = 0;
+    allocationBudgetStats.deadlineTrips = 0;
+    allocationBudgetStats.maxNodes = 0;
+    allocationBudgetStats.maxMs = 0;
+  };
+
+  it("a tripped node budget reads as an uncertified node trip", () => {
+    const state = memoizedBoard();
+    reset();
+    const { read } = allocateRates(state, true, {
+      keep: new Set(state.activeChords ?? []),
+      budget: { maxNodes: 1, maxMs: 60_000 },
+    });
+    expect(allocationBudgetStats.solves).toBe(1);
+    expect(read.certified).toBe(false);
+    expect(allocationBudgetStats.uncertified).toBe(1);
+    expect(allocationBudgetStats.nodeTrips).toBeGreaterThan(0);
+    expect(allocationBudgetStats.deadlineTrips).toBe(0);
+    expect(allocationBudgetStats.maxNodes).toBeGreaterThan(0);
+  });
+
+  it("a tripped wall-clock valve reads as a deadline trip beside the node count", () => {
+    const state = memoizedBoard();
+    reset();
+    const { read } = allocateRates(state, true, {
+      keep: new Set(state.activeChords ?? []),
+      budget: { maxNodes: 1_000_000, maxMs: 0 },
+    });
+    expect(allocationBudgetStats.solves).toBe(1);
+    expect(read.certified).toBe(false);
+    expect(allocationBudgetStats.deadlineTrips).toBeGreaterThan(0);
+  });
+
+  it("a certified solve counts clean", () => {
+    const state = memoizedBoard();
+    reset();
+    const { read } = allocateRates(state, true, {
+      keep: new Set(state.activeChords ?? []),
+      budget: { maxNodes: 250_000, maxMs: 750 },
+    });
+    expect(read.certified).toBe(true);
+    expect(allocationBudgetStats.solves).toBe(1);
+    expect(allocationBudgetStats.uncertified).toBe(0);
+    expect(allocationBudgetStats.nodeTrips).toBe(0);
+    expect(allocationBudgetStats.deadlineTrips).toBe(0);
   });
 });

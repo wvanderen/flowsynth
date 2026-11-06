@@ -2,16 +2,20 @@ import { BALANCE, SAVE_VERSION, WORLD_ENEMIES } from "../src/engine/constants";
 import { ARETE_HORIZON } from "../src/engine/accumulator";
 import {
   PLAYTHROUGH_RUNNER_VERSION,
+  completeSnapshotsOf,
   composePlaythroughRecipe,
   continuePlaythrough,
+  playthroughCaptureStats,
   playthroughNote,
   playthroughSource,
   runPlaythrough,
   stateNumbersFinite,
+  walkPlaythrough,
   type PlaythroughEraLedger,
   type PlaythroughEvent,
   type PlaythroughRecipe,
   type PlaythroughRecord,
+  type PlaythroughRetention,
   type PlaythroughSource,
 } from "../src/engine/playthrough";
 import { serialize, deserialize } from "../src/engine/save";
@@ -20,10 +24,30 @@ import { TARGET_WINDOW_MAX_HOURS, TARGET_WINDOW_MIN_HOURS, meaningfulDecisions, 
 import { createInitialState } from "../src/engine/state";
 import { investment } from "../src/engine/economy";
 import { frontier as boardFrontier } from "../src/engine/capacity-calibration";
+import { ALLOCATION_MEMO_MAX_ENTRIES, allocationMemoStats } from "../src/engine/economy";
+import { allocationBudgetStats } from "../src/engine/allocation";
 import { enemyDefAt } from "../src/engine/world";
 import type { GameState, Hex, ModuleType } from "../src/engine/types";
 
-export { playthroughSource, runPlaythrough, stateNumbersFinite, playthroughNote };
+// The recording tier's shared surface (issue #509's profiler rides the
+// same compiled module the recorders certify): the runner and its reads,
+// the walk generator the profiler samples between steps, and the solver/
+// capture stats it reports. Also the supplied-board fixture's builder,
+// so the profiler constructs identical inputs for the complete/bounded
+// differential pair.
+export {
+  playthroughSource,
+  runPlaythrough,
+  stateNumbersFinite,
+  playthroughNote,
+  walkPlaythrough,
+  continuePlaythrough,
+  composePlaythroughRecipe,
+  playthroughCaptureStats,
+  allocationMemoStats,
+  allocationBudgetStats,
+  ALLOCATION_MEMO_MAX_ENTRIES,
+};
 
 // The century evaluation (issue #492, parent #484 stories 5–9, 33, 42–43):
 // the shipped economy's consequential progression through roughly 100
@@ -329,12 +353,15 @@ export function centuryTrajectory(record: PlaythroughRecord): TrajectoryPoint[] 
     while (snapshotIndex + 1 < record.snapshots.length && record.snapshots[snapshotIndex + 1]!.credited <= at) snapshotIndex++;
     const snapshot = record.snapshots[snapshotIndex];
     while (bankIndex < banks.length && banks[bankIndex]!.credited <= at) bankIndex++;
+    // The plotted figures read the captured numbers — the one store both
+    // retentions carry (issue #509).
+    const figures = snapshot?.numbers;
     points.push({
       hour,
       rate: snapshot ? Math.round(snapshot.rate * 100) / 100 : 0,
-      eraEarned: snapshot ? Math.round(snapshot.state.eraEarned) : 0,
-      nous: snapshot ? Math.round(snapshot.state.nous) : 0,
-      frontier: snapshot ? snapshot.state.world.frontier : 0,
+      eraEarned: figures ? Math.round(figures.eraEarned) : 0,
+      nous: figures ? Math.round(figures.nous) : 0,
+      frontier: figures?.frontier ?? 0,
       bankCount: bankIndex,
     });
   }
@@ -360,6 +387,61 @@ export interface NumericRead {
 }
 
 export function numericRead(record: PlaythroughRecord): NumericRead {
+  // Bounded retention (issue #509): the maxima and finite verdicts were
+  // captured per snapshot, and the serialized round trips ran at capture
+  // on the stride — the final sample's round trip reads the record's own
+  // retained final state, the ground truth both retentions carry.
+  if (record.retention === "bounded") {
+    let maxNous = 0;
+    let maxEraEarned = 0;
+    let maxTotalEarned = 0;
+    let maxRate = 0;
+    let maxArete = 0;
+    let maxLevel = 0;
+    let maxReserve = 0;
+    let finite = true;
+    let serializedChecks = 0;
+    let serializedOk = 0;
+    for (const snapshot of record.snapshots) {
+      const figures = snapshot.numbers;
+      finite = finite && figures.finite && Number.isFinite(snapshot.rate);
+      maxNous = Math.max(maxNous, Math.abs(figures.nous));
+      maxEraEarned = Math.max(maxEraEarned, figures.eraEarned);
+      maxTotalEarned = Math.max(maxTotalEarned, figures.totalEarned);
+      maxRate = Math.max(maxRate, Math.abs(snapshot.rate));
+      maxArete = Math.max(maxArete, figures.arete);
+      maxLevel = Math.max(maxLevel, figures.maxLevel);
+      maxReserve = Math.max(maxReserve, figures.maxAbsReserve);
+      serializedChecks += figures.serializedChecks;
+      serializedOk += figures.serializedOk;
+    }
+    serializedChecks++;
+    try {
+      const text = serialize(record.state, record.elapsedSeconds * 1000);
+      const roundTrip = deserialize(text, () => 0.5);
+      const loaded = roundTrip.state;
+      const ok = loaded !== undefined &&
+        loaded.nous === record.state.nous &&
+        loaded.eraEarned === record.state.eraEarned &&
+        loaded.totalEarned === record.state.totalEarned &&
+        loaded.arete === record.state.arete;
+      if (ok) serializedOk++;
+    } catch {
+      // A refusal is the recorded failure this read exists to catch.
+    }
+    return {
+      maxNous: Math.round(maxNous * 100) / 100,
+      maxEraEarned: Math.round(maxEraEarned * 100) / 100,
+      maxTotalEarned: Math.round(maxTotalEarned * 100) / 100,
+      maxRate: Math.round(maxRate * 100) / 100,
+      maxArete,
+      maxLevel,
+      maxReserve: Math.round(maxReserve * 100) / 100,
+      finiteSnapshots: finite,
+      serializedChecks,
+      serializedOk,
+    };
+  }
   let maxNous = 0;
   let maxEraEarned = 0;
   let maxTotalEarned = 0;
@@ -370,8 +452,11 @@ export function numericRead(record: PlaythroughRecord): NumericRead {
   let finite = true;
   let serializedChecks = 0;
   let serializedOk = 0;
-  for (let index = 0; index < record.snapshots.length; index++) {
-    const snapshot = record.snapshots[index]!;
+  // The complete-mode stride reads the retained states themselves; the
+  // bounded path returned above (issue #509).
+  const snapshots = completeSnapshotsOf(record);
+  for (let index = 0; index < snapshots.length; index++) {
+    const snapshot = snapshots[index]!;
     finite = finite && stateNumbersFinite(snapshot.state) && Number.isFinite(snapshot.rate);
     maxNous = Math.max(maxNous, Math.abs(snapshot.state.nous));
     maxEraEarned = Math.max(maxEraEarned, snapshot.state.eraEarned);
@@ -385,8 +470,8 @@ export function numericRead(record: PlaythroughRecord): NumericRead {
     // The serialized-output stride: every bank boundary, the final state,
     // and every tenth recorded state. The engine's serialize refuses a
     // nonfinite figure; the round trip pins the monetary fields exactly.
-    const isBank = index > 0 && record.snapshots[index - 1]!.state.prestiges < snapshot.state.prestiges;
-    if (isBank || index === record.snapshots.length - 1 || index % 10 === 0) {
+    const isBank = index > 0 && snapshots[index - 1]!.state.prestiges < snapshot.state.prestiges;
+    if (isBank || index === snapshots.length - 1 || index % 10 === 0) {
       serializedChecks++;
       try {
         const text = serialize(snapshot.state, snapshot.elapsed * 1000);
@@ -498,7 +583,9 @@ export function centuryRow(
   // the walk earned. A continuation's intake includes the branch input's
   // balance — the first recorded state — so the walk's own earnings read
   // against the difference, never against zero.
-  const startTotal = record.kind === "continuation" ? (record.snapshots[0]?.state.totalEarned ?? 0) : 0;
+  // The continuation's branch input reads the first captured figure — the
+  // one store both retentions carry (issue #509).
+  const startTotal = record.kind === "continuation" ? (record.snapshots[0]?.numbers.totalEarned ?? 0) : 0;
   const drift = Math.abs((record.state.totalEarned - startTotal) - record.earnedNous);
   return {
     measurementVersion: CENTURY_MEASUREMENT_VERSION,
@@ -843,7 +930,15 @@ export function suppliedBoardState(): GameState {
 //   Neither walk is shipped translation behavior.
 export type SuppliedBoardVariant = "raw" | "collection-reset";
 
-export function suppliedBoardRecord(variant: SuppliedBoardVariant, stopHours: number = CENTURY_MARK_HOURS, budgetDays: number = CENTURY_BUDGET_DAYS.long): PlaythroughRecord {
+// The fixture walk's declared inputs (issue #509): the recipe and the
+// branch state, built fresh per call — the one constructor both
+// `suppliedBoardRecord` and the recording profiler drive, so a profiled
+// walk and a recorded walk are literally the same workload.
+export function suppliedBoardWalkInputs(
+  variant: SuppliedBoardVariant,
+  stopHours: number = CENTURY_MARK_HOURS,
+  budgetDays: number = CENTURY_BUDGET_DAYS.long,
+): { recipe: PlaythroughRecipe; state: GameState } {
   const recipe = composePlaythroughRecipe({
     seed: CENTURY_SEEDS[0]!,
     policyId: "support",
@@ -864,7 +959,12 @@ export function suppliedBoardRecord(variant: SuppliedBoardVariant, stopHours: nu
     }
     state.world.frontier = 0;
   }
-  return continuePlaythrough(recipe, state, playthroughSource());
+  return { recipe, state };
+}
+
+export function suppliedBoardRecord(variant: SuppliedBoardVariant, stopHours: number = CENTURY_MARK_HOURS, budgetDays: number = CENTURY_BUDGET_DAYS.long, retention: PlaythroughRetention = "complete"): PlaythroughRecord {
+  const { recipe, state } = suppliedBoardWalkInputs(variant, stopHours, budgetDays);
+  return continuePlaythrough(recipe, state, playthroughSource(), { retention });
 }
 
 export function suppliedBoardRow(variant: SuppliedBoardVariant): CenturyRow {

@@ -214,6 +214,40 @@ interface Solve {
 
 class BudgetExhausted extends Error {}
 
+// The solver's budget outcomes (issue #509): what the recording profiler
+// reports alongside the memo stats — real solve passes, uncertified
+// results, and which limit tripped. Module-global like the memo stats;
+// the profiler resets it around a measured walk, production never does.
+export interface AllocationBudgetStats {
+  // Whole-board allocateChords passes.
+  solves: number;
+  // Passes whose certified flag fell — a budget tripped somewhere.
+  uncertified: number;
+  // Trip events by limit: the deterministic node cap and the wall-clock
+  // valve, counted where they fire (a pass may trip both).
+  nodeTrips: number;
+  deadlineTrips: number;
+  // The heaviest certified work one pass carried.
+  maxNodes: number;
+  maxMs: number;
+}
+
+export const allocationBudgetStats: AllocationBudgetStats = {
+  solves: 0, uncertified: 0, nodeTrips: 0, deadlineTrips: 0, maxNodes: 0, maxMs: 0,
+};
+
+// The one budget gate (issue #509): every trip site counts which limit
+// fired before aborting, so a profiled walk can surface time-budget-limited
+// allocator behavior instead of burying it in an uncertified flag.
+function checkBudget(solve: Solve): void {
+  if (solve.nodes > solve.maxNodes) allocationBudgetStats.nodeTrips++;
+  if (performance.now() > solve.deadline) allocationBudgetStats.deadlineTrips++;
+  if (solve.nodes > solve.maxNodes || performance.now() > solve.deadline) {
+    solve.exhausted = true;
+    throw new BudgetExhausted();
+  }
+}
+
 function valueOf(solve: Solve): number {
   // An unnamed formation pays every voice its idle value; one active
   // instance names it, and Q then rides every participant's product.
@@ -512,10 +546,7 @@ function greedyIncumbent(solve: Solve, perSeat: boolean): void {
     // The greedy shares the budget: one sweep counts one node, and the
     // clock valve bounds a pathologically wide candidate list.
     solve.nodes++;
-    if (solve.nodes > solve.maxNodes || performance.now() > solve.deadline) {
-      solve.exhausted = true;
-      throw new BudgetExhausted();
-    }
+    checkBudget(solve);
     let best: Candidate | null = null;
     let bestRank = 0;
     for (const candidate of solve.candidates) {
@@ -562,10 +593,7 @@ function exactSearch(solve: Solve, start: number): void {
   try {
     for (let i = start; i < solve.candidates.length; i++) {
       solve.nodes++;
-      if (solve.nodes > solve.maxNodes || performance.now() > solve.deadline) {
-        solve.exhausted = true;
-        throw new BudgetExhausted();
-      }
+      checkBudget(solve);
       consider(solve);
       if (boundOf(solve) < solve.best.value - TIE_EPS) return;
       const candidate = solve.candidates[i]!;
@@ -580,10 +608,7 @@ function exactSearch(solve: Solve, start: number): void {
       advanced = i;
     }
     solve.nodes++;
-    if (solve.nodes > solve.maxNodes || performance.now() > solve.deadline) {
-      solve.exhausted = true;
-      throw new BudgetExhausted();
-    }
+    checkBudget(solve);
     consider(solve);
   } finally {
     for (let j = advanced; j >= start; j--) retreat(solve, j);
@@ -724,6 +749,10 @@ export function allocateChords(singers: Singer[], spacers: DeployedModule[] = []
       namedFormation.set(voice.id, count > 0);
     }
   }
+  allocationBudgetStats.solves++;
+  if (!certified) allocationBudgetStats.uncertified++;
+  allocationBudgetStats.maxNodes = Math.max(allocationBudgetStats.maxNodes, nodes);
+  allocationBudgetStats.maxMs = Math.max(allocationBudgetStats.maxMs, performance.now() - started);
   return {
     analysis: { namedChords, voiceMultiplier, formationQ, formationMeasuredQ, namedFormation, participation },
     used,

@@ -920,6 +920,30 @@ interface AllocationMemoEntry {
 
 let allocationMemo = new WeakMap<GameState, Map<string, AllocationMemoEntry>>();
 
+// The memo's per-state bound (issue #509): a long scheduled walk moves the
+// quantized fingerprint every step on one live state, so an unbounded
+// entries map grew with the walk — the multi-gigabyte recording cost the
+// #509 profiler identifies on the supplied-board fixture. The documented
+// hits — consecutive ticks, a render's twin passes, and the solve's own
+// write-back pair — all read recent entries, so retention keeps those and
+// evicts the oldest. A fingerprint recurrence deeper than the bound
+// re-solves to the identical result: the solver is deterministic given its
+// inputs, and only the wall-clock valve's trip can differ — the budget
+// stats surface exactly that instead of presuming it away.
+export const ALLOCATION_MEMO_MAX_ENTRIES = 8;
+
+// Insert with recency, evicting the oldest past the bound. The just-set
+// key is always the newest, so eviction never drops it.
+function memoStore(entries: Map<string, AllocationMemoEntry>, key: string, entry: AllocationMemoEntry): void {
+  entries.delete(key);
+  entries.set(key, entry);
+  while (entries.size > ALLOCATION_MEMO_MAX_ENTRIES) {
+    const oldest = entries.keys().next().value;
+    if (oldest === undefined) break;
+    entries.delete(oldest);
+  }
+}
+
 function memoKeyOf(flow: boolean, capacity: string, budget: AllocationBudget, keep: ReadonlySet<string>): string {
   return `${flow ? "flow" : "build"}:${capacity}:${budget.maxNodes}:${budget.maxMs}:${keepKeyOf(keep)}`;
 }
@@ -1016,6 +1040,8 @@ export function allocateRates(
   if (!entries) allocationMemo.set(state, (entries = new Map()));
   const hit = entries.get(key);
   if (hit && hit.fingerprint === fingerprint) {
+    // Refresh recency: a sustained-hit key survives eviction.
+    memoStore(entries, key, hit);
     allocationMemoStats.hits++;
     return hit.result;
   }
@@ -1071,13 +1097,13 @@ export function allocateRates(
     certified: allocated.certified,
   };
   const result = { snapshot, read: allocated };
-  entries.set(key, { fingerprint, result });
+  memoStore(entries, key, { fingerprint, result });
   // The sync writes the solve's own active keys back as the state's
   // retention hint, so the read right after a solve asks with the hint
   // the solve produced — store the result under that key too, and the
   // write-back cannot cost a second solve.
   const resultKey = memoKeyOf(flow, capacity, budget, new Set(allocated.instances.map((instance) => instance.key)));
-  if (resultKey !== key) entries.set(resultKey, { fingerprint, result });
+  if (resultKey !== key) memoStore(entries, resultKey, { fingerprint, result });
   return result;
 }
 

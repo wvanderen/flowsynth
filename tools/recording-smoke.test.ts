@@ -36,6 +36,8 @@ describe("recorder static gate", () => {
       // outside tsc's program, covered by the same gate.
       "job-recorder.mjs",
       "job-worker.mjs",
+      // Issue #509: the retained-recording profiler.
+      "record-profile.mjs",
     ]);
   });
 
@@ -684,4 +686,45 @@ describe("the later-eras smoke CLI", () => {
       expect(existsSync(path.join(unmarked.envRoot, "later-era-smoke-report.json"))).toBe(false);
     }, 120_000);
   });
+});
+
+describe("the profile smoke CLI (issue #509)", () => {
+  it("runs the complete/bounded differential on bounded walks and publishes isolated evidence", () => {
+    const envRoot = freshSmokeRoot("profile-happy");
+    const result = spawnRecorder("record-profile.mjs", ["smoke"], { FLOWSYNTH_SMOKE_OUTPUT: envRoot });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    const payload = JSON.parse(readFileSync(path.join(envRoot, "profile-smoke.json"), "utf8"));
+    expect(payload.tier).toBe("smoke");
+    expect(payload.profile).toBe("retained-recording");
+    // The workload identity rides the payload: the recipe, the stop, the
+    // compiled fingerprint, the commit, the runtime it ran on.
+    expect(payload.recipe).toEqual(JSON.parse(JSON.stringify(centurySmokeRecipe())));
+    expect(payload.source.engineSource).toMatch(/^[0-9a-f]+$/);
+    expect(payload.recordingCommit).toMatch(/^[0-9a-f]{40}$/);
+    expect(payload.recordingEnvironment.node).toBe(process.version);
+    // The differential held, and only the complete run keeps boards.
+    expect(payload.differential.agrees).toBe(true);
+    expect(payload.runs.complete.measures.retention.snapshotsWithState).toBeGreaterThan(0);
+    expect(payload.runs.bounded.measures.retention.snapshotsWithState).toBe(0);
+    expect(payload.runs.bounded.measures.retention.snapshots).toBe(payload.runs.complete.measures.retention.snapshots);
+    // The cost separation and the solver outcomes are reported.
+    for (const run of [payload.runs.complete, payload.runs.bounded]) {
+      expect(run.measures.walkMs).toBeGreaterThan(0);
+      expect(run.measures.capture.captures).toBeGreaterThan(0);
+      expect(Number.isFinite(run.measures.memory.peakSampledHeapBytes)).toBe(true);
+      expect(run.measures.memo.solves).toBeGreaterThan(0);
+      expect(run.measures.budget.solves).toBeGreaterThan(0);
+      expect(run.measures.budget.uncertified).toBe(0);
+    }
+    expect(result.stdout).toContain("differential: all");
+  }, 120_000);
+
+  it("refuses invalid arguments with the usage diagnostic before any work", () => {
+    for (const args of [["fixture"], ["fixture", "not-a-variant"], ["walk"], []]) {
+      const result = spawnRecorder("record-profile.mjs", args);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("Usage: node tools/record-profile.mjs");
+    }
+  }, 60_000);
 });

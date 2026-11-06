@@ -162,6 +162,12 @@ function nestedRecordError(record: Record<string, unknown>): string | null {
 // the evidence, byte-faithful where JSON allows.
 export function exportPlaythroughArtifact(input: PlaythroughArtifactInput): string {
   const record = input.record;
+  if (record && typeof record === "object" && "retention" in record && record.retention === "bounded") {
+    throw new Error(
+      "Run artifact: a bounded-retention batch record is not a complete interactive artifact — " +
+        "export carries a complete record, with its exact historical snapshots.",
+    );
+  }
   if (!record || typeof record.runId !== "string" || !record.runId) {
     throw new Error("Run artifact: export needs a recorded run — nothing stands selected.");
   }
@@ -252,6 +258,9 @@ export function importPlaythroughArtifact(text: string): PlaythroughArtifactLoad
   const snapshots = record.snapshots;
   if (!Array.isArray(snapshots) || snapshots.length === 0) {
     return { ok: false, error: "The artifact is malformed — its historical snapshots are missing." };
+  }
+  if (record.retention === "bounded") {
+    return { ok: false, error: "The artifact is malformed — a bounded-retention batch record is not a complete interactive artifact." };
   }
   for (const snapshot of snapshots) {
     if (

@@ -37,6 +37,7 @@ import { cellNoteOf, octaveRowOf } from "./lattice";
 import { neighbors } from "./hex";
 import { writeNote } from "./notes";
 import { SCENARIOS, scenarioOf } from "./scenarios";
+import { deserialize, serialize } from "./save";
 import { columnCost, enemyDefAt, enemyDefeated, honeCostOf, worldOccupantAt, hasActiveWorldEnemy, eligibleTargetsOf } from "./world";
 import type { GameState, Hex, ModuleInstance, ModuleType, ResponseCurveId, WeaponType } from "./types";
 
@@ -644,13 +645,48 @@ export interface PlaythroughTrajectoryPoint {
 // stamp's actions take no simulated time, so every event of one stamp
 // resolves to that stamp's one closing state — the exact recorded board
 // at the moment they all carry, never a neighboring break's.
+//
+// Bounded retention (issue #509) carries the same moment as figures: a
+// batch walk declares `retention: "bounded"` and its snapshots keep the
+// numbers every report read consumes while the board itself is dropped —
+// `state` null, `voices` empty — so historical retention stops growing
+// with the board. Bounded records are explicitly not interactive
+// artifacts: inspection and artifact export refuse them by name, and the
+// numerical-integrity verdicts move to capture time (recorded per
+// snapshot in `numbers`), so the evidence survives the drop.
+export interface PlaythroughSnapshotNumbers {
+  readonly nous: number;
+  readonly eraEarned: number;
+  readonly totalEarned: number;
+  readonly arete: number;
+  readonly prestiges: number;
+  readonly frontier: number;
+  readonly maxLevel: number;
+  readonly maxAbsReserve: number;
+  // The whole-state finite read, taken at capture on the exact cloned
+  // state — the numerical-integrity figure both retentions report.
+  readonly finite: boolean;
+  // The serialized round-trip verdicts taken at capture, bounded records
+  // only: every tenth recorded state and every bank boundary, so the
+  // save seam's evidence survives the dropped boards. Complete records
+  // check the same stride at report time off their retained states and
+  // carry zeros here.
+  readonly serializedChecks: number;
+  readonly serializedOk: number;
+}
+
 export interface PlaythroughSnapshot {
   readonly rate: number;
   readonly voices: readonly PlaythroughBoardVoice[];
   // Simulated elapsed seconds since the anchor — the plotted x.
   readonly elapsed: number;
   readonly credited: number;
-  readonly state: GameState;
+  // The captured figures, computed at capture from the exact cloned state
+  // — the one store every batch read consumes, both retentions alike.
+  readonly numbers: PlaythroughSnapshotNumbers;
+  // The whole recorded state, complete records only; bounded retention
+  // drops the board and carries null (voices ride along as empty).
+  readonly state: GameState | null;
 }
 
 // The curve markers (story 27): every recorded event classifies into the
@@ -793,6 +829,9 @@ export interface PlaythroughRecord {
   // The exact recorded states (issue #470): one per plotted sample, one at
   // every session boundary, one at every moment the action record stamps —
   // every event's `snapshot` and every point's `snapshot` resolves here.
+  // Complete retention carries each snapshot's whole frozen state;
+  // bounded retention (issue #509) carries the captured figures and
+  // drops the boards.
   readonly snapshots: readonly PlaythroughSnapshot[];
   readonly achievements: readonly string[];
   readonly worldDiscoveries: readonly string[];
@@ -809,6 +848,13 @@ export interface PlaythroughRecord {
   readonly eras: readonly PlaythroughEraLedger[];
   // The run's final state — the ground truth behind every figure.
   readonly state: GameState;
+  // The historical retention the walk declared (issue #509): "complete"
+  // keeps every snapshot's whole frozen state — the interactive artifact
+  // record, inspectable and exportable; "bounded" keeps the captured
+  // figures and drops the boards, so a batch recording's memory stops
+  // growing with the board. A bounded record refuses inspection and
+  // artifact export by name — it never masquerades as a complete one.
+  readonly retention: PlaythroughRetention;
 }
 
 interface RunContext {
@@ -880,6 +926,10 @@ interface RunContext {
   // the shipped prompt/pushing order; the comparison policies ride their
   // own; "none" never touches the World faces.
   worldOrder: "offerings-first" | "support-first" | "combat-first" | "none";
+  // The declared historical retention (issue #509): "complete" freezes and
+  // keeps every snapshot's state; "bounded" drops the board after the
+  // capture read and moves the serialized stride checks to capture time.
+  retention: PlaythroughRetention;
 }
 
 // The runner's mutable era tracker: everything the public
@@ -1001,22 +1051,103 @@ function previewClone(state: GameState): GameState {
   return clone;
 }
 
+// The captured figures (issue #509): everything the batch reads consume,
+// computed once at capture from the exact cloned state — the maxima the
+// numeric read reports, the balances the per-hour trajectory plots, and
+// the whole-state finite verdict, all from one walk over the clone.
+function snapshotNumbersOf(state: GameState): PlaythroughSnapshotNumbers {
+  let maxLevel = 0;
+  let maxAbsReserve = 0;
+  for (const module of state.modules) {
+    maxLevel = Math.max(maxLevel, module.level);
+    maxAbsReserve = Math.max(maxAbsReserve, Math.abs(module.reserve));
+  }
+  return {
+    nous: state.nous,
+    eraEarned: state.eraEarned,
+    totalEarned: state.totalEarned,
+    arete: state.arete,
+    prestiges: state.prestiges,
+    frontier: state.world.frontier,
+    maxLevel,
+    maxAbsReserve,
+    finite: stateNumbersFinite(state),
+    serializedChecks: 0,
+    serializedOk: 0,
+  };
+}
+
+// The capture read's costs (issue #509): what the recording profiler
+// reports, separated from the simulation — clone/rate/freeze/figures time
+// and, on bounded walks, the capture-time serialized round trips. Module-
+// global like the allocation stats: the profiler resets it around a
+// measured walk, production never does, and the record itself carries no
+// timings so artifacts stay byte-stable.
+export interface PlaythroughCaptureStats {
+  captures: number;
+  // Snapshots that kept their whole frozen state (complete retention).
+  retainedStates: number;
+  captureMs: number;
+  serializeMs: number;
+}
+
+export const playthroughCaptureStats: PlaythroughCaptureStats = {
+  captures: 0, retainedStates: 0, captureMs: 0, serializeMs: 0,
+};
+
+// The bounded stride's serialized round trip, at capture (issue #509):
+// every tenth recorded state and every bank boundary rides the real save
+// seam while the state is still in hand — a refusal or a drifted monetary
+// field records as a failed verdict, never silently dropped evidence.
+function captureSerializedCheck(captured: GameState, elapsedSeconds: number): { checks: number; ok: number } {
+  const started = performance.now();
+  let checks = 1;
+  let ok = 0;
+  try {
+    const text = serialize(captured, elapsedSeconds * 1000);
+    const loaded = deserialize(text, () => 0.5).state;
+    ok = loaded !== undefined &&
+      loaded.nous === captured.nous &&
+      loaded.eraEarned === captured.eraEarned &&
+      loaded.totalEarned === captured.totalEarned &&
+      loaded.arete === captured.arete ? 1 : 0;
+  } catch {
+    // A refusal is the recorded failure this read exists to catch.
+  }
+  playthroughCaptureStats.serializeMs += performance.now() - started;
+  return { checks, ok };
+}
+
 function snap(ctx: RunContext, state: GameState): number {
+  const started = performance.now();
   const captured = previewClone(state);
   const rates = syncRates(captured, false);
+  const numbers = snapshotNumbersOf(captured);
+  const index = ctx.snapshots.length;
+  const elapsed = Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000);
+  const bounded = ctx.retention === "bounded";
+  // Bank boundaries ride the same detection the report-time stride uses:
+  // the previous recorded state's prestige count moved.
+  const isBank = index > 0 && ctx.snapshots[index - 1]!.numbers.prestiges < captured.prestiges;
+  const serialized = bounded && (index % 10 === 0 || isBank)
+    ? captureSerializedCheck(captured, elapsed)
+    : { checks: 0, ok: 0 };
   const snapshot: PlaythroughSnapshot = {
     rate: rates.rate,
-    voices: deepFreeze(captured.modules
+    voices: bounded ? [] : deepFreeze(captured.modules
       .filter(module => module.pos !== null)
       .sort((a, b) => a.pos!.r - b.pos!.r || a.pos!.q - b.pos!.q || a.id.localeCompare(b.id))
       .map(module => ({ type: module.type, note: cellNoteOf(module.pos!), level: module.level,
         nuPerSecond: rates.contributions.get(module.id)?.value ?? null }))),
-    elapsed: Math.round((ctx.elapsedMs - ctx.schedule.startAt) / 1000),
+    elapsed,
     credited: Math.round(ctx.stampCredited),
-    state: deepFreeze(captured),
+    numbers: { ...numbers, serializedChecks: serialized.checks, serializedOk: serialized.ok },
+    state: bounded ? null : deepFreeze(captured),
   };
+  playthroughCaptureStats.captures++;
+  if (!bounded) playthroughCaptureStats.retainedStates++;
+  playthroughCaptureStats.captureMs += performance.now() - started;
   ctx.snapshots.push(snapshot);
-  const index = ctx.snapshots.length - 1;
   for (const open of ctx.openEvents) {
     ctx.events[open] = { ...ctx.events[open]!, snapshot: index };
   }
@@ -1969,7 +2100,9 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
   era.endElapsedMs = ctx.elapsedMs;
   era.endCredited = ctx.stampCredited;
   pushTrajectory(ctx, state);
-  era.finite = stateNumbersFinite(ctx.snapshots[ctx.snapshots.length - 1]!.state);
+  // The era's finite verdict reads the moment's captured figures — the
+  // just-pushed snapshot's own integrity read, both retentions alike.
+  era.finite = ctx.snapshots[ctx.snapshots.length - 1]!.numbers.finite;
   if (!era.finite) {
     record(ctx, {
       kind: "milestone",
@@ -1984,11 +2117,24 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
   return result.ok;
 }
 
+// The declared historical retention (issue #509): "complete" — the
+// default, and every interactive path — freezes and keeps each snapshot's
+// whole state, the record inspection and artifact export read. "bounded"
+// keeps the captured figures and drops the boards, so a long batch
+// recording's memory stops growing with the board; the record refuses
+// inspection and export by name, never masquerading as a complete one.
+export type PlaythroughRetention = "complete" | "bounded";
+
+export interface PlaythroughRunOptions {
+  readonly retention?: PlaythroughRetention;
+}
+
 export function runPlaythrough(
   recipe: PlaythroughRecipe,
   source: PlaythroughSource = playthroughSource(),
+  options: PlaythroughRunOptions = {},
 ): PlaythroughRecord {
-  return finishWalk(walkPlaythrough(recipe, null, source));
+  return finishWalk(walkPlaythrough(recipe, null, source, undefined, options.retention ?? "complete"));
 }
 
 // The checkpoint walk (issue #471): the same walk with one declared stop.
@@ -1999,9 +2145,10 @@ export function runPlaythroughCheckpoint(
   recipe: PlaythroughRecipe,
   checkpointId: PlaythroughCheckpointId,
   source: PlaythroughSource = playthroughSource(),
+  options: PlaythroughRunOptions = {},
 ): PlaythroughRecord {
   const checkpoint = checkpointOf(checkpointId);
-  const record = finishWalk(walkPlaythrough(recipe, checkpointId, source));
+  const record = finishWalk(walkPlaythrough(recipe, checkpointId, source, undefined, options.retention ?? "complete"));
   return assertCheckpointReached(record, checkpoint);
 }
 
@@ -2025,11 +2172,12 @@ export function continuePlaythrough(
   recipe: PlaythroughRecipe,
   state: GameState,
   source: PlaythroughSource = playthroughSource(),
+  options: PlaythroughRunOptions = {},
 ): PlaythroughRecord {
   if (state.mode !== "upgrade" || state.session !== null || state.eraEarned !== 0 || !stateNumbersFinite(state)) {
     throw new Error("Playthrough continuation: expected a finite, between-sessions bank state.");
   }
-  return finishWalk(walkPlaythrough(recipe, null, source, state));
+  return finishWalk(walkPlaythrough(recipe, null, source, state, options.retention ?? "complete"));
 }
 
 function finishWalk(walk: Generator<void, PlaythroughRecord>): PlaythroughRecord {
@@ -2038,11 +2186,15 @@ function finishWalk(walk: Generator<void, PlaythroughRecord>): PlaythroughRecord
   return next.value;
 }
 
-function* walkPlaythrough(
+// One scheduled action walk, driven step by step: the exported generator
+// form the checkpoint presets' interleaved preparation shares with the
+// recording profiler (issue #509), which samples memory between steps.
+export function* walkPlaythrough(
   recipe: PlaythroughRecipe,
   checkpoint: PlaythroughCheckpointId | null,
   source: PlaythroughSource,
   initialState?: GameState,
+  retention: PlaythroughRetention = "complete",
 ): Generator<void, PlaythroughRecord> {
   validatePlaythroughRecipe(recipe);
   const scenario = scenarioOf(recipe.scenarioId)!;
@@ -2118,6 +2270,7 @@ function* walkPlaythrough(
     manageBreaks: 0,
     eras: [openEraTrack(0, recipe.schedule.startAt, 0)],
     worldOrder: worldOrderOf(policy.id),
+    retention,
   };
 
   if (initialState) pushTrajectory(ctx, state);
@@ -2303,6 +2456,7 @@ function* walkPlaythrough(
     recovery,
     eras: ctx.eras.map((era) => eraLedgerOf(ctx, era)),
     state,
+    retention: ctx.retention,
   };
 }
 
@@ -2498,10 +2652,36 @@ export interface PlaythroughInspection {
 // one read per (record, index), memoized.
 const inspections = new WeakMap<PlaythroughRecord, Map<number, PlaythroughInspection>>();
 
+// The complete-record narrow (issue #509): the readers that need the
+// exact historical boards — historical inspection, artifact export, the
+// later-era probe boundary — assert complete retention here, one named
+// refusal, instead of silently reading a missing board as data.
+export interface CompletePlaythroughSnapshot extends PlaythroughSnapshot {
+  readonly state: GameState;
+}
+
+export function completeSnapshotsOf(record: PlaythroughRecord): readonly CompletePlaythroughSnapshot[] {
+  if (record.retention === "bounded") {
+    throw new Error(
+      "Playthrough record: a bounded-retention record carries no historical board states — " +
+        "this read needs a complete record.",
+    );
+  }
+  return record.snapshots as readonly CompletePlaythroughSnapshot[];
+}
+
 export function playthroughInspection(run: PlaythroughRecord, index: number): PlaythroughInspection {
+  if (run.retention === "bounded") {
+    throw new Error(
+      "Playthrough inspection: a bounded-retention record carries no historical board states — " +
+        "historical inspection reads a complete record.",
+    );
+  }
   const hit = inspections.get(run)?.get(index);
   if (hit) return hit;
-  const snapshot = run.snapshots[index];
+  // The retention guard above is the narrow: a complete record's snapshots
+  // carry their states.
+  const snapshot = run.snapshots[index] as CompletePlaythroughSnapshot | undefined;
   if (!snapshot) {
     throw new Error(`Playthrough inspection: no recorded snapshot ${index} — the run carries ${run.snapshots.length}.`);
   }
