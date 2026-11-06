@@ -91,6 +91,18 @@ This deliberately tightens the published schema; identity-less evidence must
 be re-published from its original units or re-recorded, never stamped from
 current inputs. See ADR-0083 for the migration and pre-lease worker boundary.
 
+### Final verification at source `91da43c`
+
+- Supported Node `22.23.4` preflight — passed (`America/Chicago`, storage roundtrip available).
+- Targeted recording pass — 101 passed, one explicit-tier skip across `recording-review`, `recording-job`, `recording-smoke`, and `later-eras`.
+- `npm run check` — passed, including the four-script recorder static gate.
+- `npm test` — 124 files passed; 2,337 tests passed, nine skipped. No second full UI run.
+- Production `compose`, with output isolated under `/tmp`, verified 48 matrix walks and 20 persisted forwards without running walks. All measured report data is unchanged. The regenerated report updates only its composition commit and the seven input publication commits (the old report predated their existing `dd01701` publication stamps); it matches the actual composed bytes.
+- No UI or calendar-engine behavior changed, so browser evidence and the separate calendar suite are not owed. The full multi-hour recording was not repeated; its original units, identities, commits, environments, and results are retained.
+
+The final follow-up commit contains only this evidence record and the composed
+report's metadata; it does not change the verified source.
+
 ## Automated checks
 
 `tools/recording-job.test.ts` (39 cases) demonstrates the boundaries at
