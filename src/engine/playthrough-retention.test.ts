@@ -4,6 +4,7 @@ import {
   composePlaythroughRecipe,
   playthroughInspection,
   runPlaythrough,
+  runPlaythroughCheckpoint,
   type PlaythroughRecord,
 } from "./playthrough";
 import { exportPlaythroughArtifact, importPlaythroughArtifact } from "./playthrough-artifact";
@@ -120,6 +121,17 @@ describe("bounded and complete walks agree on identical inputs", () => {
 });
 
 describe("a bounded record never masquerades as a complete artifact", () => {
+  it("a checkpoint preset walk refuses bounded retention at the door, before any walk", () => {
+    // Presets feed interactive inspection and artifact export, so the
+    // checkpoint door refuses bounded retention before the walk starts.
+    expect(() => runPlaythroughCheckpoint(
+      composePlaythroughRecipe({ budgetDays: 1 }),
+      "approaching-prestige",
+      undefined,
+      { retention: "bounded" },
+    )).toThrow(/presets are interactive records/);
+  });
+
   it("historical inspection refuses a bounded record by name, and reads a complete one", () => {
     const bounded = boundedWalk();
     expect(() => playthroughInspection(bounded, 0)).toThrow(/bounded-retention record carries no historical board states/);

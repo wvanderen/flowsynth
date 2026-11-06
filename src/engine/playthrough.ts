@@ -1079,7 +1079,9 @@ function snapshotNumbersOf(state: GameState): PlaythroughSnapshotNumbers {
 
 // The capture read's costs (issue #509): what the recording profiler
 // reports, separated from the simulation — clone/rate/freeze/figures time
-// and, on bounded walks, the capture-time serialized round trips. Module-
+// and, on bounded walks, the capture-time serialized round trips. captureMs
+// INCLUDES serializeMs (the round trips run inside the same snap); the
+// profiler's capture-only bucket is captureMs − serializeMs. Module-
 // global like the allocation stats: the profiler resets it around a
 // measured walk, production never does, and the record itself carries no
 // timings so artifacts stay byte-stable.
@@ -2148,6 +2150,12 @@ export function runPlaythroughCheckpoint(
   options: PlaythroughRunOptions = {},
 ): PlaythroughRecord {
   const checkpoint = checkpointOf(checkpointId);
+  // A checkpoint preset feeds interactive inspection and artifact export
+  // (issue #471's presets ride the app's dev surfaces), so a bounded walk
+  // would build an unusable preset: refused at the door, not at the UI.
+  if (options.retention === "bounded") {
+    throw new Error("Playthrough checkpoint: presets are interactive records — retention is always complete.");
+  }
   const record = finishWalk(walkPlaythrough(recipe, checkpointId, source, undefined, options.retention ?? "complete"));
   return assertCheckpointReached(record, checkpoint);
 }
