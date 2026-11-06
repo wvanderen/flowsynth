@@ -820,6 +820,43 @@ describe("the recording domain's publication", () => {
     expect(() => assertSliceRows(bundle, payload.rows, minutes, policy)).not.toThrow();
   });
 
+  it("a rebuilt plan keeps its derived units exactly while the parent identity holds", async () => {
+    const { mergedPlanUnits } = await import("./dev/later-era-recording.mjs");
+    const dir = freshDir("pub-merge");
+    const walkDescriptor = {
+      id: "probe-walk",
+      key: { kind: "probe-walk" as const },
+      recipe: laterEraSmokeRecipe(),
+      forward: null,
+      deps: [] as string[],
+    };
+    const parentIdentity = bundle.laterEraUnitIdentity(walkDescriptor);
+    const forwardDescriptor = {
+      id: "forward-b0-o0",
+      key: { kind: "probe-forward" as const, bank: 0, orderIndex: 0 },
+      recipe: null,
+      forward: { bank: 0, order: ["entry" as const], budgetDays: 30, parentIdentity },
+      deps: ["probe-walk"],
+    };
+    // The previous run's plan: base plus its derived forward.
+    await prepareJobDir(dir, {
+      scope: "merge", bundle: bundlePath, commit: "0".repeat(40),
+      units: [walkDescriptor, forwardDescriptor],
+    });
+    // The rebuild (a relaunch recomputes the base): the derived forward
+    // survives while its parent's identity is unchanged.
+    const merged = await mergedPlanUnits(dir, bundle, { units: [walkDescriptor] });
+    expect(merged.map((unit: { id: string }) => unit.id)).toEqual(["probe-walk", "forward-b0-o0"]);
+    // A changed parent invalidates the derived unit at the merge itself:
+    // the rebuild drops it and the derive pass re-appends fresh ones.
+    const changedParent = {
+      ...walkDescriptor,
+      recipe: { ...laterEraSmokeRecipe(), budgetDays: 4 },
+    };
+    const remerged = await mergedPlanUnits(dir, bundle, { units: [changedParent] });
+    expect(remerged.map((unit: { id: string }) => unit.id)).toEqual(["probe-walk"]);
+  });
+
   it("refuses to publish a slice whose rows are not the declared matrix's own faces", async () => {
     const dir = freshDir("pub-slice-bad");
     const target = path.join(dir, "slice.json");

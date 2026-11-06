@@ -7,6 +7,7 @@
 // CLI and by the verification, so production recording and its checks
 // cannot drift apart.
 import assert from "node:assert/strict";
+import { readPlan } from "./job-recorder.mjs";
 import { writeJsonAtomic, recordingPayload } from "./runtime.mjs";
 
 export const PROBE_EVIDENCE_PATH = "docs/later-era-probe.json";
@@ -34,6 +35,31 @@ export const unitProvenanceOf = (unitsById) => Object.fromEntries(
     recordingEnvironment: unit.provenance.recordingEnvironment,
   }]),
 );
+
+// The plan is rebuilt from the current checkout on every run — the base
+// units are recomputed — but the derived units (the probe forwards) only
+// exist in the persisted plan. Rebuilding without them would make every
+// resume re-execute the whole fan-out. They survive the rebuild exactly
+// while their parent's identity — the probe walk's current identity — is
+// unchanged; a changed parent invalidates them here, before the scan, and
+// the derive pass re-appends fresh ones under the new parent.
+export async function mergedPlanUnits(dir, m, builder) {
+  let previous;
+  try {
+    previous = await readPlan(dir);
+  } catch {
+    return builder.units;
+  }
+  const baseIds = new Set(builder.units.map((unit) => unit.id));
+  const derived = previous.units.filter((unit) => !baseIds.has(unit.id));
+  if (derived.length === 0) return builder.units;
+  const walk = builder.units.find((unit) => unit.key.kind === "probe-walk");
+  const currentParent = walk ? m.laterEraUnitIdentity(walk) : null;
+  const parentText = currentParent ? JSON.stringify(currentParent) : null;
+  const kept = derived.filter((unit) =>
+    unit.forward && parentText !== null && JSON.stringify(unit.forward.parentIdentity) === parentText);
+  return [...builder.units, ...kept];
+}
 
 // `paths.slice` overrides the published slice file's location (the
 // verification passes isolated paths; the CLI publishes the committed

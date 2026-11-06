@@ -52,6 +52,7 @@ import {
 import {
   PROBE_EVIDENCE_PATH,
   assertSliceRows,
+  mergedPlanUnits,
   probeGroup,
   sliceGroup,
   sliceGroups,
@@ -152,9 +153,10 @@ async function runCommand(slice, flags) {
     const lock = await acquireSupervisorLock(dir);
     try {
       const { commit, bundle, m, source, builder } = await prepareRun(slice, dir);
-      await prepareJobDir(dir, { scope, bundle, commit, units: builder.units });
+      const units = await mergedPlanUnits(dir, m, builder);
+      await prepareJobDir(dir, { scope, bundle, commit, units });
       const { outcome, cancelled, publishError } = await runSupervisor(dir,
-        { scope, bundle, commit, units: builder.units }, adapterFor(m, source, builder, slice),
+        { scope, bundle, commit, units }, adapterFor(m, source, builder, slice),
         { ...options, detached: true, lock });
       if (publishError) console.error(publishError);
       return { outcome, cancelled };
@@ -188,9 +190,10 @@ async function runCommand(slice, flags) {
   const lock = await acquireSupervisorLock(dir);
   try {
     const { commit, bundle, m, source, builder } = await prepareRun(slice, dir);
-    await prepareJobDir(dir, { scope, bundle, commit, units: builder.units });
+    const units = await mergedPlanUnits(dir, m, builder);
+    await prepareJobDir(dir, { scope, bundle, commit, units });
     const { outcome, cancelled, publishError } = await runSupervisor(dir,
-      { scope, bundle, commit, units: builder.units }, adapterFor(m, source, builder, slice),
+      { scope, bundle, commit, units }, adapterFor(m, source, builder, slice),
       { ...options, lock });
     const status = await readJobStatus(dir);
     console.log(formatStatus(dir, status));

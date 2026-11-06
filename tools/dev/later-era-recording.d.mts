@@ -1,8 +1,10 @@
 // Type surface for tools/dev/later-era-recording.mjs — the later-era
 // recording domain's adapter half (issue #507): publication and
 // slice-shape verification over the job's persisted units.
+import type { JobPlan } from "./job-recorder.mjs";
 
 export declare const PROBE_EVIDENCE_PATH: string;
+
 export declare function slicePath(minutes: number, policy: string): string;
 
 /** The slice-shape checks both the job's publication and composition enforce. */
@@ -43,3 +45,13 @@ export declare function probeGroup(
   source: unknown,
   paths?: { probe?: string },
 ): PublicationGroup;
+
+/**
+ * Merges the persisted plan's derived units back into a rebuilt plan,
+ * keeping them exactly while their parent's identity is unchanged.
+ */
+export declare function mergedPlanUnits(
+  dir: string,
+  m: { laterEraUnitIdentity: (descriptor: unknown) => unknown },
+  builder: { units: JobPlan["units"] },
+): Promise<JobPlan["units"]>;
