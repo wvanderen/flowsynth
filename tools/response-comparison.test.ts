@@ -25,7 +25,7 @@ import { upgradeModuleLevels } from "../src/engine/actions";
 import { allocateRates, voiceCapacityOf } from "../src/engine/economy";
 import { BALANCE, RESPONSE_CURVES, WORLD_ENEMIES } from "../src/engine/constants";
 import { exportPlaythroughArtifact, importPlaythroughArtifact } from "../src/engine/playthrough-artifact";
-import { composePlaythroughRecipe, playthroughNote, playthroughRunId, runPlaythrough, type PlaythroughEvent, type PlaythroughRecord } from "../src/engine/playthrough";
+import { completeSnapshotsOf, composePlaythroughRecipe, playthroughNote, playthroughRunId, runPlaythrough, type PlaythroughEvent, type PlaythroughRecord } from "../src/engine/playthrough";
 
 // The response-support candidate comparison's checks (issue #487, parent
 // stories 7–14, 42–43). The catalog and seam pins run always; the full
@@ -309,7 +309,7 @@ describe("fresh-start pacing", () => {
     expect(linearRecord.state.candidates).toEqual({ responseCurve: "linear" });
     // Every recorded snapshot carries the run's own candidate — the
     // historical board reads the curve it was played under.
-    for (const snapshot of boundedRecord.snapshots) {
+    for (const snapshot of completeSnapshotsOf(boundedRecord)) {
       expect(snapshot.state.candidates).toEqual({ responseCurve: "bounded" });
     }
     expect(playthroughNote(boundedRecord)).toContain("curve bounded");

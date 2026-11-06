@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
-import { playthroughEventMarker, playthroughRunId, playthroughNote, type PlaythroughRecord } from "../engine/playthrough";
+import { completeSnapshotsOf, playthroughEventMarker, playthroughRunId, playthroughNote, type PlaythroughRecord } from "../engine/playthrough";
 import { exportPlaythroughArtifact, PLAYTHROUGH_ARTIFACT_VERSION } from "../engine/playthrough-artifact";
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { BALANCE } from "../engine/constants";
@@ -60,7 +60,7 @@ function comparable(record: PlaythroughRecord): Omit<PlaythroughRecord, "state" 
   const { state, runId: _executionId, ...rest } = record;
   return {
     ...rest,
-    snapshots: record.snapshots.map((snapshot) => ({ ...snapshot, state: normalize(snapshot.state) })),
+    snapshots: completeSnapshotsOf(record).map((snapshot) => ({ ...snapshot, state: normalize(snapshot.state) })),
     state: normalize(state),
   };
 }
@@ -581,12 +581,12 @@ describe("declared tuning overrides", () => {
     // the run's first recorded board carries two modules against the
     // baseline's one, the purchase landed through the real action.
     expect(tuned.recipe.overrides).toEqual({ openingGrant: 60 });
-    expect(tuned.snapshots[0]!.state.modules.length).toBe(2);
+    expect(completeSnapshotsOf(tuned)[0]!.state.modules.length).toBe(2);
     expect(app.devPlaythroughNote).toContain("tuned openingGrant=60");
     // The baseline beside it, same seed: shipped grant, shipped board.
     const plain = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
     expect(plain.recipe.overrides).toEqual({});
-    expect(plain.snapshots[0]!.state.modules.length).toBe(1);
+    expect(completeSnapshotsOf(plain)[0]!.state.modules.length).toBe(1);
     expect(tuned.runId).not.toBe(plain.runId);
     expect(tuned.runId).not.toBe(plain.runId);
   });
@@ -669,7 +669,7 @@ describe("declared response curves (issue #487)", () => {
     const boundedRun = app.devRunPlaythrough({ seed: 7, budgetDays: 1, responseCurve: "bounded" });
     expect(boundedRun.recipe.responseCurve).toBe("bounded");
     expect(boundedRun.state.candidates).toEqual({ responseCurve: "bounded" });
-    expect(boundedRun.snapshots[0]!.state.candidates).toEqual({ responseCurve: "bounded" });
+    expect(completeSnapshotsOf(boundedRun)[0]!.state.candidates).toEqual({ responseCurve: "bounded" });
     expect(app.devPlaythroughNote).toContain("curve bounded");
     const plain = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
     expect(plain.recipe.responseCurve).toBe("shipped");
@@ -803,7 +803,7 @@ describe("historical snapshots and inspection", () => {
     // Every plotted sample resolves to an exact recorded state carrying
     // the sample's own stamps and figures — the plot never interpolates.
     for (const point of record.trajectory) {
-      const snapshot = record.snapshots[point.snapshot]!;
+      const snapshot = completeSnapshotsOf(record)[point.snapshot]!;
       expect(snapshot.elapsed).toBe(point.elapsed);
       expect(snapshot.credited).toBe(point.credited);
       expect(snapshot.state.eraEarned).toBe(point.eraEarned);
@@ -821,7 +821,7 @@ describe("historical snapshots and inspection", () => {
       expect(record.snapshots[event.snapshot]!.elapsed).toBe(event.at);
     }
     // Recorded states are deep-frozen: read-only for human and agent alike.
-    const someSnapshot = record.snapshots[Math.floor(record.snapshots.length / 2)]!;
+    const someSnapshot = completeSnapshotsOf(record)[Math.floor(record.snapshots.length / 2)]!;
     expect(Object.isFrozen(someSnapshot.state)).toBe(true);
     expect(Object.isFrozen(someSnapshot.state.modules)).toBe(true);
     expect(Object.isFrozen(someSnapshot.state.modules[0])).toBe(true);
@@ -844,15 +844,15 @@ describe("historical snapshots and inspection", () => {
     expect(inspection.balances.nous).toBe(point.nous);
     expect(inspection.balances.arete).toBe(point.arete);
     expect(inspection.balances.eraEarned).toBe(point.eraEarned);
-    expect(inspection.balances.cells).toBe(record.snapshots[point.snapshot]!.state.cells.length);
+    expect(inspection.balances.cells).toBe(completeSnapshotsOf(record)[point.snapshot]!.state.cells.length);
     // The shared command exposes the record's frozen state itself.
-    expect(inspection.state).toBe(record.snapshots[point.snapshot]!.state);
+    expect(inspection.state).toBe(completeSnapshotsOf(record)[point.snapshot]!.state);
     expect(inspection.events.every(event => event.snapshot <= point.snapshot)).toBe(true);
     for (const event of inspection.events) expect(record.events).toContain(event);
     // The board reads: every deployed voice with its note, level, and
     // final ν/s on the same preview basis.
     expect(inspection.voices.length).toBeGreaterThan(0);
-    const snapshotState = record.snapshots[point.snapshot]!.state;
+    const snapshotState = completeSnapshotsOf(record)[point.snapshot]!.state;
     expect(inspection.voices.length).toBe(snapshotState.modules.filter((m) => m.pos !== null).length);
     expect(inspection.voices.every((voice) => voice.nuPerSecond === null || voice.nuPerSecond >= 0)).toBe(true);
     // A session-boundary snapshot recorded between samples carries no
@@ -976,7 +976,7 @@ describe("historical snapshots and inspection", () => {
     const record = app.devRunPlaythrough({ budgetDays: 1, schedule: { sessionsPerDay: 1, sessionMinutes: 1 } });
     app.devToggleCurves();
     const inspection = app.devInspectPlaythrough(0)!;
-    expect(inspection.state).toBe(record.snapshots[0]!.state);
+    expect(inspection.state).toBe(completeSnapshotsOf(record)[0]!.state);
     expect(Object.isFrozen(inspection.state.world.weapons[0])).toBe(true);
     const board = document.querySelector(".dev-history-board")!;
     expect([...board.querySelectorAll("h3")].map(h => h.querySelector("button")?.textContent ?? h.textContent)).toEqual(["Mutators", "Modules", "World"]);
@@ -1014,7 +1014,7 @@ describe("historical snapshots and inspection", () => {
     // The recorded states refuse writes loudly — strict-mode assignment
     // to a frozen state throws, so even an agent bug cannot rewrite
     // evidence in place.
-    const snapshot = record.snapshots[0]!;
+    const snapshot = completeSnapshotsOf(record)[0]!;
     expect(() => {
       (snapshot.state as { nous: number }).nous = 1234;
     }).toThrow(TypeError);
@@ -1220,7 +1220,7 @@ describe("the run artifact boundary", () => {
     // evidence.
     const imported = fresh.devResults[0]!.record;
     expect(() => {
-      (imported.snapshots[0]!.state as { mode: string }).mode = "flow";
+      (completeSnapshotsOf(imported)[0]!.state as { mode: string }).mode = "flow";
     }).toThrow();
     const first = fresh.devInspectPlaythrough(0)!;
     const second = fresh.devInspectPlaythrough(0)!;

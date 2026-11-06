@@ -1,0 +1,2511 @@
+{
+  "tier": "profile",
+  "profile": "retained-recording",
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 13,
+    "runnerVersion": 15,
+    "engineSource": "3cd08373"
+  },
+  "workload": {
+    "name": "supplied-board fixture (collection-reset)",
+    "variant": "collection-reset",
+    "stopCreditedHours": 6,
+    "budgetDays": 4,
+    "schedule": {
+      "sessionsPerDay": 2,
+      "sessionMinutes": 60,
+      "breatherMinutes": 5,
+      "habitName": "Practice",
+      "goalMinutes": 25,
+      "startAt": 1767603600000,
+      "timeZone": "America/Chicago"
+    },
+    "policyId": "support",
+    "seed": 42,
+    "modules": 36,
+    "cells": 38
+  },
+  "recipe": {
+    "scenarioId": "fresh-start",
+    "seed": 42,
+    "policyId": "support",
+    "claimTarget": 2,
+    "schedule": {
+      "sessionsPerDay": 2,
+      "sessionMinutes": 60,
+      "breatherMinutes": 5,
+      "habitName": "Practice",
+      "goalMinutes": 25,
+      "startAt": 1767603600000,
+      "timeZone": "America/Chicago"
+    },
+    "budgetDays": 4,
+    "eras": 1,
+    "stopCreditedHours": 6,
+    "responseCurve": "shipped",
+    "overrides": {}
+  },
+  "recordingCommit": "ca1d8dc45797853f14f99796662d4fd507c854d2",
+  "runs": {
+    "complete": {
+      "retention": "complete",
+      "measures": {
+        "walkMs": 797710,
+        "steps": 360,
+        "reportMs": 12,
+        "capture": {
+          "captures": 24,
+          "retainedStates": 24,
+          "captureMs": 18373,
+          "serializeMs": 0
+        },
+        "memo": {
+          "solves": 1043,
+          "hits": 304
+        },
+        "budget": {
+          "solves": 1043,
+          "uncertified": 1043,
+          "nodeTrips": 0,
+          "deadlineTrips": 678,
+          "maxNodes": 246108,
+          "maxMs": 1302.908962000045
+        },
+        "memory": {
+          "heapStartBytes": 80220384,
+          "heapEndBytes": 298334472,
+          "peakSampledHeapBytes": 390506920,
+          "maxRssKbProcessWide": 552304
+        },
+        "retention": {
+          "snapshots": 24,
+          "snapshotsWithState": 24,
+          "recordEstimateBytes": 2070356,
+          "snapshotsEstimateBytes": 1912630
+        }
+      },
+      "stopKind": "century",
+      "complete": true,
+      "days": 3,
+      "creditedHours": 6,
+      "runId": "fresh-start-s42-a279e2a3-from-a0d3f5d2",
+      "rowDigest": "768d0572197dc3a4",
+      "row": {
+        "measurementVersion": 2,
+        "decisionGapsOk": true,
+        "seed": 42,
+        "sessionMinutes": 60,
+        "policy": "support",
+        "kind": "continuation",
+        "complete": true,
+        "stopKind": "century",
+        "stopReason": "The declared 6-credited-hour mark reached at day 3 — 2 era(s) banked.",
+        "days": 3,
+        "elapsedHours": 50.17,
+        "creditedHours": 6,
+        "manageBreaks": 6,
+        "claims": [
+          11,
+          4
+        ],
+        "claimTarget": 2,
+        "frontiers": [
+          11,
+          15
+        ],
+        "eras": [
+          {
+            "index": 0,
+            "eraClass": "under",
+            "hours": 1,
+            "claim": 11,
+            "frontierAfter": 11,
+            "rateAtBank": 1518733.6571803314,
+            "priorDepth": null,
+            "depthGrowth": null,
+            "familiarHours": 0,
+            "newHours": 1,
+            "newShare": 1,
+            "rebuildingShare": null,
+            "purchases": [],
+            "nousPurchases": 24,
+            "placements": 3,
+            "defeats": [],
+            "gaps": {
+              "count": 1,
+              "maxCredited": 3600,
+              "meanCredited": 3600
+            },
+            "longGaps": [],
+            "finite": true
+          },
+          {
+            "index": 1,
+            "eraClass": "in-window",
+            "hours": 5,
+            "claim": 4,
+            "frontierAfter": 15,
+            "rateAtBank": 5591046.938462397,
+            "priorDepth": 5640807143.460957,
+            "depthGrowth": null,
+            "familiarHours": 4.03,
+            "newHours": 0.97,
+            "newShare": 0.193,
+            "rebuildingShare": 0.6,
+            "purchases": [
+              "World Column",
+              "World Column",
+              "World Column",
+              "Hone rank — chargeBlade",
+              "Hone rank — chargeBlade"
+            ],
+            "nousPurchases": 0,
+            "placements": 20,
+            "defeats": [],
+            "gaps": {
+              "count": 5,
+              "maxCredited": 3600,
+              "meanCredited": 3600
+            },
+            "longGaps": [],
+            "finite": true
+          }
+        ],
+        "investments": [
+          {
+            "key": "world — enemy w0",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w1",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w2",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w3",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w4",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w5",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w6",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w7",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w8",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "shelf generator",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "shelf infusor",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "shelf forge",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "board cells",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "Poly Expander rung 1",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "Poly Expander rung 2",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "feat mutator-entry",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat first-prestige",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat first-row",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat shelf-complete",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat first-light",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat kept-promise",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat marginalia",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat on-the-clock",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat room-to-grow",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat power-chord",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat fine-china",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat eyes-on-the-horizon",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat spark",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "module square",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module release",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module amplifier",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module infusor",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module triangle",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module blaster",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module additive",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module saw",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module noteKeyed",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module spacer",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module field",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module goalKeyed",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Charge Column 1",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Charge Column 2",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Charge Column 3",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Hone ladder 1",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Hone ladder 2",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "feat roll-credit",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "feat time-in-the-seat",
+            "creditedHour": 2,
+            "era": 1
+          }
+        ],
+        "trajectory": [
+          {
+            "hour": 0,
+            "rate": 2373600.83,
+            "eraEarned": 0,
+            "nous": 10169637,
+            "frontier": 0,
+            "bankCount": 0
+          },
+          {
+            "hour": 1,
+            "rate": 8.25,
+            "eraEarned": 0,
+            "nous": 2,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 2,
+            "rate": 288.11,
+            "eraEarned": 34906,
+            "nous": 5,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 3,
+            "rate": 30670.32,
+            "eraEarned": 1345571,
+            "nous": 3491,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 4,
+            "rate": 2119920.64,
+            "eraEarned": 116356162,
+            "nous": 78710,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 5,
+            "rate": 15974358.78,
+            "eraEarned": 3873775925,
+            "nous": 5458196,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 6,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 7,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 8,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 9,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 10,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 11,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 12,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 13,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 14,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 15,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 16,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 17,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 18,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 19,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 20,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 21,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 22,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 23,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 24,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 25,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 26,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 27,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 28,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 29,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 30,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 31,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 32,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 33,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 34,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 35,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 36,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 37,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 38,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 39,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 40,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 41,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 42,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 43,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 44,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 45,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 46,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 47,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 48,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 49,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 50,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 51,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 52,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 53,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 54,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 55,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 56,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 57,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 58,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 59,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 60,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 61,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 62,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 63,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 64,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 65,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 66,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 67,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 68,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 69,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 70,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 71,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 72,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 73,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 74,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 75,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 76,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 77,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 78,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 79,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 80,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 81,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 82,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 83,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 84,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 85,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 86,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 87,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 88,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 89,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 90,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 91,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 92,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 93,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 94,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 95,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 96,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 97,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 98,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 99,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 100,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          }
+        ],
+        "acquisition": {
+          "rollsAccepted": 40,
+          "distinctTypes": 12,
+          "rollsPerCreditedHour": 6.67
+        },
+        "numeric": {
+          "maxNous": 32986015415.95,
+          "maxEraEarned": 36854333144.95,
+          "maxTotalEarned": 492495140288.42,
+          "maxRate": 15974541.89,
+          "maxArete": 11,
+          "maxLevel": 35,
+          "maxReserve": 327156.39,
+          "finiteSnapshots": true,
+          "serializedChecks": 5,
+          "serializedOk": 5
+        },
+        "gaps": {
+          "count": 6,
+          "maxCredited": 3600,
+          "meanCredited": 3600,
+          "longCount": 0
+        },
+        "noGrant": true,
+        "defeats": [],
+        "bottleneck": null,
+        "note": "Support-seeking ✓ 3d · 360m credited of 3010m elapsed · claim 11, 4 Arete · seed 42 · fresh-start · fresh-start-s42-a279e2a3-from-a0d3f5d2 · spent 3× Charge Column + 2× Hone (chargeBlade) · recovery — bank 11, purchase 0.0d/0m (a Charge Column), blade 1.0d/180m, column 0.0d/0m, rate 1.0d/180m, door 1.0d/180m, frontier 2.0d/300m (1518733.66ν/s pre-reset) · The declared 6-credited-hour mark reached at day 3 — 2 era(s) banked."
+      }
+    },
+    "bounded": {
+      "retention": "bounded",
+      "measures": {
+        "walkMs": 796270,
+        "steps": 360,
+        "reportMs": 3,
+        "capture": {
+          "captures": 24,
+          "retainedStates": 0,
+          "captureMs": 18357,
+          "serializeMs": 6
+        },
+        "memo": {
+          "solves": 1043,
+          "hits": 304
+        },
+        "budget": {
+          "solves": 1043,
+          "uncertified": 1043,
+          "nodeTrips": 0,
+          "deadlineTrips": 688,
+          "maxNodes": 249079,
+          "maxMs": 794.9982009999803
+        },
+        "memory": {
+          "heapStartBytes": 34630304,
+          "heapEndBytes": 129069840,
+          "peakSampledHeapBytes": 257055880,
+          "maxRssKbProcessWide": 446492
+        },
+        "retention": {
+          "snapshots": 24,
+          "snapshotsWithState": 0,
+          "recordEstimateBytes": 178526,
+          "snapshotsEstimateBytes": 20800
+        }
+      },
+      "stopKind": "century",
+      "complete": true,
+      "days": 3,
+      "creditedHours": 6,
+      "runId": "fresh-start-s42-a279e2a3-from-a0d3f5d2",
+      "rowDigest": "434d3cf5df35abd8",
+      "row": {
+        "measurementVersion": 2,
+        "decisionGapsOk": true,
+        "seed": 42,
+        "sessionMinutes": 60,
+        "policy": "support",
+        "kind": "continuation",
+        "complete": true,
+        "stopKind": "century",
+        "stopReason": "The declared 6-credited-hour mark reached at day 3 — 2 era(s) banked.",
+        "days": 3,
+        "elapsedHours": 50.17,
+        "creditedHours": 6,
+        "manageBreaks": 6,
+        "claims": [
+          11,
+          4
+        ],
+        "claimTarget": 2,
+        "frontiers": [
+          11,
+          15
+        ],
+        "eras": [
+          {
+            "index": 0,
+            "eraClass": "under",
+            "hours": 1,
+            "claim": 11,
+            "frontierAfter": 11,
+            "rateAtBank": 1518733.6571803314,
+            "priorDepth": null,
+            "depthGrowth": null,
+            "familiarHours": 0,
+            "newHours": 1,
+            "newShare": 1,
+            "rebuildingShare": null,
+            "purchases": [],
+            "nousPurchases": 24,
+            "placements": 3,
+            "defeats": [],
+            "gaps": {
+              "count": 1,
+              "maxCredited": 3600,
+              "meanCredited": 3600
+            },
+            "longGaps": [],
+            "finite": true
+          },
+          {
+            "index": 1,
+            "eraClass": "in-window",
+            "hours": 5,
+            "claim": 4,
+            "frontierAfter": 15,
+            "rateAtBank": 5591046.938462397,
+            "priorDepth": 5640807143.460957,
+            "depthGrowth": null,
+            "familiarHours": 4.03,
+            "newHours": 0.97,
+            "newShare": 0.193,
+            "rebuildingShare": 0.6,
+            "purchases": [
+              "World Column",
+              "World Column",
+              "World Column",
+              "Hone rank — chargeBlade",
+              "Hone rank — chargeBlade"
+            ],
+            "nousPurchases": 0,
+            "placements": 20,
+            "defeats": [],
+            "gaps": {
+              "count": 5,
+              "maxCredited": 3600,
+              "meanCredited": 3600
+            },
+            "longGaps": [],
+            "finite": true
+          }
+        ],
+        "investments": [
+          {
+            "key": "world — enemy w0",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w1",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w2",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w3",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w4",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w5",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w6",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w7",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "world — enemy w8",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "shelf generator",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "shelf infusor",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "shelf forge",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "board cells",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "Poly Expander rung 1",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "Poly Expander rung 2",
+            "creditedHour": 0,
+            "era": 0
+          },
+          {
+            "key": "feat mutator-entry",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat first-prestige",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat first-row",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat shelf-complete",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat first-light",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat kept-promise",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat marginalia",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat on-the-clock",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat room-to-grow",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat power-chord",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat fine-china",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat eyes-on-the-horizon",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "feat spark",
+            "creditedHour": 1,
+            "era": 0
+          },
+          {
+            "key": "module square",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module release",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module amplifier",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module infusor",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module triangle",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module blaster",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module additive",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module saw",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module noteKeyed",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module spacer",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module field",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "module goalKeyed",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Charge Column 1",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Charge Column 2",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Charge Column 3",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Hone ladder 1",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "Hone ladder 2",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "feat roll-credit",
+            "creditedHour": 1,
+            "era": 1
+          },
+          {
+            "key": "feat time-in-the-seat",
+            "creditedHour": 2,
+            "era": 1
+          }
+        ],
+        "trajectory": [
+          {
+            "hour": 0,
+            "rate": 2373600.83,
+            "eraEarned": 0,
+            "nous": 10169637,
+            "frontier": 0,
+            "bankCount": 0
+          },
+          {
+            "hour": 1,
+            "rate": 8.25,
+            "eraEarned": 0,
+            "nous": 2,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 2,
+            "rate": 288.11,
+            "eraEarned": 34906,
+            "nous": 5,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 3,
+            "rate": 30670.32,
+            "eraEarned": 1345571,
+            "nous": 3491,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 4,
+            "rate": 2119920.64,
+            "eraEarned": 116356162,
+            "nous": 78710,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 5,
+            "rate": 15974358.78,
+            "eraEarned": 3873778432,
+            "nous": 5460703,
+            "frontier": 11,
+            "bankCount": 1
+          },
+          {
+            "hour": 6,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 7,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 8,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 9,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 10,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 11,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 12,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 13,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 14,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 15,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 16,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 17,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 18,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 19,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 20,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 21,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 22,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 23,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 24,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 25,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 26,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 27,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 28,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 29,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 30,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 31,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 32,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 33,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 34,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 35,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 36,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 37,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 38,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 39,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 40,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 41,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 42,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 43,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 44,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 45,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 46,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 47,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 48,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 49,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 50,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 51,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 52,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 53,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 54,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 55,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 56,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 57,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 58,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 59,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 60,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 61,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 62,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 63,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 64,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 65,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 66,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 67,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 68,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 69,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 70,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 71,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 72,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 73,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 74,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 75,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 76,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 77,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 78,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 79,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 80,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 81,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 82,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 83,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 84,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 85,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 86,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 87,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 88,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 89,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 90,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 91,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 92,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 93,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 94,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 95,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 96,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 97,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 98,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 99,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          },
+          {
+            "hour": 100,
+            "rate": 8.45,
+            "eraEarned": 0,
+            "nous": 12,
+            "frontier": 15,
+            "bankCount": 2
+          }
+        ],
+        "acquisition": {
+          "rollsAccepted": 40,
+          "distinctTypes": 12,
+          "rollsPerCreditedHour": 6.67
+        },
+        "numeric": {
+          "maxNous": 32986020418.32,
+          "maxEraEarned": 36854338147.32,
+          "maxTotalEarned": 492495145290.78,
+          "maxRate": 15974541.89,
+          "maxArete": 11,
+          "maxLevel": 35,
+          "maxReserve": 327156.39,
+          "finiteSnapshots": true,
+          "serializedChecks": 6,
+          "serializedOk": 6
+        },
+        "gaps": {
+          "count": 6,
+          "maxCredited": 3600,
+          "meanCredited": 3600,
+          "longCount": 0
+        },
+        "noGrant": true,
+        "defeats": [],
+        "bottleneck": null,
+        "note": "Support-seeking ✓ 3d · 360m credited of 3010m elapsed · claim 11, 4 Arete · seed 42 · fresh-start · fresh-start-s42-a279e2a3-from-a0d3f5d2 · spent 3× Charge Column + 2× Hone (chargeBlade) · recovery — bank 11, purchase 0.0d/0m (a Charge Column), blade 1.0d/180m, column 0.0d/0m, rate 1.0d/180m, door 1.0d/180m, frontier 2.0d/300m (1518733.66ν/s pre-reset) · The declared 6-credited-hour mark reached at day 3 — 2 era(s) banked."
+      }
+    }
+  },
+  "differential": {
+    "agrees": false,
+    "checks": [
+      {
+        "name": "century row (the recorded figures)",
+        "agrees": false
+      },
+      {
+        "name": "decision record",
+        "agrees": false
+      },
+      {
+        "name": "trajectory samples",
+        "agrees": false
+      },
+      {
+        "name": "claims",
+        "agrees": true
+      },
+      {
+        "name": "era ledgers",
+        "agrees": false
+      },
+      {
+        "name": "stop",
+        "agrees": true
+      },
+      {
+        "name": "snapshot count",
+        "agrees": true
+      }
+    ],
+    "disagreements": [
+      "century row (the recorded figures)",
+      "decision record",
+      "trajectory samples",
+      "era ledgers"
+    ],
+    "uncertified": {
+      "complete": 1043,
+      "bounded": 1043
+    },
+    "deadlineTrips": {
+      "complete": 678,
+      "bounded": 688
+    },
+    "timeLimited": true
+  },
+  "limitations": [
+    "Peak memory is sampled between simulated steps (per-step heapUsed); the sampled peak can miss an intra-step spike, and each run owns its process so no sibling's retained record pollutes its peak.",
+    "A disagreement under uncertified solves is the wall-clock valve's timing-dependent incumbent, not a deterministic divergence; the budget stats carry the trips.",
+    "The complete retention run of the full declared fixture stop (100 credited hours) retains multi-gigabyte histories and is not a bounded or quick invocation; reduced stops keep the inputs comparable.",
+    "Bounded snapshots carry no boards: historical inspection and artifact export refuse them by name, and the serialized stride verdicts move to capture time."
+  ],
+  "recordingEnvironment": {
+    "node": "v22.23.4",
+    "timeZone": "America/Chicago",
+    "utcOffsetMinutes": -360
+  }
+}

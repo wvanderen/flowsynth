@@ -72,10 +72,13 @@ const assertFixtureRecord = (variant, measurementVersion) => (row) => {
 // The mechanical per-walk checks both the matrix slices and the smoke
 // walk validate (issue #506): finite state and rate at every snapshot,
 // event credit matching its snapshot, and the prior depth's credit
-// carried into the era.
+// carried into the era. Bounded-retention walks (issue #509) read the
+// captured finite verdicts — the checks run at capture on the exact
+// cloned state, so the evidence survives the dropped boards.
 const assertCenturyWalkMechanics = (m, record) => {
   for (const snapshot of record.snapshots) {
-    assert.equal(m.stateNumbersFinite(snapshot.state), true, "the recorded state stayed finite");
+    const finite = snapshot.state ? m.stateNumbersFinite(snapshot.state) : snapshot.numbers.finite;
+    assert.equal(finite, true, "the recorded state stayed finite");
     assert.ok(Number.isFinite(snapshot.rate), "the credited rate stayed finite");
   }
   for (const event of record.events) assert.equal(record.snapshots[event.snapshot].credited, event.credited);
@@ -198,7 +201,9 @@ async function main() {
     for (const seed of m.CENTURY_SEEDS) {
       const t0 = performance.now();
       const recipe = m.centuryRecipe(seed, minutes, policy);
-      const record = m.runPlaythrough(recipe);
+      // Bounded retention (issue #509): the matrix rows read captured
+      // figures only — the batch tier keeps its historical memory bounded.
+      const record = m.runPlaythrough(recipe, source, { retention: "bounded" });
       assertCenturyWalkMechanics(m, record);
       rows.push(m.centuryRow(seed, minutes, record));
       console.log(`${arg} seed ${seed}: ${record.claims.length} banks, frontier ${record.state.world.frontier}, ${record.days}d, ${dt(t0)} — ${record.stop.kind}`);
@@ -211,9 +216,12 @@ async function main() {
     // recording unit: the retained board's certified-allocation cost makes
     // each walk tens of minutes of work, so an interruption loses at most
     // its own variant, and the compose pass reads the recorded pair.
+    // Bounded retention (issue #509): the row reads captured figures, and
+    // the walk's historical memory stays bounded however long the board
+    // grows.
     const variant = arg;
     const t0 = performance.now();
-    const record = m.suppliedBoardRecord(variant);
+    const record = m.suppliedBoardRecord(variant, undefined, undefined, "bounded");
     const row = { ...m.centuryRow(m.CENTURY_SEEDS[0], m.CENTURY_SESSION_MINUTES.long, record), note: `${variant}: ${m.playthroughNote(record)}` };
     assertFixtureRecord(variant, m.CENTURY_MEASUREMENT_VERSION)(row);
     await writeFile(`docs/century-fixture-${variant}.json`, JSON.stringify(recordingPayload({ source, recordingCommit: commit, variant, row }), null, 2));

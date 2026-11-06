@@ -6,7 +6,7 @@ import {
   exportPlaythroughArtifact,
   importPlaythroughArtifact,
 } from "../src/engine/playthrough-artifact";
-import { composePlaythroughRecipe, runPlaythrough, type PlaythroughRecord } from "../src/engine/playthrough";
+import { completeSnapshotsOf, composePlaythroughRecipe, continuePlaythrough, runPlaythrough, type PlaythroughRecord } from "../src/engine/playthrough";
 import {
   CENTURY_BUDGET_DAYS,
   CENTURY_MARK_HOURS,
@@ -361,5 +361,73 @@ describe("the century record at the artifact boundary", () => {
       expect(imported.artifact.record.recipe.stopCreditedHours).toBe(1);
       expect(imported.artifact.record.creditedSeconds).toBe(record.creditedSeconds);
     }
+  }, 120_000);
+});
+
+// Bounded retention on the century tier's own reads (issue #509): the
+// batch row must be identical whichever retention recorded the walk —
+// the captured figures carry every figure the row reports, and the
+// continuation's branch-input figure rides the numbers like any other.
+describe("bounded retention on the century reads (#509)", () => {
+  const centuryShape = () => composePlaythroughRecipe({
+    seed: 23,
+    policyId: "pushing",
+    claimTarget: 2,
+    eras: 1,
+    stopCreditedHours: 2,
+    budgetDays: 5,
+    schedule: { sessionsPerDay: 2, sessionMinutes: 60, breatherMinutes: 5 },
+  });
+
+  it("a bounded walk's row equals its complete twin's", () => {
+    const complete = runPlaythrough(centuryShape());
+    const bounded = runPlaythrough(centuryShape(), undefined, { retention: "bounded" });
+    expect(bounded.retention).toBe("bounded");
+    expect(bounded.snapshots.length).toBe(complete.snapshots.length);
+    expect(bounded.snapshots.filter((snapshot) => snapshot.state !== null).length).toBe(0);
+    expect(bounded.events).toEqual(complete.events);
+    expect(bounded.trajectory).toEqual(complete.trajectory);
+    expect(centuryRow(23, 60, bounded)).toEqual(centuryRow(23, 60, complete));
+  }, 120_000);
+
+  it("a bounded continuation's row equals its complete twin's, branch input figure included", () => {
+    const base = runPlaythrough(centuryShape());
+    // The bank state's own rebase — the continuation door's shape — so
+    // both twins run as kind "continuation" and the no-grant drift read
+    // starts from the branch input's captured total.
+    const input = structuredClone(base.state);
+    input.eraEarned = 0;
+    const recipe = centuryShape();
+    const complete = continuePlaythrough(recipe, structuredClone(input));
+    const bounded = continuePlaythrough(recipe, structuredClone(input), undefined, { retention: "bounded" });
+    expect(complete.kind).toBe("continuation");
+    expect(bounded.kind).toBe("continuation");
+    expect(bounded.snapshots[0]!.numbers.totalEarned).toBe(input.totalEarned);
+    expect(bounded.snapshots.length).toBe(complete.snapshots.length);
+    expect(bounded.events).toEqual(complete.events);
+    expect(bounded.trajectory).toEqual(complete.trajectory);
+    expect(centuryRow(23, 60, bounded)).toEqual(centuryRow(23, 60, complete));
+    // The complete twin still exports whole; the bounded one refuses.
+    expect(importPlaythroughArtifact(exportPlaythroughArtifact({ record: complete })).ok).toBe(true);
+    expect(() => exportPlaythroughArtifact({ record: bounded })).toThrow(/not a complete interactive artifact/);
+  }, 180_000);
+
+  it("the mechanics read holds on a bounded walk without its boards", () => {
+    const bounded = runPlaythrough(centuryShape(), undefined, { retention: "bounded" });
+    // The finite verdicts were captured per snapshot; the states are gone
+    // and the checks still read.
+    for (const snapshot of bounded.snapshots) {
+      expect(snapshot.state).toBeNull();
+      expect(snapshot.numbers.finite).toBe(true);
+      expect(Number.isFinite(snapshot.rate)).toBe(true);
+    }
+    for (const event of bounded.events) {
+      expect(bounded.snapshots[event.snapshot]!.credited).toBe(event.credited);
+    }
+    for (const era of bounded.eras) {
+      if (era.priorDepthPassed) expect(era.familiarCredited).toBe(era.priorDepthPassed.credited);
+    }
+    // The complete narrow refuses the bounded record by name.
+    expect(() => completeSnapshotsOf(bounded)).toThrow(/carries no historical board states/);
   }, 120_000);
 });

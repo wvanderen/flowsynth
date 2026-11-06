@@ -20,6 +20,9 @@ export const RECORDER_SCRIPTS = [
   // outside tsc's program, so the gate covers them with the CLIs.
   "tools/dev/job-recorder.mjs",
   "tools/dev/job-worker.mjs",
+  // Issue #509: the retained-recording profiler — the same plain-.mjs
+  // tier, statically checked with the CLIs it shares the runtime with.
+  "tools/record-profile.mjs",
 ];
 
 const repoRoot = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));

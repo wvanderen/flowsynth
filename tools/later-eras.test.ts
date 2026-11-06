@@ -20,7 +20,7 @@ import {
   routeProbes,
   walkRouteForward,
 } from "./later-eras";
-import { composePlaythroughRecipe, continuePlaythrough, runPlaythrough, type PlaythroughEraLedger } from "../src/engine/playthrough";
+import { completeSnapshotsOf, composePlaythroughRecipe, continuePlaythrough, runPlaythrough, type PlaythroughEraLedger } from "../src/engine/playthrough";
 import { PLAYTHROUGH_POLICIES } from "../src/engine/playthrough";
 import { BALANCE } from "../src/engine/constants";
 import type { GameState } from "../src/engine/types";
@@ -270,7 +270,7 @@ describe("the era view and the route probe on real walks", () => {
     expect(banks.length).toBeGreaterThan(0);
     for (const [index, bank] of banks.entries()) {
       const lastSession = pushingWalk.events.slice(0, bank).reverse().find((event) => event.kind === "breather" || event.kind === "session")!;
-      const state = pushingWalk.snapshots[lastSession.snapshot]!.state;
+      const state = completeSnapshotsOf(pushingWalk)[lastSession.snapshot]!.state;
       const defeated = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp === 0).map(([key]) => key);
       expect(laterEraView(pushingWalk, index, null).defeats).toEqual(defeated);
     }
@@ -292,7 +292,7 @@ describe("the era view and the route probe on real walks", () => {
 
   it("continues the exact earned bank without mutating it or inferring the parent's later success", { timeout: 60_000 }, () => {
     const bank = pushingWalk.events.find((event) => event.kind === "prestige")!;
-    const state = pushingWalk.snapshots[bank.snapshot]!.state;
+    const state = completeSnapshotsOf(pushingWalk)[bank.snapshot]!.state;
     const before = JSON.stringify(state);
     const forward = walkRouteForward(pushingWalk, bank, 0, state, 1);
     expect(forward.outcome).toBe("unreached");
@@ -304,7 +304,7 @@ describe("the era view and the route probe on real walks", () => {
     expect(JSON.stringify(state)).toBe(before);
     const branch = continuePlaythrough(forward.recipe, state);
     expect(branch.kind).toBe("continuation");
-    expect(branch.snapshots[0]!.state).toEqual(state);
+    expect(completeSnapshotsOf(branch)[0]!.state).toEqual(state);
     const load = importPlaythroughArtifact(exportPlaythroughArtifact({ record: branch }));
     expect(load.ok).toBe(true);
     if (load.ok) expect(load.artifact.record.kind).toBe("continuation");
