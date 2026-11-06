@@ -426,9 +426,12 @@ async function main() {
     return;
   }
   if (command === "run") {
-    const flags = parseRunFlags(rest);
-    if (operand !== undefined && !SLICE_PATTERN.test(operand)) throw usageError();
-    const slice = operand ? [Number(operand.split(":")[0]), operand.split(":")[1]] : null;
+    // `run [<slice>] [flags]` and `run [flags]` both work: a leading flag
+    // is never a slice.
+    const sliceArg = operand !== undefined && !operand.startsWith("--") ? operand : undefined;
+    const flags = parseRunFlags(sliceArg === undefined && operand !== undefined ? [operand, ...rest] : rest);
+    if (sliceArg !== undefined && !SLICE_PATTERN.test(sliceArg)) throw usageError();
+    const slice = sliceArg ? [Number(sliceArg.split(":")[0]), sliceArg.split(":")[1]] : null;
     const { outcome, cancelled } = await runCommand(slice, flags);
     if (outcome === "failed") process.exitCode = 1;
     if (cancelled) process.exitCode = cancelled === "SIGINT" ? 130 : 143;
