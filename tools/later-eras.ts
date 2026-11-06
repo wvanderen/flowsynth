@@ -790,8 +790,8 @@ export interface LaterEraJobPlan {
   readonly derive: (banks: readonly RouteBankProbe[], probeWalkIdentity: LaterEraUnitIdentity) => readonly LaterEraUnitDescriptor[];
 }
 
-function assertPlanUnique(units: readonly LaterEraUnitDescriptor[]): void {
-  const ids = new Set<string>();
+function assertPlanUnique(units: readonly LaterEraUnitDescriptor[], known: readonly string[] = []): void {
+  const ids = new Set<string>(known);
   const keys = new Set<string>();
   for (const unit of units) {
     if (ids.has(unit.id)) throw new Error(`Later-era job plan: duplicate unit id "${unit.id}".`);
@@ -818,11 +818,14 @@ export function laterEraJobPlan(): LaterEraJobPlan {
   return {
     units,
     derive: (banks, probeWalkIdentity) => {
+      // The forwards' declared dependency — the probe walk — is known
+      // from the plan the supervisor already carries; the forwards array
+      // itself is validated against that known id, not alone.
       const forwards = banks.flatMap((probe, bank) =>
         probe.orders.map((order, orderIndex) =>
           forwardUnit(bank, orderIndex, order.order, probeWalkIdentity)),
       );
-      assertPlanUnique(forwards);
+      assertPlanUnique(forwards, [laterEraUnitId({ kind: "probe-walk" })]);
       return forwards;
     },
   };
