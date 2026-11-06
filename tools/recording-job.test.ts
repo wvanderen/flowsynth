@@ -201,12 +201,16 @@ describe("unit identity and validity", () => {
       (stolen: typeof identity) => { stolen.engine.runnerVersion = stolen.engine.runnerVersion + 1; },
       (stolen: typeof identity) => { stolen.recipe.schedule.sessionMinutes = 60; },
       (stolen: typeof identity) => { stolen.recipe.seed = 99; },
-      (stolen: typeof identity) => { stolen.recipe.schedule.timeZone = "UTC"; },
+      (stolen: typeof identity) => {
+        // CI's host is UTC: assigning UTC there would not change the identity.
+        stolen.recipe.schedule.timeZone = stolen.recipe.schedule.timeZone === "UTC" ? "America/Chicago" : "UTC";
+      },
       (stolen: typeof identity) => { stolen.solver.maxNodes = stolen.solver.maxNodes + 1; },
       (stolen: typeof identity) => { stolen.runtime.node = "v0.0.0"; },
     ]) {
       const copy = JSON.parse(JSON.stringify(identity));
       tamper(copy);
+      expect(copy, "each tamper must change the original identity").not.toEqual(identity);
       expect(laterEraUnitMatches(descriptor, { ...stored, identity: copy })).toBe(false);
     }
     // Key order is irrelevant to identity.

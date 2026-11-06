@@ -103,6 +103,21 @@ current inputs. See ADR-0083 for the migration and pre-lease worker boundary.
 The final follow-up commit contains only this evidence record and the composed
 report's metadata; it does not change the verified source.
 
+## CI timezone regression
+
+[CI run 42269786923](https://github.com/wvanderen/flowsynth/actions/runs/42269786923)
+failed `rejects reuse when any behavior-affecting input moves` on its UTC host.
+The test assigned `UTC` to a recipe already using `UTC`: no input changed, so
+accepting reuse was correct. The same targeted command reproduced the failure
+locally with `TZ=UTC`. The test now chooses a different calendar zone and asserts
+that every tamper actually changes the original identity before checking refusal.
+There is no production matcher or calendar-engine change.
+
+- `TZ=UTC npm test -- tools/recording-job.test.ts -t 'rejects reuse when any behavior-affecting input moves'` — failed before the fix, passed after.
+- The same targeted case under `TZ=America/Chicago` — passed after the fix.
+- `TZ=UTC npm test -- tools/recording-job.test.ts` — all 39 cases passed.
+- Final full checks and CI readiness for this follow-up are recorded in PR #519's authoritative Verification record.
+
 ## Automated checks
 
 `tools/recording-job.test.ts` (39 cases) demonstrates the boundaries at
