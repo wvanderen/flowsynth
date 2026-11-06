@@ -37,9 +37,12 @@ import { parseArgs } from "node:util";
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { compileEngineTo } from "./dev/compile-engine.mjs";
+import { compileEngine, compileEngineTo } from "./dev/compile-engine.mjs";
 import {
   acquireSupervisorLock,
+  assertNoLiveSupervisor,
+  recoverJobWorkers,
+  releaseSupervisorLock,
   formatStatus,
   launchDetachedSupervisor,
   logEvent,
@@ -50,7 +53,7 @@ import {
 } from "./dev/job-recorder.mjs";
 import {
   PROBE_EVIDENCE_PATH,
-  assertSliceRows,
+  assertSliceEvidence,
   mergedPlanUnits,
   probeGroup,
   sliceGroup,
@@ -105,7 +108,7 @@ function parseRunFlags(args) {
   }
 }
 
-const jobDirFor = (scope, explicit) => explicit ?? path.join(DEFAULT_JOB_ROOT, scope);
+const jobDirFor = (scope, explicit) => path.resolve(explicit ?? path.join(DEFAULT_JOB_ROOT, scope));
 // ── run ────────────────────────────────────────────────────────────────────
 
 // The supervision skeleton every launch shape shares: single-flight before
@@ -117,6 +120,9 @@ const jobDirFor = (scope, explicit) => explicit ?? path.join(DEFAULT_JOB_ROOT, s
 async function superviseJob(dir, { scope, prepare, adapter, options, detached }) {
   const lock = await acquireSupervisorLock(dir);
   try {
+    // A killed supervisor can leave registered workers computing. Let them
+    // land evidence before touching their plan, bundle, or write temporaries.
+    await recoverJobWorkers(dir, lock, options);
     const prepared = await prepare();
     const units = await mergedPlanUnits(dir, prepared.m, prepared.builder);
     const plan = { scope, bundle: prepared.bundle, commit: prepared.commit, units };
@@ -128,6 +134,8 @@ async function superviseJob(dir, { scope, prepare, adapter, options, detached })
   } catch (error) {
     await logEvent(dir, `supervisor failed: ${error?.message ?? error}`);
     throw error;
+  } finally {
+    await releaseSupervisorLock(dir);
   }
 }
 
@@ -141,8 +149,10 @@ async function prepareRun(slice, dir) {
   // source. (The smoke tier publishes only into isolated output.)
   execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  const bundle = await compileEngineTo("tools/later-eras.ts", "later-eras", path.join(dir, "bundle"));
-  const m = await import(bundle);
+  // A launch preflight uses a disposable bundle; only the lock holder
+  // may compile into the job's bundle directory.
+  const bundle = dir ? await compileEngineTo("tools/later-eras.ts", "later-eras", path.join(dir, "bundle")) : null;
+  const m = bundle ? await import(bundle) : await compileEngine("tools/later-eras.ts", "later-eras");
   const source = m.playthroughSource();
   const builder = slice ? m.laterEraSliceJobPlan(slice[0], slice[1]) : m.laterEraJobPlan();
   return { commit, bundle, m, source, builder };
@@ -181,7 +191,8 @@ async function runCommand(slice, flags) {
   if (flags.values.detach) {
     // The launch handoff: refuse everything cheap first (a broken compile
     // never detaches), then spawn the detached supervisor and return.
-    await prepareRun(slice, dir);
+    await assertNoLiveSupervisor(dir);
+    await prepareRun(slice);
     const childArgs = [
       process.execPath, SCRIPT_PATH, "run",
       ...(slice ? [`${slice[0]}:${slice[1]}`] : []),
@@ -213,7 +224,7 @@ async function runCommand(slice, flags) {
 // ── status ─────────────────────────────────────────────────────────────────
 
 async function statusCommand(flags) {
-  const dir = flags.values.dir ?? jobDirFor("evaluation");
+  const dir = jobDirFor("evaluation", flags.values.dir);
   const status = await readJobStatus(dir);
   console.log(formatStatus(dir, status));
   return { outcome: status.status };
@@ -225,7 +236,7 @@ async function composeCommand() {
   await requireRuntimeEnvironment();
   execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  const m = await (await import("./dev/compile-engine.mjs")).compileEngine("tools/later-eras.ts", "later-eras");
+  const m = await compileEngine("tools/later-eras.ts", "later-eras");
   const source = m.playthroughSource();
   // Every input's recording commits — the slice's own and each unit's —
   // must be ancestors of this checkout: evidence from a divergent history
@@ -248,7 +259,7 @@ async function composeCommand() {
     assertSameCompiledSource(recorded.source, source, sliceLabel);
     assertAncestry([recorded.recordingCommit,
       ...Object.values(recorded.unitProvenance ?? {}).map((provenance) => provenance.recordingCommit)]);
-    assertSliceRows(m, recorded.rows, minutes, policy);
+    assertSliceEvidence(m, recorded, minutes, policy);
     inputs.push({ path: sliceLabel, recording: recorded });
     runs.push(...recorded.rows);
   }
@@ -285,7 +296,7 @@ async function composeCommand() {
 async function smokeCommand(leg, flags) {
   const root = await resolveSmokeRoot("flowsynth-later-era-smoke-");
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  const dir = flags.values.dir ?? path.join(root, leg === "compose" ? "job" : `job-${leg}`);
+  const dir = path.resolve(flags.values.dir ?? path.join(root, leg === "compose" ? "job" : `job-${leg}`));
   const { jobs, workerMemoryBudgetMb } = resolveJobBudgets(flags.values.jobs, flags.values["worker-mb"]);
   const options = { jobs, workerMemoryBudgetMb, notify: flags.values.notify ?? null };
 
@@ -340,19 +351,20 @@ async function smokeCommand(leg, flags) {
 
   if (flags.values.supervisor) {
     // The detached smoke supervisor: single-flight before any compile.
-    const { outcome } = await superviseJob(dir, {
+    const { outcome, cancelled } = await superviseJob(dir, {
       scope,
       options,
       detached: true,
       prepare,
       adapter: (prepared) => smokeAdapter(prepared.m, prepared.source, root, prepared.builder, tiny),
     });
-    return { outcome };
+    return { outcome, cancelled };
   }
 
   if (flags.values.detach) {
     if (!flags.values.dir) throw new Error("smoke --detach needs --dir: the detached supervisor publishes into the same root, and the default root is per-invocation");
-    await compileEngineTo("tools/later-eras.ts", "later-eras", path.join(dir, "bundle"));
+    await assertNoLiveSupervisor(dir);
+    await compileEngine("tools/later-eras.ts", "later-eras");
     const childArgs = [
       process.execPath, SCRIPT_PATH, "smoke", leg,
       "--dir", dir, "--jobs", String(jobs), "--worker-mb", String(workerMemoryBudgetMb),
@@ -366,7 +378,7 @@ async function smokeCommand(leg, flags) {
     return { outcome: "detached" };
   }
 
-  const { outcome, status } = await superviseJob(dir, {
+  const { outcome, cancelled, status } = await superviseJob(dir, {
     scope,
     options,
     detached: false,
@@ -374,7 +386,7 @@ async function smokeCommand(leg, flags) {
     adapter: (prepared) => smokeAdapter(prepared.m, prepared.source, root, prepared.builder, tiny),
   });
   console.log(formatStatus(dir, status));
-  return { outcome };
+  return { outcome, cancelled };
 }
 
 // The smoke legs' recording adapter: the same identity and validation the
@@ -421,8 +433,9 @@ async function main() {
   }
   if (command === "smoke") {
     if (!SMOKE_LEGS.includes(operand)) throw usageError();
-    const { outcome } = await smokeCommand(operand, parseRunFlags(rest));
+    const { outcome, cancelled } = await smokeCommand(operand, parseRunFlags(rest));
     if (outcome === "failed") process.exitCode = 1;
+    if (cancelled) process.exitCode = cancelled === "SIGINT" ? 130 : 143;
     return;
   }
   if (command === "run") {
@@ -444,5 +457,5 @@ try {
   await main();
 } catch (error) {
   console.error(`${SCRIPT_NAME}: ${error?.message ?? error}`);
-  process.exitCode = 1;
+  process.exitCode = error?.cancelled ? (error.cancelled === "SIGINT" ? 130 : 143) : 1;
 }

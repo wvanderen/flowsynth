@@ -13,6 +13,7 @@ export declare function lockPath(dir: string): string;
 export declare function statusPath(dir: string): string;
 export declare function planPath(dir: string): string;
 export declare function logsPath(dir: string): string;
+export declare function workerLeasePath(dir: string, pid: number): string;
 
 /** Refuses by name when a live supervisor holds the job's lock. */
 export declare function assertNoLiveSupervisor(dir: string): Promise<void>;
@@ -27,6 +28,9 @@ export interface SupervisorLock {
  * name, a stale one (a killed supervisor) is taken over.
  */
 export declare function acquireSupervisorLock(dir: string): Promise<SupervisorLock>;
+export declare function releaseSupervisorLock(dir: string): Promise<void>;
+/** Waits for registered orphan workers before touching their plan or files. */
+export declare function recoverJobWorkers(dir: string, lock: SupervisorLock, options?: Pick<SupervisorOptions, "notify">): Promise<void>;
 
 /** The job's plan: scope, bundle path, commit, and the unit descriptors. */
 export interface JobPlan {

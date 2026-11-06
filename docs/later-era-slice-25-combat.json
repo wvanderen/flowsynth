@@ -1189,6 +1189,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 42,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     },
     "seed-25-combat-468": {
@@ -1197,6 +1234,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 468,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     },
     "seed-25-combat-157": {
@@ -1205,6 +1279,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 157,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     },
     "seed-25-combat-2026": {
@@ -1213,6 +1324,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 2026,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     },
     "seed-25-combat-7": {
@@ -1221,6 +1369,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 7,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     },
     "seed-25-combat-99": {
@@ -1229,6 +1414,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 99,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     },
     "seed-25-combat-11": {
@@ -1237,6 +1459,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 11,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     },
     "seed-25-combat-23": {
@@ -1245,6 +1504,43 @@
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
         "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ccab0a92"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": {
+          "scenarioId": "fresh-start",
+          "seed": 23,
+          "policyId": "combat",
+          "claimTarget": 2,
+          "schedule": {
+            "sessionsPerDay": 2,
+            "sessionMinutes": 25,
+            "breatherMinutes": 5,
+            "habitName": "Practice",
+            "goalMinutes": 25,
+            "startAt": 1767603600000,
+            "timeZone": "America/Chicago"
+          },
+          "budgetDays": 70,
+          "eras": 4,
+          "stopCreditedHours": 0,
+          "responseCurve": "shipped",
+          "overrides": {}
+        },
+        "forward": null
       }
     }
   },

@@ -15,9 +15,12 @@ export declare function assertSliceRows(
   policy: string,
 ): void;
 
+export declare function assertSliceEvidence(m: any, payload: any, minutes: number, policy: string): void;
+
 export declare function unitProvenanceOf(unitsById: Record<string, any>): Record<string, {
   recordingCommit: string;
   recordingEnvironment?: Record<string, unknown>;
+  identity: unknown;
 }>;
 
 export interface PublishContext {
@@ -47,11 +50,11 @@ export declare function probeGroup(
 ): PublicationGroup;
 
 /**
- * Merges the persisted plan's derived units back into a rebuilt plan,
- * keeping them exactly while their parent's identity is unchanged.
+ * Rebuilds derived descriptors with current inputs from a verified
+ * persisted parent. The normal scan decides whether stored units match.
  */
 export declare function mergedPlanUnits(
   dir: string,
-  m: { laterEraUnitIdentity: (descriptor: unknown) => unknown },
-  builder: { units: JobPlan["units"] },
+  m: any,
+  builder: { units: JobPlan["units"]; derive?: (banks: any, parentIdentity: any) => JobPlan["units"] },
 ): Promise<JobPlan["units"]>;

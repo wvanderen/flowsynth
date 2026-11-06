@@ -1,8 +1,8 @@
 # Issue #507 — the later-era evaluation recorded as one resumable job
 
-Evidence for the resumable-recording work, including the completion record
-(mirrored into the pull request's Verification section when the branch opens
-as one).
+Evidence for the resumable-recording work. The authoritative criterion-to-evidence
+completion record is in [PR #519's Verification section](https://github.com/wvanderen/flowsynth/pull/519);
+the original mapping and recorded demonstration are retained below.
 
 ## Completion record: every #507 criterion beside its evidence
 
@@ -56,6 +56,40 @@ The run spanned several launches, and the interruptions were real:
 
 The job directory itself (`.recording/later-era/evaluation/`) is working
 state and stays out of the checkout; these excerpts are its record.
+
+## PR #519 review fixes
+
+`tools/recording-review.test.ts` adds regressions at the production boundaries:
+
+| Finding | Named verification | Class |
+| --- | --- | --- |
+| A forward-only budget change reused obsolete descriptors | `rebuilds resumed forwards with the current budget, not the old descriptor` changes the actual compiled budget declaration from 30 to 15 while preserving the parent identity; the rebuilt plan carries 15 and rejects the old forward identity | automated |
+| Composition lost evaluation identities | `publishes recorded identities and refuses stale evaluation evidence at composition` publishes the workers' identities, then changes the actual compiled evaluation version; both slice and probe validation refuse the old evidence despite an unchanged engine digest | automated |
+| A supervisor-only kill left overlapping workers and unsafe cleanup | `waits for an orphan worker before cleanup and reuses it (cancel recovery: false)` kills a real supervisor while its worker is computing, resumes at one worker, checks one worker start and untouched live temporaries, and verifies reuse with one attempt plus restored elapsed/memory metrics; the `true` case additionally cancels recovery, checks its notification, and safely resumes again | automated |
+| A refused detached launch overwrote the live bundle | `refuses a detached second launch without touching the live bundle` exercises production and smoke CLI launches against a held lock and checks an existing bundle dependency is unchanged | automated |
+| Incomplete or duplicate route evidence and missing provenance composed | `requires every affordable order exactly once and complete identity provenance` rejects a missing order, duplicate order, empty/missing provenance, and an unexpected unit | automated |
+| Relative job paths failed during import | `accepts a relative job directory through the real CLI` records the bounded slice through a relative `--dir` and checks durable completion | automated |
+| The env-gated slice assertion still called the removed command | `tools/later-eras.test.ts` now invokes `run <slice>`; `the slice recording command validates budgets before walking` checks the production slice command parses and refuses a bad budget before any work | automated + source inspection |
+| The completion record was absent from the PR | PR #519's Verification section carries all eight #507 criteria and their named evidence | recorded |
+
+The new regression command was first run red: four selected cases failed on
+obsolete budgets, accepted incomplete evidence, live-bundle deletion, and
+relative imports. The completed regression file also covers evaluation-version
+changes and supervisor-only kills (including cancellation during recovery).
+
+### Identity recovery, not re-recording
+
+The seven published inputs were regenerated through `sliceGroup` / `probeGroup`
+from the original `.recording/later-era/evaluation/units/` files. Every one of the
+69 units passed the current identity and payload checks. Before writing any
+artifact, the migration asserted deep equality of **every field except the new
+identity metadata**, and checked each original per-unit commit/environment
+against its persisted worker provenance. No walk or continuation ran. The
+SHA-256 of the `[artifact path, rows-or-banks]` payloads before and after is
+`9f1499ed7f8978b2ce8b8ef9cb224c28b8a18db91dfb8e5070f0aeaa48727d79`.
+This deliberately tightens the published schema; identity-less evidence must
+be re-published from its original units or re-recorded, never stamped from
+current inputs. See ADR-0083 for the migration and pre-lease worker boundary.
 
 ## Automated checks
 

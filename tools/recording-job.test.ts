@@ -23,6 +23,7 @@ import {
   LATER_ERA_EVALUATION_VERSION,
   LATER_ERA_SEEDS,
   laterEraProbeWalkRecipe,
+  laterEraJobPlan,
   laterEraSmokeRecipe,
   laterEraTinyJobPlan,
   laterEraUnitIdentity,
@@ -817,37 +818,33 @@ describe("the recording domain's publication", () => {
   it("a rebuilt plan keeps its derived units exactly while the parent identity holds", async () => {
     const { mergedPlanUnits } = await import("./dev/later-era-recording.mjs");
     const dir = freshDir("pub-merge");
-    const walkDescriptor = {
-      id: "probe-walk",
-      key: { kind: "probe-walk" as const },
-      recipe: laterEraSmokeRecipe(),
-      forward: null,
-      deps: [] as string[],
-    };
+    const builder = bundle.laterEraJobPlan();
+    const walkDescriptor = builder.units.find((d: { id: string }) => d.id === "probe-walk");
     const parentIdentity = bundle.laterEraUnitIdentity(walkDescriptor);
-    const forwardDescriptor = {
-      id: "forward-b0-o0",
-      key: { kind: "probe-forward" as const, bank: 0, orderIndex: 0 },
-      recipe: null,
-      forward: { bank: 0, order: ["entry" as const], budgetDays: 30, parentIdentity },
-      deps: ["probe-walk"],
+    const banks = [{ orders: [{ order: [] }] }];
+    const [forwardDescriptor] = builder.derive(banks, parentIdentity);
+    const parent = {
+      unit: walkDescriptor.id, key: walkDescriptor.key, identity: parentIdentity,
+      result: { row: { noGrant: true, eras: [], seed: 23 }, banks,
+        record: { recipe: walkDescriptor.recipe, snapshots: [{}] } },
     };
     // The previous run's plan: base plus its derived forward.
     await prepareJobDir(dir, {
       scope: "merge", bundle: bundlePath, commit: "0".repeat(40),
       units: [walkDescriptor, forwardDescriptor],
     });
-    // The rebuild (a relaunch recomputes the base): the derived forward
-    // survives while its parent's identity is unchanged.
-    const merged = await mergedPlanUnits(dir, bundle, { units: [walkDescriptor] });
+    writeFileSync(path.join(dir, "units/probe-walk.json"), JSON.stringify(parent));
+    // Re-derive from the verified parent using today's builder; completed
+    // forward files still match the freshly built descriptors.
+    const merged = await mergedPlanUnits(dir, bundle, { ...builder, units: [walkDescriptor] });
     expect(merged.map((unit: { id: string }) => unit.id)).toEqual(["probe-walk", "forward-b0-o0"]);
     // A changed parent invalidates the derived unit at the merge itself:
     // the rebuild drops it and the derive pass re-appends fresh ones.
     const changedParent = {
       ...walkDescriptor,
-      recipe: { ...laterEraSmokeRecipe(), budgetDays: 4 },
+      recipe: { ...walkDescriptor.recipe, budgetDays: 4 },
     };
-    const remerged = await mergedPlanUnits(dir, bundle, { units: [changedParent] });
+    const remerged = await mergedPlanUnits(dir, bundle, { ...builder, units: [changedParent] });
     expect(remerged.map((unit: { id: string }) => unit.id)).toEqual(["probe-walk"]);
   });
 
@@ -873,13 +870,17 @@ describe("the recording domain's publication", () => {
   // the walk cannot have demonstrated anything yet.
   const banks = () => [2, 6].map((frontier) => ({
     frontier, claim: 2, budget: 2, pieces: [], routeDemonstrated: false,
-    orders: [{ order: ["entry"], spend: 1, purchasesOk: true, placementsOk: true, finite: true, forward: null }],
+    orders: [{ order: [], spend: 0, purchasesOk: true, placementsOk: true, finite: true, forward: null }],
   }));
   const probeUnits = (): Record<string, any> => {
+    const builder = bundle.laterEraJobPlan();
+    const parent = builder.units.find((d: { id: string }) => d.id === "probe-walk");
+    const parentIdentity = bundle.laterEraUnitIdentity(parent);
+    const forwards = builder.derive(banks(), parentIdentity);
     const walk: Record<string, any> = {
       "probe-walk": {
         id: "probe-walk",
-        identity: { recipe: JSON.parse(JSON.stringify(laterEraProbeWalkRecipe())) },
+        identity: parentIdentity,
         result: { row: { noGrant: true, eras: [], frontiers: [2, 6] }, banks: banks() },
         provenance,
       },
@@ -887,8 +888,9 @@ describe("the recording domain's publication", () => {
     for (const [b, frontier] of [2, 6].entries()) {
       walk[`forward-b${b}-o0`] = {
         id: `forward-b${b}-o0`,
+        identity: bundle.laterEraUnitIdentity(forwards[b]),
         result: {
-          prepared: { order: ["entry"], spend: 1, purchasesOk: true, placementsOk: true, finite: true },
+          prepared: { order: [], spend: 0, purchasesOk: true, placementsOk: true, finite: true },
           forward: forward(frontier),
         },
         provenance,
@@ -966,8 +968,8 @@ describe("the observable status", () => {
 
 describe("probe evidence verification", () => {
   const order = (frontier: number) => ({
-    order: ["entry" as const],
-    spend: 1,
+    order: [],
+    spend: 0,
     purchasesOk: true,
     placementsOk: true,
     finite: true,
@@ -984,11 +986,12 @@ describe("probe evidence verification", () => {
     },
   });
 
-  const evidence = () => ({
+  const evidence = () => {
+    const payload = {
     source: { game: "flowsynth", saveVersion: 12, runnerVersion: 15, engineSource: "abcdef01" },
     recordingCommit: "0".repeat(40),
     recordingEnvironment: { node: process.version, timeZone: "UTC", utcOffsetMinutes: 0 },
-    unitProvenance: { "probe-walk": { recordingCommit: "0".repeat(40) } },
+    unitProvenance: {},
     seed: 23,
     minutes: 60,
     policy: "support",
@@ -1000,7 +1003,15 @@ describe("probe evidence verification", () => {
       { frontier: 2, claim: 2, budget: 2, pieces: [], orders: [order(2)], routeDemonstrated: true },
       { frontier: 6, claim: 2, budget: 2, pieces: [], orders: [order(6)], routeDemonstrated: true },
     ],
-  });
+    };
+    const builder = laterEraJobPlan();
+    const walk = builder.units.find(d => d.id === "probe-walk")!;
+    const descriptors = [walk, ...builder.derive!(payload.banks, laterEraUnitIdentity(walk))];
+    payload.unitProvenance = Object.fromEntries(descriptors.map(d => [d.id, {
+      recordingCommit: "0".repeat(40), identity: laterEraUnitIdentity(d),
+    }]));
+    return payload;
+  };
 
   it("accepts evidence whose walk, banks, and every persisted forward hold together", () => {
     expect(() => assertProbeEvidence(evidence(), "the probe file")).not.toThrow();

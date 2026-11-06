@@ -14,7 +14,8 @@
 // worker that outlives a killed supervisor still lands its completed
 // unit, and a resume reuses it.
 import { spawn } from "node:child_process";
-import { appendFile, mkdir, open, readFile, rename, rm } from "node:fs/promises";
+import { appendFile, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import {
   REPO_ROOT,
@@ -38,6 +39,7 @@ const lockPath = (dir) => path.join(dir, "supervisor.lock.json");
 const statusPath = (dir) => path.join(dir, "job-status.json");
 const planPath = (dir) => path.join(dir, "plan.json");
 const logsPath = (dir) => path.join(dir, "logs");
+export const workerLeasePath = (dir, pid) => path.join(dir, "workers", `${pid}.json`);
 
 export { statusPath, planPath, logsPath, lockPath };
 
@@ -68,6 +70,12 @@ function processAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
     process.kill(pid, 0);
+    // An orphan killed by signal can remain a zombie until the host reaps
+    // it. It cannot write evidence and must not block recovery forever.
+    if (process.platform === "linux") {
+      const stat = readFileSync(`/proc/${pid}/stat`, "utf8");
+      if (stat.slice(stat.lastIndexOf(")") + 2).startsWith("Z ")) return false;
+    }
     return true;
   } catch (error) {
     return error?.code === "EPERM";
@@ -124,8 +132,72 @@ export async function acquireSupervisorLock(dir) {
   throw new Error("could not acquire the job's supervision lock — another supervisor is starting");
 }
 
-async function releaseSupervisorLock(dir) {
-  await rm(lockPath(dir), { force: true });
+export async function releaseSupervisorLock(dir) {
+  let holder;
+  try { holder = JSON.parse(await readFile(lockPath(dir), "utf8")); } catch { return; }
+  if (holder.pid === process.pid) await rm(lockPath(dir), { force: true });
+}
+
+// Workers cannot start until their pid lease is durable (the IPC start
+// handshake below). Recovery holds the supervision lock and lets surviving
+// workers finish before recompilation, scanning, or temporary cleanup. This
+// also bounds resource use when the new launch requests fewer workers.
+export async function recoverJobWorkers(dir, lock, options = {}) {
+  const directory = path.join(dir, "workers");
+  const entries = await readdir(directory).catch((error) => {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  });
+  if (entries.length === 0) return;
+  const previous = await readJobStatusIfAny(dir);
+  if (previous) await writeJobStatus(dir, {
+    ...previous, status: "running", terminalAt: null, notification: null,
+    supervisor: { pid: process.pid, startedAt: lock.startedAt, node: process.version },
+  });
+  let cancelled = null;
+  // While recovering, a signal stops the supervisor but does not send a
+  // signal to a pid from an old lease (the host could have recycled it).
+  // The registered workers remain discoverable by the next resume.
+  const onInterrupt = () => { cancelled = "SIGINT"; };
+  const onTerminate = () => { cancelled = "SIGTERM"; };
+  process.on("SIGINT", onInterrupt);
+  process.on("SIGTERM", onTerminate);
+  try {
+    for (const name of entries) {
+      if (!/^\d+\.json$/.test(name)) continue;
+      const file = path.join(directory, name);
+      const pid = Number(name.slice(0, -5));
+      await logEvent(dir, `waiting for previous worker pid ${pid} before reclaiming the job`);
+      // The worker removes its lease only after its final write; a dead
+      // worker's lease is stale. A live pid never authorizes cleanup.
+      while (processAlive(pid) && !cancelled) {
+        try { await readFile(file); } catch (error) {
+          if (error?.code === "ENOENT") break;
+          throw error;
+        }
+        await sleep(100);
+      }
+      if (cancelled) break;
+      await rm(file, { force: true });
+    }
+    if (cancelled) {
+      if (previous) {
+        const status = {
+          ...previous, status: "cancelled", terminalAt: new Date().toISOString(),
+          supervisor: { pid: process.pid, startedAt: lock.startedAt, node: process.version },
+        };
+        await writeJobStatus(dir, status);
+        const notify = options.notify ?? previous.options.notify;
+        status.notification = notify ? await runNotification(dir, notify, "cancelled") : null;
+        await writeJobStatus(dir, status);
+      }
+      await releaseSupervisorLock(dir);
+      throw Object.assign(new Error(`job recovery cancelled by ${cancelled}; previous workers remain registered`), { cancelled });
+    }
+  } finally {
+    process.removeListener("SIGINT", onInterrupt);
+    process.removeListener("SIGTERM", onTerminate);
+  }
 }
 
 // ── The plan ───────────────────────────────────────────────────────────────
@@ -329,6 +401,7 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
   // second supervisor can never disturb the holder's bundle) skips the
   // acquisition; the release always happens in the finally below.
   const lock = options.lock ?? await acquireSupervisorLock(dir);
+  await recoverJobWorkers(dir, lock, options);
   await clearStaleTemporaries(path.join(dir, "units"));
   await clearStaleTemporaries(dir);
   await logEvent(dir, `supervisor pid ${process.pid} took the job (jobs=${jobs}, worker-mb=${workerMemoryBudgetMb})`);
@@ -344,6 +417,10 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
       state: entry.state === "valid" ? "done" : "pending",
       attempts: prior.attempts ?? (entry.state === "valid" ? 1 : 0),
       error: entry.state === "valid" ? null : entry.reason ?? null,
+      ...(entry.state === "valid" ? {
+        elapsedMs: entry.payload.elapsedMs,
+        peakRssKb: entry.payload.worker?.peakRssKb,
+      } : {}),
     };
   }
   const status = {
@@ -413,20 +490,31 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
     logHandles.set(id, logHandle);
     const child = spawn(process.execPath,
       [`--max-old-space-size=${workerMemoryBudgetMb}`, WORKER_SCRIPT, "--dir", dir, "--unit", id],
-      { cwd: REPO_ROOT, stdio: ["ignore", "pipe", "pipe"], env: process.env });
+      { cwd: REPO_ROOT, stdio: ["ignore", "pipe", "pipe", "ipc"], env: process.env });
     running.set(id, { child, startedAt: Date.now() });
     child.stdout.on("data", (chunk) => void logHandle.write(chunk));
     child.stderr.on("data", (chunk) => void logHandle.write(chunk));
+    child.on("error", (error) => void logHandle.write(`worker process error: ${error.message}\n`));
     child.on("close", (code, signal) => {
       exits.push({ id, code, signal });
       if (wake) { const release = wake; wake = null; release(); }
+    });
+    // If the supervisor dies before this durable write, the waiting child
+    // exits on IPC disconnect without ever reading the mutable job plan.
+    await mkdir(path.join(dir, "workers"), { recursive: true });
+    await writeJsonAtomic(workerLeasePath(dir, child.pid), { pid: child.pid, unit: id });
+    if (cancelled) child.kill("SIGTERM");
+    else child.send({ start: true }, (error) => {
+      if (error) child.kill("SIGTERM");
     });
   };
 
   const finishUnit = async (id, state, extra = {}) => {
     const { elapsedMs, peakRssKb, error } = extra;
     const startedAt = running.get(id)?.startedAt ?? Date.now();
+    const workerPid = running.get(id)?.child.pid;
     running.delete(id);
+    if (workerPid !== undefined) await rm(workerLeasePath(dir, workerPid), { force: true });
     unitStates[id] = {
       ...unitStates[id],
       state,

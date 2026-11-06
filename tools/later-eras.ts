@@ -430,10 +430,15 @@ export function affordableOrdersAt(state: GameState): readonly RoutePiece[][] {
     const price = routePiecePriceAt(state, piece);
     return price === null ? [] : [{ piece, price }];
   });
+  return affordableOrdersFor(priced, state.arete);
+}
+
+// The same enumeration verifies persisted evidence without running a walk.
+function affordableOrdersFor(priced: readonly { readonly piece: RoutePiece; readonly price: number }[], budget: number): RoutePiece[][] {
   const orders: RoutePiece[][] = [[]];
   const walk = (prefix: RoutePiece[], left: typeof priced, spent: number): void => {
     for (const { piece, price } of left) {
-      if (spent + price > state.arete) continue;
+      if (spent + price > budget) continue;
       const next = [...prefix, piece];
       orders.push(next);
       walk(next, left.filter((entry) => entry.piece !== piece), spent + price);
@@ -990,11 +995,36 @@ export function laterEraUnitMatches(descriptor: LaterEraUnitDescriptor, payload:
 // and every one of its orders' forwards are persisted work units; the
 // job publishes their composed evidence, and composition verifies it.
 
+export interface LaterEraUnitProvenance {
+  readonly recordingCommit: string;
+  readonly recordingEnvironment?: Record<string, unknown>;
+  readonly identity: LaterEraUnitIdentity;
+}
+
+// Published evidence must retain exactly the identities workers measured.
+// An engine fingerprint alone does not cover recipes or evaluation logic.
+export function assertLaterEraUnitProvenance(
+  provenance: Record<string, LaterEraUnitProvenance>,
+  descriptors: readonly LaterEraUnitDescriptor[],
+  label: string,
+): void {
+  assert.ok(provenance && typeof provenance === "object", `${label} carries its units' identity provenance — re-publish from the job`);
+  assert.deepEqual(Object.keys(provenance).sort(), descriptors.map(unit => unit.id).sort(),
+    `${label} carries exactly the declared units' identity provenance`);
+  for (const descriptor of descriptors) {
+    const stored = provenance[descriptor.id]!;
+    assert.equal(typeof stored.recordingCommit, "string", `${label}'s unit ${descriptor.id} names its recording commit`);
+    // Compare the serialized shape: the plan and artifacts are JSON data.
+    assert.deepEqual(stored.identity, JSON.parse(JSON.stringify(laterEraUnitIdentity(descriptor))),
+      `${label}'s unit ${descriptor.id} has a stale or missing identity — re-record it`);
+  }
+}
+
 export interface LaterEraProbeEvidence {
   readonly source: PlaythroughSource;
   readonly recordingCommit: string;
   readonly recordingEnvironment?: Record<string, unknown>;
-  readonly unitProvenance: Record<string, { readonly recordingCommit: string; readonly recordingEnvironment?: Record<string, unknown> }>;
+  readonly unitProvenance: Record<string, LaterEraUnitProvenance>;
   readonly seed: number;
   readonly minutes: number;
   readonly policy: string;
@@ -1017,7 +1047,6 @@ export function assertProbeEvidence(payload: unknown, label: string): asserts pa
   assert.equal(probe.minutes, LONG_SESSION_MINUTES);
   assert.equal(probe.policy, "support");
   assertLaterEraRowCore(probe.walk.row);
-  assert.ok(probe.unitProvenance && typeof probe.unitProvenance === "object", `${label} names its units' provenance`);
   const banks = probe.banks;
   assert.ok(Array.isArray(banks), `${label} carries its probed banks`);
   // The probed frontiers are the walk's own banks — the exact sequence the
@@ -1027,7 +1056,8 @@ export function assertProbeEvidence(payload: unknown, label: string): asserts pa
   assert.ok(banks.length >= 2, `${label} probed enough banks`);
   for (let i = 1; i < banks.length; i++) assert.ok(banks[i]!.frontier > banks[i - 1]!.frontier);
   for (const bank of banks) {
-    assert.ok(bank.orders.length > 0, `${label} carries every affordable order`);
+    assert.deepEqual(bank.orders.map((order: RouteProbeOrder) => order.order), affordableOrdersFor(bank.pieces, bank.budget),
+      `${label} carries every affordable order exactly once in declared order`);
     assert.equal(bank.routeDemonstrated, true, `${label}'s frontier ${bank.frontier} demonstrates no route`);
     for (const order of bank.orders) {
       assert.ok(order.forward, `${label}'s frontier ${bank.frontier} carries an order without its persisted forward`);
@@ -1041,4 +1071,8 @@ export function assertProbeEvidence(payload: unknown, label: string): asserts pa
       assert.ok(order.forward!.frontierAfter > bank.frontier);
     }
   }
+  const builder = laterEraJobPlan();
+  const walk = builder.units.find(unit => unit.key.kind === "probe-walk")!;
+  assertLaterEraUnitProvenance(probe.unitProvenance,
+    [walk, ...builder.derive!(banks, laterEraUnitIdentity(walk))], label);
 }

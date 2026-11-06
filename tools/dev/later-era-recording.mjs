@@ -7,8 +7,8 @@
 // CLI and by the verification, so production recording and its checks
 // cannot drift apart.
 import assert from "node:assert/strict";
-import { readPlan } from "./job-recorder.mjs";
-import { writeJsonAtomic, recordingPayload } from "./runtime.mjs";
+import { unitPath } from "./job-recorder.mjs";
+import { readRecordingFile, writeJsonAtomic, recordingPayload } from "./runtime.mjs";
 
 export const PROBE_EVIDENCE_PATH = "docs/later-era-probe.json";
 export const slicePath = (minutes, policy) => `docs/later-era-slice-${minutes}-${policy}.json`;
@@ -29,36 +29,37 @@ export const assertSliceRows = (m, rows, minutes, policy) => {
   }
 };
 
+export const assertSliceEvidence = (m, payload, minutes, policy) => {
+  assertSliceRows(m, payload.rows, minutes, policy);
+  m.assertLaterEraUnitProvenance(payload.unitProvenance, m.laterEraSliceJobPlan(minutes, policy).units, "the later-era slice");
+};
+
 export const unitProvenanceOf = (unitsById) => Object.fromEntries(
   Object.entries(unitsById).map(([id, unit]) => [id, {
     recordingCommit: unit.provenance.recordingCommit,
     recordingEnvironment: unit.provenance.recordingEnvironment,
+    identity: unit.identity,
   }]),
 );
 
-// The plan is rebuilt from the current checkout on every run — the base
-// units are recomputed — but the derived units (the probe forwards) only
-// exist in the persisted plan. Rebuilding without them would make every
-// resume re-execute the whole fan-out. They survive the rebuild exactly
-// while their parent's identity — the probe walk's current identity — is
-// unchanged; a changed parent invalidates them here, before the scan, and
-// the derive pass re-appends fresh ones under the new parent.
+// Re-derive descriptors from a verified persisted parent, never from the
+// old plan: forward-only inputs (such as their budget) can change while
+// the parent's identity stays the same. Fresh descriptors still reuse
+// completed forwards when their full identities match during the scan.
 export async function mergedPlanUnits(dir, m, builder) {
-  let previous;
+  const walk = builder.units.find((unit) => unit.key.kind === "probe-walk");
+  if (!walk || !builder.derive) return builder.units;
+  let parent;
   try {
-    previous = await readPlan(dir);
+    parent = await readRecordingFile(unitPath(dir, walk.id), { what: "the probe walk" });
+    m.validateLaterEraUnit(walk, parent);
+    if (!m.laterEraUnitMatches(walk, parent)) return builder.units;
   } catch {
+    // Missing, stale, or corrupt parent: the supervisor's normal scan
+    // preserves corrupt bytes, then re-runs it and derives its forwards.
     return builder.units;
   }
-  const baseIds = new Set(builder.units.map((unit) => unit.id));
-  const derived = previous.units.filter((unit) => !baseIds.has(unit.id));
-  if (derived.length === 0) return builder.units;
-  const walk = builder.units.find((unit) => unit.key.kind === "probe-walk");
-  const currentParent = walk ? m.laterEraUnitIdentity(walk) : null;
-  const parentText = currentParent ? JSON.stringify(currentParent) : null;
-  const kept = derived.filter((unit) =>
-    unit.forward && parentText !== null && JSON.stringify(unit.forward.parentIdentity) === parentText);
-  return [...builder.units, ...kept];
+  return [...builder.units, ...builder.derive(parent.result.banks, parent.identity)];
 }
 
 // `paths.slice` overrides the published slice file's location (the
