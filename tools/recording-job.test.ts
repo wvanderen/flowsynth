@@ -455,6 +455,17 @@ describe("the job supervisor", () => {
     const adapter = adapterForPlan(bundle, plan, {
       deriveFrom: plan.units[0]!.id,
       derive: () => [derived],
+      // The probe evidence's group resolves its ids lazily — the forwards
+      // exist only after the derive pass — so the supervisor must call it.
+      groups: [{
+        id: "lazy",
+        unitIds: () => [plan.units[0]!.id, "derived-unit"],
+        publish: async (unitsById, { dir: at }) => {
+          const target = path.join(at, "lazy-artifact.json");
+          await writeJsonAtomic(target, { ids: Object.keys(unitsById).sort() });
+          return target;
+        },
+      }],
     });
     const { outcome } = await runToCompletion(dir, plan, adapter);
     expect(outcome).toBe("complete");
@@ -463,6 +474,9 @@ describe("the job supervisor", () => {
     expect(status.units["derived-unit"]!.attempts).toBe(1);
     const storedPlan = JSON.parse(readFileSync(path.join(dir, "plan.json"), "utf8"));
     expect(storedPlan.units.map((unit: { id: string }) => unit.id)).toContain("derived-unit");
+    // The lazy group published once both its units were valid.
+    expect(JSON.parse(readFileSync(path.join(dir, "lazy-artifact.json"), "utf8")).ids)
+      .toEqual(["derived-unit", plan.units[0]!.id].sort());
   }, 120_000);
 
   it("reports a publish defect as a failed job without discarding the units", async () => {

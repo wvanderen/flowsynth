@@ -492,8 +492,9 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
   const publishReadyGroups = async () => {
     for (const group of adapter.groups ?? []) {
       if (publishedThisRun.has(group.id)) continue;
-      if (!group.unitIds.every((id) => validIds.has(id))) continue;
-      const unitsById = Object.fromEntries(group.unitIds.map((id) => {
+      const unitIds = typeof group.unitIds === "function" ? group.unitIds() : group.unitIds;
+      if (!unitIds.every((id) => validIds.has(id))) continue;
+      const unitsById = Object.fromEntries(unitIds.map((id) => {
         const payload = doneThisRun.get(id) ?? scanned.find((entry) => entry.descriptor.id === id)?.payload;
         return [id, payload];
       }));
