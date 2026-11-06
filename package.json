@@ -11,7 +11,7 @@
     "test": "node tools/run-supported.mjs node_modules/vitest/vitest.mjs run",
     "test:watch": "node tools/run-supported.mjs node_modules/vitest/vitest.mjs",
     "test:calendar": "node tools/run-supported.mjs tools/calendar-regression.mjs",
-    "check": "node tools/run-supported.mjs node_modules/typescript/bin/tsc --noEmit",
+    "check": "node tools/run-supported.mjs node_modules/typescript/bin/tsc --noEmit && node tools/run-supported.mjs tools/dev/recorder-static-check.mjs",
     "preflight": "node tools/runtime-preflight.mjs",
     "deploy:vercel": "vercel build --prod && vercel deploy --prebuilt --prod"
   },
