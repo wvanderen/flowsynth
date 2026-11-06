@@ -521,6 +521,73 @@ describe("the job supervisor", () => {
       .toEqual(["derived-unit", plan.units[0]!.id].sort());
   }, 120_000);
 
+  it("a resumed job derives the fan-out from a parent that was reused, not re-run", async () => {
+    const dir = freshDir("sup-derive-resume");
+    const plan = tinyPlan([LATER_ERA_SEEDS[0]!]);
+    await prepareJobDir(dir, plan);
+    // Run one: the parent completes, but the supervisor carries no derive.
+    const plain = adapterForPlan(bundle, plan, { groups: [] });
+    await runToCompletion(dir, plan, plain);
+    expect(existsSync(path.join(dir, "units", "derived-unit.json"))).toBe(false);
+    // Run two (the resume): the parent is reused from the scan — the
+    // fan-out must still derive and complete.
+    const derived = {
+      id: "derived-unit",
+      key: { kind: "seed" as const, seed: 999, minutes: 25, policy: "support" },
+      recipe: bundle.laterEraSmokeRecipe(),
+      forward: null,
+      deps: [plan.units[0]!.id],
+    };
+    const deriving = adapterForPlan(bundle, plan, {
+      deriveFrom: plan.units[0]!.id,
+      derive: () => [derived],
+      groups: [{
+        id: "gated",
+        unitIds: ({ descriptors }: any) => [
+          plan.units[0]!.id,
+          ...[...descriptors.values()].filter((d: { id: string }) => d.id === "derived-unit").map((d: { id: string }) => d.id),
+        ],
+        ready: ({ descriptors, validIds }: any) => {
+          if (!validIds.has(plan.units[0]!.id)) return false;
+          const known = [...descriptors.values()].filter((d: { id: string }) => d.id === "derived-unit");
+          return known.length > 0 && known.every((d: { id: string }) => validIds.has(d.id));
+        },
+        publish: async (unitsById: Record<string, unknown>, { dir: at }: { dir: string }) => {
+          const target = path.join(at, "resume-derive-artifact.json");
+          await writeJsonAtomic(target, { ids: Object.keys(unitsById).sort() });
+          return target;
+        },
+      }],
+    });
+    const { outcome, publishError } = await runToCompletion(dir, plan, deriving);
+    expect(outcome).toBe("complete");
+    expect(publishError).toBeNull();
+    const status = await readJobStatus(dir);
+    expect(status.units["derived-unit"]!.state).toBe("done");
+    expect(status.units[plan.units[0]!.id]!.attempts).toBe(1);
+    expect(JSON.parse(readFileSync(path.join(dir, "resume-derive-artifact.json"), "utf8")).ids)
+      .toEqual(["derived-unit", plan.units[0]!.id].sort());
+  }, 120_000);
+
+  it("a group that never assembles fails the job instead of claiming complete", async () => {
+    const dir = freshDir("sup-unpublished");
+    const plan = tinyPlan([LATER_ERA_SEEDS[0]!]);
+    await prepareJobDir(dir, plan);
+    const adapter = adapterForPlan(bundle, plan, {
+      groups: [{
+        id: "never",
+        unitIds: [plan.units[0]!.id, "a-unit-no-plan-carries"],
+        publish: async () => path.join(dir, "never.json"),
+      }],
+    });
+    const { outcome, publishError } = await runToCompletion(dir, plan, adapter);
+    expect(outcome).toBe("failed");
+    expect(publishError).toContain("never published: never");
+    // The units themselves are still valid evidence.
+    const scanned = await scanUnits(dir, plan, { identityOf: adapter.identityOf, validateUnit: adapter.validateUnit });
+    expect(scanned.every((entry) => entry.state === "valid")).toBe(true);
+  }, 120_000);
+
   it("reports a publish defect as a failed job without discarding the units", async () => {
     const dir = freshDir("sup-publish");
     const plan = tinyPlan(LATER_ERA_SEEDS.slice(0, 2));

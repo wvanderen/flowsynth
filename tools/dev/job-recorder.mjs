@@ -467,21 +467,29 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
     doneThisRun.set(id, payload);
     validIds.add(id);
     await logEvent(dir, `unit ${id} done in ${payload.elapsedMs !== undefined ? Math.round(payload.elapsedMs / 1000) + "s" : "?"}, worker peak ${payload.worker?.peakRssKb ? Math.round(payload.worker.peakRssKb / 1024) + "MB" : "?"}`);
-    if (adapter.derive && id === adapter.deriveFrom && !derivedOnce) {
-      derivedOnce = true;
-      const derived = await adapter.derive(payload);
-      const fresh = await appendDerivedUnits(dir, derived);
-      for (const unit of fresh) {
-        descriptors.set(unit.id, unit);
-        queue.push(unit.id);
-        unitStates[unit.id] = { state: "pending", attempts: 0, error: null };
-      }
-      if (fresh.length > 0) {
-        await writeJobStatus(dir, status);
-        await logEvent(dir, `derived ${fresh.length} follow-on units from ${id}`);
-      }
-    }
+    await deriveWhenParentLands();
     await publishReadyGroups();
+  };
+
+  // The fan-out derives when its parent's result first exists — from a
+  // worker exit or from the scan of a resumed job whose parent was
+  // already completed (a reused parent must still derive its forwards).
+  const deriveWhenParentLands = async () => {
+    if (!adapter.derive || derivedOnce) return;
+    const parent = doneThisRun.get(adapter.deriveFrom);
+    if (!parent) return;
+    derivedOnce = true;
+    const derived = await adapter.derive(parent);
+    const fresh = await appendDerivedUnits(dir, derived);
+    for (const unit of fresh) {
+      descriptors.set(unit.id, unit);
+      queue.push(unit.id);
+      unitStates[unit.id] = { state: "pending", attempts: 0, error: null };
+    }
+    if (fresh.length > 0) {
+      await writeJobStatus(dir, status);
+      await logEvent(dir, `derived ${fresh.length} follow-on units from ${adapter.deriveFrom}`);
+    }
   };
 
   // Publication readiness is per-run: a resumed job re-attempts each
@@ -529,8 +537,10 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
   };
 
   // Groups whose units were all valid before this run (a crash between
-  // completion and publication) publish immediately.
+  // completion and publication) publish immediately, and a reused parent
+  // still derives its fan-out before anything is called publishable.
   for (const entry of scanned) if (entry.state === "valid") doneThisRun.set(entry.descriptor.id, entry.payload);
+  await deriveWhenParentLands();
   await publishReadyGroups();
 
   try {
@@ -550,7 +560,17 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
 
     const failedCount = Object.values(unitStates).filter((unit) => unit.state === "failed").length;
     const doneCount = Object.values(unitStates).filter((unit) => unit.state === "done").length;
-    const outcome = cancelled ? "cancelled" : failedCount > 0 || publishError ? "failed" : "complete";
+    // A group that never became publishable is a failed job, never a
+    // silent complete: `complete` means every declared artifact published.
+    const unpublished = (adapter.groups ?? [])
+      .filter((group) => !publishedThisRun.has(group.id))
+      .map((group) => group.id);
+    let outcome = cancelled ? "cancelled" : failedCount > 0 || publishError ? "failed" : "complete";
+    if (outcome === "complete" && unpublished.length > 0) {
+      outcome = "failed";
+      publishError = `the job completed its units but never published: ${unpublished.join(", ")} — read the supervisor log for what the groups were waiting on`;
+      await logEvent(dir, publishError);
+    }
     status.status = outcome;
     status.terminalAt = new Date().toISOString();
     await writeJobStatus(dir, status);
