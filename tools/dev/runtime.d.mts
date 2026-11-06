@@ -96,12 +96,16 @@ export interface SmokeRootOptions {
 /**
  * The smoke tier's output root (issue #506): a fresh temporary directory
  * per invocation by default, or the validated FLOWSYNTH_SMOKE_OUTPUT —
- * created when absent, refused when not a directory or inside the checkout.
+ * created when absent, refused when not a directory or inside the checkout
+ * after canonicalizing symlinks and existing ancestors.
  */
 export declare function resolveSmokeRoot(prefix: string, options?: SmokeRootOptions): Promise<string>;
 
-/** Refuses with a named error when the path exists — smoke never overwrites. */
+/** Cheap early refusal when a path exists; publication must still use writeSmokeArtifact. */
 export declare function refuseExistingArtifact(filePath: string, what: string): Promise<void>;
+
+/** Exclusively creates JSON output; a concurrent publisher or existing symlink is refused by name. */
+export declare function writeSmokeArtifact(filePath: string, payload: unknown, what: string): Promise<void>;
 
 export interface ReadRecordingOptions {
   /** What the file is, used in every refusal message. */

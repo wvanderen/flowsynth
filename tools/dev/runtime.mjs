@@ -11,7 +11,7 @@
 // TypeScript surface lives in runtime.d.mts.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, stat } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -217,35 +217,68 @@ export const REPO_ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(im
 // for inspecting artifacts (created when absent), but it must be a
 // directory and it must sit outside the checkout: a committed calibration
 // artifact can never be smoke's target.
+// Resolve existing ancestors before creating anything: lexical containment
+// alone misses outside symlinks pointing into the checkout. Only ENOENT is
+// recoverable; permissions and non-directory ancestors retain their errors.
+async function canonicalOutputPath(candidate) {
+  try {
+    return await realpath(candidate);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    const parent = path.dirname(candidate);
+    if (parent === candidate) throw error;
+    return path.join(await canonicalOutputPath(parent), path.basename(candidate));
+  }
+}
+
 export async function resolveSmokeRoot(prefix, { env = process.env, cwd = process.cwd(), repoRoot = REPO_ROOT, tmp = tmpdir() } = {}) {
   const requested = env.FLOWSYNTH_SMOKE_OUTPUT;
-  if (requested === undefined || requested === "") {
-    return mkdtemp(path.join(tmp, prefix));
-  }
-  const resolved = path.resolve(cwd, requested);
-  const relative = path.relative(path.resolve(repoRoot), resolved);
-  if (relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))) {
-    throw new Error(
-      `FLOWSYNTH_SMOKE_OUTPUT ${requested} sits inside the checkout (${repoRoot}) — smoke output must stay outside it, so a committed calibration artifact can never be smoke's target.`,
-    );
-  }
-  const existing = await stat(resolved).catch(() => null);
+  const explicit = requested !== undefined && requested !== "";
+  const checkout = await realpath(repoRoot);
+  const outsideCheckout = (resolved) => {
+    const relative = path.relative(checkout, resolved);
+    if (relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))) {
+      throw new Error(
+        `FLOWSYNTH_SMOKE_OUTPUT ${requested ?? tmp} sits inside the checkout (${checkout}) — smoke output must stay outside it, so a committed calibration artifact can never be smoke's target.`,
+      );
+    }
+    return resolved;
+  };
+  const resolved = outsideCheckout(await canonicalOutputPath(path.resolve(cwd, explicit ? requested : tmp)));
+  if (!explicit) return mkdtemp(path.join(resolved, prefix));
+  const existing = await stat(resolved).catch((error) => {
+    if (error?.code !== "ENOENT") throw error;
+    return null;
+  });
   if (existing && !existing.isDirectory()) {
     throw new Error(`FLOWSYNTH_SMOKE_OUTPUT ${requested} is not a directory — name a directory smoke may create or reuse.`);
   }
   if (!existing) await mkdir(resolved, { recursive: true });
-  return resolved;
+  return outsideCheckout(await realpath(resolved));
 }
 
-// Smoke writes only through fresh roots, so this refusal is the guard
-// that keeps a rerun (or a concurrent run sharing an explicit root) from
-// overwriting a recording another invocation produced.
+const existingArtifactError = (filePath, what) => new Error(
+  `${what} already exists at ${filePath} — smoke never overwrites; point FLOWSYNTH_SMOKE_OUTPUT at a fresh path or unset it for a temporary root.`,
+);
+
+// A cheap early refusal, not a concurrency guarantee. Publication below
+// uses exclusive creation even when multiple callers passed this check.
 export async function refuseExistingArtifact(filePath, what) {
-  const existing = await stat(filePath).catch(() => null);
-  if (existing) {
-    throw new Error(
-      `${what} already exists at ${filePath} — smoke never overwrites; point FLOWSYNTH_SMOKE_OUTPUT at a fresh path or unset it for a temporary root.`,
-    );
+  try {
+    await lstat(filePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
+  throw existingArtifactError(filePath, what);
+}
+
+export async function writeSmokeArtifact(filePath, payload, what) {
+  try {
+    await writeFile(filePath, JSON.stringify(payload, null, 2), { flag: "wx" });
+  } catch (error) {
+    if (error?.code === "EEXIST") throw existingArtifactError(filePath, what);
+    throw error;
   }
 }
 

@@ -1,7 +1,7 @@
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, writeFileSync, existsSync } from "node:fs";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,7 @@ import {
   readRecordingFile,
   refuseExistingArtifact,
   resolveSmokeRoot,
+  writeSmokeArtifact,
 } from "./dev/runtime.mjs";
 import { CENTURY_MARK_HOURS, CENTURY_SEEDS, CENTURY_SMOKE, centurySmokeRecipe, runPlaythrough } from "./century";
 import { LATER_ERA_MIN_HOURS, LATER_ERA_SEEDS, LATER_ERA_SMOKE, laterEraSmokeRecipe } from "./later-eras";
@@ -54,6 +55,16 @@ describe("recorder static gate", () => {
     expect(result.ok).toBe(false);
     expect(result.diagnostics).toContain("Cannot find name 'noSuchSmokeSeam'");
     expect(result.diagnostics).toContain("record-century.mjs");
+  }, 60_000);
+
+  it("checks undefined references in the shared smoke lifecycle too", () => {
+    const script = path.join(root, "tools", "dev", "smoke-recorder.mjs");
+    const result = checkRecorderScripts({
+      overrides: [{ path: script, text: `${readFileSync(script, "utf8")}\nnoSuchSharedSmokeSeam();\n` }],
+    });
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics).toContain("Cannot find name 'noSuchSharedSmokeSeam'");
+    expect(result.diagnostics).toContain("smoke-recorder.mjs");
   }, 60_000);
 
   it("rejects an unresolvable named import from the shared runtime module", () => {
@@ -110,7 +121,7 @@ describe("the smoke recipes", () => {
 // inside the checkout or overwrite anything (issue #506).
 describe("smoke output isolation", () => {
   it("defaults to a fresh temporary directory per invocation", async () => {
-    const root = await resolveSmokeRoot("flowsynth-smoke-test-");
+    const root = await resolveSmokeRoot("flowsynth-smoke-test-", { env: {} });
     try {
       expect(path.dirname(root)).toBe(tmpdir());
       expect(path.basename(root)).toMatch(/^flowsynth-smoke-test-/);
@@ -144,6 +155,36 @@ describe("smoke output isolation", () => {
     ).rejects.toThrow(/inside the checkout/);
   });
 
+  it("refuses checkout aliases and missing descendants through symlinked ancestors", async () => {
+    const parent = mkdtempSync(path.join(tmpdir(), "flowsynth-smoke-alias-"));
+    try {
+      const checkout = path.join(parent, "checkout");
+      mkdirSync(path.join(checkout, "docs"), { recursive: true });
+      const alias = path.join(parent, "outside-link");
+      symlinkSync(path.join(checkout, "docs"), alias);
+      for (const requested of [alias, path.join(alias, "missing", "nested")]) {
+        await expect(resolveSmokeRoot("unused-", {
+          repoRoot: checkout, env: { FLOWSYNTH_SMOKE_OUTPUT: requested },
+        })).rejects.toThrow(/inside the checkout/);
+      }
+      expect(existsSync(path.join(checkout, "docs", "missing"))).toBe(false);
+      const checkoutAlias = path.join(parent, "checkout-alias");
+      symlinkSync(checkout, checkoutAlias);
+      await expect(resolveSmokeRoot("unused-", {
+        repoRoot: checkoutAlias, env: { FLOWSYNTH_SMOKE_OUTPUT: path.join(checkout, "docs") },
+      })).rejects.toThrow(/inside the checkout/);
+      const outside = path.join(parent, "outside");
+      mkdirSync(outside);
+      const outsideAlias = path.join(parent, "outside-alias");
+      symlinkSync(outside, outsideAlias);
+      await expect(resolveSmokeRoot("unused-", {
+        repoRoot: checkout, env: { FLOWSYNTH_SMOKE_OUTPUT: path.join(outsideAlias, "new") },
+      })).resolves.toBe(path.join(outside, "new"));
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
   it("refuses a smoke root that is not a directory", async () => {
     const parent = mkdtempSync(path.join(tmpdir(), "flowsynth-smoke-parent-"));
     try {
@@ -152,6 +193,33 @@ describe("smoke output isolation", () => {
       await expect(
         resolveSmokeRoot("flowsynth-smoke-test-", { env: { FLOWSYNTH_SMOKE_OUTPUT: occupied } }),
       ).rejects.toThrow(/not a directory/);
+    } finally {
+      rmSync(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("exclusive publication has one winner and refuses occupied or dangling symlinks", async () => {
+    const parent = mkdtempSync(path.join(tmpdir(), "flowsynth-smoke-exclusive-"));
+    try {
+      const artifact = path.join(parent, "slice.json");
+      const results = await Promise.allSettled([
+        writeSmokeArtifact(artifact, { writer: "a" }, "the smoke slice"),
+        writeSmokeArtifact(artifact, { writer: "b" }, "the smoke slice"),
+      ]);
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      const refused = results.find((result) => result.status === "rejected") as PromiseRejectedResult;
+      expect(refused.reason.message).toContain("the smoke slice already exists");
+      expect(["a", "b"]).toContain(JSON.parse(readFileSync(artifact, "utf8")).writer);
+      const first = readFileSync(artifact, "utf8");
+      const missing = path.join(parent, "missing.json");
+      for (const target of [artifact, missing]) {
+        const alias = `${target}.link`;
+        symlinkSync(target, alias);
+        await expect(refuseExistingArtifact(alias, "the smoke slice")).rejects.toThrow(/already exists/);
+        await expect(writeSmokeArtifact(alias, {}, "the smoke slice")).rejects.toThrow(/already exists/);
+      }
+      expect(readFileSync(artifact, "utf8")).toBe(first);
+      expect(existsSync(missing)).toBe(false);
     } finally {
       rmSync(parent, { recursive: true, force: true });
     }
@@ -250,6 +318,20 @@ const spawnRecorder = (script: string, args: string[], env: Record<string, strin
     timeout: 120_000,
   });
 
+// Start without blocking so Promise.all below really overlaps processes.
+const spawnRecorderAsync = (script: string, args: string[], env: Record<string, string> = {}) =>
+  new Promise<{ status: number | null; stdout: string; stderr: string }>((resolve, reject) => {
+    const child = spawn(process.execPath, [path.join(root, "tools", script), ...args], {
+      cwd: root, env: { ...process.env, ...env }, timeout: 120_000,
+    });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.setEncoding("utf8").on("data", (chunk: string) => { stdout += chunk; });
+    child.stderr.setEncoding("utf8").on("data", (chunk: string) => { stderr += chunk; });
+    child.on("error", reject);
+    child.on("close", (status) => resolve({ status, stdout, stderr }));
+  });
+
 const freshSmokeRoot = (label: string) =>
   trackRoot(mkdtempSync(path.join(tmpdir(), `flowsynth-smoke-cli-${label}-`)));
 
@@ -280,6 +362,7 @@ describe("the century smoke CLI", () => {
     expect(slicePayload.recordingEnvironment.node).toBe(process.version);
     expect(slicePayload.minutes).toBe(CENTURY_SMOKE.sessionMinutes);
     expect(slicePayload.policy).toBe(CENTURY_SMOKE.policyId);
+    expect(slicePayload.recipe).toEqual(JSON.parse(JSON.stringify(centurySmokeRecipe())));
     expect(slicePayload.rows).toHaveLength(1);
     const row = slicePayload.rows[0];
     expect(row.seed).toBe(CENTURY_SMOKE.seed);
@@ -391,14 +474,14 @@ describe("the century smoke CLI", () => {
     }, 120_000);
   });
 
-  it("never touches committed calibration artifacts, and concurrent smokes never collide", () => {
+  it("never touches committed calibration artifacts, and concurrent smokes never collide", async () => {
     const before = docsArtifactDigests();
     // Two concurrent smoke slices, default temporary roots: each must get
     // its own isolation and neither may write the checkout.
-    const [sliceA, sliceB] = [
-      spawnRecorder("record-century.mjs", ["smoke", "slice"]),
-      spawnRecorder("record-century.mjs", ["smoke", "slice"]),
-    ];
+    const [sliceA, sliceB] = await Promise.all([
+      spawnRecorderAsync("record-century.mjs", ["smoke", "slice"], { FLOWSYNTH_SMOKE_OUTPUT: "" }),
+      spawnRecorderAsync("record-century.mjs", ["smoke", "slice"], { FLOWSYNTH_SMOKE_OUTPUT: "" }),
+    ]);
     expect(sliceA.status).toBe(0);
     expect(sliceB.status).toBe(0);
     const rootA = path.dirname(sliceA.stdout.trim().split("\n").at(-1)!.split(" — ").at(-1)!);
@@ -417,6 +500,64 @@ describe("the century smoke CLI", () => {
   }, 240_000);
 });
 
+interface RecipeTamperPayload {
+  rows: Array<{ seed: number; sessionMinutes: number; policy: string }>;
+  recipe?: Record<string, unknown>;
+}
+
+describe.each([
+  { script: "record-century.mjs", name: "century" },
+  { script: "record-later-eras.mjs", name: "later-era" },
+])("$name smoke safety regressions", ({ script, name }) => {
+  it("concurrent slices and reports sharing an explicit root have exactly one publisher", async () => {
+    const envRoot = freshSmokeRoot(`${name}-race`);
+    const env = { FLOWSYNTH_SMOKE_OUTPUT: envRoot };
+    for (const leg of ["slice", "compose"]) {
+      const results = await Promise.all([
+        spawnRecorderAsync(script, ["smoke", leg], env),
+        spawnRecorderAsync(script, ["smoke", leg], env),
+      ]);
+      expect(results.map((result) => result.status).sort()).toEqual([0, 1]);
+      expect(results.find((result) => result.status === 1)?.stderr).toContain("already exists");
+      const artifact = path.join(envRoot, `${name}-smoke-${leg === "slice" ? "slice" : "report"}.json`);
+      const first = readFileSync(artifact, "utf8");
+      expect(JSON.parse(first).tier).toBe("smoke");
+      const rerun = spawnRecorder(script, ["smoke", leg], env);
+      expect(rerun.status).toBe(1);
+      expect(rerun.stderr).toContain("already exists");
+      expect(readFileSync(artifact, "utf8")).toBe(first);
+    }
+  }, 240_000);
+
+  it("rejects contradictory row identity and missing or changed full recipes without publishing", () => {
+    const pristineRoot = freshSmokeRoot(`${name}-recipe`);
+    expect(runSmokeSlice(script, pristineRoot).status).toBe(0);
+    const pristine = readFileSync(path.join(pristineRoot, `${name}-smoke-slice.json`), "utf8");
+    const mutations: Array<(payload: RecipeTamperPayload) => void> = [
+      (payload) => { payload.rows[0]!.seed = 99; },
+      (payload) => { payload.rows[0]!.sessionMinutes = 60; },
+      (payload) => { payload.rows[0]!.policy = "combat"; },
+      (payload) => { delete payload.recipe; },
+      (payload) => { payload.recipe = { ...payload.recipe, stopCreditedHours: 2 }; },
+      (payload) => { payload.recipe = { ...payload.recipe, budgetDays: 4 }; },
+      (payload) => { payload.recipe = { ...payload.recipe, seed: 99 }; },
+      (payload) => { payload.recipe = { ...payload.recipe, schedule: {
+        ...(payload.recipe?.schedule as Record<string, unknown>), sessionMinutes: 60,
+      } }; },
+    ];
+    for (const mutate of mutations) {
+      const envRoot = freshSmokeRoot(`${name}-recipe-tamper`);
+      const payload = JSON.parse(pristine);
+      mutate(payload);
+      writeFileSync(path.join(envRoot, `${name}-smoke-slice.json`), JSON.stringify(payload));
+      const result = spawnRecorder(script, ["smoke", "compose"], { FLOWSYNTH_SMOKE_OUTPUT: envRoot });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("stale recipe evidence");
+      expect(existsSync(path.join(envRoot, `${name}-smoke-report.json`))).toBe(false);
+    }
+  }, 240_000);
+});
+
 describe("the later-eras smoke CLI", () => {
   it("runs the real entry points end to end: bounded walk, slice payload, composition", () => {
     const envRoot = freshSmokeRoot("later-happy");
@@ -431,6 +572,7 @@ describe("the later-eras smoke CLI", () => {
     expect(slicePayload.recordingEnvironment.node).toBe(process.version);
     expect(slicePayload.minutes).toBe(LATER_ERA_SMOKE.sessionMinutes);
     expect(slicePayload.policy).toBe(LATER_ERA_SMOKE.policyId);
+    expect(slicePayload.recipe).toEqual(JSON.parse(JSON.stringify(laterEraSmokeRecipe())));
     expect(slicePayload.rows).toHaveLength(1);
     const row = slicePayload.rows[0];
     expect(row.seed).toBe(LATER_ERA_SMOKE.seed);

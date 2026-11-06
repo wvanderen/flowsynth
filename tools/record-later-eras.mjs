@@ -18,19 +18,16 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
-import { join } from "node:path";
 import { compileEngine } from "./dev/compile-engine.mjs";
+import { runSmoke } from "./dev/smoke-recorder.mjs";
 import {
   assertNotSmokeTier,
   assertSameCompiledSource,
-  assertSmokeTier,
   composeRecordingPayload,
   readRecordingFile,
   recordingEnvironment,
   recordingPayload,
-  refuseExistingArtifact,
   requireRuntimeEnvironment,
-  resolveSmokeRoot,
 } from "./dev/runtime.mjs";
 
 const SCRIPT_NAME = "record-later-eras";
@@ -89,63 +86,6 @@ const assertSmokeRow = (m, row) => {
   assert.ok(row.creditedHours < m.LATER_ERA_MIN_HOURS, "a smoke row stays under the later-era window — it is not later-era evidence");
 };
 
-// The smoke tier (issue #506): the recording pipeline's own path —
-// argument validation, the compile, one bounded walk, the slice payload,
-// and composition — published only into isolated output. The compose leg
-// refuses an incomplete or corrupted slice before compiling anything.
-async function runSmoke(leg, commit) {
-  const root = await resolveSmokeRoot("flowsynth-later-eras-smoke-");
-  const slicePath = join(root, "later-era-smoke-slice.json");
-  const reportPath = join(root, "later-era-smoke-report.json");
-  if (leg === "slice") {
-    await refuseExistingArtifact(slicePath, "the later-era smoke slice");
-    const m = await compileEngine("tools/later-eras.ts", "later-eras");
-    const source = m.playthroughSource();
-    const t0 = performance.now();
-    const record = m.runPlaythrough(m.laterEraSmokeRecipe());
-    assertLaterEraWalkMechanics(m, record);
-    const row = m.laterEraRow(m.LATER_ERA_SMOKE.seed, m.LATER_ERA_SMOKE.sessionMinutes, record);
-    assertSmokeRow(m, row);
-    await writeFile(slicePath, JSON.stringify(recordingPayload({
-      tier: "smoke",
-      source,
-      recordingCommit: commit,
-      minutes: m.LATER_ERA_SMOKE.sessionMinutes,
-      policy: m.LATER_ERA_SMOKE.policyId,
-      rows: [row],
-    }), null, 2));
-    console.log(`smoke slice: seed ${row.seed} completed at its declared credited stop, ${row.creditedHours} credited h, ${dt(t0)} — ${slicePath}`);
-    return;
-  }
-  // Cheap failures first: the slice is read and its JSON parsed before
-  // the engine compiles, so an incomplete input is refused in
-  // milliseconds with its remedy.
-  const recorded = await readRecordingFile(slicePath, {
-    what: "the later-era smoke slice",
-    remedy: "record it with: node tools/record-later-eras.mjs smoke slice",
-  });
-  const m = await compileEngine("tools/later-eras.ts", "later-eras");
-  const source = m.playthroughSource();
-  assertSmokeTier(recorded, slicePath);
-  assertSameCompiledSource(recorded.source, source, slicePath);
-  assert.equal(typeof recorded.recordingCommit, "string", "the smoke slice names its recording commit");
-  execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
-  assert.equal(recorded.minutes, m.LATER_ERA_SMOKE.sessionMinutes,
-    "the smoke slice's recipe is not the declared smoke recipe — stale recipe evidence cannot compose; re-record it with: node tools/record-later-eras.mjs smoke slice");
-  assert.equal(recorded.policy, m.LATER_ERA_SMOKE.policyId,
-    "the smoke slice's recipe is not the declared smoke recipe — stale recipe evidence cannot compose; re-record it with: node tools/record-later-eras.mjs smoke slice");
-  assert.equal(recorded.rows?.length, 1, "the smoke slice carries exactly one bounded walk");
-  assertSmokeRow(m, recorded.rows[0]);
-  await refuseExistingArtifact(reportPath, "the later-era smoke report");
-  await writeFile(reportPath, JSON.stringify(composeRecordingPayload({
-    tier: "smoke",
-    recordingCommit: commit,
-    smoke: m.LATER_ERA_SMOKE,
-    runs: recorded.rows,
-  }, [{ path: slicePath, recording: recorded }]), null, 2));
-  console.log(`smoke report: composed the bounded walk — ${reportPath}`);
-}
-
 async function main() {
   // Cheap failures first: the argument surface is validated before the
   // runtime gate, git, or any compile (issue #506).
@@ -161,7 +101,20 @@ async function main() {
     execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
   }
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  if (command === "smoke") return runSmoke(slice, commit);
+  if (command === "smoke") return runSmoke(slice, commit, {
+    name: "later-era", script: SCRIPT_NAME,
+    load: async () => {
+      const m = await compileEngine("tools/later-eras.ts", "later-eras");
+      const recipe = m.laterEraSmokeRecipe();
+      return {
+        source: m.playthroughSource(), smoke: m.LATER_ERA_SMOKE, recipe,
+        run: m.runPlaythrough,
+        row: (record) => m.laterEraRow(recipe.seed, recipe.schedule.sessionMinutes, record),
+        assertWalk: (record) => assertLaterEraWalkMechanics(m, record),
+        assertRow: (row) => assertSmokeRow(m, row),
+      };
+    },
+  });
   const m = await compileEngine("tools/later-eras.ts", "later-eras");
   const source = m.playthroughSource();
   const slicePath = (minutes, policy) => `docs/later-era-slice-${minutes}-${policy}.json`;
@@ -260,9 +213,4 @@ try {
 } catch (error) {
   console.error(`${SCRIPT_NAME}: ${error?.message ?? error}`);
   process.exit(1);
-}
-
-function dt(from) {
-  const seconds = (performance.now() - from) / 1000;
-  return seconds >= 60 ? `${(seconds / 60).toFixed(1)}m` : `${seconds.toFixed(0)}s`;
 }

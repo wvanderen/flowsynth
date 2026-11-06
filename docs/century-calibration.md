@@ -109,7 +109,20 @@ The restored ten slices and [composed report](century-calibration-results.json) 
 
 ## The smoke tier
 
-Ordinary verification exercises the recording pipeline without any matrix work (issue #506): `node tools/record-century.mjs smoke slice` then `smoke compose` (and the `record-later-eras.mjs` pair) drive the real command surface — argument validation, the Vite compile, one bounded walk (a single credited hour, far under every calibration mark, declared as `CENTURY_SMOKE` / `LATER_ERA_SMOKE` in the compiled recording modules), the slice payload with tier `"smoke"`, and composition — in seconds. Smoke publishes only into isolated temporary output (a fresh temp root per invocation, or `FLOWSYNTH_SMOKE_OUTPUT`, which must stay outside the checkout and never overwrite), so committed calibration artifacts and concurrent recordings are untouchable. The calibration compose refuses smoke-tier slices outright, and a smoke row stays under the century mark by construction — smoke evidence certifies the pipeline, never balance. `tools/recording-smoke.test.ts` runs these cases on every suite run, and `npm run check` statically checks the recorder scripts for undefined references before anything executes.
+Ordinary verification exercises the recording pipeline without any matrix work (issue #506): both recorders' `smoke slice` and `smoke compose` commands drive the real command surface — argument validation, the Vite compile, one bounded walk (a single credited hour, far under every calibration mark, declared as `CENTURY_SMOKE` / `LATER_ERA_SMOKE` in the compiled recording modules), the slice payload with tier `"smoke"`, and composition — in seconds. A shared lifecycle in `tools/dev/smoke-recorder.mjs` owns persistence, provenance, and composition; each recorder supplies its compiled recipe and domain checks. The full normalized recipe is persisted and compared on composition, including seed, schedule, budget, and credited stop; the row's identity must agree too. Smoke evidence made before this recipe field existed must be re-recorded.
+
+Smoke publishes only into isolated temporary output: a fresh temp root per invocation, or `FLOWSYNTH_SMOKE_OUTPUT`. Both the checkout and output paths are canonicalized through symlinks and existing ancestors before any output directory is created. Exclusive file creation prevents even simultaneous invocations sharing one explicit root from overwriting a slice or report. To compose a prior slice, explicitly reuse its printed output root (an unset variable creates a different root on each invocation):
+
+```sh
+export FLOWSYNTH_SMOKE_OUTPUT="$(mktemp -d)"
+node tools/run-supported.mjs tools/record-century.mjs smoke slice
+node tools/run-supported.mjs tools/record-century.mjs smoke compose
+# The later-era pair may use this root too: their artifact names are distinct.
+node tools/run-supported.mjs tools/record-later-eras.mjs smoke slice
+node tools/run-supported.mjs tools/record-later-eras.mjs smoke compose
+```
+
+The calibration compose refuses smoke-tier slices outright, and a smoke row stays under the century mark by construction — smoke evidence certifies the pipeline, never balance. `tools/recording-smoke.test.ts` runs the CLI cases, actual concurrent same-root publication, symlink isolation, and stale recipe/source refusals on every suite run. `npm run check` statically checks the recorder scripts for undefined references before anything executes. The #506 acceptance-criterion completion record lives in PR #518's Verification section.
 
 ## Every acceptance criterion beside its evidence
 
