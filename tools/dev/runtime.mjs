@@ -207,7 +207,9 @@ export function composeRecordingPayload(payload, inputs) {
 
 // ── Issue #506: the smoke tier's output isolation and compose refusals ──
 
-const REPO_ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+// The checkout root, derived from this module's own location — shared so
+// the recorder tooling computes it one way.
+export const REPO_ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
 
 // Smoke output is always isolated. The default root is a fresh mkdtemp
 // per invocation — concurrent smoke recordings cannot collide, and
@@ -247,14 +249,16 @@ export async function refuseExistingArtifact(filePath, what) {
   }
 }
 
-// Compose input loading with named refusals: an incomplete input names
-// the missing artifact and its remedy; a corrupted one names the path —
-// neither ever publishes a report (issue #506).
+// Compose input loading with named refusals: a missing input names the
+// artifact and its remedy; a corrupted one names the path — neither ever
+// publishes a report (issue #506). Any other read failure (permissions,
+// for instance) surfaces with the system's own named error.
 export async function readRecordingFile(filePath, { what, remedy } = {}) {
   let text;
   try {
     text = await readFile(filePath, "utf8");
-  } catch {
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
     throw new Error(`${what} is missing at ${filePath}${remedy ? ` — ${remedy}` : ""}`);
   }
   try {

@@ -55,6 +55,9 @@ export declare function normalizeVersion(version: string): string;
 
 export declare function requireRuntimeEnvironment(root?: string): Promise<void>;
 
+/** The checkout root, derived from this module's own location. */
+export declare const REPO_ROOT: string;
+
 export interface RecordingInput {
   path: string;
   recording: {

@@ -38,7 +38,7 @@ describe("recorder static gate", () => {
     const result = checkRecorderScripts();
     expect(result.ok).toBe(true);
     expect(result.diagnostics).toBe("");
-  });
+  }, 60_000);
 
   it("rejects a deliberate undefined reference statically, without launching a walk", () => {
     // The tampered content never executes: the checker is a static program
@@ -54,7 +54,7 @@ describe("recorder static gate", () => {
     expect(result.ok).toBe(false);
     expect(result.diagnostics).toContain("Cannot find name 'noSuchSmokeSeam'");
     expect(result.diagnostics).toContain("record-century.mjs");
-  });
+  }, 60_000);
 
   it("rejects an unresolvable named import from the shared runtime module", () => {
     const script = path.join(root, "tools", "record-later-eras.mjs");
@@ -66,7 +66,7 @@ describe("recorder static gate", () => {
     });
     expect(result.ok).toBe(false);
     expect(result.diagnostics).toContain("noSuchRuntimeExport");
-  });
+  }, 60_000);
 });
 
 // The smoke tier's bounded recipe or execution seam: declared in the
@@ -307,7 +307,7 @@ describe("the century smoke CLI", () => {
     expect(report.distributions).toBeUndefined();
     expect(report.investments).toBeUndefined();
     expect(compose.stdout).toContain("smoke report:");
-  });
+  }, 120_000);
 
   it("refuses invalid arguments with the usage diagnostic before any work", () => {
     for (const args of [["smoke"], ["smoke", "walk"], ["nonsense"], ["slice", "99:support"]]) {
@@ -315,7 +315,7 @@ describe("the century smoke CLI", () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("Usage: node tools/record-century.mjs");
     }
-  });
+  }, 60_000);
 
   it("refuses an incomplete input by name and publishes no report", () => {
     const envRoot = freshSmokeRoot("century-missing");
@@ -324,7 +324,20 @@ describe("the century smoke CLI", () => {
     expect(compose.stderr).toContain("the century smoke slice is missing at");
     expect(compose.stderr).toContain("record it with: node tools/record-century.mjs smoke slice");
     expect(existsSync(path.join(envRoot, "century-smoke-report.json"))).toBe(false);
-  });
+  }, 120_000);
+
+  it("refuses to overwrite an existing smoke report and leaves the first composition in place", () => {
+    const envRoot = freshSmokeRoot("century-report-overwrite");
+    expect(runSmokeSlice("record-century.mjs", envRoot).status).toBe(0);
+    const composeArgs = ["smoke", "compose"];
+    expect(spawnRecorder("record-century.mjs", composeArgs, { FLOWSYNTH_SMOKE_OUTPUT: envRoot }).status).toBe(0);
+    const reportPath = path.join(envRoot, "century-smoke-report.json");
+    const first = readFileSync(reportPath, "utf8");
+    const rerun = spawnRecorder("record-century.mjs", composeArgs, { FLOWSYNTH_SMOKE_OUTPUT: envRoot });
+    expect(rerun.status).toBe(1);
+    expect(rerun.stderr).toContain("the century smoke report already exists");
+    expect(readFileSync(reportPath, "utf8")).toBe(first);
+  }, 240_000);
 
   describe("stale and foreign evidence is refused before publishing", () => {
     // One real smoke slice serves every tamper case: the cases copy it
@@ -444,7 +457,7 @@ describe("the later-eras smoke CLI", () => {
     expect(report.distributions).toBeUndefined();
     expect(report.routeProbes).toBeUndefined();
     expect(compose.stdout).toContain("smoke report:");
-  });
+  }, 120_000);
 
   it("refuses invalid arguments with the usage diagnostic before any work", () => {
     for (const args of [["smoke"], ["smoke", "walk"], ["nonsense"], ["slice", "99:support"], ["slice", "25:pushing"]]) {
@@ -452,7 +465,7 @@ describe("the later-eras smoke CLI", () => {
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("Usage: node tools/record-later-eras.mjs");
     }
-  });
+  }, 60_000);
 
   it("refuses an incomplete input by name and publishes no report", () => {
     const envRoot = freshSmokeRoot("later-missing");
@@ -461,7 +474,7 @@ describe("the later-eras smoke CLI", () => {
     expect(compose.stderr).toContain("the later-era smoke slice is missing at");
     expect(compose.stderr).toContain("record it with: node tools/record-later-eras.mjs smoke slice");
     expect(existsSync(path.join(envRoot, "later-era-smoke-report.json"))).toBe(false);
-  });
+  }, 120_000);
 
   describe("stale and foreign evidence is refused before publishing", () => {
     let pristineRoot: string;

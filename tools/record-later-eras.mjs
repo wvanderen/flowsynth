@@ -17,11 +17,9 @@
 // compose refuses them outright.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
+import { writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { build } from "vite";
+import { compileEngine } from "./dev/compile-engine.mjs";
 import {
   assertNotSmokeTier,
   assertSameCompiledSource,
@@ -45,7 +43,7 @@ const usageError = () => new Error("Usage: node tools/record-later-eras.mjs slic
 // walk validate (issue #506): finite state and rate at every snapshot,
 // event credit matching its snapshot, the prior depth's credit carried
 // into the era, and every era's defeats read off its own pre-bank board.
-const assertWalkMechanics = (m, record) => {
+const assertLaterEraWalkMechanics = (m, record) => {
   // Every era owns its actual end-of-era kills, including repeated
   // enemies. Check the pre-bank board, not the reset board.
   const banks = record.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
@@ -68,7 +66,7 @@ const assertWalkMechanics = (m, record) => {
 // The row core both the matrix rows and the smoke row validate (issue
 // #506): currency integrity, finite banked state, the familiar/new hour
 // split, and strict frontier advance at every closed era.
-const assertRowCore = (row) => {
+const assertLaterEraRowCore = (row) => {
   assert.equal(row.noGrant, true);
   let frontier = 0;
   for (const era of row.eras) {
@@ -84,28 +82,12 @@ const assertRowCore = (row) => {
 // declared credited bound and stays under the later-era window's floor —
 // the bounded seam cannot pass a smoke row off as later-era evidence.
 const assertSmokeRow = (m, row) => {
-  assertRowCore(row);
+  assertLaterEraRowCore(row);
   assert.equal(row.complete, true, "the smoke walk completes at its declared bound");
   assert.equal(row.stopKind, "century", "the smoke walk completes at its declared credited stop");
   assert.ok(row.creditedHours >= m.LATER_ERA_SMOKE.stopCreditedHours, `credited ${row.creditedHours} below the smoke bound`);
   assert.ok(row.creditedHours < m.LATER_ERA_MIN_HOURS, "a smoke row stays under the later-era window — it is not later-era evidence");
 };
-
-// Compile the recorder's engine module with Vite's real glob/raw
-// transforms — the verified path whose fingerprint certifies the compiled
-// engine — and return the loaded module.
-async function compileEngine(entry, name) {
-  const output = await mkdtemp(join(tmpdir(), `flowsynth-${name}-compile-`));
-  try {
-    await build({ configFile: false, logLevel: "error", build: {
-      ssr: entry, outDir: output, emptyOutDir: true,
-      rollupOptions: { output: { entryFileNames: `${name}.mjs` } },
-    } });
-    return await import(pathToFileURL(join(output, `${name}.mjs`)).href);
-  } finally {
-    await rm(output, { recursive: true, force: true });
-  }
-}
 
 // The smoke tier (issue #506): the recording pipeline's own path —
 // argument validation, the compile, one bounded walk, the slice payload,
@@ -121,7 +103,7 @@ async function runSmoke(leg, commit) {
     const source = m.playthroughSource();
     const t0 = performance.now();
     const record = m.runPlaythrough(m.laterEraSmokeRecipe());
-    assertWalkMechanics(m, record);
+    assertLaterEraWalkMechanics(m, record);
     const row = m.laterEraRow(m.LATER_ERA_SMOKE.seed, m.LATER_ERA_SMOKE.sessionMinutes, record);
     assertSmokeRow(m, row);
     await writeFile(slicePath, JSON.stringify(recordingPayload({
@@ -154,6 +136,7 @@ async function runSmoke(leg, commit) {
     "the smoke slice's recipe is not the declared smoke recipe — stale recipe evidence cannot compose; re-record it with: node tools/record-later-eras.mjs smoke slice");
   assert.equal(recorded.rows?.length, 1, "the smoke slice carries exactly one bounded walk");
   assertSmokeRow(m, recorded.rows[0]);
+  await refuseExistingArtifact(reportPath, "the later-era smoke report");
   await writeFile(reportPath, JSON.stringify(composeRecordingPayload({
     tier: "smoke",
     recordingCommit: commit,
@@ -179,101 +162,96 @@ async function main() {
   }
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   if (command === "smoke") return runSmoke(slice, commit);
-  const output = await mkdtemp(join(tmpdir(), "flowsynth-later-eras-"));
-  try {
-    const m = await compileEngine("tools/later-eras.ts", "later-eras");
-    const source = m.playthroughSource();
-    const slicePath = (minutes, policy) => `docs/later-era-slice-${minutes}-${policy}.json`;
-    const assertRows = (rows, minutes, policy) => {
-      assert.deepEqual(rows.map(row => row.seed), m.LATER_ERA_SEEDS);
-      for (const row of rows) {
-        assertRowCore(row);
-        assert.equal(row.sessionMinutes, minutes);
-        assert.equal(row.policy, policy);
-        if (policy === "ignoring") {
-          assert.deepEqual(row.defeats, []);
-          assert.ok(row.eras.every(era => era.placements.length === 0));
-        }
+  const m = await compileEngine("tools/later-eras.ts", "later-eras");
+  const source = m.playthroughSource();
+  const slicePath = (minutes, policy) => `docs/later-era-slice-${minutes}-${policy}.json`;
+  const assertRows = (rows, minutes, policy) => {
+    assert.deepEqual(rows.map(row => row.seed), m.LATER_ERA_SEEDS);
+    for (const row of rows) {
+      assertLaterEraRowCore(row);
+      assert.equal(row.sessionMinutes, minutes);
+      assert.equal(row.policy, policy);
+      if (policy === "ignoring") {
+        assert.deepEqual(row.defeats, []);
+        assert.ok(row.eras.every(era => era.placements.length === 0));
       }
-    };
-    if (command === "slice") {
-      const [raw, policy] = slice.split(":");
-      const minutes = Number(raw);
-      const rows = [];
-      for (const seed of m.LATER_ERA_SEEDS) {
-        const record = m.runPlaythrough(m.laterEraRecipe(seed, minutes, policy));
-        assertWalkMechanics(m, record);
-        rows.push(m.laterEraRow(seed, minutes, record));
-        console.log(`${slice} seed ${seed}: ${record.claims.length} banks, ${record.creditedSeconds / 3600} credited hours`);
-      }
-      assertRows(rows, minutes, policy);
-      // Issue #505: every recording names the runtime and timezone it ran on.
-      await writeFile(slicePath(minutes, policy), JSON.stringify(recordingPayload({ source, recordingCommit: commit, minutes, policy, rows }), null, 2));
-    } else {
-      const runs = [];
-      const inputs = [];
-      for (const minutes of [25, 60]) for (const policy of m.WORLD_POLICIES) {
-        const recorded = await readRecordingFile(slicePath(minutes, policy), {
-          what: "the later-era slice",
-          remedy: `record it with: node tools/record-later-eras.mjs slice ${minutes}:${policy}`,
-        });
-        // Each slice carries its own recording commit and the compiled
-        // engine fingerprint. Composition verifies the fingerprint byte for
-        // byte and the commit's ancestry: a slice recorded on an ancestor
-        // whose engine source compiled identically is the same evidence,
-        // while a divergent engine source is refused (issue #503's
-        // provenance discipline, kept for the recorder-fix commits that
-        // landed between slices). Smoke evidence is refused outright.
-        assertNotSmokeTier(recorded, slicePath(minutes, policy));
-        assertSameCompiledSource(recorded.source, source, slicePath(minutes, policy));
-        execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
-        assertRows(recorded.rows, minutes, policy);
-        inputs.push({ path: slicePath(minutes, policy), recording: recorded });
-        runs.push(...recorded.rows);
-      }
-      const report = m.laterEraReport(runs);
-      const walk = m.runPlaythrough(m.laterEraRecipe(23, 60, "support"));
-      const routeProbes = m.routeProbes(walk, { budgetDays: 30 });
-      // The probed frontiers are the walk's own banks — strictly increasing
-      // at whatever reach the calibrated curve pays (issue #492's slope
-      // recalibration moved the shipped reach; the probe reads it live).
-      const probedFrontiers = routeProbes.map(probe => probe.frontier);
-      assert.ok(probedFrontiers.length >= 2, "the walk banked enough frontiers to probe");
-      for (let i = 1; i < probedFrontiers.length; i++) assert.ok(probedFrontiers[i] > probedFrontiers[i - 1]);
-      for (const probe of routeProbes) {
-        assert.equal(probe.routeDemonstrated, true);
-        for (const order of probe.orders) {
-          assert.equal(order.purchasesOk, true);
-          assert.equal(order.finite, true);
-          assert.ok(order.spend <= probe.budget);
-          assert.equal(order.forward.noGrant, true);
-          assert.equal(order.forward.noRefund, true);
-          assert.equal(order.forward.finite, true);
-          assert.equal(order.forward.outcome, "advanced");
-          assert.ok(order.forward.frontierAfter > probe.frontier);
-        }
-      }
-      // The fighting demonstration (issue #491's capability clause): at
-      // the calibrated slope a route continuation banks its claim by depth
-      // growth before its weapon's fight resolves — the per-bank read — so
-      // the fighting configurations are demonstrated by the support
-      // policy's recorded walks, whose defeats ride every slice, while the
-      // probes demonstrate the no-refund advancement at every tested
-      // frontier. Every order's forward defeats ride the recorded JSON for
-      // the per-configuration read.
-      assert.ok(
-        runs.some(row => row.policy === "support" && row.defeats.length > 0),
-        "the support walks demonstrate fighting configurations",
-      );
-      await writeFile(process.env.FLOWSYNTH_LATER_ERA_REPORT || "docs/later-era-results.json", JSON.stringify(composeRecordingPayload({
-        ...report, recordingCommit: commit, routeProbes,
-        // These probes really ran during composition, unlike the input rows.
-        routeProbeRecordingEnvironment: recordingEnvironment(),
-      }, inputs), null, 2));
-      console.log(`Recorded ${runs.length} matrix walks and ${routeProbes.reduce((n, probe) => n + probe.orders.length, 0)} directly continued purchase orders.`);
     }
-  } finally {
-    await rm(output, { recursive: true, force: true });
+  };
+  if (command === "slice") {
+    const [raw, policy] = slice.split(":");
+    const minutes = Number(raw);
+    const rows = [];
+    for (const seed of m.LATER_ERA_SEEDS) {
+      const record = m.runPlaythrough(m.laterEraRecipe(seed, minutes, policy));
+      assertLaterEraWalkMechanics(m, record);
+      rows.push(m.laterEraRow(seed, minutes, record));
+      console.log(`${slice} seed ${seed}: ${record.claims.length} banks, ${record.creditedSeconds / 3600} credited hours`);
+    }
+    assertRows(rows, minutes, policy);
+    // Issue #505: every recording names the runtime and timezone it ran on.
+    await writeFile(slicePath(minutes, policy), JSON.stringify(recordingPayload({ source, recordingCommit: commit, minutes, policy, rows }), null, 2));
+  } else {
+    const runs = [];
+    const inputs = [];
+    for (const minutes of [25, 60]) for (const policy of m.WORLD_POLICIES) {
+      const recorded = await readRecordingFile(slicePath(minutes, policy), {
+        what: "the later-era slice",
+        remedy: `record it with: node tools/record-later-eras.mjs slice ${minutes}:${policy}`,
+      });
+      // Each slice carries its own recording commit and the compiled
+      // engine fingerprint. Composition verifies the fingerprint byte for
+      // byte and the commit's ancestry: a slice recorded on an ancestor
+      // whose engine source compiled identically is the same evidence,
+      // while a divergent engine source is refused (issue #503's
+      // provenance discipline, kept for the recorder-fix commits that
+      // landed between slices). Smoke evidence is refused outright.
+      assertNotSmokeTier(recorded, slicePath(minutes, policy));
+      assertSameCompiledSource(recorded.source, source, slicePath(minutes, policy));
+      execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
+      assertRows(recorded.rows, minutes, policy);
+      inputs.push({ path: slicePath(minutes, policy), recording: recorded });
+      runs.push(...recorded.rows);
+    }
+    const report = m.laterEraReport(runs);
+    const walk = m.runPlaythrough(m.laterEraRecipe(23, 60, "support"));
+    const routeProbes = m.routeProbes(walk, { budgetDays: 30 });
+    // The probed frontiers are the walk's own banks — strictly increasing
+    // at whatever reach the calibrated curve pays (issue #492's slope
+    // recalibration moved the shipped reach; the probe reads it live).
+    const probedFrontiers = routeProbes.map(probe => probe.frontier);
+    assert.ok(probedFrontiers.length >= 2, "the walk banked enough frontiers to probe");
+    for (let i = 1; i < probedFrontiers.length; i++) assert.ok(probedFrontiers[i] > probedFrontiers[i - 1]);
+    for (const probe of routeProbes) {
+      assert.equal(probe.routeDemonstrated, true);
+      for (const order of probe.orders) {
+        assert.equal(order.purchasesOk, true);
+        assert.equal(order.finite, true);
+        assert.ok(order.spend <= probe.budget);
+        assert.equal(order.forward.noGrant, true);
+        assert.equal(order.forward.noRefund, true);
+        assert.equal(order.forward.finite, true);
+        assert.equal(order.forward.outcome, "advanced");
+        assert.ok(order.forward.frontierAfter > probe.frontier);
+      }
+    }
+    // The fighting demonstration (issue #491's capability clause): at
+    // the calibrated slope a route continuation banks its claim by depth
+    // growth before its weapon's fight resolves — the per-bank read — so
+    // the fighting configurations are demonstrated by the support
+    // policy's recorded walks, whose defeats ride every slice, while the
+    // probes demonstrate the no-refund advancement at every tested
+    // frontier. Every order's forward defeats ride the recorded JSON for
+    // the per-configuration read.
+    assert.ok(
+      runs.some(row => row.policy === "support" && row.defeats.length > 0),
+      "the support walks demonstrate fighting configurations",
+    );
+    await writeFile(process.env.FLOWSYNTH_LATER_ERA_REPORT || "docs/later-era-results.json", JSON.stringify(composeRecordingPayload({
+      ...report, recordingCommit: commit, routeProbes,
+      // These probes really ran during composition, unlike the input rows.
+      routeProbeRecordingEnvironment: recordingEnvironment(),
+    }, inputs), null, 2));
+    console.log(`Recorded ${runs.length} matrix walks and ${routeProbes.reduce((n, probe) => n + probe.orders.length, 0)} directly continued purchase orders.`);
   }
 }
 
