@@ -9,8 +9,12 @@
 // use the storage it requires (happy-dom's localStorage). Plain JavaScript so
 // the preflight and the npm-script wrapper run under plain node; this module's
 // TypeScript surface lives in runtime.d.mts.
+import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { lstat, mkdir, mkdtemp, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 export const DECLARATION_FILE = ".node-version";
 
@@ -185,17 +189,144 @@ export function recordingPayload(payload) {
 // Composition is not a new measurement of the input runs. Preserve each
 // input's original provenance (including absent legacy metadata), and name
 // the composer's environment separately. Slice shape identifies its rows;
-// fixture variant identifies its continuation. Never infer an input's zone.
+// fixture variant identifies its continuation; the tier identifies smoke
+// evidence (issue #506). Never infer an input's zone.
 export function composeRecordingPayload(payload, inputs) {
   return {
     ...payload,
     compositionEnvironment: recordingEnvironment(),
     recordingInputs: inputs.map(({ path, recording }) => {
       const metadata = { path, source: recording.source };
-      for (const key of ["recordingCommit", "recordingEnvironment", "minutes", "policy", "variant"]) {
+      for (const key of ["tier", "recordingCommit", "recordingEnvironment", "minutes", "policy", "variant"]) {
         if (Object.hasOwn(recording, key)) metadata[key] = recording[key];
       }
       return metadata;
     }),
   };
+}
+
+// ── Issue #506: the smoke tier's output isolation and compose refusals ──
+
+// The checkout root, derived from this module's own location — shared so
+// the recorder tooling computes it one way.
+export const REPO_ROOT = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));
+
+// Smoke output is always isolated. The default root is a fresh mkdtemp
+// per invocation — concurrent smoke recordings cannot collide, and
+// nothing lands in the checkout. FLOWSYNTH_SMOKE_OUTPUT may name a root
+// for inspecting artifacts (created when absent), but it must be a
+// directory and it must sit outside the checkout: a committed calibration
+// artifact can never be smoke's target.
+// Resolve existing ancestors before creating anything: lexical containment
+// alone misses outside symlinks pointing into the checkout. Only ENOENT is
+// recoverable; permissions and non-directory ancestors retain their errors.
+async function canonicalOutputPath(candidate) {
+  try {
+    return await realpath(candidate);
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    const parent = path.dirname(candidate);
+    if (parent === candidate) throw error;
+    return path.join(await canonicalOutputPath(parent), path.basename(candidate));
+  }
+}
+
+export async function resolveSmokeRoot(prefix, { env = process.env, cwd = process.cwd(), repoRoot = REPO_ROOT, tmp = tmpdir() } = {}) {
+  const requested = env.FLOWSYNTH_SMOKE_OUTPUT;
+  const explicit = requested !== undefined && requested !== "";
+  const checkout = await realpath(repoRoot);
+  const outsideCheckout = (resolved) => {
+    const relative = path.relative(checkout, resolved);
+    if (relative === "" || (relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative))) {
+      throw new Error(
+        `FLOWSYNTH_SMOKE_OUTPUT ${requested ?? tmp} sits inside the checkout (${checkout}) — smoke output must stay outside it, so a committed calibration artifact can never be smoke's target.`,
+      );
+    }
+    return resolved;
+  };
+  const resolved = outsideCheckout(await canonicalOutputPath(path.resolve(cwd, explicit ? requested : tmp)));
+  if (!explicit) return mkdtemp(path.join(resolved, prefix));
+  const existing = await stat(resolved).catch((error) => {
+    if (error?.code !== "ENOENT") throw error;
+    return null;
+  });
+  if (existing && !existing.isDirectory()) {
+    throw new Error(`FLOWSYNTH_SMOKE_OUTPUT ${requested} is not a directory — name a directory smoke may create or reuse.`);
+  }
+  if (!existing) await mkdir(resolved, { recursive: true });
+  return outsideCheckout(await realpath(resolved));
+}
+
+const existingArtifactError = (filePath, what) => new Error(
+  `${what} already exists at ${filePath} — smoke never overwrites; point FLOWSYNTH_SMOKE_OUTPUT at a fresh path or unset it for a temporary root.`,
+);
+
+// A cheap early refusal, not a concurrency guarantee. Publication below
+// uses exclusive creation even when multiple callers passed this check.
+export async function refuseExistingArtifact(filePath, what) {
+  try {
+    await lstat(filePath);
+  } catch (error) {
+    if (error?.code === "ENOENT") return;
+    throw error;
+  }
+  throw existingArtifactError(filePath, what);
+}
+
+export async function writeSmokeArtifact(filePath, payload, what) {
+  try {
+    await writeFile(filePath, JSON.stringify(payload, null, 2), { flag: "wx" });
+  } catch (error) {
+    if (error?.code === "EEXIST") throw existingArtifactError(filePath, what);
+    throw error;
+  }
+}
+
+// Compose input loading with named refusals: a missing input names the
+// artifact and its remedy; a corrupted one names the path — neither ever
+// publishes a report (issue #506). Any other read failure (permissions,
+// for instance) surfaces with the system's own named error.
+export async function readRecordingFile(filePath, { what, remedy } = {}) {
+  let text;
+  try {
+    text = await readFile(filePath, "utf8");
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+    throw new Error(`${what} is missing at ${filePath}${remedy ? ` — ${remedy}` : ""}`);
+  }
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`${what} at ${filePath} is not valid JSON — the recording was truncated or corrupted; re-record it.`);
+  }
+}
+
+// Composition verifies each input's fingerprint byte for byte against the
+// engine this checkout compiles; a mismatch is stale evidence and is
+// refused by name, not with a structural diff.
+export function assertSameCompiledSource(recordedSource, source, label) {
+  try {
+    assert.deepEqual(recordedSource, source);
+  } catch {
+    throw new Error(
+      `${label} was recorded against a different compiled engine source than this checkout compiles — stale evidence cannot compose; re-record it at the current source.`,
+    );
+  }
+}
+
+// The tier guards keep smoke evidence and calibration evidence out of
+// each other's compose paths: the smoke compose reads only smoke-tier
+// recordings, and a calibration compose refuses a smoke slice outright.
+export function assertSmokeTier(recorded, label) {
+  if (recorded?.tier !== "smoke") {
+    throw new Error(
+      `${label} is not a smoke recording (tier ${JSON.stringify(recorded?.tier ?? null)}) — the smoke compose composes only smoke evidence.`,
+    );
+  }
+}
+
+export function assertNotSmokeTier(recorded, label) {
+  if (recorded?.tier === "smoke") {
+    throw new Error(`${label} is smoke evidence — smoke rows cannot join the calibration matrix; compose smoke with the smoke tier.`);
+  }
 }

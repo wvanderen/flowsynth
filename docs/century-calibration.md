@@ -107,6 +107,23 @@ node tools/run-supported.mjs tools/record-century.mjs compose
 
 The restored ten slices and [composed report](century-calibration-results.json) retain their historical recording commits and compiled engine fingerprint. New composition verifies each slice's fingerprint byte for byte and its commit's ancestry, requires version-2 gap measurements, preserves each input's actual environment (including legacy absence) in `recordingInputs`, and labels its own environment separately as `compositionEnvironment`. The equivalent `FLOWSYNTH_CENTURY_SLICE` / `FLOWSYNTH_CENTURY_REPORT` vitest gates invoke this same recorder. Ordinary suite runs skip the multi-hour evaluation; the always-on cases in `tools/century.test.ts` pin the matrix declaration, the century stop's mechanics, the classification windows, the fixture construction, boundary-gap reads, and the frozen-figure comparison. The rechecks re-recorded their own evaluations: `FLOWSYNTH_FIRST_PRESTIGE_REPORT` and `node tools/record-later-eras.mjs slice … | compose`.
 
+## The smoke tier
+
+Ordinary verification exercises the recording pipeline without any matrix work (issue #506): both recorders' `smoke slice` and `smoke compose` commands drive the real command surface — argument validation, the Vite compile, one bounded walk (a single credited hour, far under every calibration mark, declared as `CENTURY_SMOKE` / `LATER_ERA_SMOKE` in the compiled recording modules), the slice payload with tier `"smoke"`, and composition — in seconds. A shared lifecycle in `tools/dev/smoke-recorder.mjs` owns persistence, provenance, and composition; each recorder supplies its compiled recipe and domain checks. The full normalized recipe is persisted and compared on composition, including seed, schedule, budget, and credited stop; the row's identity must agree too. Smoke evidence made before this recipe field existed must be re-recorded.
+
+Smoke publishes only into isolated temporary output: a fresh temp root per invocation, or `FLOWSYNTH_SMOKE_OUTPUT`. Both the checkout and output paths are canonicalized through symlinks and existing ancestors before any output directory is created. Exclusive file creation prevents even simultaneous invocations sharing one explicit root from overwriting a slice or report. To compose a prior slice, explicitly reuse its printed output root (an unset variable creates a different root on each invocation):
+
+```sh
+export FLOWSYNTH_SMOKE_OUTPUT="$(mktemp -d)"
+node tools/run-supported.mjs tools/record-century.mjs smoke slice
+node tools/run-supported.mjs tools/record-century.mjs smoke compose
+# The later-era pair may use this root too: their artifact names are distinct.
+node tools/run-supported.mjs tools/record-later-eras.mjs smoke slice
+node tools/run-supported.mjs tools/record-later-eras.mjs smoke compose
+```
+
+The calibration compose refuses smoke-tier slices outright, and a smoke row stays under the century mark by construction — smoke evidence certifies the pipeline, never balance. `tools/recording-smoke.test.ts` runs the CLI cases, actual concurrent same-root publication, symlink isolation, and stale recipe/source refusals on every suite run. `npm run check` statically checks the recorder scripts for undefined references before anything executes. The #506 acceptance-criterion completion record lives in PR #518's Verification section.
+
 ## Every acceptance criterion beside its evidence
 
 | #492 criterion | Named verification / recorded evidence | Class and outcome |

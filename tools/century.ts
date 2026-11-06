@@ -562,6 +562,31 @@ export function centurySliceRows(sessionMinutes: number, policyId: string): Cent
     centuryRow(seed, sessionMinutes, runPlaythrough(centuryRecipe(seed, sessionMinutes, policyId))));
 }
 
+// ── The smoke tier (issue #506) ────────────────────────────────────────────
+
+// The recording CLI's smoke tier declares its own small bound here, in
+// the module the recorders compile: one seed, one short session shape,
+// a single credited hour, a 3-day budget. The walk finishes in seconds
+// and its row stays far below the century mark — the pipeline (argument
+// validation, persistence, validation, composition) is what smoke
+// certifies, never balance evidence. Explicitly named so it can never
+// be mistaken for the matrix's century-scale walks.
+export const CENTURY_SMOKE = {
+  seed: CENTURY_SEEDS[0],
+  sessionMinutes: CENTURY_SESSION_MINUTES.baseline,
+  policyId: "support",
+  stopCreditedHours: 1,
+  budgetDays: 3,
+} as const;
+
+export function centurySmokeRecipe(): PlaythroughRecipe {
+  return {
+    ...centuryRecipe(CENTURY_SMOKE.seed, CENTURY_SMOKE.sessionMinutes, CENTURY_SMOKE.policyId),
+    stopCreditedHours: CENTURY_SMOKE.stopCreditedHours,
+    budgetDays: CENTURY_SMOKE.budgetDays,
+  };
+}
+
 // The per-policy era-class distribution for one schedule×policy slice.
 export interface CenturyDistribution {
   readonly sessionMinutes: number;

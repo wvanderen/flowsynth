@@ -106,7 +106,9 @@ describe("the lost-money recovery's recoverability (issue #494)", () => {
     // the recovery granted sits banked against it.
     expect(bankableClaimOf(state)).toBe(0);
     expect(state.world.frontier).toBe(0);
-  });
+  // Explicit timeout: this walk sits near vitest's 5s default and timed out
+  // under full-suite fork contention (issue #506's verification run).
+  }, 30_000);
 
   // The scheduled recovered play evidence, behind the declared tier (the
   // migration walk's precedent): the same four-credited-hour support-policy

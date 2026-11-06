@@ -3,49 +3,130 @@
 // one identity with the suite, dev server, and build since #503's fix
 // made that fingerprint content-sensitive in every path — then record the
 // same functions the tests exercise. No listening server.
+//
+//   node tools/record-later-eras.mjs slice <25|60>:<support|combat|ignoring>
+//   node tools/record-later-eras.mjs compose
+//
+// The smoke tier (issue #506) drives the same pipeline in seconds,
+// publishing only into isolated output:
+//
+//   node tools/record-later-eras.mjs smoke slice
+//   node tools/record-later-eras.mjs smoke compose
+//
+// Smoke artifacts carry smoke names and tier "smoke"; the production
+// compose refuses them outright.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { build } from "vite";
-import { composeRecordingPayload, recordingEnvironment, recordingPayload, requireRuntimeEnvironment } from "./dev/runtime.mjs";
+import { writeFile } from "node:fs/promises";
+import { compileEngine } from "./dev/compile-engine.mjs";
+import { runSmoke } from "./dev/smoke-recorder.mjs";
+import {
+  assertNotSmokeTier,
+  assertSameCompiledSource,
+  composeRecordingPayload,
+  readRecordingFile,
+  recordingEnvironment,
+  recordingPayload,
+  requireRuntimeEnvironment,
+} from "./dev/runtime.mjs";
 
-await requireRuntimeEnvironment();
-
+const SCRIPT_NAME = "record-later-eras";
 const [command, slice] = process.argv.slice(2);
-if (command !== "compose" && !(command === "slice" && /^(25|60):(support|combat|ignoring)$/.test(slice ?? ""))) {
-  throw new Error("Usage: node tools/record-later-eras.mjs slice <25|60>:<support|combat|ignoring> | compose");
-}
-execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
-const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-const output = await mkdtemp(join(tmpdir(), "flowsynth-later-eras-"));
-try {
-  await build({ configFile: false, logLevel: "error", build: {
-    ssr: "tools/later-eras.ts", outDir: output, emptyOutDir: true,
-    rollupOptions: { output: { entryFileNames: "later-eras.mjs" } },
-  } });
-  const m = await import(pathToFileURL(join(output, "later-eras.mjs")).href);
+const SLICE_PATTERN = /^(25|60):(support|combat|ignoring)$/;
+const SMOKE_LEGS = ["slice", "compose"];
+const usageError = () => new Error("Usage: node tools/record-later-eras.mjs slice <25|60>:<support|combat|ignoring> | compose | smoke <slice|compose>");
+
+// The mechanical per-walk checks both the matrix slices and the smoke
+// walk validate (issue #506): finite state and rate at every snapshot,
+// event credit matching its snapshot, the prior depth's credit carried
+// into the era, and every era's defeats read off its own pre-bank board.
+const assertLaterEraWalkMechanics = (m, record) => {
+  // Every era owns its actual end-of-era kills, including repeated
+  // enemies. Check the pre-bank board, not the reset board.
+  const banks = record.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
+  for (const [index, bank] of banks.entries()) {
+    const last = record.events.slice(0, bank).reverse().find(event => event.kind === "session" || event.kind === "breather");
+    const state = record.snapshots[last.snapshot].state;
+    const defeats = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp === 0).map(([key]) => key);
+    assert.deepEqual(m.laterEraView(record, index, null).defeats, defeats);
+  }
+  for (const snapshot of record.snapshots) {
+    assert.equal(m.stateNumbersFinite(snapshot.state), true, "the recorded state stayed finite");
+    assert.ok(Number.isFinite(snapshot.rate), "the credited rate stayed finite");
+  }
+  for (const event of record.events) assert.equal(record.snapshots[event.snapshot].credited, event.credited);
+  for (const era of record.eras) {
+    if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
+  }
+};
+
+// The row core both the matrix rows and the smoke row validate (issue
+// #506): currency integrity, finite banked state, the familiar/new hour
+// split, and strict frontier advance at every closed era.
+const assertLaterEraRowCore = (row) => {
+  assert.equal(row.noGrant, true);
+  let frontier = 0;
+  for (const era of row.eras) {
+    if (era.claim === null) continue;
+    assert.equal(era.finite, true);
+    if (era.index > 0) assert.ok(Math.abs(era.familiarHours + era.newHours - era.hours) < 0.02);
+    assert.ok(era.frontierAfter > frontier);
+    frontier = era.frontierAfter;
+  }
+};
+
+// The smoke row's own checks (issue #506): the walk completed at its
+// declared credited bound and stays under the later-era window's floor —
+// the bounded seam cannot pass a smoke row off as later-era evidence.
+const assertSmokeRow = (m, row) => {
+  assertLaterEraRowCore(row);
+  assert.equal(row.complete, true, "the smoke walk completes at its declared bound");
+  assert.equal(row.stopKind, "century", "the smoke walk completes at its declared credited stop");
+  assert.ok(row.creditedHours >= m.LATER_ERA_SMOKE.stopCreditedHours, `credited ${row.creditedHours} below the smoke bound`);
+  assert.ok(row.creditedHours < m.LATER_ERA_MIN_HOURS, "a smoke row stays under the later-era window — it is not later-era evidence");
+};
+
+async function main() {
+  // Cheap failures first: the argument surface is validated before the
+  // runtime gate, git, or any compile (issue #506).
+  if (command !== "compose" && !(command === "slice" && SLICE_PATTERN.test(slice ?? "")) && !(command === "smoke" && SMOKE_LEGS.includes(slice ?? ""))) {
+    throw usageError();
+  }
+  await requireRuntimeEnvironment();
+  // Production recordings publish committed evidence, so they require a
+  // clean tree: the recording commit identifies exactly the recorded
+  // source. The smoke tier publishes only into isolated output and runs
+  // on dirty worktrees too — mid-development suites include it (issue #506).
+  if (command !== "smoke") {
+    execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
+  }
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  if (command === "smoke") return runSmoke(slice, commit, {
+    name: "later-era", script: SCRIPT_NAME,
+    load: async () => {
+      const m = await compileEngine("tools/later-eras.ts", "later-eras");
+      const recipe = m.laterEraSmokeRecipe();
+      return {
+        source: m.playthroughSource(), smoke: m.LATER_ERA_SMOKE, recipe,
+        run: m.runPlaythrough,
+        row: (record) => m.laterEraRow(recipe.seed, recipe.schedule.sessionMinutes, record),
+        assertWalk: (record) => assertLaterEraWalkMechanics(m, record),
+        assertRow: (row) => assertSmokeRow(m, row),
+      };
+    },
+  });
+  const m = await compileEngine("tools/later-eras.ts", "later-eras");
   const source = m.playthroughSource();
   const slicePath = (minutes, policy) => `docs/later-era-slice-${minutes}-${policy}.json`;
   const assertRows = (rows, minutes, policy) => {
     assert.deepEqual(rows.map(row => row.seed), m.LATER_ERA_SEEDS);
     for (const row of rows) {
+      assertLaterEraRowCore(row);
       assert.equal(row.sessionMinutes, minutes);
       assert.equal(row.policy, policy);
-      assert.equal(row.noGrant, true);
       if (policy === "ignoring") {
         assert.deepEqual(row.defeats, []);
         assert.ok(row.eras.every(era => era.placements.length === 0));
-      }
-      let frontier = 0;
-      for (const era of row.eras) {
-        if (era.claim === null) continue;
-        assert.equal(era.finite, true);
-        if (era.index > 0) assert.ok(Math.abs(era.familiarHours + era.newHours - era.hours) < 0.02);
-        assert.ok(era.frontierAfter > frontier);
-        frontier = era.frontierAfter;
       }
     }
   };
@@ -55,23 +136,7 @@ try {
     const rows = [];
     for (const seed of m.LATER_ERA_SEEDS) {
       const record = m.runPlaythrough(m.laterEraRecipe(seed, minutes, policy));
-      // Every era owns its actual end-of-era kills, including repeated
-      // enemies. Check the pre-bank board, not the reset board.
-      const banks = record.events.flatMap((event, index) => event.kind === "prestige" && event.ok ? [index] : []);
-      for (const [index, bank] of banks.entries()) {
-        const last = record.events.slice(0, bank).reverse().find(event => event.kind === "session" || event.kind === "breather");
-        const state = record.snapshots[last.snapshot].state;
-        const defeats = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp === 0).map(([key]) => key);
-        assert.deepEqual(m.laterEraView(record, index, null).defeats, defeats);
-      }
-      for (const snapshot of record.snapshots) {
-        assert.equal(m.stateNumbersFinite(snapshot.state), true);
-        assert.ok(Number.isFinite(snapshot.rate));
-      }
-      for (const event of record.events) assert.equal(record.snapshots[event.snapshot].credited, event.credited);
-      for (const era of record.eras) {
-        if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
-      }
+      assertLaterEraWalkMechanics(m, record);
       rows.push(m.laterEraRow(seed, minutes, record));
       console.log(`${slice} seed ${seed}: ${record.claims.length} banks, ${record.creditedSeconds / 3600} credited hours`);
     }
@@ -82,15 +147,19 @@ try {
     const runs = [];
     const inputs = [];
     for (const minutes of [25, 60]) for (const policy of m.WORLD_POLICIES) {
-      const recorded = JSON.parse(await readFile(slicePath(minutes, policy), "utf8"));
+      const recorded = await readRecordingFile(slicePath(minutes, policy), {
+        what: "the later-era slice",
+        remedy: `record it with: node tools/record-later-eras.mjs slice ${minutes}:${policy}`,
+      });
       // Each slice carries its own recording commit and the compiled
       // engine fingerprint. Composition verifies the fingerprint byte for
       // byte and the commit's ancestry: a slice recorded on an ancestor
       // whose engine source compiled identically is the same evidence,
       // while a divergent engine source is refused (issue #503's
       // provenance discipline, kept for the recorder-fix commits that
-      // landed between slices).
-      assert.deepEqual(recorded.source, source);
+      // landed between slices). Smoke evidence is refused outright.
+      assertNotSmokeTier(recorded, slicePath(minutes, policy));
+      assertSameCompiledSource(recorded.source, source, slicePath(minutes, policy));
       execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
       assertRows(recorded.rows, minutes, policy);
       inputs.push({ path: slicePath(minutes, policy), recording: recorded });
@@ -137,6 +206,11 @@ try {
     }, inputs), null, 2));
     console.log(`Recorded ${runs.length} matrix walks and ${routeProbes.reduce((n, probe) => n + probe.orders.length, 0)} directly continued purchase orders.`);
   }
-} finally {
-  await rm(output, { recursive: true, force: true });
+}
+
+try {
+  await main();
+} catch (error) {
+  console.error(`${SCRIPT_NAME}: ${error?.message ?? error}`);
+  process.exit(1);
 }

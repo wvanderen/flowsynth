@@ -5,34 +5,43 @@
 // the same functions the tests exercise. No listening server.
 //
 //   node tools/record-century.mjs slice <25|60>:<prompt|pushing|support|combat|ignoring>
+//   node tools/record-century.mjs fixture <raw|collection-reset>
 //   node tools/record-century.mjs compose
 //
 // The ten slices (two session shapes × five policies, eight seeds each)
 // run independently. Record both fixture variants before composing; compose
 // reads their evidence and writes the frozen calibration baseline.
+//
+// The smoke tier (issue #506) drives the same pipeline — argument
+// validation, this compile, one bounded walk, the slice payload, and
+// composition — in seconds, publishing only into isolated output:
+//
+//   node tools/record-century.mjs smoke slice
+//   node tools/record-century.mjs smoke compose
+//
+// Smoke artifacts carry smoke names and tier "smoke"; the production
+// compose refuses them outright.
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { pathToFileURL } from "node:url";
-import { build } from "vite";
-import { composeRecordingPayload, recordingPayload, requireRuntimeEnvironment } from "./dev/runtime.mjs";
+import { writeFile } from "node:fs/promises";
+import { compileEngine } from "./dev/compile-engine.mjs";
+import { runSmoke } from "./dev/smoke-recorder.mjs";
+import {
+  assertNotSmokeTier,
+  assertSameCompiledSource,
+  composeRecordingPayload,
+  readRecordingFile,
+  recordingPayload,
+  requireRuntimeEnvironment,
+} from "./dev/runtime.mjs";
 
-await requireRuntimeEnvironment();
-
+const SCRIPT_NAME = "record-century";
 const [command, arg] = process.argv.slice(2);
 const SLICE_PATTERN = /^(25|60):(prompt|pushing|support|combat|ignoring)$/;
 const FIXTURE_VARIANTS = ["raw", "collection-reset"];
-if (
-  command !== "compose" &&
-  !(command === "slice" && SLICE_PATTERN.test(arg ?? "")) &&
-  !(command === "fixture" && FIXTURE_VARIANTS.includes(arg ?? ""))
-) {
-  throw new Error("Usage: node tools/record-century.mjs slice <25|60>:<policy> | fixture <raw|collection-reset> | compose");
-}
-execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
-const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+const SMOKE_LEGS = ["slice", "compose"];
+const usageError = () => new Error("Usage: node tools/record-century.mjs slice <25|60>:<policy> | fixture <raw|collection-reset> | compose | smoke <slice|compose>");
+
 // The recorded fixture row's shared checks: currency integrity, finite
 // snapshots, intact serialized round trips, and the variant's own strand
 // or bank shape (the raw position's strand is the recorded limitation the
@@ -60,34 +69,102 @@ const assertFixtureRecord = (variant, measurementVersion) => (row) => {
   }
 };
 
-const output = await mkdtemp(join(tmpdir(), "flowsynth-century-"));
-try {
-  await build({ configFile: false, logLevel: "error", build: {
-    ssr: "tools/century.ts", outDir: output, emptyOutDir: true,
-    rollupOptions: { output: { entryFileNames: "century.mjs" } },
-  } });
-  const m = await import(pathToFileURL(join(output, "century.mjs")).href);
+// The mechanical per-walk checks both the matrix slices and the smoke
+// walk validate (issue #506): finite state and rate at every snapshot,
+// event credit matching its snapshot, and the prior depth's credit
+// carried into the era.
+const assertCenturyWalkMechanics = (m, record) => {
+  for (const snapshot of record.snapshots) {
+    assert.equal(m.stateNumbersFinite(snapshot.state), true, "the recorded state stayed finite");
+    assert.ok(Number.isFinite(snapshot.rate), "the credited rate stayed finite");
+  }
+  for (const event of record.events) assert.equal(record.snapshots[event.snapshot].credited, event.credited);
+  for (const era of record.eras) {
+    if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
+  }
+};
+
+// The row core both the matrix rows and the smoke row validate (issue
+// #506): measurement currency, currency integrity, finite snapshots,
+// intact serialized round trips, the claims/eras alignment, and strict
+// frontier advance at every closed era.
+const assertCenturyRowCore = (m, row) => {
+  assert.equal(row.measurementVersion, m.CENTURY_MEASUREMENT_VERSION,
+    "legacy gap measurements require re-recording; do not compose them as current evidence");
+  assert.equal(row.kind, "representative");
+  assert.equal(row.noGrant, true);
+  assert.equal(row.numeric.finiteSnapshots, true);
+  assert.equal(row.numeric.serializedChecks > 0, true);
+  assert.equal(row.numeric.serializedOk, row.numeric.serializedChecks);
+  assert.equal(row.eras.filter(era => era.claim !== null).length, row.claims.length);
+  let frontier = 0;
+  for (const era of row.eras) {
+    if (!era.claim) continue;
+    assert.equal(era.finite, true);
+    assert.ok(era.frontierAfter > frontier);
+    frontier = era.frontierAfter;
+  }
+};
+
+// The smoke row's own checks (issue #506): the walk completed at its
+// declared credited bound and stays far under the calibration mark — the
+// bounded seam cannot pass a smoke row off as calibration evidence.
+const assertSmokeRow = (m, row) => {
+  assertCenturyRowCore(m, row);
+  assert.equal(row.complete, true, "the smoke walk completes at its declared bound");
+  assert.equal(row.stopKind, "century", "the smoke walk completes at its declared credited stop");
+  assert.ok(row.creditedHours >= m.CENTURY_SMOKE.stopCreditedHours, `credited ${row.creditedHours} below the smoke bound`);
+  assert.ok(row.creditedHours < m.CENTURY_MARK_HOURS, "a smoke row stays under the calibration mark — it is not calibration evidence");
+};
+
+async function main() {
+  // Cheap failures first: the argument surface is validated before the
+  // runtime gate, git, or any compile (issue #506).
+  if (
+    command !== "compose" &&
+    !(command === "slice" && SLICE_PATTERN.test(arg ?? "")) &&
+    !(command === "fixture" && FIXTURE_VARIANTS.includes(arg ?? "")) &&
+    !(command === "smoke" && SMOKE_LEGS.includes(arg ?? ""))
+  ) {
+    throw usageError();
+  }
+  await requireRuntimeEnvironment();
+  // Production recordings publish committed evidence, so they require a
+  // clean tree: the recording commit identifies exactly the recorded
+  // source. The smoke tier publishes only into isolated output and runs
+  // on dirty worktrees too — mid-development suites include it (issue #506).
+  if (command !== "smoke") {
+    execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
+  }
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  if (command === "smoke") return runSmoke(arg, commit, {
+    name: "century", script: SCRIPT_NAME,
+    load: async () => {
+      const m = await compileEngine("tools/century.ts", "century");
+      const recipe = m.centurySmokeRecipe();
+      return {
+        source: m.playthroughSource(), smoke: m.CENTURY_SMOKE, recipe,
+        run: m.runPlaythrough,
+        row: (record) => m.centuryRow(recipe.seed, recipe.schedule.sessionMinutes, record),
+        assertWalk: (record) => assertCenturyWalkMechanics(m, record),
+        assertRow: (row) => assertSmokeRow(m, row),
+      };
+    },
+  });
+  const m = await compileEngine("tools/century.ts", "century");
   const source = m.playthroughSource();
   const slicePath = (minutes, policy) => `docs/century-slice-${minutes}-${policy}.json`;
 
   const assertRows = (rows, minutes, policy) => {
     assert.deepEqual(rows.map(row => row.seed), m.CENTURY_SEEDS);
     for (const row of rows) {
-      assert.equal(row.measurementVersion, m.CENTURY_MEASUREMENT_VERSION,
-        "legacy gap measurements require re-recording; do not compose them as current evidence");
+      assertCenturyRowCore(m, row);
       assert.equal(row.sessionMinutes, minutes);
       assert.equal(row.policy, policy);
-      assert.equal(row.kind, "representative");
       // The century stop is the walk's declared completion.
       assert.equal(row.complete, true);
       assert.equal(row.stopKind, "century");
       assert.ok(row.creditedHours >= m.CENTURY_MARK_HOURS, `credited ${row.creditedHours} below the mark`);
-      // Currency integrity and finite, representable state at every
-      // recorded snapshot, with the serialized round trip intact.
-      assert.equal(row.noGrant, true);
-      assert.equal(row.numeric.finiteSnapshots, true);
-      assert.equal(row.numeric.serializedChecks > 0, true);
-      assert.equal(row.numeric.serializedOk, row.numeric.serializedChecks);
       // The policy's own faces. The prompt door's first crossing banks
       // the honest zero on the baseline schedule; a single long session
       // can carry an era past the entry depth before its first door, so
@@ -106,17 +183,6 @@ try {
           }
         }
       }
-      // Every closed era with a positive claim advanced the frontier
-      // strictly; zero-claim doors (the prompt policy's honest resets)
-      // hold the frontier and are not failures. The recorded state at
-      // each bank stayed finite.
-      let frontier = 0;
-      for (const era of row.eras) {
-        if (!era.claim) continue;
-        assert.equal(era.finite, true);
-        assert.ok(era.frontierAfter > frontier);
-        frontier = era.frontierAfter;
-      }
       // Whole-run waits cross bank boundaries; per-era waits are clipped.
       // They need not have the same long-gap count. A long wait is an
       // evaluation failure, not a reason to discard the evidence row.
@@ -133,14 +199,7 @@ try {
       const t0 = performance.now();
       const recipe = m.centuryRecipe(seed, minutes, policy);
       const record = m.runPlaythrough(recipe);
-      for (const snapshot of record.snapshots) {
-        assert.equal(m.stateNumbersFinite(snapshot.state), true);
-        assert.ok(Number.isFinite(snapshot.rate));
-      }
-      for (const event of record.events) assert.equal(record.snapshots[event.snapshot].credited, event.credited);
-      for (const era of record.eras) {
-        if (era.priorDepthPassed) assert.equal(era.familiarCredited, era.priorDepthPassed.credited);
-      }
+      assertCenturyWalkMechanics(m, record);
       rows.push(m.centuryRow(seed, minutes, record));
       console.log(`${arg} seed ${seed}: ${record.claims.length} banks, frontier ${record.state.world.frontier}, ${record.days}d, ${dt(t0)} — ${record.stop.kind}`);
     }
@@ -163,13 +222,18 @@ try {
     const runs = [];
     const inputs = [];
     for (const minutes of [25, 60]) for (const policy of m.CENTURY_POLICIES) {
-      const recorded = JSON.parse(await readFile(slicePath(minutes, policy), "utf8"));
+      const recorded = await readRecordingFile(slicePath(minutes, policy), {
+        what: "the century slice",
+        remedy: `record it with: node tools/record-century.mjs slice ${minutes}:${policy}`,
+      });
       // Each slice carries its own recording commit and the compiled
       // engine fingerprint. Composition verifies the fingerprint byte for
       // byte and the commit's ancestry: a slice recorded on an ancestor
       // whose engine source compiled identically is the same evidence
-      // (the recorder-fix commits landed between slices).
-      assert.deepEqual(recorded.source, source);
+      // (the recorder-fix commits landed between slices). Smoke evidence
+      // is refused outright — it never joins the matrix.
+      assertNotSmokeTier(recorded, slicePath(minutes, policy));
+      assertSameCompiledSource(recorded.source, source, slicePath(minutes, policy));
       execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
       assertRows(recorded.rows, minutes, policy);
       inputs.push({ path: slicePath(minutes, policy), recording: recorded });
@@ -183,8 +247,12 @@ try {
     const fixturePath = variant => `docs/century-fixture-${variant}.json`;
     const fixtures = {};
     for (const variant of FIXTURE_VARIANTS) {
-      const recorded = JSON.parse(await readFile(fixturePath(variant), "utf8"));
-      assert.deepEqual(recorded.source, source);
+      const recorded = await readRecordingFile(fixturePath(variant), {
+        what: "the century fixture",
+        remedy: `record it with: node tools/record-century.mjs fixture ${variant}`,
+      });
+      assertNotSmokeTier(recorded, fixturePath(variant));
+      assertSameCompiledSource(recorded.source, source, fixturePath(variant));
       execFileSync("git", ["merge-base", "--is-ancestor", recorded.recordingCommit, commit], { stdio: "pipe" });
       assert.equal(recorded.variant, variant);
       assertFixtureRecord(variant, m.CENTURY_MEASUREMENT_VERSION)(recorded.row);
@@ -230,8 +298,13 @@ try {
     }, inputs)));
     console.log(`Recorded ${runs.length} matrix walks, the fixture pair, and the frozen baseline.`);
   }
-} finally {
-  await rm(output, { recursive: true, force: true });
+}
+
+try {
+  await main();
+} catch (error) {
+  console.error(`${SCRIPT_NAME}: ${error?.message ?? error}`);
+  process.exit(1);
 }
 
 function dt(from) {

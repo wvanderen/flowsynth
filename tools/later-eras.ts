@@ -292,6 +292,31 @@ export function laterEraRecipe(seed: number, sessionMinutes: number, policyId: s
   });
 }
 
+// ── The smoke tier (issue #506) ────────────────────────────────────────────
+
+// The recording CLI's smoke tier declares its own small bound here, in
+// the module the recorders compile: one seed, one short session shape,
+// a single credited hour, a 3-day budget — far under the later-era
+// window's floor (5 credited hours). The walk finishes in seconds; the
+// pipeline (argument validation, persistence, validation, composition)
+// is what smoke certifies, never balance evidence. Explicitly named so
+// it can never be mistaken for the matrix's era-counted walks.
+export const LATER_ERA_SMOKE = {
+  seed: LATER_ERA_SEEDS[0],
+  sessionMinutes: BASELINE_SESSION_MINUTES,
+  policyId: "support",
+  stopCreditedHours: 1,
+  budgetDays: 3,
+} as const;
+
+export function laterEraSmokeRecipe(): PlaythroughRecipe {
+  return {
+    ...laterEraRecipe(LATER_ERA_SMOKE.seed, LATER_ERA_SMOKE.sessionMinutes, LATER_ERA_SMOKE.policyId),
+    stopCreditedHours: LATER_ERA_SMOKE.stopCreditedHours,
+    budgetDays: LATER_ERA_SMOKE.budgetDays,
+  };
+}
+
 // The later-era distribution for one schedule×policy slice: per-seed era
 // classes, never an average alone.
 export interface LaterEraDistribution {
