@@ -693,26 +693,20 @@ describe("the run CLI's job lifecycle", () => {
 
   it("a second supervisor cannot start while one holds the job", async () => {
     const envRoot = freshDir("cli-single");
-    // A detached, notification-less job holds the lock while it walks.
     const jobDir = path.join(envRoot, "job-run");
-    const launched = smokeRun(envRoot, ["--detach", "--dir", jobDir]);
-    expect(launched.status).toBe(0);
+    // A held lock (a detached job's supervisor holds it while it walks;
+    // holding it in-process keeps the case deterministic against the
+    // seconds-scale tiny walks).
+    await acquireSupervisorLock(jobDir);
     const second = spawnSync(process.execPath, [
-      path.join(root, "tools", "record-later-eras.mjs"), "smoke", "run",
+      path.join(root, "tools", "record-later-eras.mjs"), "smoke", "run", "--dir", jobDir,
     ], {
       encoding: "utf8", cwd: root, env: { ...process.env, FLOWSYNTH_SMOKE_OUTPUT: envRoot }, timeout: 60_000,
     });
     expect(second.status).toBe(1);
     expect(second.stderr).toContain("already running this job");
-    // Let the detached job finish so its temp root can be removed.
-    const deadline = Date.now() + 240_000;
-    let terminal = await readJobStatus(jobDir);
-    while (terminal.status === "running" && Date.now() < deadline) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      terminal = await readJobStatus(jobDir);
-    }
-    expect(terminal.status).toBe("complete");
-  }, 300_000);
+    rmSync(path.join(jobDir, "supervisor.lock.json"), { force: true });
+  }, 60_000);
 });
 
 // ── Cancellation: defined behavior for a terminated job ────────────────────

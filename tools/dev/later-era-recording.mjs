@@ -103,51 +103,51 @@ export const probeGroup = (m, source, paths = {}) => {
       return forwards.length > 0 && forwards.every((d) => validIds.has(d.id));
     },
     publish: async (unitsById, { commit }) => {
-    const walk = unitsById["probe-walk"];
-    const banks = walk.result.banks.map((bank, b) => {
-      const orders = bank.orders.map((order, o) => {
-        const forwardUnit = unitsById[`forward-b${b}-o${o}`];
-        assert.ok(forwardUnit, `the probe's bank ${b} order ${o} has no persisted forward unit`);
-        assert.deepEqual(forwardUnit.result.prepared.order, order.order,
-          `the forward unit for bank ${b} order ${o} carries a different order`);
-        assert.deepEqual(
-          {
-            spend: forwardUnit.result.prepared.spend,
-            purchasesOk: forwardUnit.result.prepared.purchasesOk,
-            placementsOk: forwardUnit.result.prepared.placementsOk,
-            finite: forwardUnit.result.prepared.finite,
-          },
-          {
-            spend: order.spend,
-            purchasesOk: order.purchasesOk,
-            placementsOk: order.placementsOk,
-            finite: order.finite,
-          },
-          `the forward unit for bank ${b} order ${o} disagrees with the walk's enumeration`,
-        );
-        return { ...order, forward: forwardUnit.result.forward };
+      const walk = unitsById["probe-walk"];
+      const banks = walk.result.banks.map((bank, b) => {
+        const orders = bank.orders.map((order, o) => {
+          const forwardUnit = unitsById[`forward-b${b}-o${o}`];
+          assert.ok(forwardUnit, `the probe's bank ${b} order ${o} has no persisted forward unit`);
+          assert.deepEqual(forwardUnit.result.prepared.order, order.order,
+            `the forward unit for bank ${b} order ${o} carries a different order`);
+          assert.deepEqual(
+            {
+              spend: forwardUnit.result.prepared.spend,
+              purchasesOk: forwardUnit.result.prepared.purchasesOk,
+              placementsOk: forwardUnit.result.prepared.placementsOk,
+              finite: forwardUnit.result.prepared.finite,
+            },
+            {
+              spend: order.spend,
+              purchasesOk: order.purchasesOk,
+              placementsOk: order.placementsOk,
+              finite: order.finite,
+            },
+            `the forward unit for bank ${b} order ${o} disagrees with the walk's enumeration`,
+          );
+          return { ...order, forward: forwardUnit.result.forward };
+        });
+        // The demonstration read belongs to the assembled evidence: the
+        // walk's enumeration carries forward: null on every order, so the
+        // flag is recomputed from the persisted forwards here.
+        return {
+          ...bank,
+          orders,
+          routeDemonstrated: orders.some((order) => order.forward?.outcome === "advanced"),
+        };
       });
-      // The demonstration read belongs to the assembled evidence: the
-      // walk's enumeration carries forward: null on every order, so the
-      // flag is recomputed from the persisted forwards here.
-      return {
-        ...bank,
-        orders,
-        routeDemonstrated: orders.some((order) => order.forward?.outcome === "advanced"),
-      };
-    });
-    const target = paths.probe ?? PROBE_EVIDENCE_PATH;
-    await writeJsonAtomic(target, recordingPayload({
-      source,
-      recordingCommit: commit,
-      seed: m.PROBE_WALK_SEED,
-      minutes: m.LONG_SESSION_MINUTES,
-      policy: "support",
-      walk: { recipe: walk.identity.recipe, row: walk.result.row },
-      banks,
-      unitProvenance: unitProvenanceOf(unitsById),
-    }));
-    return target;
+      const target = paths.probe ?? PROBE_EVIDENCE_PATH;
+      await writeJsonAtomic(target, recordingPayload({
+        source,
+        recordingCommit: commit,
+        seed: m.PROBE_WALK_SEED,
+        minutes: m.LONG_SESSION_MINUTES,
+        policy: "support",
+        walk: { recipe: walk.identity.recipe, row: walk.result.row },
+        banks,
+        unitProvenance: unitProvenanceOf(unitsById),
+      }));
+      return target;
     },
   };
 };

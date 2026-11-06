@@ -787,7 +787,9 @@ export function laterEraUnitIdentity(descriptor: LaterEraUnitDescriptor): LaterE
 // result, under the walk's own identity, so the fan-out rides the job.
 export interface LaterEraJobPlan {
   readonly units: readonly LaterEraUnitDescriptor[];
-  readonly derive: (banks: readonly RouteBankProbe[], probeWalkIdentity: LaterEraUnitIdentity) => readonly LaterEraUnitDescriptor[];
+  // Only the full evaluation's plan derives: the forwards are enumerable
+  // once the probe walk's banks exist. Plans without a fan-out omit it.
+  readonly derive?: (banks: readonly RouteBankProbe[], probeWalkIdentity: LaterEraUnitIdentity) => readonly LaterEraUnitDescriptor[];
 }
 
 function assertPlanUnique(units: readonly LaterEraUnitDescriptor[], known: readonly string[] = []): void {
@@ -837,7 +839,7 @@ export function laterEraJobPlan(): LaterEraJobPlan {
 export function laterEraSliceJobPlan(minutes: number, policy: string): LaterEraJobPlan {
   const units = LATER_ERA_SEEDS.map((seed) => seedUnit(seed, minutes, policy, laterEraRecipe(seed, minutes, policy)));
   assertPlanUnique(units);
-  return { units, derive: () => [] };
+  return { units };
 }
 
 // The smoke tier's plan (issue #506's bounded seam, carried into the job
@@ -848,7 +850,7 @@ export function laterEraSmokeJobPlan(): LaterEraJobPlan {
   const recipe = laterEraSmokeRecipe();
   const units = [seedUnit(seed, recipe.schedule.sessionMinutes, recipe.policyId, recipe)];
   assertPlanUnique(units);
-  return { units, derive: () => [] };
+  return { units };
 }
 
 // A tiny multi-unit evaluation (the interruption/resume demonstration
@@ -861,7 +863,7 @@ export function laterEraTinyJobPlan(seeds: readonly number[] = [42, 468, 157]): 
     return seedUnit(seed, recipe.schedule.sessionMinutes, recipe.policyId, { ...recipe, seed });
   });
   assertPlanUnique(units);
-  return { units, derive: () => [] };
+  return { units };
 }
 
 // ── The unit checks, shared by worker, supervisor, and composition ────────

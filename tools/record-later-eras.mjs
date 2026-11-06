@@ -39,14 +39,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { compileEngineTo } from "./dev/compile-engine.mjs";
 import {
-  DEFAULT_JOBS,
-  DEFAULT_WORKER_MEMORY_MB,
   acquireSupervisorLock,
   formatStatus,
   launchDetachedSupervisor,
   logEvent,
   prepareJobDir,
   readJobStatus,
+  resolveJobBudgets,
   runSupervisor,
 } from "./dev/job-recorder.mjs";
 import {
@@ -109,6 +108,29 @@ function parseRunFlags(args) {
 const jobDirFor = (scope, explicit) => explicit ?? path.join(DEFAULT_JOB_ROOT, scope);
 // ── run ────────────────────────────────────────────────────────────────────
 
+// The supervision skeleton every launch shape shares: single-flight before
+// any compile (a refused second supervisor can never disturb the holder's
+// bundle), the merged plan built once and written once, one supervisor run
+// to its terminal state. `prepare` recompiles under the held lock and
+// returns the recording module, the plan builder, and the provenance;
+// `adapter` supplies the recording domain over them.
+async function superviseJob(dir, { scope, prepare, adapter, options, detached }) {
+  const lock = await acquireSupervisorLock(dir);
+  try {
+    const prepared = await prepare();
+    const units = await mergedPlanUnits(dir, prepared.m, prepared.builder);
+    const plan = { scope, bundle: prepared.bundle, commit: prepared.commit, units };
+    await prepareJobDir(dir, plan);
+    const result = await runSupervisor(dir, plan, adapter(prepared), { ...options, detached, lock });
+    const status = await readJobStatus(dir);
+    if (result.publishError) console.error(result.publishError);
+    return { ...result, status };
+  } catch (error) {
+    await logEvent(dir, `supervisor failed: ${error?.message ?? error}`);
+    throw error;
+  }
+}
+
 // Validates every cheap precondition and returns the compiled module plus
 // the plan builder. Used by both the foreground/detached-supervisor run
 // and the launch handoff (which refuses before spawning a doomed child).
@@ -138,32 +160,22 @@ const adapterFor = (m, source, builder, slice) => ({
 });
 
 async function runCommand(slice, flags) {
-  const jobs = flags.values.jobs !== undefined ? Number(flags.values.jobs) : DEFAULT_JOBS;
-  const workerMb = flags.values["worker-mb"] !== undefined ? Number(flags.values["worker-mb"]) : DEFAULT_WORKER_MEMORY_MB;
-  if (!Number.isInteger(jobs) || jobs < 1) throw new Error(`--jobs must be a whole number ≥ 1 — found ${flags.values.jobs}`);
-  if (!Number.isInteger(workerMb) || workerMb < 128) throw new Error(`--worker-mb must be a whole number ≥ 128 — found ${flags.values["worker-mb"]}`);
-
+  const { jobs, workerMemoryBudgetMb } = resolveJobBudgets(flags.values.jobs, flags.values["worker-mb"]);
   const scope = slice ? `${slice[0]}-${slice[1]}` : "evaluation";
   const dir = jobDirFor(scope, flags.values.dir);
-  const options = { jobs, workerMemoryBudgetMb: workerMb, notify: flags.values.notify ?? null };
+  const options = { jobs, workerMemoryBudgetMb, notify: flags.values.notify ?? null };
 
   if (flags.values.supervisor) {
-    // The detached supervisor. Single-flight first — before any compile —
-    // so a refused second supervisor cannot disturb the holder's bundle.
-    const lock = await acquireSupervisorLock(dir);
-    try {
-      const { commit, bundle, m, source, builder } = await prepareRun(slice, dir);
-      const units = await mergedPlanUnits(dir, m, builder);
-      await prepareJobDir(dir, { scope, bundle, commit, units });
-      const { outcome, cancelled, publishError } = await runSupervisor(dir,
-        { scope, bundle, commit, units }, adapterFor(m, source, builder, slice),
-        { ...options, detached: true, lock });
-      if (publishError) console.error(publishError);
-      return { outcome, cancelled };
-    } catch (error) {
-      await logEvent(dir, `supervisor failed: ${error?.message ?? error}`);
-      throw error;
-    }
+    // The detached supervisor: output is invisible; the logs and the
+    // durable status carry everything.
+    const { outcome, cancelled } = await superviseJob(dir, {
+      scope,
+      options,
+      detached: true,
+      prepare: () => prepareRun(slice, dir),
+      adapter: (prepared) => adapterFor(prepared.m, prepared.source, prepared.builder, slice),
+    });
+    return { outcome, cancelled };
   }
 
   if (flags.values.detach) {
@@ -173,7 +185,7 @@ async function runCommand(slice, flags) {
     const childArgs = [
       process.execPath, SCRIPT_PATH, "run",
       ...(slice ? [`${slice[0]}:${slice[1]}`] : []),
-      "--dir", dir, "--jobs", String(jobs), "--worker-mb", String(workerMb),
+      "--dir", dir, "--jobs", String(jobs), "--worker-mb", String(workerMemoryBudgetMb),
       ...(flags.values.notify ? ["--notify", flags.values.notify] : []),
       "--supervisor",
     ];
@@ -187,22 +199,15 @@ async function runCommand(slice, flags) {
     return { outcome: "detached" };
   }
 
-  const lock = await acquireSupervisorLock(dir);
-  try {
-    const { commit, bundle, m, source, builder } = await prepareRun(slice, dir);
-    const units = await mergedPlanUnits(dir, m, builder);
-    await prepareJobDir(dir, { scope, bundle, commit, units });
-    const { outcome, cancelled, publishError } = await runSupervisor(dir,
-      { scope, bundle, commit, units }, adapterFor(m, source, builder, slice),
-      { ...options, lock });
-    const status = await readJobStatus(dir);
-    console.log(formatStatus(dir, status));
-    if (publishError) console.error(publishError);
-    return { outcome, cancelled };
-  } catch (error) {
-    await logEvent(dir, `run failed: ${error?.message ?? error}`);
-    throw error;
-  }
+  const { outcome, cancelled, status } = await superviseJob(dir, {
+    scope,
+    options,
+    detached: false,
+    prepare: () => prepareRun(slice, dir),
+    adapter: (prepared) => adapterFor(prepared.m, prepared.source, prepared.builder, slice),
+  });
+  console.log(formatStatus(dir, status));
+  return { outcome, cancelled };
 }
 
 // ── status ─────────────────────────────────────────────────────────────────
@@ -281,11 +286,8 @@ async function smokeCommand(leg, flags) {
   const root = await resolveSmokeRoot("flowsynth-later-era-smoke-");
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   const dir = flags.values.dir ?? path.join(root, leg === "compose" ? "job" : `job-${leg}`);
-  const jobs = flags.values.jobs !== undefined ? Number(flags.values.jobs) : 2;
-  const workerMb = flags.values["worker-mb"] !== undefined ? Number(flags.values["worker-mb"]) : DEFAULT_WORKER_MEMORY_MB;
-  if (!Number.isInteger(jobs) || jobs < 1) throw new Error(`--jobs must be a whole number ≥ 1 — found ${flags.values.jobs}`);
-  if (!Number.isInteger(workerMb) || workerMb < 128) throw new Error(`--worker-mb must be a whole number ≥ 128 — found ${flags.values["worker-mb"]}`);
-  const options = { jobs, workerMemoryBudgetMb: workerMb, notify: flags.values.notify ?? null };
+  const { jobs, workerMemoryBudgetMb } = resolveJobBudgets(flags.values.jobs, flags.values["worker-mb"]);
+  const options = { jobs, workerMemoryBudgetMb, notify: flags.values.notify ?? null };
 
   if (leg === "compose") {
     const sliceArtifact = path.join(root, "later-era-smoke-slice.json");
@@ -329,20 +331,22 @@ async function smokeCommand(leg, flags) {
   }
 
   const tiny = leg === "run";
+  const scope = `smoke-${leg}`;
+  const prepare = async () => {
+    const bundle = await compileEngineTo("tools/later-eras.ts", "later-eras", path.join(dir, "bundle"));
+    const m = await import(bundle);
+    return { commit, bundle, m, source: m.playthroughSource(), builder: tiny ? m.laterEraTinyJobPlan() : m.laterEraSmokeJobPlan() };
+  };
 
   if (flags.values.supervisor) {
     // The detached smoke supervisor: single-flight before any compile.
-    const lock = await acquireSupervisorLock(dir);
-    const bundle = await compileEngineTo("tools/later-eras.ts", "later-eras", path.join(dir, "bundle"));
-    const m = await import(bundle);
-    const source = m.playthroughSource();
-    const planBuilder = tiny ? m.laterEraTinyJobPlan() : m.laterEraSmokeJobPlan();
-    await prepareJobDir(dir, { scope: `smoke-${leg}`, bundle, commit, units: planBuilder.units });
-    const { outcome, publishError } = await runSupervisor(dir,
-      { scope: `smoke-${leg}`, bundle, commit, units: planBuilder.units },
-      smokeAdapter(m, source, root, planBuilder, tiny),
-      { ...options, detached: true, lock });
-    if (publishError) console.error(publishError);
+    const { outcome } = await superviseJob(dir, {
+      scope,
+      options,
+      detached: true,
+      prepare,
+      adapter: (prepared) => smokeAdapter(prepared.m, prepared.source, root, prepared.builder, tiny),
+    });
     return { outcome };
   }
 
@@ -351,7 +355,7 @@ async function smokeCommand(leg, flags) {
     await compileEngineTo("tools/later-eras.ts", "later-eras", path.join(dir, "bundle"));
     const childArgs = [
       process.execPath, SCRIPT_PATH, "smoke", leg,
-      "--dir", dir, "--jobs", String(jobs), "--worker-mb", String(workerMb),
+      "--dir", dir, "--jobs", String(jobs), "--worker-mb", String(workerMemoryBudgetMb),
       ...(flags.values.notify ? ["--notify", flags.values.notify] : []),
       "--supervisor",
     ];
@@ -362,21 +366,14 @@ async function smokeCommand(leg, flags) {
     return { outcome: "detached" };
   }
 
-  // Single-flight before any compile — a refused second supervisor cannot
-  // disturb the holder's bundle.
-  const lock = await acquireSupervisorLock(dir);
-  const bundle = await compileEngineTo("tools/later-eras.ts", "later-eras", path.join(dir, "bundle"));
-  const m = await import(bundle);
-  const source = m.playthroughSource();
-  const planBuilder = tiny ? m.laterEraTinyJobPlan() : m.laterEraSmokeJobPlan();
-  await prepareJobDir(dir, { scope: `smoke-${leg}`, bundle, commit, units: planBuilder.units });
-  const adapter = smokeAdapter(m, source, root, planBuilder, tiny);
-  const { outcome, publishError } = await runSupervisor(dir, { scope: `smoke-${leg}`, bundle, commit, units: planBuilder.units }, adapter, {
-    ...options, lock,
+  const { outcome, status } = await superviseJob(dir, {
+    scope,
+    options,
+    detached: false,
+    prepare,
+    adapter: (prepared) => smokeAdapter(prepared.m, prepared.source, root, prepared.builder, tiny),
   });
-  const status = await readJobStatus(dir);
   console.log(formatStatus(dir, status));
-  if (publishError) console.error(publishError);
   return { outcome };
 }
 

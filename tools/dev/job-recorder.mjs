@@ -45,6 +45,25 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // ── Single-flight supervision ──────────────────────────────────────────────
 
+// The single-flight refusal — one wording, two checkers (the launch
+// handoff's cheap check and the supervisor's acquisition).
+const lockRefusal = (existing) =>
+  `a supervisor is already running this job (pid ${existing.pid}, started ${existing.startedAt}) — ` +
+  `observe it with the status command, or kill pid ${existing.pid} to cancel it`;
+
+// The CLI sites parse --jobs/--worker-mb once, here, so a bad budget is
+// refused before any lock, compile, or walk. The supervisor re-checks
+// what it is actually given — it is the boundary's own enforcement.
+export function resolveJobBudgets(jobsArg, workerMbArg) {
+  const jobs = jobsArg !== undefined ? Number(jobsArg) : DEFAULT_JOBS;
+  const workerMemoryBudgetMb = workerMbArg !== undefined ? Number(workerMbArg) : DEFAULT_WORKER_MEMORY_MB;
+  if (!Number.isInteger(jobs) || jobs < 1) throw new Error(`--jobs must be a whole number ≥ 1 — found ${jobsArg}`);
+  if (!Number.isInteger(workerMemoryBudgetMb) || workerMemoryBudgetMb < 128) {
+    throw new Error(`--worker-mb must be a whole number ≥ 128 — found ${workerMbArg}`);
+  }
+  return { jobs, workerMemoryBudgetMb };
+}
+
 function processAlive(pid) {
   if (!Number.isInteger(pid) || pid <= 0) return false;
   try {
@@ -65,10 +84,7 @@ export async function assertNoLiveSupervisor(dir) {
     return;
   }
   if (processAlive(existing?.pid)) {
-    throw new Error(
-      `a supervisor is already running this job (pid ${existing.pid}, started ${existing.startedAt}) — ` +
-      `observe it with the status command, or kill pid ${existing.pid} to cancel it`,
-    );
+    throw new Error(lockRefusal(existing));
   }
 }
 
@@ -85,10 +101,7 @@ export async function acquireSupervisorLock(dir) {
       existing = null;
     }
     if (existing && processAlive(existing.pid)) {
-      throw new Error(
-        `a supervisor is already running this job (pid ${existing.pid}, started ${existing.startedAt}) — ` +
-        `observe it with the status command, or kill pid ${existing.pid} to cancel it`,
-      );
+      throw new Error(lockRefusal(existing));
     }
     if (existing) {
       // A stale lock (a killed supervisor): clear it before re-creating.
@@ -254,7 +267,7 @@ export function formatStatus(dir, status) {
   const done = units.filter(([, unit]) => unit.state === "done");
   const failed = units.filter(([, unit]) => unit.state === "failed");
   const running = units.filter(([, unit]) => unit.state === "running");
-  const open_ = units.filter(([, unit]) => unit.state === "pending");
+  const pending = units.filter(([, unit]) => unit.state === "pending");
   const total = units.length;
   const elapsedMs = (status.terminalAt ? Date.parse(status.terminalAt) : Date.now()) - Date.parse(status.startedAt);
   const elapsed = elapsedMs >= 60_000
@@ -263,7 +276,7 @@ export function formatStatus(dir, status) {
   const peak = Math.max(0, ...units.map(([, unit]) => unit.peakRssKb ?? 0));
   const lines = [
     `${status.scope} job at ${dir} — ${status.status}${status.supervisor?.pid ? ` (pid ${status.supervisor.pid})` : ""}`,
-    `units: ${done.length}/${total} done, ${failed.length} failed, ${open_.length + running.length} remaining · elapsed ${elapsed}`,
+    `units: ${done.length}/${total} done, ${failed.length} failed, ${pending.length + running.length} remaining · elapsed ${elapsed}`,
     `options: ${status.options.jobs} concurrent workers · ${status.options.workerMemoryBudgetMb} MB worker memory budget${status.options.notify ? ` · notify: ${status.options.notify}` : ""}`,
   ];
   for (const [id, unit] of running) lines.push(`  running ${id} (attempt ${unit.attempts}, started ${unit.startedAt})`);

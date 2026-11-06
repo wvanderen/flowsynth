@@ -154,3 +154,9 @@ export declare function launchDetachedSupervisor(options: {
   dir: string;
   timeoutMs?: number;
 }): Promise<{ pid: number; status: JobStatus }>;
+
+/** Parses and validates --jobs/--worker-mb once for the CLI sites, with defaults. */
+export declare function resolveJobBudgets(
+  jobsArg: string | number | undefined,
+  workerMbArg: string | number | undefined,
+): { jobs: number; workerMemoryBudgetMb: number };
