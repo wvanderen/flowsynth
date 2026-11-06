@@ -78,9 +78,8 @@ export const probeGroup = (m, source, paths = {}) => {
     },
     publish: async (unitsById, { commit }) => {
     const walk = unitsById["probe-walk"];
-    const banks = walk.result.banks.map((bank, b) => ({
-      ...bank,
-      orders: bank.orders.map((order, o) => {
+    const banks = walk.result.banks.map((bank, b) => {
+      const orders = bank.orders.map((order, o) => {
         const forwardUnit = unitsById[`forward-b${b}-o${o}`];
         assert.ok(forwardUnit, `the probe's bank ${b} order ${o} has no persisted forward unit`);
         assert.deepEqual(forwardUnit.result.prepared.order, order.order,
@@ -101,8 +100,16 @@ export const probeGroup = (m, source, paths = {}) => {
           `the forward unit for bank ${b} order ${o} disagrees with the walk's enumeration`,
         );
         return { ...order, forward: forwardUnit.result.forward };
-      }),
-    }));
+      });
+      // The demonstration read belongs to the assembled evidence: the
+      // walk's enumeration carries forward: null on every order, so the
+      // flag is recomputed from the persisted forwards here.
+      return {
+        ...bank,
+        orders,
+        routeDemonstrated: orders.some((order) => order.forward?.outcome === "advanced"),
+      };
+    });
     const target = paths.probe ?? PROBE_EVIDENCE_PATH;
     await writeJsonAtomic(target, recordingPayload({
       source,

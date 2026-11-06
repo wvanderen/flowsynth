@@ -1,11 +1,11 @@
 {
   "source": {
     "game": "flowsynth",
-    "saveVersion": 12,
+    "saveVersion": 13,
     "runnerVersion": 15,
-    "engineSource": "8790c6cb"
+    "engineSource": "ccab0a92"
   },
-  "recordingCommit": "983ab58c397f0f5380c42f1e6b4049704172f4cb",
+  "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
   "minutes": 60,
   "policy": "ignoring",
   "rows": [
@@ -77,7 +77,7 @@
           "rebuildingShare": 0.667,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -105,7 +105,7 @@
           "priorDepthPassedHours": 6.72,
           "rebuildingShare": 0.75,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 2,
           "placements": [],
@@ -123,7 +123,7 @@
           "hours": 11,
           "claim": 2,
           "frontierAfter": 8,
-          "priorDepth": 207739006.6393837,
+          "priorDepth": 207739006.63938367,
           "familiarHours": 8.17,
           "newHours": 2.83,
           "newShare": 0.258,
@@ -147,7 +147,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Enemy-ignoring ✓ 26d · 3060m credited of 36065m elapsed · claim 2, 2, 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-cd2df8e9 · spent Catalog entry + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/480m, door 4.0d/420m, frontier 6.0d/720m (1625.47ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 26 — the frontier stands at 8 Arete, combat still postponed."
+      "note": "Enemy-ignoring ✓ 26d · 3060m credited of 36065m elapsed · claim 2, 2, 2, 2 Arete · seed 42 · fresh-start · fresh-start-s42-4fbbc397 · spent Catalog entry + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/480m, door 4.0d/420m, frontier 6.0d/720m (1625.47ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 26 — the frontier stands at 8 Arete, combat still postponed."
     },
     {
       "seed": 468,
@@ -217,7 +217,7 @@
           "rebuildingShare": 0.667,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -245,7 +245,7 @@
           "priorDepthPassedHours": 5.98,
           "rebuildingShare": 0.571,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -287,7 +287,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Enemy-ignoring ✓ 17d · 2040m credited of 23170m elapsed · claim 2, 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-0b069bb1 · spent Catalog entry + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/360m (3642.00ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 17 — the frontier stands at 8 Arete, combat still postponed."
+      "note": "Enemy-ignoring ✓ 17d · 2040m credited of 23170m elapsed · claim 2, 2, 2, 2 Arete · seed 468 · fresh-start · fresh-start-s468-e76f134f · spent Catalog entry + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/360m (3642.00ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 17 — the frontier stands at 8 Arete, combat still postponed."
     },
     {
       "seed": 157,
@@ -351,7 +351,7 @@
           "rebuildingShare": null,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 0,
           "placements": [],
@@ -367,7 +367,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 157 · fresh-start · fresh-start-s157-0def413e · spent Catalog entry + 1× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate unreached, door unreached, frontier unreached (193.93ν/s pre-reset) · eras 1/4 closed · Poly Expander 2 — 9.07ν/s → 11.60ν/s · The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2 Arete · seed 157 · fresh-start · fresh-start-s157-de0800a4 · spent Catalog entry + 1× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate unreached, door unreached, frontier unreached (193.93ν/s pre-reset) · eras 1/4 closed · Poly Expander 2 — 9.07ν/s → 11.60ν/s · The 30-day budget ended with combat postponed — 1 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 2026,
@@ -437,7 +437,7 @@
           "rebuildingShare": 0.636,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -465,7 +465,7 @@
           "priorDepthPassedHours": 10.18,
           "rebuildingShare": 0.846,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -507,7 +507,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Enemy-ignoring ✓ 30d · 3540m credited of 41825m elapsed · claim 2, 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-a6d01fa1 · spent Catalog entry + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/420m, door 4.0d/420m, frontier 6.0d/660m (2480.46ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 30 — the frontier stands at 8 Arete, combat still postponed."
+      "note": "Enemy-ignoring ✓ 30d · 3540m credited of 41825m elapsed · claim 2, 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-9bdaefff · spent Catalog entry + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 4.0d/420m, door 4.0d/420m, frontier 6.0d/660m (2480.46ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 30 — the frontier stands at 8 Arete, combat still postponed."
     },
     {
       "seed": 7,
@@ -577,7 +577,7 @@
           "rebuildingShare": 0.571,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -595,7 +595,7 @@
           "hours": 9,
           "claim": 2,
           "frontierAfter": 7,
-          "priorDepth": 128024164.77025138,
+          "priorDepth": 128024164.77025136,
           "familiarHours": 6.5,
           "newHours": 2.5,
           "newShare": 0.278,
@@ -605,7 +605,7 @@
           "priorDepthPassedHours": 6.5,
           "rebuildingShare": 0.667,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 2,
           "placements": [],
@@ -649,7 +649,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Enemy-ignoring ✓ 22d · 2640m credited of 30370m elapsed · claim 2, 3, 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-5f0fbaa0 · spent Catalog entry + 1× Chord Catalysts + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/420m (3776.61ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 22 — the frontier stands at 9 Arete, combat still postponed."
+      "note": "Enemy-ignoring ✓ 22d · 2640m credited of 30370m elapsed · claim 2, 3, 2, 2 Arete · seed 7 · fresh-start · fresh-start-s7-10b6a58a · spent Catalog entry + 1× Chord Catalysts + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/240m, door 2.0d/240m, frontier 3.0d/420m (3776.61ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 22 — the frontier stands at 9 Arete, combat still postponed."
     },
     {
       "seed": 99,
@@ -719,7 +719,7 @@
           "rebuildingShare": 0.625,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 2,
           "placements": [],
@@ -747,7 +747,7 @@
           "priorDepthPassedHours": 7.15,
           "rebuildingShare": 0.6,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 1,
           "placements": [],
@@ -789,7 +789,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Enemy-ignoring ✓ 26d · 3060m credited of 36065m elapsed · claim 2, 2, 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-3bcde58d · spent Catalog entry + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 3.0d/300m, door 3.0d/300m, frontier 4.0d/480m (2535.26ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 26 — the frontier stands at 8 Arete, combat still postponed."
+      "note": "Enemy-ignoring ✓ 26d · 3060m credited of 36065m elapsed · claim 2, 2, 2, 2 Arete · seed 99 · fresh-start · fresh-start-s99-d96cf61b · spent Catalog entry + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 3.0d/300m, door 3.0d/300m, frontier 4.0d/480m (2535.26ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 26 — the frontier stands at 8 Arete, combat still postponed."
     },
     {
       "seed": 11,
@@ -855,7 +855,7 @@
           "rebuildingShare": 0.654,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 2,
           "placements": [],
@@ -883,7 +883,7 @@
           "priorDepthPassedHours": null,
           "rebuildingShare": null,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 0,
           "placements": [],
@@ -899,7 +899,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": "The 30-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete..",
-      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2 Arete · seed 11 · fresh-start · fresh-start-s11-88aa442d · spent Catalog entry + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 9.0d/1020m, door 7.0d/780m, frontier 13.0d/1560m (450.86ν/s pre-reset) · eras 2/4 closed · Poly Expander 2 — 12.04ν/s → 18.92ν/s · The 30-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
+      "note": "Enemy-ignoring ✗ 30d · 3600m credited of 41890m elapsed · claim 2, 2 Arete · seed 11 · fresh-start · fresh-start-s11-8bb81f3b · spent Catalog entry + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 9.0d/1020m, door 7.0d/780m, frontier 13.0d/1560m (450.86ν/s pre-reset) · eras 2/4 closed · Poly Expander 2 — 12.04ν/s → 18.92ν/s · The 30-day budget ended with combat postponed — 2 of the declared 4 era(s) closed. Last decline — arete Chord Catalysts — Not enough Arete.."
     },
     {
       "seed": 23,
@@ -969,7 +969,7 @@
           "rebuildingShare": 0.6,
           "purchases": [
             "Catalog entry",
-            "Row unlock — row 3"
+            "Rack Extenders — row 3"
           ],
           "nousPurchases": 2,
           "placements": [],
@@ -997,7 +997,7 @@
           "priorDepthPassedHours": 4.7,
           "rebuildingShare": 0.667,
           "purchases": [
-            "Row unlock — row -2"
+            "Rack Extenders — row -2"
           ],
           "nousPurchases": 2,
           "placements": [],
@@ -1041,7 +1041,78 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Enemy-ignoring ✓ 14d · 1680m credited of 18850m elapsed · claim 2, 4, 3, 2 Arete · seed 23 · fresh-start · fresh-start-s23-eec80d46 · spent Catalog entry + 1× Chord Catalysts + 2× Row unlock · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete, combat still postponed."
+      "note": "Enemy-ignoring ✓ 14d · 1680m credited of 18850m elapsed · claim 2, 4, 3, 2 Arete · seed 23 · fresh-start · fresh-start-s23-086ee2fc · spent Catalog entry + 1× Chord Catalysts + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade unreached, column unreached, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete, combat still postponed."
     }
-  ]
+  ],
+  "unitProvenance": {
+    "seed-60-ignoring-42": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    },
+    "seed-60-ignoring-468": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    },
+    "seed-60-ignoring-157": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    },
+    "seed-60-ignoring-2026": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    },
+    "seed-60-ignoring-7": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    },
+    "seed-60-ignoring-99": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    },
+    "seed-60-ignoring-11": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    },
+    "seed-60-ignoring-23": {
+      "recordingCommit": "97a6aa60c2a83ae21a9541af8e410a9feb779056",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      }
+    }
+  },
+  "recordingEnvironment": {
+    "node": "v22.23.4",
+    "timeZone": "America/Chicago",
+    "utcOffsetMinutes": -360
+  }
 }

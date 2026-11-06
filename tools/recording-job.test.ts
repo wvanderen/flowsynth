@@ -838,8 +838,10 @@ describe("the recording domain's publication", () => {
     outcome: "advanced", runId: "fresh-start-s23-abcdef01", recipe: laterEraProbeWalkRecipe(),
     frontierAfter: frontier + 1, creditedHours: 2, defeats: ["Sapling"], noGrant: true, noRefund: true, finite: true,
   });
+  // The enumeration-time banks: every order's forward is still null, so
+  // the walk cannot have demonstrated anything yet.
   const banks = () => [2, 6].map((frontier) => ({
-    frontier, claim: 2, budget: 2, pieces: [], routeDemonstrated: true,
+    frontier, claim: 2, budget: 2, pieces: [], routeDemonstrated: false,
     orders: [{ order: ["entry"], spend: 1, purchasesOk: true, placementsOk: true, finite: true, forward: null }],
   }));
   const probeUnits = (): Record<string, any> => {
@@ -874,6 +876,9 @@ describe("the recording domain's publication", () => {
     expect(payload.seed).toBe(23);
     expect(payload.minutes).toBe(60);
     expect(payload.policy).toBe("support");
+    // The demonstration read is recomputed from the persisted forwards —
+    // the enumeration carried false on every bank.
+    expect(payload.banks.map((bank: { routeDemonstrated: boolean }) => bank.routeDemonstrated)).toEqual([true, true]);
     // The composed evidence passes composition's verification unchanged.
     expect(() => assertProbeEvidence(payload, "the probe file")).not.toThrow();
   });

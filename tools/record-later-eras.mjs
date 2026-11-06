@@ -219,7 +219,11 @@ async function composeCommand() {
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   const m = await (await import("./dev/compile-engine.mjs")).compileEngine("tools/later-eras.ts", "later-eras");
   const source = m.playthroughSource();
-  const assertAncestry = (label, commits) => {
+  // Every input's recording commits — the slice's own and each unit's —
+  // must be ancestors of this checkout: evidence from a divergent history
+  // is refused. A slice recorded on an ancestor whose engine source
+  // compiled identically is the same evidence.
+  const assertAncestry = (commits) => {
     for (const recorded of new Set(commits)) {
       execFileSync("git", ["merge-base", "--is-ancestor", recorded, commit], { stdio: "pipe" });
     }
@@ -234,11 +238,7 @@ async function composeCommand() {
     });
     assertNotSmokeTier(recorded, sliceLabel);
     assertSameCompiledSource(recorded.source, source, sliceLabel);
-    // Every unit's recording commit — and the slice's own — must be an
-    // ancestor of this checkout: evidence from a divergent history is
-    // refused (a slice recorded on an ancestor whose engine source
-    // compiled identically is the same evidence).
-    assertAncestry(sliceLabel, [recorded.recordingCommit,
+    assertAncestry([recorded.recordingCommit,
       ...Object.values(recorded.unitProvenance ?? {}).map((provenance) => provenance.recordingCommit)]);
     assertSliceRows(m, recorded.rows, minutes, policy);
     inputs.push({ path: sliceLabel, recording: recorded });
@@ -251,7 +251,7 @@ async function composeCommand() {
   });
   assertNotSmokeTier(probe, probeLabel);
   assertSameCompiledSource(probe.source, source, probeLabel);
-  assertAncestry(probeLabel, [probe.recordingCommit,
+  assertAncestry([probe.recordingCommit,
     ...Object.values(probe.unitProvenance ?? {}).map((p) => p.recordingCommit)]);
   m.assertProbeEvidence(probe, "the later-era probe evidence");
   inputs.push({ path: probeLabel, recording: probe });
