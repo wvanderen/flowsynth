@@ -27,6 +27,10 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { performance } from "node:perf_hooks";
 import { compileEngine } from "./dev/compile-engine.mjs";
@@ -165,6 +169,8 @@ function measuredWalk(m, { label, recipe, state, retention }) {
 // allocator behavior is surfaced, not assumed away — a disagreement with
 // zero uncertified solves on either side is a failure; a disagreement
 // under deadline trips is recorded as the honest timing-dependent read.
+// The compared shape is the run's agreement slice: the recorded outcomes
+// a reader could act on, not the boards.
 function differential(complete, bounded) {
   const checks = [];
   const disagreements = [];
@@ -180,12 +186,12 @@ function differential(complete, bounded) {
     if (!agrees) disagreements.push(name);
   };
   compare("century row (the recorded figures)", complete.row, bounded.row);
-  compare("decision record", complete.record.events, bounded.record.events);
-  compare("trajectory samples", complete.record.trajectory, bounded.record.trajectory);
-  compare("claims", complete.record.claims, bounded.record.claims);
-  compare("era ledgers", complete.record.eras, bounded.record.eras);
-  compare("stop", complete.record.stop, bounded.record.stop);
-  compare("snapshot count", complete.record.snapshots.length, bounded.record.snapshots.length);
+  compare("decision record", complete.agreement.events, bounded.agreement.events);
+  compare("trajectory samples", complete.agreement.trajectory, bounded.agreement.trajectory);
+  compare("claims", complete.agreement.claims, bounded.agreement.claims);
+  compare("era ledgers", complete.agreement.eras, bounded.agreement.eras);
+  compare("stop", complete.agreement.stop, bounded.agreement.stop);
+  compare("snapshot count", complete.agreement.snapshots, bounded.agreement.snapshots);
   const uncertified = {
     complete: complete.measures.budget.uncertified,
     bounded: bounded.measures.budget.uncertified,
@@ -204,56 +210,101 @@ function differential(complete, bounded) {
   return { agrees: disagreements.length === 0, checks, disagreements, uncertified, deadlineTrips, timeLimited };
 }
 
-async function runProfile({ variant = undefined, stopHours = undefined, budgetDays = undefined, smoke = false, out = undefined }) {
+// The agreement slice one measured run carries for the comparison: the
+// recorded outcomes, not the boards.
+function agreementOf(record) {
+  return {
+    events: record.events,
+    trajectory: record.trajectory,
+    claims: record.claims,
+    eras: record.eras,
+    stop: record.stop,
+    snapshots: record.snapshots.length,
+  };
+}
+
+function runLine(run) {
+  return `${run.retention}: walk ${Math.round(run.measures.walkMs / 1000)}s, `
+    + `${run.measures.retention.snapshots} snapshots `
+    + `(${run.measures.retention.snapshotsWithState} with states), `
+    + `retained ~${kb(run.measures.retention.recordEstimateBytes)}KB, `
+    + `peak sampled heap ${kb(run.measures.memory.peakSampledHeapBytes)}KB, `
+    + `memo ${run.measures.memo.solves}/${run.measures.memo.hits}, `
+    + `uncertified ${run.measures.budget.uncertified} `
+    + `(node ${run.measures.budget.nodeTrips}, deadline ${run.measures.budget.deadlineTrips})`;
+}
+
+// One measured fixture walk in this process, written as its own payload.
+// The pair command spawns one child per retention (issue #509): peak
+// memory is attributed per run, never polluted by a sibling's retained
+// record — the same isolation rule the job workers follow.
+async function runSingleFixtureRun({ variant, stopHours, budgetDays, retention, out }) {
   await requireRuntimeEnvironment();
-  // Production profiles publish committed evidence, so like the recorders
-  // they require a clean tree over src and tools: the profile commit
-  // identifies exactly the measured source. The smoke tier publishes only
-  // into isolated output and runs on dirty worktrees too.
-  if (!smoke) {
-    execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
-  }
+  execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
   const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
   const m = await compileEngine("tools/century.ts", "profile");
+  const { recipe, state } = m.suppliedBoardWalkInputs(variant, stopHours, budgetDays);
+  const run = measuredWalk(m, { label: retention, recipe, state, retention });
+  console.log(runLine(run));
+  const payload = recordingPayload({
+    tier: "profile-run",
+    profile: "retained-recording",
+    source: m.playthroughSource(),
+    workload: {
+      name: `supplied-board fixture (${variant})`,
+      variant,
+      stopCreditedHours: recipe.stopCreditedHours,
+      budgetDays: recipe.budgetDays,
+      schedule: recipe.schedule,
+      policyId: recipe.policyId,
+      seed: recipe.seed,
+      modules: state.modules.length,
+      cells: state.cells.length,
+    },
+    recipe,
+    recordingCommit: commit,
+    retention,
+    measures: run.measures,
+    row: run.row,
+    agreement: agreementOf(run.record),
+    stopKind: run.record.stop.kind,
+    complete: run.record.complete,
+    days: run.record.days,
+    creditedHours: Math.round(run.record.creditedSeconds / 360) / 10,
+    runId: run.record.runId,
+    rowDigest: createHash("sha256").update(JSON.stringify(run.row)).digest("hex").slice(0, 16),
+  });
+  await writeJsonAtomic(out, payload);
+}
 
-  // The workload: the supplied-board fixture's declared walk (the fresh
-  // board for smoke), built fresh per retention so both runs start from
-  // byte-identical inputs.
-  const recipe = smoke
-    ? m.centurySmokeRecipe()
-    : m.suppliedBoardWalkInputs(variant, stopHours, budgetDays).recipe;
-  const stateFor = () => {
-    if (smoke) return undefined;
-    return m.suppliedBoardWalkInputs(variant, stopHours, budgetDays).state;
-  };
-
-  const workloads = [
-    { label: "complete", retention: "complete" },
-    { label: "bounded", retention: "bounded" },
-  ];
+// The fixture profile: one child process per retention on identical
+// inputs, then the differential over the pair and one committed artifact.
+async function runFixtureProfile({ variant, stopHours, budgetDays, out }) {
+  await requireRuntimeEnvironment();
+  // The profile commit identifies exactly the measured source.
+  execFileSync("git", ["diff", "--exit-code", "HEAD", "--", "src", "tools"], { stdio: "pipe" });
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const scriptPath = fileURLToPath(import.meta.url);
   const runs = {};
-  for (const workload of workloads) {
-    // GC between runs where the runtime offers it, so the second run's
-    // start heap reads clean of the first's garbage.
-    if (globalThis.gc) globalThis.gc();
-    const inputState = stateFor();
-    runs[workload.label] = measuredWalk(m, {
-      label: workload.label,
-      recipe,
-      state: inputState,
-      retention: workload.retention,
-    });
-    console.log(
-      `${workload.label}: walk ${Math.round(runs[workload.label].measures.walkMs / 1000)}s, `
-        + `${runs[workload.label].measures.retention.snapshots} snapshots `
-        + `(${runs[workload.label].measures.retention.snapshotsWithState} with states), `
-        + `retained ~${kb(runs[workload.label].measures.retention.recordEstimateBytes)}KB, `
-        + `peak sampled heap ${kb(runs[workload.label].measures.memory.peakSampledHeapBytes)}KB, `
-        + `memo ${runs[workload.label].measures.memo.solves}/${runs[workload.label].measures.memo.hits}, `
-        + `uncertified ${runs[workload.label].measures.budget.uncertified} `
-        + `(node ${runs[workload.label].measures.budget.nodeTrips}, deadline ${runs[workload.label].measures.budget.deadlineTrips})`,
-    );
+  const staging = await mkdtemp(path.join(tmpdir(), "flowsynth-profile-run-"));
+  try {
+    for (const retention of ["complete", "bounded"]) {
+      const payloadPath = path.join(staging, `${retention}.json`);
+      execFileSync(process.execPath, [
+        scriptPath, "fixture-run", variant,
+        "--retention", retention,
+        "--out", payloadPath,
+        ...(stopHours !== undefined ? ["--stop-hours", String(stopHours)] : []),
+        ...(budgetDays !== undefined ? ["--budget-days", String(budgetDays)] : []),
+      ], { stdio: "inherit" });
+      runs[retention] = JSON.parse(await readFile(payloadPath, "utf8"));
+    }
+  } finally {
+    await rm(staging, { recursive: true, force: true });
   }
+  // The pair must be the same declared workload.
+  assert.deepEqual(runs.bounded.workload, runs.complete.workload, "the pair's workload identity");
+  assert.deepEqual(runs.bounded.recipe, runs.complete.recipe, "the pair's recipe");
 
   const comparison = differential(runs.complete, runs.bounded);
   if (!comparison.agrees) {
@@ -266,51 +317,77 @@ async function runProfile({ variant = undefined, stopHours = undefined, budgetDa
     console.log(`differential: all ${comparison.checks.length} checks agree on identical inputs`);
   }
 
-  const stripped = (run) => {
-    const { record, ...rest } = run;
-    return {
-      ...rest,
-      stopKind: record.stop.kind,
-      complete: record.complete,
-      days: record.days,
-      creditedHours: Math.round(record.creditedSeconds / 360) / 10,
-      runId: record.runId,
-      rowDigest: createHash("sha256").update(JSON.stringify(run.row)).digest("hex").slice(0, 16),
-    };
-  };
-  const workloadState = smoke ? undefined : stateFor();
   const payload = recordingPayload({
-    tier: smoke ? "smoke" : "profile",
+    tier: "profile",
     profile: "retained-recording",
-    source: m.playthroughSource(),
-    workload: {
-      name: smoke ? "smoke recipe (fresh board)" : `supplied-board fixture (${variant})`,
-      ...(smoke ? {} : { variant }),
-      stopCreditedHours: recipe.stopCreditedHours,
-      budgetDays: recipe.budgetDays,
-      schedule: recipe.schedule,
-      policyId: recipe.policyId,
-      seed: recipe.seed,
-      modules: workloadState?.modules.length,
-      cells: workloadState?.cells.length,
-    },
-    recipe,
+    source: runs.complete.source,
+    workload: runs.complete.workload,
+    recipe: runs.complete.recipe,
     recordingCommit: commit,
-    runs: { complete: stripped(runs.complete), bounded: stripped(runs.bounded) },
+    runs: {
+      complete: { retention: "complete", measures: runs.complete.measures, stopKind: runs.complete.stopKind, complete: runs.complete.complete, days: runs.complete.days, creditedHours: runs.complete.creditedHours, runId: runs.complete.runId, rowDigest: runs.complete.rowDigest, row: runs.complete.row },
+      bounded: { retention: "bounded", measures: runs.bounded.measures, stopKind: runs.bounded.stopKind, complete: runs.bounded.complete, days: runs.bounded.days, creditedHours: runs.bounded.creditedHours, runId: runs.bounded.runId, rowDigest: runs.bounded.rowDigest, row: runs.bounded.row },
+    },
     differential: comparison,
     limitations: [
-      "Peak memory is sampled between simulated steps (per-step heapUsed) plus the process-wide maxRSS ceiling; the sampled peak can miss an intra-step spike.",
+      "Peak memory is sampled between simulated steps (per-step heapUsed); the sampled peak can miss an intra-step spike, and each run owns its process so no sibling's retained record pollutes its peak.",
       "A disagreement under uncertified solves is the wall-clock valve's timing-dependent incumbent, not a deterministic divergence; the budget stats carry the trips.",
       "The complete retention run of the full declared fixture stop (100 credited hours) retains multi-gigabyte histories and is not a bounded or quick invocation; reduced stops keep the inputs comparable.",
       "Bounded snapshots carry no boards: historical inspection and artifact export refuse them by name, and the serialized stride verdicts move to capture time.",
     ],
   });
-  const target = out ?? (smoke
-    ? undefined
-    : `docs/recording-profile-fixture-${variant}.json`);
-  if (target) {
-    await writeJsonAtomic(target, payload);
-    console.log(`profile written: ${target}`);
+  const target = out ?? `docs/recording-profile-fixture-${variant}.json`;
+  await writeJsonAtomic(target, payload);
+  console.log(`profile written: ${target}`);
+  return payload;
+}
+
+async function runProfile({ variant = undefined, stopHours = undefined, budgetDays = undefined, smoke = false, out = undefined }) {
+  const m = await compileEngine("tools/century.ts", "profile");
+  // The smoke workload: the declared smoke recipe on the fresh board,
+  // both retentions in-process — small boards, no isolation needed.
+  const recipe = m.centurySmokeRecipe();
+  const workloads = [
+    { label: "complete", retention: "complete" },
+    { label: "bounded", retention: "bounded" },
+  ];
+  const runs = {};
+  for (const workload of workloads) {
+    const run = measuredWalk(m, { label: workload.label, recipe, state: undefined, retention: workload.retention });
+    runs[workload.label] = { ...run, agreement: agreementOf(run.record) };
+    console.log(runLine(run));
+  }
+  const comparison = differential(runs.complete, runs.bounded);
+  if (!comparison.agrees) throw new Error("the smoke workload's retentions must agree");
+  console.log(`differential: all ${comparison.checks.length} checks agree on identical inputs`);
+  const commit = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const payload = recordingPayload({
+    tier: "smoke",
+    profile: "retained-recording",
+    source: m.playthroughSource(),
+    workload: {
+      name: "smoke recipe (fresh board)",
+      stopCreditedHours: recipe.stopCreditedHours,
+      budgetDays: recipe.budgetDays,
+      schedule: recipe.schedule,
+      policyId: recipe.policyId,
+      seed: recipe.seed,
+    },
+    recipe,
+    recordingCommit: commit,
+    runs: {
+      complete: { retention: "complete", measures: runs.complete.measures, stopKind: runs.complete.record.stop.kind, complete: runs.complete.record.complete, days: runs.complete.record.days, creditedHours: Math.round(runs.complete.record.creditedSeconds / 360) / 10, runId: runs.complete.record.runId, rowDigest: createHash("sha256").update(JSON.stringify(runs.complete.row)).digest("hex").slice(0, 16) },
+      bounded: { retention: "bounded", measures: runs.bounded.measures, stopKind: runs.bounded.record.stop.kind, complete: runs.bounded.record.complete, days: runs.bounded.record.days, creditedHours: Math.round(runs.bounded.record.creditedSeconds / 360) / 10, runId: runs.bounded.record.runId, rowDigest: createHash("sha256").update(JSON.stringify(runs.bounded.row)).digest("hex").slice(0, 16) },
+    },
+    differential: comparison,
+    limitations: [
+      "Peak memory is sampled between simulated steps (per-step heapUsed); the sampled peak can miss an intra-step spike.",
+      "The smoke workload is the fresh-board smoke recipe — a pipeline check, never balance or retention evidence at fixture scale.",
+    ],
+  });
+  if (out) {
+    await writeJsonAtomic(out, payload);
+    console.log(`profile written: ${out}`);
   }
   return payload;
 }
@@ -334,6 +411,36 @@ async function main() {
       + `${payload.runs.bounded.measures.retention.snapshots} bounded (no boards) — artifact at ${target}`);
     return;
   }
+  if (command === "fixture-run") {
+    // Internal: one measured fixture walk in its own process, spawned by
+    // the fixture command for per-run memory attribution. Not usage-listed.
+    const { values } = parseArgs({
+      args: process.argv.slice(3),
+      options: {
+        retention: { type: "string" },
+        "stop-hours": { type: "string" },
+        "budget-days": { type: "string" },
+        out: { type: "string" },
+      },
+      allowPositionals: true,
+      strict: true,
+    });
+    if (!FIXTURE_VARIANTS.includes(positional ?? "")) throw usageError();
+    if (values.retention !== "complete" && values.retention !== "bounded") {
+      throw new Error("fixture-run: --retention must be complete or bounded");
+    }
+    if (!values.out) throw new Error("fixture-run: --out is required");
+    const stopHours = values["stop-hours"] !== undefined ? Number(values["stop-hours"]) : undefined;
+    const budgetDays = values["budget-days"] !== undefined ? Number(values["budget-days"]) : undefined;
+    await runSingleFixtureRun({
+      variant: positional,
+      stopHours,
+      budgetDays,
+      retention: values.retention,
+      out: values.out,
+    });
+    return;
+  }
   if (command !== "fixture" || !FIXTURE_VARIANTS.includes(positional ?? "")) throw usageError();
   const { values } = parseArgs({
     args: process.argv.slice(3),
@@ -350,7 +457,7 @@ async function main() {
   const budgetDays = values["budget-days"] !== undefined ? Number(values["budget-days"]) : undefined;
   if (stopHours !== undefined && (!Number.isFinite(stopHours) || stopHours <= 0)) throw new Error("--stop-hours must be a positive number");
   if (budgetDays !== undefined && (!Number.isInteger(budgetDays) || budgetDays < 1)) throw new Error("--budget-days must be a whole number ≥ 1");
-  await runProfile({ variant: positional, stopHours, budgetDays, smoke: false, out: values.out });
+  await runFixtureProfile({ variant: positional, stopHours, budgetDays, out: values.out });
 }
 
 try {
