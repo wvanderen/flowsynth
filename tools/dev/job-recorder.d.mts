@@ -102,10 +102,17 @@ export declare function readJobStatusIfAny(dir: string): Promise<JobStatus | nul
 /** The human summary the status command prints. */
 export declare function formatStatus(dir: string, status: JobStatus): string;
 
+export interface GroupContext {
+  descriptors: Map<string, JobPlan["units"][number]>;
+  validIds: Set<string>;
+}
+
 export interface SupervisorGroup {
   id: string;
-  /** Static unit ids, or a resolver evaluated each readiness check. */
-  unitIds: string[] | (() => string[]);
+  /** Static unit ids, or a resolver evaluated against the current plan. */
+  unitIds: string[] | ((ctx: GroupContext) => string[]);
+  /** Optional extra readiness gate (e.g. a group not publishable before its derive pass). */
+  ready?: (ctx: GroupContext) => boolean;
   publish: (unitsById: Record<string, any>, ctx: { commit: string; dir: string }) => Promise<string>;
 }
 

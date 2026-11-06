@@ -479,6 +479,48 @@ describe("the job supervisor", () => {
       .toEqual(["derived-unit", plan.units[0]!.id].sort());
   }, 120_000);
 
+  it("a group gated on its derived units is not attempted before they exist", async () => {
+    const dir = freshDir("sup-gated");
+    const plan = tinyPlan([LATER_ERA_SEEDS[0]!]);
+    await prepareJobDir(dir, plan);
+    const derived = {
+      id: "derived-unit",
+      key: { kind: "seed" as const, seed: 999, minutes: 25, policy: "support" },
+      recipe: bundle.laterEraSmokeRecipe(),
+      forward: null,
+      deps: [plan.units[0]!.id],
+    };
+    const adapter = adapterForPlan(bundle, plan, {
+      deriveFrom: plan.units[0]!.id,
+      derive: () => [derived],
+      groups: [{
+        id: "gated",
+        // Resolves only the ids the plan currently knows — the shape that
+        // once made the probe evidence publish prematurely, before its
+        // forwards were derived.
+        unitIds: ({ descriptors }) => [
+          plan.units[0]!.id,
+          ...[...descriptors.values()].filter((d) => d.id === "derived-unit").map((d) => d.id),
+        ],
+        ready: ({ descriptors, validIds }) => {
+          if (!validIds.has(plan.units[0]!.id)) return false;
+          const known = [...descriptors.values()].filter((d) => d.id === "derived-unit");
+          return known.length > 0 && known.every((d) => validIds.has(d.id));
+        },
+        publish: async (unitsById, { dir: at }) => {
+          const target = path.join(at, "gated-artifact.json");
+          await writeJsonAtomic(target, { ids: Object.keys(unitsById).sort() });
+          return target;
+        },
+      }],
+    });
+    const { outcome, publishError } = await runToCompletion(dir, plan, adapter);
+    expect(outcome).toBe("complete");
+    expect(publishError).toBeNull();
+    expect(JSON.parse(readFileSync(path.join(dir, "gated-artifact.json"), "utf8")).ids)
+      .toEqual(["derived-unit", plan.units[0]!.id].sort());
+  }, 120_000);
+
   it("reports a publish defect as a failed job without discarding the units", async () => {
     const dir = freshDir("sup-publish");
     const plan = tinyPlan(LATER_ERA_SEEDS.slice(0, 2));

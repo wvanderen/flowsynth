@@ -62,12 +62,21 @@ export const sliceGroups = (m, source) => [25, 60].flatMap((minutes) =>
   m.WORLD_POLICIES.map((policy) => sliceGroup(m, source, [minutes, policy])));
 
 // The probe evidence group: the walk plus every derived forward. The
-// forward units are resolved at readiness time — they exist only once
-// the probe walk has derived them.
-export const probeGroup = (m, source, paths = {}) => ({
-  id: "probe",
-  unitIds: () => ["probe-walk"],
-  publish: async (unitsById, { commit }) => {
+// forward units are resolved against the plan the supervisor carries —
+// they exist only once the probe walk has derived them — and the group
+// is ready only when the walk's banks are fully covered by completed
+// forwards, so a resumed job never attempts a premature publish.
+export const probeGroup = (m, source, paths = {}) => {
+  const forwardsOf = (descriptors) => [...descriptors.values()].filter((d) => d.key?.kind === "probe-forward");
+  return {
+    id: "probe",
+    unitIds: ({ descriptors }) => ["probe-walk", ...forwardsOf(descriptors).map((d) => d.id)],
+    ready: ({ descriptors, validIds }) => {
+      if (!validIds.has("probe-walk")) return false;
+      const forwards = forwardsOf(descriptors);
+      return forwards.length > 0 && forwards.every((d) => validIds.has(d.id));
+    },
+    publish: async (unitsById, { commit }) => {
     const walk = unitsById["probe-walk"];
     const banks = walk.result.banks.map((bank, b) => ({
       ...bank,
@@ -106,5 +115,6 @@ export const probeGroup = (m, source, paths = {}) => ({
       unitProvenance: unitProvenanceOf(unitsById),
     }));
     return target;
-  },
-});
+    },
+  };
+};

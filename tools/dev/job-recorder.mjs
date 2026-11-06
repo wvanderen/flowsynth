@@ -489,11 +489,17 @@ export async function runSupervisor(dir, plan, adapter, options = {}) {
   // tier's exclusive creation refuses by name), so the persisted record
   // stays observability only, never a skip marker.
   const publishedThisRun = new Set();
+  const groupContext = () => ({ descriptors, validIds });
   const publishReadyGroups = async () => {
     for (const group of adapter.groups ?? []) {
       if (publishedThisRun.has(group.id)) continue;
-      const unitIds = typeof group.unitIds === "function" ? group.unitIds() : group.unitIds;
+      // A group whose ids depend on derived units resolves them against
+      // the plan the supervisor currently carries, and may gate its own
+      // readiness (the probe evidence is not publishable before its
+      // forwards have been derived and completed).
+      const unitIds = typeof group.unitIds === "function" ? group.unitIds(groupContext()) : group.unitIds;
       if (!unitIds.every((id) => validIds.has(id))) continue;
+      if (group.ready && !group.ready(groupContext())) continue;
       const unitsById = Object.fromEntries(unitIds.map((id) => {
         const payload = doneThisRun.get(id) ?? scanned.find((entry) => entry.descriptor.id === id)?.payload;
         return [id, payload];
@@ -608,7 +614,9 @@ export async function launchDetachedSupervisor({ argv, dir, timeoutMs = 30_000 }
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const status = await readJobStatusIfAny(dir);
-    if (status?.supervisor?.pid && status.supervisor.pid !== process.pid) {
+    // A leftover status from a dead run must never satisfy the wait: the
+    // reported supervisor has to be alive.
+    if (status?.supervisor?.pid && status.supervisor.pid !== process.pid && processAlive(status.supervisor.pid)) {
       return { pid: status.supervisor.pid, status };
     }
     if (child.exitCode !== null) {
