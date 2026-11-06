@@ -11,3 +11,7 @@ dist/
 
 # A browser profile's local database, left by evidence captures.
 .localstorage
+
+# Resumable recording jobs' work state (issue #507); the committed
+# evidence remains the published slices, probe file, and report.
+.recording/

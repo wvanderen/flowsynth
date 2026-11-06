@@ -28,10 +28,14 @@ const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 // the static gate checks them here, and the smoke tier drives their real
 // command surface end to end on bounded walks.
 describe("recorder static gate", () => {
-  it("checks both recorder CLIs by default", () => {
+  it("checks the recorder CLIs and the job boundary scripts by default", () => {
     expect(RECORDER_SCRIPTS.map((script) => path.basename(script))).toEqual([
       "record-century.mjs",
       "record-later-eras.mjs",
+      // Issue #507: the resumable job boundary and its worker — plain .mjs
+      // outside tsc's program, covered by the same gate.
+      "job-recorder.mjs",
+      "job-worker.mjs",
     ]);
   });
 
@@ -518,7 +522,15 @@ describe.each([
         spawnRecorderAsync(script, ["smoke", leg], env),
       ]);
       expect(results.map((result) => result.status).sort()).toEqual([0, 1]);
-      expect(results.find((result) => result.status === 1)?.stderr).toContain("already exists");
+      const refusal = results.find((result) => result.status === 1)?.stderr;
+      // The later-era slice leg is job-supervised (issue #507): the second
+      // supervisor is refused at the job's single-flight lock, before any
+      // compile. Publication stays exclusive for everything else.
+      if (script === "record-later-eras.mjs" && leg === "slice") {
+        expect(refusal).toContain("already running this job");
+      } else {
+        expect(refusal).toContain("already exists");
+      }
       const artifact = path.join(envRoot, `${name}-smoke-${leg === "slice" ? "slice" : "report"}.json`);
       const first = readFileSync(artifact, "utf8");
       expect(JSON.parse(first).tier).toBe("smoke");
@@ -580,7 +592,12 @@ describe("the later-eras smoke CLI", () => {
     expect(row.stopKind).toBe("century");
     expect(row.creditedHours).toBeGreaterThanOrEqual(LATER_ERA_SMOKE.stopCreditedHours);
     expect(row.creditedHours).toBeLessThan(LATER_ERA_MIN_HOURS);
-    expect(slice.stdout).toContain("smoke slice:");
+    // The smoke slice rides the production job pipeline (issue #507): the
+    // bounded walk runs on a worker process under the job supervisor, and
+    // the summary names the completed job and its published artifact.
+    expect(slice.stdout).toContain("job-slice — complete");
+    expect(slice.stdout).toContain("1/1 done");
+    expect(slice.stdout).toContain("published smoke-slice →");
 
     const compose = spawnRecorder("record-later-eras.mjs", ["smoke", "compose"], { FLOWSYNTH_SMOKE_OUTPUT: envRoot });
     expect(compose.status).toBe(0);

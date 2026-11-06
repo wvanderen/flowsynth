@@ -11,7 +11,7 @@
 // TypeScript surface lives in runtime.d.mts.
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { lstat, mkdir, mkdtemp, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rename, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -271,6 +271,48 @@ export async function refuseExistingArtifact(filePath, what) {
     throw error;
   }
   throw existingArtifactError(filePath, what);
+}
+
+// ── Issue #507: atomic evidence persistence ────────────────────────────
+
+// Serialize, write a uniquely named temporary sibling, then rename it
+// over the target. The target only ever changes by one atomic rename, so
+// a reader — or a kill at any point — sees the previous bytes or the
+// complete new ones, never a partial write that could pass for completed
+// evidence. Temporaries are cleaned on every handled failure; a hard kill
+// can leave one behind, and the job supervisor clears stale temporaries
+// when it takes a directory over (no other writer can be alive then).
+export async function writeJsonAtomic(filePath, payload) {
+  const text = JSON.stringify(payload, null, 2);
+  const directory = path.dirname(filePath);
+  const base = path.basename(filePath);
+  const tmp = path.join(directory, `.${base}.tmp-${process.pid}-${Math.random().toString(36).slice(2)}`);
+  let handle;
+  try {
+    handle = await open(tmp, "wx", 0o644);
+    await handle.writeFile(text);
+    await handle.sync();
+    await handle.close();
+    handle = undefined;
+    await rename(tmp, filePath);
+  } catch (error) {
+    if (handle !== undefined) await handle.close().catch(() => {});
+    await rm(tmp, { force: true }).catch(() => {});
+    throw error;
+  }
+}
+
+// Remove a directory's stale atomic-write temporaries. Only ever called
+// while this process holds the directory's supervision lock, so nothing
+// else is mid-write.
+export async function clearStaleTemporaries(directory) {
+  const entries = await readdir(directory).catch((error) => {
+    if (error?.code === "ENOENT") return [];
+    throw error;
+  });
+  await Promise.all(entries
+    .filter((name) => name.includes(".tmp-"))
+    .map((name) => rm(path.join(directory, name), { force: true })));
 }
 
 export async function writeSmokeArtifact(filePath, payload, what) {
