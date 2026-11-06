@@ -342,6 +342,8 @@ async function main() {
       "budget-days": { type: "string" },
       out: { type: "string" },
     },
+    // The variant is validated above; parseArgs only reads the flags.
+    allowPositionals: true,
     strict: true,
   });
   const stopHours = values["stop-hours"] !== undefined ? Number(values["stop-hours"]) : undefined;
