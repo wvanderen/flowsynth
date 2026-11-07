@@ -13,10 +13,11 @@
 // matches what the recorded evidence regenerates. `write` rewrites only
 // the fenced generated region of each document — the handwritten
 // interpretation around it is never touched — through an exclusive
-// temporary file and an atomic rename, so concurrent work is neither
-// clobbered nor observed half-written. `--out` publishes the rendered
+// temporary file and an atomic rename, with a generator lock and an
+// optimistic concurrent-edit check before publication. `--out` publishes the rendered
 // sections to a fresh path for inspection without touching the documents.
-import { open, readFile, rename } from "node:fs/promises";
+import { open, readFile } from "node:fs/promises";
+import { updateReportDocument } from "./dev/update-report-document.mjs";
 import { join } from "node:path";
 import { compileEngine } from "./dev/compile-engine.mjs";
 
@@ -111,19 +112,9 @@ for (const { id, doc, rendered } of [laterEra, century]) {
     console.log(`${doc}: generated figures match the recorded evidence.`);
     continue;
   }
-  // Exclusive temporary file in the document's own directory (so the
-  // final rename stays on one filesystem), then an atomic rename: a
-  // concurrent reader sees the old or the new document, never a
-  // half-written one, and two invocations cannot collide on the
-  // temporary path.
-  const staging = join(root, "docs", `.figures-${process.pid}-${Math.random().toString(36).slice(2)}.tmp`);
-  const handle = await open(staging, "wx");
-  try {
-    await handle.writeFile(updated, "utf8");
-  } finally {
-    await handle.close();
-  }
-  await rename(staging, docs(doc));
+  // Re-read under the generator lock; never publish the earlier snapshot.
+  // Ordinary editor changes during staging cause an explicit refusal.
+  await updateReportDocument(docs(doc), (current) => module.spliceGeneratedBlock(current, id, rendered));
   console.log(`${doc}: generated section rewritten from the recorded evidence; handwritten interpretation untouched.`);
 }
 if (process.exitCode === 1) {

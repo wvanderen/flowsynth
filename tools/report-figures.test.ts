@@ -205,6 +205,12 @@ describe("cheap validation rejects corrupted evidence", () => {
     expect(() => validateLaterEraEvidence(report, laterEraInputs())).toThrow(/provenance|fingerprint/i);
   });
 
+  it("rejects composed route orders missing from the published probe", () => {
+    const report: any = laterEraReport();
+    report.routeProbes[0].orders.pop();
+    expect(() => validateLaterEraEvidence(report, laterEraInputs())).toThrow(/route probes disagree/);
+  });
+
   it("rejects a route flag the recorded forwards contradict", () => {
     const inputs: any = laterEraInputs();
     inputs.probe.banks[0].routeDemonstrated = false;
@@ -262,6 +268,13 @@ describe("stale generated figures and splice integrity", () => {
       .toBe(doc.replace(generatedBlock(LATER_ERA_BLOCK_ID, rendered), ""));
     // The handwritten paragraphs outside the block survive untouched.
     expect(altered).toContain("These results do not satisfy the new-frontier-effort requirement.");
+  });
+
+  it("rejects duplicate stale blocks even when one block is current", () => {
+    const current = generatedBlock(LATER_ERA_BLOCK_ID, "current");
+    const stale = generatedBlock(LATER_ERA_BLOCK_ID, "stale");
+    expect(figuresCurrent(current + "\n" + stale, LATER_ERA_BLOCK_ID, "current")).toBe(false);
+    expect(figuresCurrent(stale + "\n" + current, LATER_ERA_BLOCK_ID, "current")).toBe(false);
   });
 
   it("refuses to splice when the markers are missing or duplicated", () => {

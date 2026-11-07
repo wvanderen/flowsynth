@@ -232,7 +232,11 @@ export function generatedBlock(id: string, rendered: string): string {
 // document's generated region must equal what the recorded evidence
 // regenerates, byte for byte.
 export function figuresCurrent(doc: string, id: string, rendered: string): boolean {
-  return doc.includes(generatedBlock(id, rendered));
+  try {
+    return spliceGeneratedBlock(doc, id, rendered) === doc;
+  } catch {
+    return false;
+  }
 }
 
 // Replace (or, for first publication, require) the document's generated
@@ -450,8 +454,8 @@ export function validateLaterEraEvidence(report: LaterEraReportJson, inputs: Lat
   report.routeProbes.forEach((bank, index) => validateRouteBank(bank, `routeProbes[${index}]`, failures));
   probe.banks.forEach((bank, index) => validateRouteBank(bank, `probe banks[${index}]`, failures));
   if (!deepEqual(
-    report.routeProbes.map((bank) => [bank.frontier, bank.routeDemonstrated]),
-    probe.banks.map((bank) => [bank.frontier, bank.routeDemonstrated]),
+    report.routeProbes,
+    probe.banks,
   )) {
     failures.add("the composed route probes disagree with the published probe evidence");
   }
