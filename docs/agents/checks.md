@@ -19,7 +19,7 @@ A second failure this closes: checks ran on whatever Node the shell happened to 
 
 ## Required once per revision; targeted while iterating
 
-Final verification of a revision is one successful execution of each required suite at that revision — `npm run check` and `npm test` — plus the capture pass when the change touches a UI surface. Both halves of that sentence bind: *once* is the requirement, and *at that revision* is the operative bound. These runs are the last thing before hand-off, at the commit being offered for review.
+Final verification of a revision is one successful execution of each required suite at that revision — `npm run check` and `npm test` — plus the capture pass when the change touches a UI surface. Both halves of that sentence bind: *once* is the requirement, and *at that revision* is the operative bound. These runs are the last thing before hand-off, at the commit being offered for review — the final evidence of [the review workflow](review-workflow.md)'s stage 5, run only after that workflow's source gate and freeze.
 
 While iterating, targeted runs are the tool and carry no recording duty: rerun the failing file, chase one case with `-t`, sanity-check UI work against its project with `--project ui`. None of that obliges a matching rerun later — the full pass at the end supersedes the interim state.
 

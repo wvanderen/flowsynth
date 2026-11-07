@@ -20,6 +20,10 @@ Briefs for implementation agents carry intent, priorities, non-goals, and one-pl
 
 Work against acceptance criteria maps every criterion to a named test or recorded verification in one completion record; review checks the mapping, never the suite count. See `docs/agents/verification.md`.
 
+## Review workflow
+
+Implementation and targeted checks first, then a preliminary source/spec review whose findings are resolved together as one revision, then the source freeze, and only then the final recordings, captures, and acceptance: the preliminary review and the final acceptance are different gates, and neither substitutes for the other. A required source fix after the freeze invalidates the affected evidence by the standing rules and regenerates it honestly — it is never relabeled as current. See `docs/agents/review-workflow.md`.
+
 ## UI surfaces
 
 When changing or reviewing a UI surface (panel, sheet, readout, control, or its copy), read `docs/instrument-standards.md` first and judge the changed surface against the pinned prototype there; record checks that cannot run as unavailable.
@@ -33,5 +37,6 @@ Fresh worktrees carry no `node_modules` — run `npm install` before your first 
 - Targeted iteration: `npx vitest run <file> -t '<name>'` for one case, `npx vitest run --project ui` for the UI files alone while iterating. Any source change invalidates earlier runs — finish each revision with targeted reruns for the touched area, then one full pass.
 - `npm run test:calendar` — the calendar-sensitive regressions (`src/engine/calendar.test.ts`, `src/engine/goals.test.ts`) run targeted under UTC and a DST-observing zone. Not part of the per-revision full-pass obligation; owed when touching calendar-adjacent engine behavior (goal occurrence boundaries, playthrough schedule arithmetic), and run in CI on every push.
 - Browser evidence is a separate requirement, not a suite: when the change touches a UI surface, launch this checkout with `npm run dev` — it picks a free port, prints the served worktree, commit, source cleanliness, and URL, and tees logs to `.dev/server.log` — then run the capture preflight (`node tools/evidence-preflight.mjs --url <url>`) and capture desktop and phone evidence per `docs/agents/visual-evidence.md`.
+- Balance-calibration and playthrough recordings: follow `docs/agents/recordings.md` — the one guide to the recorders, their commands, and the job lifecycle; none of that is restated here.
 
 The authoritative description of check selection, invalidation, and a worked UI example: `docs/agents/checks.md`.
