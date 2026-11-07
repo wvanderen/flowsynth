@@ -19,8 +19,20 @@ import {
   type PlaythroughSource,
 } from "../src/engine/playthrough";
 import { serialize, deserialize } from "../src/engine/save";
-import { LATER_ERA_MAX_HOURS, LATER_ERA_MIN_HOURS, LATER_ERA_SEEDS } from "./later-eras";
-import { TARGET_WINDOW_MAX_HOURS, TARGET_WINDOW_MIN_HOURS, meaningfulDecisions, type DecisionGap } from "./first-prestige";
+import { LATER_ERA_SEEDS } from "./later-eras";
+import { meaningfulDecisions, type DecisionGap } from "./first-prestige";
+import {
+  BASELINE_SESSION_MINUTES,
+  CENTURY_BUDGET_DAYS,
+  CENTURY_MARK_HOURS,
+  CENTURY_MEASUREMENT_VERSION,
+  CENTURY_POLICIES,
+  LONG_GAP_CREDITED,
+  LONG_SESSION_MINUTES,
+  LATER_ERA_WINDOW as LATER_WINDOW,
+  OPENING_WINDOW,
+  SPARSE_ACQUISITION_SEEDS,
+} from "./evaluation-declaration";
 import { createInitialState } from "../src/engine/state";
 import { investment } from "../src/engine/economy";
 import { frontier as boardFrontier } from "../src/engine/capacity-calibration";
@@ -70,36 +82,27 @@ export {
 // The declared seed matrix (issues #490/#491; the same eight).
 export const CENTURY_SEEDS: readonly number[] = LATER_ERA_SEEDS;
 
-// The declared session shapes: the suite's baseline two-25-minute day and
-// its two-60-minute variant.
-export const CENTURY_SESSION_MINUTES = { baseline: 25, long: 60 } as const;
+// The declared session shapes, mark, budgets, policies, sparse seeds,
+// gap threshold, and measurement version live in the shared evaluation
+// declaration (issue #512): one reviewable place, importable without the
+// engine so the recorded-report figure generator can read them without
+// simulating.
+export {
+  CENTURY_BUDGET_DAYS,
+  CENTURY_MARK_HOURS,
+  CENTURY_MEASUREMENT_VERSION,
+  CENTURY_POLICIES,
+  type CenturyPolicyId,
+  LONG_GAP_CREDITED,
+  SPARSE_ACQUISITION_SEEDS,
+} from "./evaluation-declaration";
 
-// The declared century mark: the credited-flow horizon this evaluation
-// walks through. A validation target from ADR-0078, not a timer.
-export const CENTURY_MARK_HOURS = 100;
-
-// The budgets sized past the mark: a baseline day credits 50 minutes of
-// practice (120 days reach the mark), a long day credits 2 hours (50
-// days). A budget that outlives an economy's banks leaves the exhausted
-// stretch explicitly recorded, never hidden behind an extended goalpost.
-export const CENTURY_BUDGET_DAYS = { baseline: 140, long: 60 } as const;
-
-// The five declared policies: prompt and pushing (issues #468–#490) plus
-// the three World-comparison policies (issue #491).
-export const CENTURY_POLICIES = ["prompt", "pushing", "support", "combat", "ignoring"] as const;
-export type CenturyPolicyId = (typeof CENTURY_POLICIES)[number];
-
-// The declared sparse-acquisition stress fixtures: seeds whose recorded
-// acquisition stayed weakest across the matrix (roll acceptances per
-// credited hour and distinct acquired types through the opening era).
-// Declared here, measured in every recorded row, so the sparse walks ride
-// the same declared matrix instead of a hand-built lucky board.
-export const SPARSE_ACQUISITION_SEEDS: readonly number[] = [11, 42];
+export const CENTURY_SESSION_MINUTES = { baseline: BASELINE_SESSION_MINUTES, long: LONG_SESSION_MINUTES } as const;
 
 // The era windows (ADR-0078 as revised): the opening era's 8–12 credited
-// hours (#490's calibrated range) and later eras' roughly 5–10 (#491's).
-export const OPENING_WINDOW = { minHours: TARGET_WINDOW_MIN_HOURS, maxHours: TARGET_WINDOW_MAX_HOURS };
-export const LATER_WINDOW = { minHours: LATER_ERA_MIN_HOURS, maxHours: LATER_ERA_MAX_HOURS };
+// hours (#490's calibrated range) and later eras' roughly 5–10 (#491's),
+// declared once in the shared evaluation declaration.
+export { OPENING_WINDOW, LATER_WINDOW };
 
 // One era's timing class against its window. Era 0 is the opening era and
 // reads the 8–12 window; every later era reads 5–10. An open era stays
@@ -128,7 +131,6 @@ export function classifyCenturyEra(era: PlaythroughEraLedger): CenturyEraClass {
 // action affordable, so a recorded gap is exactly a stretch where nothing
 // was affordable and nothing was found — the affordability wait the
 // century criterion names.
-export const LONG_GAP_CREDITED = 2 * 3600;
 
 export interface CenturyEraView {
   readonly index: number;
@@ -527,8 +529,8 @@ export function acquisitionRead(record: PlaythroughRecord): AcquisitionRead {
 // timeline, the acquisition read, the numeric read, the coarse
 // trajectory, and the honest stop.
 // Version 1 omitted observation-boundary waits. Never compose its
-// summaries as if they demonstrated the version 2 decision-gap criterion.
-export const CENTURY_MEASUREMENT_VERSION = 2;
+// summaries as if they demonstrated the version 2 decision-gap criterion;
+// the version itself is declared in the shared evaluation declaration.
 
 export interface CenturyRow {
   readonly measurementVersion: number;
