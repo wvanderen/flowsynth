@@ -28,7 +28,7 @@ Prioritize behavioral fidelity and boundary cases over test volume. Before writi
 
 ## Review: check the mapping against the requirement
 
-Review reads the record beside the originating issue and asks, per criterion:
+This mapping check is the final acceptance gate's core work; the preliminary source/spec review that precedes the source freeze is [the review workflow](review-workflow.md)'s first gate, and it never claims the final evidence this section reads. Review reads the record beside the originating issue and asks, per criterion:
 
 1. **Is it mapped?** Every criterion from the issue appears in the record — including the ones the implementation didn't touch.
 2. **Does the named case actually demonstrate it?** Read the test's assertions, not its name. A test named for the behavior that asserts something weaker does not demonstrate the behavior.
