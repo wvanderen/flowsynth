@@ -6,7 +6,6 @@ import { exportPlaythroughArtifact, PLAYTHROUGH_ARTIFACT_VERSION } from "../engi
 import { ARETE_HORIZON } from "../engine/accumulator";
 import { BALANCE } from "../engine/constants";
 import { sameHex } from "../engine/hex";
-import { syncRates } from "../engine/economy";
 import { createAppFixture } from "./testing/app-fixture";
 import * as actions from "../engine/actions";
 import { composePlaythroughRecipe } from "../engine/playthrough";
@@ -14,19 +13,59 @@ import { scenarioOf } from "../engine/scenarios";
 import { createInitialState, createModule } from "../engine/state";
 import { STORAGE_KEY } from "../engine/save";
 import type { GameState } from "../engine/types";
+import { SUPPLIED_ENGINE_SOURCE, suppliedArtifact, suppliedEvent, suppliedRecord, suppliedSnapshot, suppliedState, type SuppliedRecordFacts } from "./testing/supplied-playthrough";
 
-// The playthrough's application-command fixtures (issues #468/#469,
-// parent #465): small deterministic known-outcome runs driven through the
-// same command the dev panel's run control and agent access share —
-// schedule accounting, reproducibility, recorded decisions, completion
-// with the honest zero claim, the pushing policy's claim-target bank and
-// next-era recovery, budget exhaustion, and the visible result wiring.
-// The runner is a pure engine walk: a run never touches the live state or
-// the save, so every case boots a plain dev app and keeps it watching.
-// The pushing fixtures ride one 600-minute daily session on the same
-// five-minute breather — a declared schedule, not the default: the same
-// credited-time economics at a fraction of the boundary breaks, so the
-// long push to the first positive claim stays a test-sized run.
+// The playthrough presentation tests (issues #468/#469/#470/#473, the
+// presentation/integration split of #510, ADR-0085): two kinds of
+// evidence, each owning its own guarantees.
+//
+// **Presentation cases read supplied records.** Rendering, inspection,
+// selection, marker classification, the note's readouts, and the
+// import/read artifact paths declare explicit records through
+// ./testing/supplied-playthrough and bring them in through the real
+// artifact boundary — no walk establishes a UI setup, and no case pins a
+// shipped balance amount or completion day: every expectation derives
+// from the record's own declared facts. A supplied record marks its
+// constructed origin (an imported library entry with "≠ current"
+// provenance) and is never reachability evidence. Records are isolated:
+// each case constructs its own.
+//
+// **A named integration set walks the real engine.** Reachability and
+// command-to-engine behavior stay real walks:
+// - reachability: the prompt door's honest zero bank ("completion"), the
+//   pushing policy's worthwhile-prestige journey, its unfinished recovery
+//   at the budget exit, and the incomplete claim-target outcome ("the pushing
+//   policy");
+// - command-to-engine: the recipe composition and rejection seams ("the
+//   declared recipe", "declared tuning overrides", "declared response
+//   curves"), the schedule's session/goal/calendar arithmetic ("schedule
+//   accounting"), walk reproducibility and provenance
+//   ("reproducibility"), the record's event shapes and the walk's
+//   isolation from the live state and ordinary save ("the prompt
+//   policy's record"), budget exhaustion, the frontier cap and the World
+//   placement rules ("the pushing policy"), the checkpoint preset
+//   install ("the run artifact boundary"), and the panel and terminal
+//   wiring ("the panel's visible wiring", "the curves surface's visible
+//   wiring", "the run artifact boundary"). The walk's isolation from the
+//   live state and ordinary save is owned by "the prompt policy's
+//   record", echoed on the tuned walk in "declared tuning overrides"
+//   and on the artifact commands in "the run artifact boundary".
+// Which figure the claim curve banks, which day a journey completes, and
+// where the horizon sits are balance outcomes — engine and calibration
+// verification: the frontier curve (`src/engine/world.test.ts`), the
+// walked checkpoint banks (`src/engine/progression-presets.test.ts`),
+// and the declared evaluation windows (`tools/first-prestige.test.ts`,
+// `tools/century.test.ts`). The integration cases assert reachability
+// and record-derived structure, never those shipped figures.
+//
+// The application-command fixtures (issues #468/#469, parent #465) boot
+// a plain dev app per case: the runner is a pure engine walk that never
+// touches the live state or the save, so every integration case keeps
+// the app watching. The pushing integration cases ride one 600-minute
+// daily session on the same five-minute breather — a declared schedule,
+// not the default: the same credited-time economics at a fraction of the
+// boundary breaks, so the long push to the first positive claim stays a
+// test-sized run.
 const fixture = createAppFixture();
 const boot = fixture.boot;
 
@@ -213,7 +252,11 @@ describe("schedule accounting", () => {
 });
 
 describe("the prompt policy's record", () => {
-  it("records purchases, placement, milestones, sessions, and the engine's own decline reasons", () => {
+  // The walk's isolation owner (issue #510's integration set): the
+  // command drives the real engine walk on its own candidate state, and
+  // the run — any run, tuned or curved — never touches the live state or
+  // the ordinary save.
+  it("records purchases, placement, milestones, sessions, and the engine's own decline reasons, and never touches the live state or the save", () => {
     app = boot(undefined, true);
     const before = app.state;
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -269,15 +312,17 @@ describe("completion", () => {
   it("prestiges at first eligibility and banks the honest zero-Arete claim", { timeout: 120_000 }, () => {
     app = boot(undefined, true);
     // The budget stays clear of the crossing: the recipe completes inside
-    // it, so the stop is the prestige, never the budget.
+    // it, so the stop is the prestige, never the budget. The reachability
+    // facts only — how far the era measure stands below the horizon and
+    // which day the door opens are balance outcomes owned by engine and
+    // calibration verification (the horizon pin and the frontier curve in
+    // src/engine/world.test.ts, the first-prestige windows in tools/).
     const record = app.devRunPlaythrough({ budgetDays: 20 });
     expect(record.complete).toBe(true);
     expect(record.stop.kind).toBe("prestige");
-    expect(record.days).toBeLessThan(20);
     expect(record.claims).toEqual([0]);
     expect(record.state.prestiges).toBe(1);
     expect(record.state.arete).toBe(0);
-    expect(record.state.eraEarned).toBeLessThan(7e6);
     const prestige = record.events.find((event) => event.kind === "prestige")!;
     expect(prestige.milestone).toBe(true);
     expect(prestige.label).toBe("Prestige 1 — banked 0 Arete");
@@ -335,6 +380,52 @@ describe("the pushing policy", () => {
     expect(record.stop.reason).toContain("worthwhile-prestige journey");
   });
 
+  it("leaves unfinished recovery marks explicitly unreached at the budget exit", () => {
+    app = boot(undefined, true);
+    const before = JSON.stringify(app.state);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      // Start at a real bank with a high pre-reset rate and a working
+      // charge line. The one-minute next era cannot regain that rate or
+      // the horizon; no action or recovery result is mocked.
+      const generator = createModule(state, "focusKeyed");
+      generator.pos = { q: 1, r: 0 };
+      state.modules.push(generator);
+      state.modules[0]!.level = 100;
+      state.eraEarned = BALANCE.world.entryNous * 10;
+      state.totalEarned = state.eraEarned;
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+      claimTarget: BALANCE.world.claimBase,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
+    expect(record.complete).toBe(false);
+    expect(record.stop.kind).toBe("budget");
+    expect(record.stop.reason).toContain("inside the worthwhile-prestige journey");
+    expect(record.claims).toHaveLength(1);
+    expect(record.claims[0]).toBeGreaterThan(0);
+    expect(record.state.prestiges).toBe(1);
+    expect(record.creditedSeconds).toBe(60);
+    expect(record.recovery).not.toBeNull();
+    expect(record.recovery!.claim).toBe(record.claims[0]);
+    expect(record.recovery!.lastingPurchase).not.toBeNull();
+    expect(record.recovery!.columnDeployed).not.toBeNull();
+    expect(record.recovery!.weaponDeployed).toBeNull();
+    expect(record.recovery!.productionRegained).toBeNull();
+    expect(record.recovery!.eligibilityReached).toBeNull();
+    expect(record.recovery!.frontierAdvanced).toBeNull();
+    expect(record.events.some(event => event.milestone && event.label.startsWith("Recovery —") &&
+      /production regained|eligibility reached|frontier advanced/.test(event.label))).toBe(false);
+    expect(app.devPlaythroughNote).toContain("blade unreached");
+    expect(app.devPlaythroughNote).toContain("rate unreached, door unreached, frontier unreached");
+    expect(app.devPlaythroughNote).not.toContain("✓");
+    expect(JSON.stringify(app.state)).toBe(before);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+  });
+
   it("keeps World occupants in the tray when no cell satisfies their adjacency rule", () => {
     app = boot(undefined, true);
     const scenario = scenarioOf("fresh-start")!;
@@ -369,29 +460,38 @@ describe("the pushing policy", () => {
     expect(app.state).toBe(before);
     expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
 
-    // The claims: the pushing policy held the first-eligibility door (where
-    // the prompt run banks zero) and banked the first worthwhile claim —
-    // 4 Arete, the curve's honest floor where the 600-minute session
-    // carried the era measure past the entry at the century-calibrated
-    // slope (issue #492) — then banked again to advance the frontier
-    // beyond the claimed frontier. The second bank reads 3: the rig's
-    // first kill pays its era bonus, and the next door banks the curve's
-    // honest figure there.
+    // The reachability facts: the pushing policy held the first-eligibility
+    // door (where the prompt run banks zero), banked a positive claim,
+    // banked again past it, and completed the worthwhile-prestige journey
+    // inside the budget. How much the curve pays at each bank and which
+    // day the journey completes are balance outcomes — owned by engine
+    // and calibration verification (the frontier curve in
+    // src/engine/world.test.ts, the walked banks and their days in
+    // src/engine/progression-presets.test.ts, the declared windows in
+    // tools/) — so this case reads the record's own structure: the
+    // frontier stands exactly at the claims' sum, each bank having
+    // advanced it by the banked step, and the journey's stop names the
+    // record's own day and frontier.
     expect(record.complete).toBe(true);
     expect(record.stop.kind).toBe("recovered");
-    expect(record.stop.reason).toContain("worthwhile-prestige journey completed at day 9");
+    expect(record.claims.length).toBe(2);
+    expect(record.claims[0]).toBeGreaterThan(0);
+    expect(record.claims[1]).toBeGreaterThan(0);
+    expect(record.state.world.frontier).toBe(record.claims[0]! + record.claims[1]!);
+    expect(record.stop.reason)
+      .toContain(`journey completed at day ${record.days} — the frontier advanced to ${record.state.world.frontier} Arete.`);
     expect(record.claimTarget).toBe(2);
-    expect(record.claims).toEqual([4, 3]);
     expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
-    // The earned spending: the Catalog entry with the first claim and the
-    // first two Charge Columns — nothing granted, nothing minted. The
-    // starter Charge Blade is the first World-eligible claim's own grant.
-    expect(record.areteSpent).toEqual({ entry: 1, discounts: 0, ceilings: 0, columns: 2, rowUnlocks: 0, hone: { chargeBlade: 0 } });
+    // The earned spending: the Catalog entry with the first claim and at
+    // least the first Charge Column — nothing granted, nothing minted.
+    // The starter Charge Blade is the first World-eligible claim's own
+    // grant; the exact rung count the bank funds rides the balance.
+    expect(record.areteSpent.entry).toBe(1);
+    expect(record.areteSpent.columns).toBeGreaterThanOrEqual(1);
     expect(record.state.world.starterWeaponGranted).toBe(true);
-    expect(record.state.arete).toBe(3);
-    expect(record.state.world.frontier).toBe(7);
+    expect(record.state.arete).toBeLessThan(record.claims[0]! + record.claims[1]!);
     // No grants: every ν the state ever banked is what the run earned —
     // the sessions and their breathers, each recorded separately. At this
     // scale the summations drift by float rounding alone, so the
@@ -429,26 +529,25 @@ describe("the pushing policy", () => {
     expect(worldEvents.some((event) => event.label.startsWith("Placed the chargeBlade at"))).toBe(true);
     expect(worldEvents.some((event) => event.label.startsWith("Placed a Charge Column at"))).toBe(true);
 
-    // The worthwhile-prestige ledger, both clocks, every mark measured
-    // from the first bank: the Catalog entry landed the moment the walk
-    // could spend, the Column with it; the blade deployed beside the fight
-    // once era 2 re-revealed w0; the next era regained the pre-reset
-    // production and reached the door again together; and the second bank
-    // advanced the frontier. Each mark's credited practice cannot exceed
+    // The worthwhile-prestige ledger: every mark reached, each measured
+    // from the first bank on both clocks, in the journey's order — the
+    // purchase landing the moment the walk could spend, the blade and the
+    // rate following, the next door, and the frontier advancing beyond
+    // the claimed frontier. Each mark's credited practice cannot exceed
     // its simulated elapsed time.
     expect(record.recovery).not.toBeNull();
     const recovery = record.recovery!;
-    expect(recovery.claim).toBe(4);
+    expect(recovery.claim).toBe(record.claims[0]!);
     expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0 });
     expect(recovery.lastingPurchaseLabel).toBe("Catalog entry");
     // The Column lands the moment it is bought: the opening board already
     // carries a charge line — a receiving module beside the generator —
     // so the purchase functions from its first between-sessions read.
     expect(recovery.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
-    expect(recovery.weaponDeployed).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
-    expect(recovery.productionRegained).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
-    expect(recovery.eligibilityReached).toEqual({ elapsed: 3 * 86_400, credited: 3 * 600 * 60 });
-    expect(recovery.frontierAdvanced).toEqual({ elapsed: 4 * 86_400, credited: 4 * 600 * 60 });
+    expect(recovery.weaponDeployed).not.toBeNull();
+    expect(recovery.productionRegained).not.toBeNull();
+    expect(recovery.eligibilityReached).not.toBeNull();
+    expect(recovery.frontierAdvanced).not.toBeNull();
     expect(recovery.preResetRate).toBeGreaterThan(0);
     for (const mark of [recovery.lastingPurchase!, recovery.weaponDeployed!, recovery.columnDeployed!,
       recovery.eligibilityReached!, recovery.productionRegained!, recovery.frontierAdvanced!]) {
@@ -459,66 +558,55 @@ describe("the pushing policy", () => {
     expect(record.events.some((event) => event.milestone && event.label.includes("next prestige eligibility reached"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label.includes("pre-reset production regained"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Catalog entry)")).toBe(true);
-    expect(record.events.some((event) => event.milestone && event.label === "Recovery — frontier advanced to 7 Arete")).toBe(true);
+    expect(record.events.some((event) => event.milestone && /Recovery — frontier advanced to \d+ Arete/.test(event.label))).toBe(true);
+    // The eligibility settle read the era measure past the horizon — the
+    // door's own gate (ARETE_HORIZON, engine-pinned in
+    // src/engine/world.test.ts): the milestone's own snapshot carries
+    // the settle's board, so the walk-level "the settle read the era
+    // measure" evidence rides the real journey, no mocks.
+    const eligibilityEvent = record.events.find((event) => event.milestone && event.label.includes("next prestige eligibility reached"))!;
+    expect(completeSnapshotsOf(record)[eligibilityEvent.snapshot]!.state.eraEarned).toBeGreaterThanOrEqual(ARETE_HORIZON);
 
-    // The readable record: the discoveries rode era 1 (the claim's depth),
-    // the prestige lines name their banks, and the note carries the
-    // journey's read.
+    // The readable record: the prestige lines name their banks, and the
+    // note carries the journey's read. The exact note figures are the
+    // readout's own presentation evidence (supplied records own that
+    // rendering); the walked note names the record's own facts.
     const prestiges = record.events.filter((event) => event.kind === "prestige");
-    expect(prestiges.map((event) => event.label)).toEqual(["Prestige 1 — banked 4 Arete", "Prestige 2 — banked 3 Arete"]);
+    expect(prestiges.map((event) => event.label)).toEqual([
+      `Prestige 1 — banked ${record.claims[0]} Arete`,
+      `Prestige 2 — banked ${record.claims[1]} Arete`,
+    ]);
     for (const event of prestiges) expect(event.milestone).toBe(true);
-    expect(app.devPlaythroughNote).toContain("claim 4, 3/2 Arete");
-    expect(app.devPlaythroughNote).toContain("recovery — bank 4, purchase 0.0d/0m (Catalog entry)");
-    expect(app.devPlaythroughNote).toContain("frontier 4.0d/2400m");
-    expect(app.devPlaythroughNote).toContain("The worthwhile-prestige journey completed at day 9");
+    expect(app.devPlaythroughNote).toContain("Pushing ✓");
+    expect(app.devPlaythroughNote).toContain("recovery — bank");
+    expect(app.devPlaythroughNote).toContain(`journey completed at day ${record.days}`);
   });
 
-  it("treats an unreached claim target as an explicit incomplete outcome, never a fabricated bank", { timeout: 120_000 }, () => {
+  it("treats an unreached claim target as an explicit incomplete outcome, never a fabricated bank", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 36, budgetDays: 4, schedule: PUSHING_SCHEDULE });
-    // The push ran well past the first eligibility — the era measure the
-    // prompt door opens at — but the 36-Arete entitlement lives decades
-    // past the World's entry, and the budget ended first.
+    // A real walk, at the test-sized one-minute session: the push plays
+    // its day and the budget ends — the 36-Arete entitlement lives
+    // decades past the World's entry, far past anything the budget
+    // reaches. How deep an era measure credited time carries, and how
+    // far past the door a multi-day push rides, are balance outcomes —
+    // the calibration windows own them (tools/first-prestige.test.ts,
+    // tools/century.test.ts), and the journey case above owns the real
+    // bank past the door. This case owns the outcome contract: a target
+    // the budget cannot reach is named unreached, and nothing is
+    // fabricated.
+    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 36, budgetDays: 1,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
     expect(record.complete).toBe(false);
     expect(record.stop.kind).toBe("budget");
     expect(record.claimTarget).toBe(36);
     expect(record.claims).toEqual([]);
     expect(record.state.prestiges).toBe(0);
-    expect(record.state.eraEarned).toBeGreaterThan(ARETE_HORIZON);
     expect(record.recovery).toBeNull();
-    expect(record.lastMilestone).toBeTruthy();
     expect(record.bottleneck).toContain("36-Arete");
     // Nothing was spent, because nothing was ever banked.
     expect(record.areteSpent).toEqual({ entry: 0, discounts: 0, ceilings: 0, columns: 0, rowUnlocks: 0, hone: { chargeBlade: 0 } });
     expect(app.devPlaythroughNote).toContain("Pushing ✗");
     expect(app.devPlaythroughNote).toContain("claim none/36 Arete");
-  });
-
-  it("reports a half-recovered era with the missing measures explicitly unreached", { timeout: 300_000 }, () => {
-    app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 6, schedule: PUSHING_SCHEDULE });
-    // The bank landed at the World's entry depth and the next morning's
-    // manage spent it — Catalog entry and Charge Columns. The Column
-    // lands immediately: the opening board's charge line is topological
-    // (a receiving module beside the generator), so the purchase
-    // functions from its first read. The next era was still rebuilding
-    // when the budget ended — blade, rate, and door are all explicitly
-    // unreached, a slower recovery being valid evidence no fabricated
-    // mark may replace.
-    expect(record.complete).toBe(false);
-    expect(record.stop.kind).toBe("budget");
-    expect(record.stop.reason).toContain("worthwhile-prestige journey");
-    expect(record.claims).toEqual([4]);
-    expect(record.recovery).not.toBeNull();
-    expect(record.recovery!.claim).toBe(4);
-    expect(record.recovery!.lastingPurchase).not.toBeNull();
-    expect(record.recovery!.columnDeployed).toEqual({ elapsed: 0, credited: 0 });
-    expect(record.recovery!.weaponDeployed).toBeNull();
-    expect(record.recovery!.eligibilityReached).toBeNull();
-    expect(record.recovery!.productionRegained).toBeNull();
-    expect(record.recovery!.frontierAdvanced).toBeNull();
-    expect(app.devPlaythroughNote).toContain("blade unreached, column 0.0d/0m, rate unreached");
-    expect(app.devPlaythroughNote).not.toContain("✓");
   });
 
   it("reproduces the pushing run from the same recipe and identifies a changed target", { timeout: 240_000 }, () => {
@@ -548,8 +636,12 @@ describe("declared tuning overrides", () => {
     app = boot(undefined, true);
     const tuning = app.devTuning();
     expect(tuning.map((param) => param.key)).toEqual(["openingGrant", "claimBase"]);
-    expect(tuning.find((param) => param.key === "openingGrant")!.default).toBe(12);
-    expect(tuning.find((param) => param.key === "claimBase")!.default).toBe(2);
+    // The catalog reads the shipped balance it declares — the figures
+    // themselves are engine verification's pins (the frontier curve in
+    // src/engine/world.test.ts), so a controlled balance change moves
+    // that pin, never this wiring.
+    expect(tuning.find((param) => param.key === "openingGrant")!.default).toBe(BALANCE.openingGrant);
+    expect(tuning.find((param) => param.key === "claimBase")!.default).toBe(BALANCE.world.claimBase);
     for (const param of tuning) {
       expect(param.max).toBeGreaterThan(param.min);
       expect(param.description).toBeTruthy();
@@ -573,8 +665,10 @@ describe("declared tuning overrides", () => {
     expect(composePlaythroughRecipe({ policyId: "pushing", overrides: { claimBase: 4 } }).overrides).toEqual({ claimBase: 4 });
   });
 
-  it("pays the declared opening grant on a fresh start and names the tuning in the record", () => {
+  it("pays the declared opening grant on a fresh start, names the tuning, and leaves the live state, save, and baseline recipe untouched", () => {
     app = boot(undefined, true);
+    const before = app.state;
+    const saved = localStorage.getItem(STORAGE_KEY);
     const tuned = app.devRunPlaythrough({ seed: 7, budgetDays: 1, overrides: { openingGrant: 60 } });
     // The declared grant is the run's own first moment: the 60ν opening
     // affords the generator shelf purchase the shipped 12ν never can —
@@ -588,10 +682,17 @@ describe("declared tuning overrides", () => {
     expect(plain.recipe.overrides).toEqual({});
     expect(completeSnapshotsOf(plain)[0]!.state.modules.length).toBe(1);
     expect(tuned.runId).not.toBe(plain.runId);
-    expect(tuned.runId).not.toBe(plain.runId);
+    // The tuned walks touched nothing live: the baseline recipe — the
+    // app's own default — still carries no overrides, the tuned recipes
+    // rode the records alone, and neither the live state nor the save
+    // moved (the isolation owner is "the prompt policy's record"; this
+    // is the override-carrying walk's own instance of it).
+    expect(app.state).toBe(before);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
+    expect(app.devPlaythroughRecipe().overrides).toEqual({});
   });
 
-  it("binds the declared claim base at the pushing bank where the shipped curve pays 2", () => {
+  it("binds the declared claim base at the pushing bank where the shipped curve pays its own floor", () => {
     app = boot(undefined, true);
     const scenario = scenarioOf("fresh-start")!;
     vi.spyOn(scenario, "build").mockImplementation(() => {
@@ -601,16 +702,20 @@ describe("declared tuning overrides", () => {
       return state;
     });
     vi.spyOn(scenario, "assert").mockImplementation(() => {});
-    // The shipped curve pays 2 at the World's entry depth; the declared
-    // base 4 pays 4 — the same walk, the run's own claim curve, banked
-    // through the real prestige action.
-    const shipped = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 2, budgetDays: 1,
+    // The shipped curve pays its entry floor — the shipped claimBase,
+    // read from the balance it owns, never pinned here (the curve's
+    // figures are engine verification, src/engine/world.test.ts); the
+    // declared base 4 pays 4 — the same walk, the run's own claim curve,
+    // banked through the real prestige action. The relative behavior —
+    // the override binding where the shipped floor stood — is what this
+    // case owns.
+    const shipped = app.devRunPlaythrough({ policyId: "pushing", claimTarget: BALANCE.world.claimBase, budgetDays: 1,
       schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
-    expect(shipped.claims).toEqual([2]);
+    expect(shipped.claims).toEqual([BALANCE.world.claimBase]);
     const tuned = app.devRunPlaythrough({ policyId: "pushing", claimTarget: 4, budgetDays: 1,
       schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 }, overrides: { claimBase: 4 } });
     expect(tuned.claims).toEqual([4]);
-    expect(tuned.state.world.frontier).toBe(4);
+    expect(tuned.state.world.frontier).toBe(tuned.claims[0]!);
     expect(tuned.recipe.overrides).toEqual({ claimBase: 4 });
     expect(app.devPlaythroughNote).toContain("tuned claimBase=4");
   });
@@ -625,23 +730,6 @@ describe("declared tuning overrides", () => {
     const changed = app.devRunPlaythrough({ ...input, overrides: { openingGrant: 101 } });
     expect(changed.runId).not.toBe(first.runId);
     expect(changed.recipe.overrides).toEqual({ openingGrant: 101 });
-  });
-
-  it("never lets an override touch the live state or the ordinary save", () => {
-    app = boot(undefined, true);
-    const before = app.state;
-    const saved = localStorage.getItem(STORAGE_KEY);
-    const record = app.devRunPlaythrough({
-      seed: 7, budgetDays: 1, policyId: "pushing",
-      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 },
-      overrides: { openingGrant: 120, claimBase: 36 },
-    });
-    expect(app.state).toBe(before);
-    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
-    // The declared recipe — the app's baseline — still carries no
-    // overrides: the tuned recipe rode the record alone.
-    expect(app.devPlaythroughRecipe().overrides).toEqual({});
-    expect(record.recipe.overrides).toEqual({ openingGrant: 120, claimBase: 36 });
   });
 });
 
@@ -791,48 +879,136 @@ describe("the panel's visible wiring", () => {
   });
 });
 
-// The historical inspection boundary (issue #470, parent stories 26–29):
-// every plotted sample and stamped event backed by its exact recorded
-// state, the selection revealing board/state and recent decisions through
-// the shared command, and inspection that cannot mutate the active run.
-describe("historical snapshots and inspection", () => {
-  it("records a frozen snapshot for every plotted sample and every event's exact moment", () => {
-    app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
-    expect(record.snapshots.length).toBeGreaterThanOrEqual(record.trajectory.length);
-    // Every plotted sample resolves to an exact recorded state carrying
-    // the sample's own stamps and figures — the plot never interpolates.
-    for (const point of record.trajectory) {
-      const snapshot = completeSnapshotsOf(record)[point.snapshot]!;
-      expect(snapshot.elapsed).toBe(point.elapsed);
-      expect(snapshot.credited).toBe(point.credited);
-      expect(snapshot.state.eraEarned).toBe(point.eraEarned);
-      expect(snapshot.state.arete).toBe(point.arete);
-      expect(Math.floor(snapshot.state.nous)).toBe(point.nous);
-      // The recorded state reproduces the recorded rate: the same preview
-      // basis recomputed off the snapshot equals the plotted figure.
-      expect(syncRates(structuredClone(snapshot.state), false).rate).toBeCloseTo(point.rate, 9);
-    }
-    // Every decision binds the state as it stood at the decision's own
-    // simulated stamp — never a neighboring break's board.
-    for (const event of record.events) {
-      expect(event.snapshot).toBeGreaterThanOrEqual(0);
-      expect(event.snapshot).toBeLessThan(record.snapshots.length);
-      expect(record.snapshots[event.snapshot]!.elapsed).toBe(event.at);
-    }
-    // Recorded states are deep-frozen: read-only for human and agent alike.
-    const someSnapshot = completeSnapshotsOf(record)[Math.floor(record.snapshots.length / 2)]!;
-    expect(Object.isFrozen(someSnapshot.state)).toBe(true);
-    expect(Object.isFrozen(someSnapshot.state.modules)).toBe(true);
-    expect(Object.isFrozen(someSnapshot.state.modules[0])).toBe(true);
-    expect(Object.isFrozen(someSnapshot.state.cells)).toBe(true);
-    expect(Object.isFrozen(someSnapshot.state.sessionRecords)).toBe(true);
-  });
+// The supplied-record facts and the import seam the presentation cases
+// read. Each case constructs its own (isolated between tests) and brings
+// it in through the artifact boundary like any recorded evidence — the
+// record's constructed origin stays visible on every surface that shows
+// provenance.
+function importSupplied(facts: SuppliedRecordFacts): PlaythroughRecord {
+  app.devImportPlaythrough(suppliedArtifact(facts));
+  return app.devPlaythrough!;
+}
 
+// The supplied two-era journey several presentation cases read. Facts,
+// not a walk: plotted samples at snapshots 0, 1, 2, 4, 5; session
+// boundaries at 1, 3, and 5; a tied clock at the first session's close
+// (elapsed == credited); a bank at snapshot 4 splitting era-local
+// decisions; and the recovery ledger's blade, rate, door, and frontier
+// marks explicitly unreached — a half-recovered era, valid evidence no
+// fabricated mark may replace.
+function suppliedJourney(): SuppliedRecordFacts {
+  // The two-era board facts: the same generator beside the opening synth,
+  // changing synth levels so selection must read each snapshot's own
+  // rate, with era 2's balances and frontier on the banked board.
+  const journeyBoard = (era: 1 | 2, level: number): GameState => suppliedState((state) => {
+    state.modules[0]!.level = level;
+    const generator = createModule(state, "focusKeyed");
+    generator.pos = { q: 1, r: 0 };
+    state.modules.push(generator);
+    if (era === 1) {
+      state.nous = 480;
+      state.totalEarned = 6000;
+      state.eraEarned = 6000;
+    } else {
+      state.prestiges = 1;
+      state.arete = 3;
+      state.world.frontier = 4;
+      state.nous = 240;
+      state.totalEarned = 6000;
+      state.eraEarned = 1800;
+    }
+  });
+  const snapshots = [
+    suppliedSnapshot({ state: journeyBoard(1, 0), elapsed: 0, credited: 0 }),
+    // Session 1's close: the tied clock — the whole span is the session
+    // itself, so both clocks read the same.
+    suppliedSnapshot({ state: journeyBoard(1, 1), elapsed: 1500, credited: 1500 }),
+    suppliedSnapshot({ state: journeyBoard(1, 2), elapsed: 3000, credited: 1500 }),
+    suppliedSnapshot({ state: journeyBoard(1, 3), elapsed: 4500, credited: 3000 }),
+    // The bank: era 2's board.
+    suppliedSnapshot({ state: journeyBoard(2, 0), elapsed: 5000, credited: 3000 }),
+    // Session 3, era 2's first session boundary — the record's final
+    // moment, beyond the last plotted sample.
+    suppliedSnapshot({ state: journeyBoard(2, 1), elapsed: 6500, credited: 4500 }),
+  ];
+  const events = [
+    suppliedEvent({ at: 0, credited: 0, kind: "purchase", label: "Shelf — generator", snapshot: 0 }),
+    suppliedEvent({ at: 1500, credited: 1500, kind: "session", label: "Session 1", snapshot: 1 }),
+    suppliedEvent({ at: 3000, credited: 1500, kind: "breather", label: "Breather — 300s of the 300s allowance", snapshot: 2 }),
+    suppliedEvent({ at: 3000, credited: 1500, kind: "placement", label: "Placed the generator at 1,0", ok: false, reason: "the cell is occupied", snapshot: 2 }),
+    suppliedEvent({ at: 3000, credited: 1500, kind: "upgrade", label: "Upgrade — generator II", snapshot: 2 }),
+    suppliedEvent({ at: 4500, credited: 3000, kind: "session", label: "Session 2", snapshot: 3 }),
+    suppliedEvent({ at: 5000, credited: 3000, kind: "prestige", label: "Prestige 1 — banked 4 Arete", milestone: true, snapshot: 4 }),
+    suppliedEvent({ at: 5000, credited: 3000, kind: "arete", label: "Catalog entry", snapshot: 4 }),
+    suppliedEvent({ at: 6500, credited: 4500, kind: "session", label: "Session 3", snapshot: 5 }),
+  ];
+  // Plot and inspection read the same captured facts, including the
+  // tied sample at snapshot 1. No independent rate or balance can drift
+  // away from the board the point selects.
+  const trajectory = [0, 1, 2, 4, 5].map(index => {
+    const snapshot = snapshots[index]!;
+    return {
+      elapsed: snapshot.elapsed, credited: snapshot.credited,
+      rate: snapshot.rate, forgeRate: 0,
+      eraEarned: snapshot.numbers.eraEarned,
+      nous: Math.floor(snapshot.numbers.nous), arete: snapshot.numbers.arete,
+      snapshot: index,
+    };
+  });
+  return {
+    // The target stays below what the record's curve paid — intent and
+    // outcome distinguishable in the note, the same shape the real
+    // journey's walked record carries.
+    recipe: { seed: 510, policyId: "pushing", claimTarget: 3, eras: 2 },
+    complete: false,
+    stop: { kind: "budget", reason: "The 1-day budget ended inside the worthwhile-prestige journey." },
+    claims: [4],
+    days: 1,
+    elapsedSeconds: 6500,
+    creditedSeconds: 4500,
+    breatherSeconds: 300,
+    manageBreaks: 3,
+    sessionNous: 400,
+    breatherNous: 80,
+    lastMilestone: "Prestige 1 — banked 4 Arete",
+    events,
+    trajectory,
+    snapshots,
+    recovery: {
+      preResetRate: snapshots[3]!.rate,
+      claim: 4,
+      lastingPurchase: { elapsed: 0, credited: 0 },
+      lastingPurchaseLabel: "Catalog entry",
+      columnDeployed: { elapsed: 0, credited: 0 },
+      weaponDeployed: null,
+      productionRegained: null,
+      eligibilityReached: null,
+      frontierAdvanced: null,
+    },
+    areteSpent: { entry: 1, discounts: 0, ceilings: 0, columns: 0, rowUnlocks: 0, hone: { chargeBlade: 0 } },
+    worldDiscoveries: ["w0"],
+    eras: [
+      { index: 0, startElapsed: 0, startCredited: 0, endElapsed: 5000, endCredited: 3000, claim: 4, frontierAfter: 4, priorDepth: null, priorRate: null, familiarCredited: 3000, newCredited: 0, productionRegained: null, priorDepthPassed: null, finite: true },
+      { index: 1, startElapsed: 5000, startCredited: 3000, endElapsed: null, endCredited: null, claim: null, frontierAfter: null, priorDepth: 4, priorRate: snapshots[3]!.rate, familiarCredited: 0, newCredited: 0, productionRegained: null, priorDepthPassed: null, finite: null },
+    ],
+  };
+}
+
+// The historical inspection boundary (issue #470, parent stories 26–29),
+// re-homed onto supplied records by #510: what the plot, the selection,
+// and the inspector read off a record, exercised on explicit constructed
+// evidence. The walked-record guarantees underneath — the capture shape,
+// the deep-frozen states, the exact event/sample/rate bindings on a real
+// walk — are engine verification (src/engine/playthrough-retention.test.ts);
+// these cases own how the presentation reads the record's declared
+// facts, including the boundary shapes a given walk may never produce on
+// schedule: tied clocks, era-local events, and explicitly unreached
+// marks.
+describe("historical snapshots and inspection on supplied records", () => {
   it("selection reveals the matching board, state, and recent decisions through the shared command", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
-    const point = record.trajectory[Math.floor(record.trajectory.length / 2)]!;
+    const record = importSupplied(suppliedJourney());
+    const point = record.trajectory[2]!;
     const inspection = app.devInspectPlaythrough(point.snapshot)!;
     // The selection is the one owner of which snapshot is inspected, and
     // the inspected figures are the plotted sample's own.
@@ -840,7 +1016,7 @@ describe("historical snapshots and inspection", () => {
     expect(inspection.index).toBe(point.snapshot);
     expect(inspection.elapsed).toBe(point.elapsed);
     expect(inspection.credited).toBe(point.credited);
-    expect(inspection.rate).toBeCloseTo(point.rate, 9);
+    expect(inspection.rate).toBe(point.rate);
     expect(inspection.balances.nous).toBe(point.nous);
     expect(inspection.balances.arete).toBe(point.arete);
     expect(inspection.balances.eraEarned).toBe(point.eraEarned);
@@ -850,14 +1026,15 @@ describe("historical snapshots and inspection", () => {
     expect(inspection.events.every(event => event.snapshot <= point.snapshot)).toBe(true);
     for (const event of inspection.events) expect(record.events).toContain(event);
     // The board reads: every deployed voice with its note, level, and
-    // final ν/s on the same preview basis.
+    // ν/s — the snapshot's own voices, nothing recomputed.
     expect(inspection.voices.length).toBeGreaterThan(0);
     const snapshotState = completeSnapshotsOf(record)[point.snapshot]!.state;
     expect(inspection.voices.length).toBe(snapshotState.modules.filter((m) => m.pos !== null).length);
     expect(inspection.voices.every((voice) => voice.nuPerSecond === null || voice.nuPerSecond >= 0)).toBe(true);
     // A session-boundary snapshot recorded between samples carries no
-    // plotted point, and says so.
-    const boundary = record.events.find((event) => event.kind === "session" && event.ok)!;
+    // plotted point, and says so — Session 2's boundary (snapshot 3)
+    // sits between the plotted samples.
+    const boundary = record.events.filter((event) => event.kind === "session" && event.ok)[1]!;
     const boundaryInspection = app.devInspectPlaythrough(boundary.snapshot)!;
     expect(record.trajectory.some((p) => p.snapshot === boundary.snapshot)).toBe(false);
     expect(boundaryInspection.point).toBeNull();
@@ -868,80 +1045,24 @@ describe("historical snapshots and inspection", () => {
     expect(app.devInspected).toBe(boundary.snapshot);
   });
 
-
-  it.each(["recovered", "budget"] as const)("binds recovery milestones at their own stamp before %s exit", (stop) => {
+  it("keeps every plotted sample's rate and balances aligned with its inspected snapshot", () => {
     app = boot(undefined, true);
-    const scenario = scenarioOf("fresh-start")!;
-    vi.spyOn(scenario, "build").mockImplementation(() => {
-      const state = createInitialState();
-      // A crafted journey board: the opening synth already sits beside w0's
-      // cell, a generator stands on the charge line, the era measure waits
-      // at the World's entry depth, and w0 is discovered and alive — the
-      // whole worthwhile journey one bank away.
-      const generator = createModule(state, "focusKeyed");
-      generator.pos = { q: 1, r: 0 };
-      state.modules.push(generator);
-      state.world.enemies.w0 = { discovered: true, hp: 12 };
-      state.eraEarned = BALANCE.world.entryNous;
-      state.totalEarned = state.eraEarned;
-      state.modules[0]!.level = 100;
-      return state;
-    });
-    vi.spyOn(scenario, "assert").mockImplementation(() => {});
-    const prestige = actions.prestige;
-    vi.spyOn(actions, "prestige").mockImplementation(state => {
-      const result = prestige(state);
-      state.modules.forEach(module => { module.level = stop === "recovered" ? 100 : 0; });
-      // Keep the era measure across both gates the journey reads — the
-      // horizon for the recovery door and the entry depth for the next
-      // bank — so every break faces a claim.
-      state.eraEarned = BALANCE.world.entryNous *
-        10 ** (state.world.frontier / BALANCE.world.claimDepthSlope + 1);
-      return result;
-    });
-    const end = actions.endSession;
-    vi.spyOn(actions, "endSession").mockImplementation((state, now) => {
-      const result = end(state, now);
-      state.eraEarned = BALANCE.world.entryNous *
-        10 ** (state.world.frontier / BALANCE.world.claimDepthSlope + 1);
-      return result;
-    });
-    // The recovered variant gets the days its weapon needs — a manage after
-    // a session re-revealed w0; the budget variant ends inside the journey.
-    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: stop === "recovered" ? 3 : 1,
-      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
-    expect(record.stop.kind).toBe(stop);
-    if (stop === "recovered") {
-      expect(record.complete).toBe(true);
-      expect(record.recovery!.weaponDeployed).not.toBeNull();
-      expect(record.recovery!.productionRegained).not.toBeNull();
-    } else {
-      expect(record.complete).toBe(false);
-      expect(record.recovery!.weaponDeployed).toBeNull();
-      expect(record.recovery!.productionRegained).toBeNull();
-    }
-    const eligibility = record.events.find(event => event.label === "Recovery — next prestige eligibility reached")!;
-    expect(eligibility).toBeDefined();
-    expect(eligibility.at).toBe(0);
-    expect(eligibility.snapshot).toBeGreaterThanOrEqual(0);
-    const inspection = app.devInspectPlaythrough(eligibility.snapshot)!;
-    expect(inspection.elapsed).toBe(eligibility.at);
-    expect(inspection.credited).toBe(eligibility.credited);
-    // The settle read the era measure the first bank's refill left — the
-    // entry depth a held frontier above, well past the horizon. The
-    // refill's figure rides the banked frontier and the calibrated slope.
-    expect(inspection.state.eraEarned).toBe(
-      BALANCE.world.entryNous * 10 ** (record.claims[0]! / BALANCE.world.claimDepthSlope + 1));
-    expect(inspection.events).toContain(eligibility);
-    for (const event of record.events) {
-      expect(event.snapshot).toBeGreaterThanOrEqual(0);
-      expect(record.snapshots[event.snapshot]!.elapsed).toBe(event.at);
+    const record = importSupplied(suppliedJourney());
+    expect(new Set(record.trajectory.map(point => point.rate)).size).toBeGreaterThan(1);
+    for (const point of record.trajectory) {
+      const inspection = app.devInspectPlaythrough(point.snapshot)!;
+      expect(inspection.elapsed).toBe(point.elapsed);
+      expect(inspection.credited).toBe(point.credited);
+      expect(inspection.rate).toBe(point.rate);
+      expect(inspection.balances.nous).toBe(point.nous);
+      expect(inspection.balances.eraEarned).toBe(point.eraEarned);
+      expect(inspection.balances.arete).toBe(point.arete);
     }
   });
 
   it("keeps preparation decisions at a session boundary without future or stale sessions", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 2 });
+    const record = importSupplied(suppliedJourney());
     const sessions = record.events.filter(event => event.kind === "session" && event.ok);
     const second = sessions[1]!;
     const first = sessions[0]!;
@@ -957,24 +1078,128 @@ describe("historical snapshots and inspection", () => {
     for (const event of preparation) expect(after.events).toContain(event);
   });
 
+  it("reads tied clocks and era-local facts exactly as the record declares them", () => {
+    app = boot(undefined, true);
+    const record = importSupplied(suppliedJourney());
+    // The tied sample: both clocks equal, plotted and inspectable — the
+    // boundary a walk produces only where its schedule happens to land
+    // one, and a supplied record declares outright.
+    const tied = record.trajectory[1]!;
+    expect(tied.elapsed).toBe(tied.credited);
+    const tiedRead = app.devInspectPlaythrough(tied.snapshot)!;
+    expect(tiedRead.point!.elapsed).toBe(tiedRead.point!.credited);
+    expect(tiedRead.elapsed).toBe(tiedRead.credited);
+    // Era-local reads: era 1's samples carry no prestiges; the bank
+    // snapshot's board carries era 2; the ledgers close era 0 at its
+    // claim and leave era 1 open — the record's own facts, not a
+    // recomputation.
+    const era1Sample = app.devInspectPlaythrough(record.trajectory[2]!.snapshot)!;
+    expect(era1Sample.balances.prestiges).toBe(0);
+    const bank = app.devInspectPlaythrough(4)!;
+    expect(bank.balances.prestiges).toBe(1);
+    expect(bank.balances.arete).toBe(3);
+    expect(record.eras[0]!.claim).toBe(record.claims[0]);
+    expect(record.eras[1]!.claim).toBeNull();
+    expect(app.devPlaythroughNote).toContain("eras 1/2 closed");
+    // The plot renders samples from both eras on one clock.
+    app.devToggleCurves();
+    const panel = document.getElementById("dev-curves")!;
+    expect(panel.querySelectorAll("circle.dev-curves-pt")).toHaveLength(record.trajectory.length);
+  });
+
+  it.each(["recovered", "budget"] as const)("binds the recovery milestone at its own stamp on a %s record", (stop) => {
+    app = boot(undefined, true);
+    // The bank sits at the very first recorded moment — the tied zero
+    // clock — and the eligibility milestone binds there. The recovered
+    // record carries the journey's marks; the budget record leaves blade
+    // and rate explicitly unreached — a slower recovery being valid
+    // evidence no fabricated mark may replace. (The walk-produced
+    // ledger's owners are "the pushing policy"'s journey case and
+    // "leaves unfinished recovery marks explicitly unreached at the budget exit".)
+    const bankState = suppliedState((state) => {
+      state.prestiges = 1;
+      state.arete = 4;
+      state.world.frontier = 4;
+      state.eraEarned = 1_800_000;
+      state.totalEarned = 1_800_000;
+    });
+    const eligibility = suppliedEvent({ at: 0, credited: 0, kind: "milestone", label: "Recovery — next prestige eligibility reached", milestone: true, snapshot: 0 });
+    const recovered = stop === "recovered";
+    const bankSnapshot = suppliedSnapshot({ state: bankState, elapsed: 0, credited: 0 });
+    const record = importSupplied({
+      recipe: { seed: 510, policyId: "pushing", claimTarget: 2 },
+      complete: recovered,
+      stop: recovered
+        ? { kind: "recovered", reason: "The worthwhile-prestige journey completed at day 2 — the frontier advanced to 6 Arete." }
+        : { kind: "budget", reason: "The 2-day budget ended inside the worthwhile-prestige journey." },
+      claims: [4],
+      days: recovered ? 2 : 1,
+      elapsedSeconds: recovered ? 172_800 : 0,
+      creditedSeconds: recovered ? 7_200 : 0,
+      lastMilestone: "Recovery — next prestige eligibility reached",
+      events: [
+        suppliedEvent({ at: 0, credited: 0, kind: "prestige", label: "Prestige 1 — banked 4 Arete", milestone: true, snapshot: 0 }),
+        eligibility,
+      ],
+      trajectory: [{ elapsed: 0, credited: 0, rate: bankSnapshot.rate, forgeRate: 0,
+        eraEarned: bankSnapshot.numbers.eraEarned, nous: Math.floor(bankSnapshot.numbers.nous),
+        arete: bankSnapshot.numbers.arete, snapshot: 0 }],
+      snapshots: [bankSnapshot],
+      recovery: {
+        preResetRate: 2,
+        claim: 4,
+        lastingPurchase: { elapsed: 0, credited: 0 },
+        lastingPurchaseLabel: "Catalog entry",
+        columnDeployed: { elapsed: 0, credited: 0 },
+        weaponDeployed: recovered ? { elapsed: 86_400, credited: 3_600 } : null,
+        productionRegained: recovered ? { elapsed: 86_400, credited: 3_600 } : null,
+        eligibilityReached: recovered ? { elapsed: 86_400, credited: 3_600 } : null,
+        frontierAdvanced: recovered ? { elapsed: 172_800, credited: 7_200 } : null,
+      },
+    });
+    expect(record.stop.kind).toBe(stop);
+    if (recovered) {
+      expect(record.recovery!.weaponDeployed).not.toBeNull();
+      expect(record.recovery!.productionRegained).not.toBeNull();
+    } else {
+      expect(record.recovery!.weaponDeployed).toBeNull();
+      expect(record.recovery!.productionRegained).toBeNull();
+    }
+    expect(eligibility.at).toBe(0);
+    expect(eligibility.snapshot).toBeGreaterThanOrEqual(0);
+    const inspection = app.devInspectPlaythrough(eligibility.snapshot)!;
+    expect(inspection.elapsed).toBe(eligibility.at);
+    expect(inspection.credited).toBe(eligibility.credited);
+    expect(inspection.point!.snapshot).toBe(eligibility.snapshot);
+    // Imported evidence compares by value: the inspection window reads
+    // the imported record's own decisions.
+    expect(inspection.events).toContainEqual(eligibility);
+    for (const event of record.events) {
+      expect(event.snapshot).toBeGreaterThanOrEqual(0);
+      expect(record.snapshots[event.snapshot]!.elapsed).toBe(event.at);
+    }
+  });
+
   it("draws the selected board layers and exposes the same frozen state without editing the live board", () => {
     app = boot(undefined, true);
-    const scenario = scenarioOf("fresh-start")!;
-    vi.spyOn(scenario, "build").mockImplementation(() => {
-      const state = createInitialState();
-      state.nous = 0;
-      state.mutatorSlots = [{ q: 0, r: 0 }];
-      state.mutators = [{ id: "historic-mutator", family: "power", rarity: "rare", pos: { q: 0, r: 0 } }];
-      state.world.columns = [{ id: "historic-column", pos: { q: 0, r: 0 } }];
-      state.world.weapons = [{ id: "historic-weapon", type: "chargeBlade", pos: { q: 0, r: 1 }, store: 12, cooldown: 0, targetPriority: ["w0"] }];
-      state.world.enemies.w0 = { discovered: true, hp: 123 };
-      return state;
-    });
-    vi.spyOn(scenario, "assert").mockImplementation(() => {});
     const liveBefore = JSON.stringify(app.state);
     const saveBefore = localStorage.getItem(STORAGE_KEY);
-    const record = app.devRunPlaythrough({ budgetDays: 1, schedule: { sessionsPerDay: 1, sessionMinutes: 1 } });
+    importSupplied({
+      snapshots: [suppliedSnapshot({
+        state: suppliedState((state) => {
+          state.nous = 0;
+          state.mutatorSlots = [{ q: 0, r: 0 }];
+          state.mutators = [{ id: "historic-mutator", family: "power", rarity: "rare", pos: { q: 0, r: 0 } }];
+          state.world.columns = [{ id: "historic-column", pos: { q: 0, r: 0 } }];
+          state.world.weapons = [{ id: "historic-weapon", type: "chargeBlade", pos: { q: 0, r: 1 }, store: 12, cooldown: 0, targetPriority: ["w0"] }];
+          state.world.enemies.w0 = { discovered: true, hp: 123 };
+        }),
+        elapsed: 0,
+        credited: 0,
+      })],
+    });
     app.devToggleCurves();
+    const record = app.devPlaythrough!;
     const inspection = app.devInspectPlaythrough(0)!;
     expect(inspection.state).toBe(completeSnapshotsOf(record)[0]!.state);
     expect(Object.isFrozen(inspection.state.world.weapons[0])).toBe(true);
@@ -1000,11 +1225,11 @@ describe("historical snapshots and inspection", () => {
 
   it("inspection never mutates the active run, the save, or the recorded state", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const record = importSupplied(suppliedJourney());
     const before = app.state;
     const saved = localStorage.getItem(STORAGE_KEY);
     const beforeJson = JSON.stringify(app.state);
-    for (let index = 0; index < record.snapshots.length; index += 7) {
+    for (let index = 0; index < record.snapshots.length; index++) {
       app.devInspectPlaythrough(index);
     }
     // The live run and its save are untouched by inspection.
@@ -1029,19 +1254,42 @@ describe("historical snapshots and inspection", () => {
 
   it("classifies curve markers, and declined attempts and unlisted actions plot none", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
-    const marked = new Set(record.events.map((event) => playthroughEventMarker(event)).filter(Boolean));
-    expect(marked.has("purchase")).toBe(true);
-    expect(marked.has("session")).toBe(true);
-    expect(marked.has("unlock")).toBe(true);
-    // Only successful events carry markers; the declined attempt and the
-    // gestures the plot doesn't name stay decisions-list lines. World
-    // buys are purchases; a World placement is a gesture, not one.
-    for (const event of record.events) {
-      if (!event.ok) expect(playthroughEventMarker(event)).toBeNull();
-      if (event.kind === "placement" || event.kind === "upgrade") expect(playthroughEventMarker(event)).toBeNull();
-      if (event.label.startsWith("Placed")) expect(playthroughEventMarker(event)).toBeNull();
-    }
+    // The marker zoo on one declared record: every class the classifier
+    // names, beside the gestures and attempts that plot none. (The
+    // walked record's event kinds are pinned by "the prompt policy's
+    // record"; this case owns the classification and its rendering.)
+    importSupplied({
+      events: [
+        suppliedEvent({ at: 0, credited: 0, kind: "purchase", label: "Shelf — generator", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "arete", label: "Catalog entry", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "session", label: "Session 1", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "roll", label: "Rolled — accepted", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "breather", label: "Breather — 300s of the 300s allowance", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "prestige", label: "Prestige 1 — banked 0 Arete", milestone: true, snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "world", label: "World Column", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "world", label: "Placed a Charge Column at 1,0", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "milestone", label: "Poly Expander 3 — 1.0ν/s → 1.2ν/s", milestone: true, snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "milestone", label: "Feat unlocked — time-in-the-seat", milestone: true, snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "milestone", label: "Recovery — next prestige eligibility reached", milestone: true, snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "placement", label: "Placed the generator at 1,0", ok: false, reason: "the cell is occupied", snapshot: 0 }),
+        suppliedEvent({ at: 0, credited: 0, kind: "upgrade", label: "Upgrade — generator II", snapshot: 0 }),
+      ],
+    });
+    app.devToggleCurves();
+    const panel = document.getElementById("dev-curves")!;
+    // The panel plots exactly what the classifier names: four purchases
+    // (the shelf, the Catalog offering, the World buy, the capacity
+    // milestone), two unlocks (the roll, the feat), the session, the
+    // breather, and the prestige. The declined attempt, the placement
+    // and upgrade gestures, the World placement, and the recovery
+    // milestone stay decisions-list lines.
+    expect(panel.querySelectorAll(".dev-curves-mk-purchase")).toHaveLength(4);
+    expect(panel.querySelectorAll(".dev-curves-mk-unlock")).toHaveLength(2);
+    expect(panel.querySelectorAll(".dev-curves-hair-session")).toHaveLength(1);
+    expect(panel.querySelectorAll(".dev-curves-mk-breather")).toHaveLength(1);
+    expect(panel.querySelectorAll(".dev-curves-hair-prestige")).toHaveLength(1);
+    // Declined attempts and unlisted gestures stay decisions-list lines.
+    expect(panel.querySelectorAll(".dev-curves-mk")).toHaveLength(7);
     // The classes' own rules, on the engine's classifier.
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "prestige", label: "Prestige 1", ok: true, snapshot: 0 })).toBe("prestige");
     expect(playthroughEventMarker({ at: 0, credited: 0, kind: "breather", label: "Breather — 300s of the 300s allowance", ok: true, snapshot: 0 })).toBe("breather");
@@ -1054,15 +1302,18 @@ describe("historical snapshots and inspection", () => {
 
   it("reports both clocks per sample, and the axes switch", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
-    // Simulated elapsed covers the day span; credited practice covers only
-    // the sessions — both recorded on every sample.
+    const record = importSupplied(suppliedJourney());
+    // Simulated elapsed covers the declared span; credited practice
+    // covers only the sessions — both recorded on every sample, the tied
+    // sample reading both clocks equal.
     expect(record.trajectory[0]!.elapsed).toBe(0);
     expect(record.trajectory.at(-1)!.elapsed).toBe(record.elapsedSeconds);
     for (const point of record.trajectory) {
       expect(point.credited).toBeLessThanOrEqual(point.elapsed);
     }
     expect(record.trajectory.at(-1)!.credited).toBe(record.creditedSeconds);
+    const tied = record.trajectory[1]!;
+    expect(tied.elapsed).toBe(tied.credited);
     // The plot's clock is an app-level, agent-reachable setting.
     expect(app.devCurvesAxis).toBe("elapsed");
     app.devSetCurvesAxis("credited");
@@ -1074,8 +1325,77 @@ describe("historical snapshots and inspection", () => {
   });
 });
 
+// The selected run's readout (the note line): the record's own figures,
+// rendered — exercised on supplied records, so no shipped balance amount
+// or completion day pins the rendering. `playthroughNote` is the
+// engine's pure renderer over the record; the app's note adds only the
+// imported/modified provenance marks.
+describe("the selected run's readout on supplied records", () => {
+  it("derives the ✓ line from the record's own facts — claims, target, spending, tuning, curve, eras, stop", () => {
+    app = boot(undefined, true);
+    importSupplied({
+      recipe: { seed: 510, policyId: "pushing", claimTarget: 3, eras: 2, overrides: { openingGrant: 60 }, responseCurve: "bounded" },
+      complete: true,
+      stop: { kind: "recovered", reason: "The worthwhile-prestige journey completed at day 2 — the frontier advanced to 7 Arete." },
+      claims: [5, 2],
+      days: 2,
+      elapsedSeconds: 172_800,
+      creditedSeconds: 7_200,
+      breatherSeconds: 600,
+      manageBreaks: 4,
+      sessionNous: 500,
+      breatherNous: 100,
+      areteSpent: { entry: 1, discounts: 0, ceilings: 0, columns: 2, rowUnlocks: 0, hone: { chargeBlade: 0 } },
+      lastMilestone: "Recovery — frontier advanced to 7 Arete",
+      eras: [
+        { index: 0, startElapsed: 0, startCredited: 0, endElapsed: 86_400, endCredited: 3_600, claim: 5, frontierAfter: 5, priorDepth: null, priorRate: null, familiarCredited: 3_600, newCredited: 0, productionRegained: null, priorDepthPassed: null, finite: true },
+        { index: 1, startElapsed: 86_400, startCredited: 3_600, endElapsed: 172_800, endCredited: 7_200, claim: 2, frontierAfter: 7, priorDepth: 5, priorRate: 2.0, familiarCredited: 3_600, newCredited: 0, productionRegained: { elapsed: 43_200, credited: 1_800 }, priorDepthPassed: { elapsed: 86_400, credited: 3_600 }, finite: true },
+      ],
+    });
+    expect(app.devPlaythroughNote).toContain("Pushing ✓");
+    expect(app.devPlaythroughNote).toContain("2d · 120m credited of 2880m elapsed");
+    expect(app.devPlaythroughNote).toContain("claim 5, 2/3 Arete");
+    expect(app.devPlaythroughNote).toContain("spent Catalog entry + 2× Charge Column");
+    expect(app.devPlaythroughNote).toContain("tuned openingGrant=60");
+    expect(app.devPlaythroughNote).toContain("curve bounded");
+    expect(app.devPlaythroughNote).toContain("eras 2/2 closed");
+    expect(app.devPlaythroughNote).toContain("journey completed at day 2");
+    expect(app.devPlaythroughNote).not.toContain("✗");
+  });
+
+  it("reads unreached recovery marks as unreached, never fabricated", () => {
+    app = boot(undefined, true);
+    importSupplied(suppliedJourney());
+    // The half-recovered journey: banked 4, the purchase and column at
+    // the bank's own moment, blade, rate, door, and frontier explicitly
+    // unreached — the note says so, and no ✓ invents a completion.
+    expect(app.devPlaythroughNote).toContain("recovery — bank 4, purchase 0.0d/0m (Catalog entry)");
+    expect(app.devPlaythroughNote).toContain("blade unreached, column 0.0d/0m, rate unreached");
+    expect(app.devPlaythroughNote).toContain("door unreached, frontier unreached");
+    expect(app.devPlaythroughNote).toContain("Pushing ✗");
+    expect(app.devPlaythroughNote).not.toContain("✓");
+  });
+
+  it("marks imported origin — a supplied record never reads as a fresh walk", () => {
+    app = boot(undefined, true);
+    const record = importSupplied(suppliedJourney());
+    // The library marks the entry imported and unmodified; the note
+    // rides the "Imported · " prefix; the carried source names the
+    // constructed origin, so the curves provenance shows it beside the
+    // current engine.
+    expect(app.devResults[0]!.imported).toBe(true);
+    expect(app.devResults[0]!.modified).toBe(false);
+    expect(app.devPlaythroughNote!.startsWith("Imported · ")).toBe(true);
+    expect(record.source.engineSource).toBe(SUPPLIED_ENGINE_SOURCE);
+    app.devToggleCurves();
+    const prov = document.querySelector(".dev-curves-prov")!.textContent!;
+    expect(prov).toContain("imported");
+    expect(prov).toContain("≠ current");
+  });
+});
+
 describe("the curves surface's visible wiring", () => {
-  it("opens empty, plots the run's samples, and selects from points, markers, and stepping", () => {
+  it("opens empty, plots the supplied record's samples, and selects from points, markers, and stepping", () => {
     app = boot(undefined, true);
     const toggle = document.querySelector<HTMLButtonElement>('[data-dev="curves"]')!;
     expect(document.getElementById("dev-curves")).toBeNull();
@@ -1084,7 +1404,7 @@ describe("the curves surface's visible wiring", () => {
     expect(document.getElementById("dev-curves")!.textContent).toContain("no run yet");
     // The button's label carries the toggle state like the board's.
     expect(toggle.textContent).toBe("close curves");
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const record = importSupplied(suppliedJourney());
     const panel = document.getElementById("dev-curves")!;
     expect(panel.textContent).toContain("RESOURCE CURVES");
     expect(panel.querySelectorAll("circle.dev-curves-pt")).toHaveLength(record.trajectory.length);
@@ -1093,7 +1413,7 @@ describe("the curves surface's visible wiring", () => {
     const point = record.trajectory[3]!;
     panel.querySelectorAll<HTMLDivElement>("circle.dev-curves-pt")[3]!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.devInspected).toBe(point.snapshot);
-    expect(panel.textContent).toContain(`sample ${point.snapshot + 1}/${record.snapshots.length} · sim `);
+    expect(document.getElementById("dev-curves")!.textContent).toContain(`sample ${point.snapshot + 1}/${record.snapshots.length} · sim `);
     // The marker glyphs select their events' snapshots (queried fresh —
     // the point's selection rebuilt the panel).
     document.getElementById("dev-curves")!.querySelector<SVGElement>(".dev-curves-mk-purchase")!
@@ -1119,7 +1439,10 @@ describe("the curves surface's visible wiring", () => {
     credited.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.devCurvesAxis).toBe("credited");
     expect(document.getElementById("dev-curves")!.querySelector('[data-devcurveaxis="credited"]')!.classList.contains("on")).toBe(true);
-    // A new run clears the stale selection with the record it pointed at.
+    // A new run clears the stale selection with the record it pointed
+    // at — the one walk here: the command-level integration the clearing
+    // owns (a fresh walk lands in the library and invalidates the stale
+    // selection), not a setup walk.
     app.devInspectPlaythrough(2);
     app.devRunPlaythrough({ seed: 8, budgetDays: 1 });
     expect(app.devInspected).toBeNull();
@@ -1165,13 +1488,13 @@ describe("the run artifact boundary", () => {
 
   it("reopens an imported run's inspection after the original session is gone", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const record = importSupplied(suppliedJourney());
     const index = record.trajectory[2]!.snapshot;
     const original = app.devInspectPlaythrough(index)!;
     const artifact = app.devExportPlaythrough();
     app.dispose();
-    // A fresh browser: empty library, no walked records, nothing shared
-    // but the artifact text.
+    // A fresh browser: empty library, nothing shared but the artifact
+    // text.
     const fresh = boot(undefined, true);
     expect(fresh.devResults).toHaveLength(0);
     fresh.devImportPlaythrough(artifact);
@@ -1182,6 +1505,7 @@ describe("the run artifact boundary", () => {
     expect(reopened.events.map((event) => event.label)).toEqual(original.events.map((event) => event.label));
     // Nothing re-executes: the library holds exactly the imported record.
     expect(fresh.devResults).toHaveLength(1);
+    expect(fresh.devResults[0]!.imported).toBe(true);
     expect(fresh.devResults[0]!.record.events).toEqual(record.events);
     // The curves surface reads the imported run with its provenance named.
     fresh.devToggleCurves();
@@ -1192,7 +1516,7 @@ describe("the run artifact boundary", () => {
 
   it("rejects malformed and unsupported artifacts by name and imports nothing", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const record = importSupplied(suppliedJourney());
     const before = app.devResults.length;
     const refuse = (text: string, fragment: RegExp): void => {
       expect(() => app.devImportPlaythrough(text)).toThrow(fragment);
@@ -1210,9 +1534,8 @@ describe("the run artifact boundary", () => {
   });
 
   it("keeps imported evidence read-only and unchanged by inspection", () => {
-    app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
-    const text = app.devExportPlaythrough();
+    const facts = suppliedJourney();
+    const text = suppliedArtifact(facts);
     const fresh = boot(undefined, true);
     fresh.devImportPlaythrough(text);
     // The imported recorded states freeze whole, like a fresh walk's: a
@@ -1225,12 +1548,12 @@ describe("the run artifact boundary", () => {
     const first = fresh.devInspectPlaythrough(0)!;
     const second = fresh.devInspectPlaythrough(0)!;
     expect(second.balances).toEqual(first.balances);
-    expect(comparable(imported)).toEqual(comparable(record));
+    expect(comparable(imported)).toEqual(comparable(suppliedRecord(facts)));
   });
 
   it("preserves an incomplete run's status and bottleneck through the artifact", () => {
     app = boot(undefined, true);
-    const record = app.devRunPlaythrough({ seed: 7, budgetDays: 1 });
+    const record = importSupplied(suppliedJourney());
     expect(record.complete).toBe(false);
     expect(record.stop.kind).toBe("budget");
     const artifact = app.devExportPlaythrough();
