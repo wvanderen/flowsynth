@@ -574,11 +574,16 @@ export function centuryRow(
   // The currency-integrity read: the state's whole intake against what
   // the walk earned. A continuation's intake includes the branch input's
   // balance — the first recorded state — so the walk's own earnings read
-  // against the difference, never against zero.
+  // against the difference, never against zero. The authored era-start
+  // grants (the claim grant included, issue #484) bypass `totalEarned`,
+  // so the ledger names them separately instead of reading them as
+  // fabricated currency.
   // The continuation's branch input reads the first captured figure — the
   // one store both retentions carry (issue #509).
   const startTotal = record.kind === "continuation" ? (record.snapshots[0]?.numbers.totalEarned ?? 0) : 0;
-  const drift = Math.abs((record.state.totalEarned - startTotal) - record.earnedNous);
+  const drift = Math.abs(
+    (record.state.totalEarned - startTotal) - (record.sessionNous + record.breatherNous + record.grantNous),
+  );
   return {
     measurementVersion: CENTURY_MEASUREMENT_VERSION,
     decisionGapsOk: gapRead.gaps.every((gap) => gap.credited <= LONG_GAP_CREDITED),
@@ -977,6 +982,10 @@ export function calibrationBaseline(): Record<string, unknown> {
     runnerVersion: PLAYTHROUGH_RUNNER_VERSION,
     source: playthroughSource(),
     openingGrant: BALANCE.openingGrant,
+    claimGrant: {
+      base: BALANCE.prestigeGrantBase,
+      growth: BALANCE.prestigeGrantGrowth,
+    },
     upgradeCost: {
       firstCost: BALANCE.upgradeFirstCost,
       growth: `${BALANCE.upgradeCostGrowthNumerator}/${BALANCE.upgradeCostGrowthDenominator}`,

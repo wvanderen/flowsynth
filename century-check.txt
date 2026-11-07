@@ -1,0 +1,12 @@
+seed 23 60m support: stop=century days=50 credited=100.0h banks=6 frontier=14 maxEarned=5.49e+12 wall=1561s noGrant=true
+  eras: e0:8.0h* e1:2.0h e2:3.0h e3:5.0h e4:6.0h e5:5.0h e6:open
+  closed eras=6
+seed 468 60m support: stop=century days=50 credited=100.0h banks=7 frontier=14 maxEarned=1.96e+12 wall=1489s noGrant=true
+  eras: e0:11.0h* e1:4.0h e2:5.0h e3:6.0h e4:7.0h e5:9.0h e6:12.0h e7:open
+  closed eras=7
+seed 23 60m support: stop=century days=50 credited=100.0h banks=6 frontier=14 maxEarned=5.49e+12 wall=1561s noGrant=true
+  eras: e0:8.0h* e1:2.0h e2:3.0h e3:5.0h e4:6.0h e5:5.0h e6:open
+  closed eras=6
+seed 468 60m support: stop=century days=50 credited=100.0h banks=7 frontier=14 maxEarned=1.96e+12 wall=1470s noGrant=true
+  eras: e0:11.0h* e1:4.0h e2:5.0h e3:6.0h e4:7.0h e5:9.0h e6:12.0h e7:open
+  closed eras=7

@@ -92,11 +92,13 @@ describe("the walked presets", () => {
     expect(preset.record.stop.reason).toContain("After first bank reached at day 3");
     // The walk banks at the first break the pending claim reaches its
     // target; a 600-minute session carries the era measure well past the
-    // entry depth, so the banked floor is the curve's honest 4 at the
-    // century-calibrated slope, above the configured 2 — intent and
-    // outcome stay distinguishable in the note.
-    expect(preset.record.claims).toEqual([4]);
-    expect(playthroughNote(preset.record)).toContain("claim 4/2 Arete");
+    // entry depth, so the banked floor is the curve's honest 3 at the
+    // later-era-calibrated slope (issue #484: entitlement 2 + 2.5·depth
+    // at the door reads one and a fraction decades past the entry), above
+    // the configured 2 — intent and outcome stay distinguishable in the
+    // note.
+    expect(preset.record.claims).toEqual([3]);
+    expect(playthroughNote(preset.record)).toContain("claim 3/2 Arete");
     expect(playthroughNote(preset.record)).toContain("no Arete spent");
     const state = preset.state;
     // The earned claim sits unspent — banked by the walk's own practice
@@ -114,11 +116,15 @@ describe("the walked presets", () => {
   it("stops the pushing walk at the living fight with the placement unplayed", () => {
     const preset = playthroughCheckpointPreset("world-enemy-active");
     expect(preset.record.stop.kind).toBe("checkpoint");
-    expect(preset.record.stop.reason).toContain("World enemy reached at day 4");
-    // The bank's honest 4 pays the entry and the first two Column rungs
-    // (1 + 2 + 1... the pushing order: entry first, then Columns while
-    // affordable) before the checkpoint halts the walk.
-    expect(playthroughNote(preset.record)).toContain("spent Catalog entry + 2× Charge Column");
+    // The claim grant (issue #484) funds the second era's rebuild, so the
+    // discovered enemy's threshold crosses a day earlier than the
+    // pre-grant walk's day 4 — the fixture pins the grant-funded day.
+    expect(preset.record.stop.reason).toContain("World enemy reached at day 3");
+    // The bank's honest 3 pays the entry, the first Column rung, and the
+    // first Hone rank (1 + 1 + 1 — the pushing order: entry first, then
+    // Columns while affordable, then Hone) before the checkpoint halts
+    // the walk.
+    expect(playthroughNote(preset.record)).toContain("spent Catalog entry + 1× Charge Column + 1× Hone");
     const state = preset.state;
     const living = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp > 0);
     expect(living.length).toBeGreaterThanOrEqual(1);
@@ -212,9 +218,14 @@ describe("scripted-run entry from a preset", () => {
     expect(recipe.scenarioId).toBe("after-first-bank");
     const record = runPlaythrough(recipe);
     // The run id names its starting preset; the walked state — the first
-    // bank's situation — is the state the run started from.
+    // bank's situation — is the state the run started from. The fixture's
+    // long sessions credit twenty hours in the day, and the claim grant
+    // (issue #484) funds that era's rebuild, so the walk can legitimately
+    // re-reach the horizon and bank again inside the budget — the seam
+    // pins the starting situation and the preset's own bank, never the
+    // era count a grant-funded era reaches.
     expect(record.runId).toMatch(/^after-first-bank-s468-/);
     expect(record.recipe.scenarioId).toBe("after-first-bank");
-    expect(record.state.prestiges).toBe(1);
+    expect(record.state.prestiges).toBeGreaterThanOrEqual(1);
   });
 });

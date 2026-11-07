@@ -820,6 +820,14 @@ export interface PlaythroughRecord {
   readonly earnedNous: number;
   readonly sessionNous: number;
   readonly breatherNous: number;
+  // The authored era-start grants the run's resets paid — the opening
+  // grants and, from the first banked claim on, the claim grants (issue
+  // #484). Grants bypass `totalEarned` (they are authored intake, never
+  // earned production), so the no-grant read stays between the wallet's
+  // earned production and the sessions' and breathers' recorded figures;
+  // this ledger names the grants separately so a run can never pass its
+  // integrity check by forgetting them.
+  readonly grantNous: number;
   readonly lastMilestone: string | null;
   // Incomplete runs only: what the budget ran out against, with the last
   // declined action's reason (story 22).
@@ -900,6 +908,7 @@ interface RunContext {
   breatherSeconds: number;
   sessionNous: number;
   breatherNous: number;
+  grantNous: number;
   elapsedMs: number;
   lastDecline: string | null;
   lastMilestone: string | null;
@@ -2070,6 +2079,10 @@ function tryPrestige(ctx: RunContext, state: GameState): boolean {
     ...(ctx.openingGrant !== undefined ? { openingGrant: ctx.openingGrant } : {}),
     ...(ctx.claimBase !== undefined ? { claimBase: ctx.claimBase } : {}),
   });
+  // The ledger counts the reset's era-start grant (issue #484): right here
+  // the wallet holds exactly what the reset paid — the no-grant read then
+  // sees the authored figures as declared intake, never as fabricated ν.
+  if (result.ok) ctx.grantNous += state.nous;
   const claim = state.arete - before;
   ctx.claims.push(claim);
   record(ctx, {
@@ -2261,6 +2274,7 @@ export function* walkPlaythrough(
     breatherSeconds: 0,
     sessionNous: 0,
     breatherNous: 0,
+    grantNous: 0,
     elapsedMs: recipe.schedule.startAt,
     lastDecline: null,
     lastMilestone: null,
@@ -2453,6 +2467,7 @@ export function* walkPlaythrough(
     earnedNous: ctx.sessionNous + ctx.breatherNous,
     sessionNous: ctx.sessionNous,
     breatherNous: ctx.breatherNous,
+    grantNous: ctx.grantNous,
     lastMilestone: ctx.lastMilestone ?? lastSessionLabel,
     bottleneck,
     events: ctx.events,

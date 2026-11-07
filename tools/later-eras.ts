@@ -245,8 +245,11 @@ export interface LaterEraRow {
   // the claims bank.
   readonly frontiers: readonly number[];
   readonly eras: readonly LaterEraView[];
-  // The currency-integrity read: the state's whole intake against
-  // everything the walk earned through real sessions and breathers.
+  // The currency-integrity read: the state's whole earned production
+  // against what the run's sessions and breathers earned. The authored
+  // era-start grants (the claim grant included, issue #484) bypass
+  // `totalEarned` — authored intake, never earned production — so they
+  // ride the ledger's own grantNous figure, never this arithmetic.
   readonly noGrant: boolean;
   readonly defeats: readonly string[];
   readonly bottleneck: string | null;
@@ -659,8 +662,11 @@ export function walkRouteForward(
     schedule: { ...parent.recipe.schedule, startAt: parent.recipe.schedule.startAt + bank.at * 1000 },
   });
   const continuation = continuePlaythrough(recipe, state, parent.source);
+  // The branch's earned production is its sessions and breathers — the
+  // banked claim's grant (issue #484) is authored intake that bypasses
+  // `totalEarned`, so the ledger reads without it.
   const earned = continuation.state.totalEarned - state.totalEarned;
-  const drift = Math.abs(earned - continuation.earnedNous);
+  const drift = Math.abs(earned - (continuation.earnedNous - continuation.grantNous));
   return {
     outcome: continuation.state.world.frontier > state.world.frontier ? "advanced" : "unreached",
     runId: continuation.runId,
