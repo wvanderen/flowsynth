@@ -85,12 +85,6 @@ export function suppliedEvent(event: Omit<PlaythroughEvent, "ok"> & { ok?: boole
   return { ok: true, ...event };
 }
 
-// One plotted sample. The figures are the case's declared facts; the
-// snapshot index names the recorded state behind the point.
-export function suppliedPoint(point: PlaythroughTrajectoryPoint): PlaythroughTrajectoryPoint {
-  return point;
-}
-
 export interface SuppliedSnapshotFacts {
   // The state as it stood — unfrozen; the capture clones, rate-syncs,
   // and freezes its own copy, like the walk's snap does.

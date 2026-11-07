@@ -13,7 +13,7 @@ import { scenarioOf } from "../engine/scenarios";
 import { createInitialState, createModule } from "../engine/state";
 import { STORAGE_KEY } from "../engine/save";
 import type { GameState } from "../engine/types";
-import { SUPPLIED_ENGINE_SOURCE, suppliedArtifact, suppliedEvent, suppliedPoint, suppliedRecord, suppliedSnapshot, suppliedState, type SuppliedRecordFacts } from "./testing/supplied-playthrough";
+import { SUPPLIED_ENGINE_SOURCE, suppliedArtifact, suppliedEvent, suppliedRecord, suppliedSnapshot, suppliedState, type SuppliedRecordFacts } from "./testing/supplied-playthrough";
 
 // The playthrough presentation tests (issues #468/#469/#470/#473, the
 // presentation/integration split of #510, ADR-0085): two kinds of
@@ -33,8 +33,8 @@ import { SUPPLIED_ENGINE_SOURCE, suppliedArtifact, suppliedEvent, suppliedPoint,
 // **A named integration set walks the real engine.** Reachability and
 // command-to-engine behavior stay real walks:
 // - reachability: the prompt door's honest zero bank ("completion"), the
-//   pushing policy's worthwhile-prestige journey, and the explicit
-//   incomplete outcome of an unreached claim target ("the pushing
+//   pushing policy's worthwhile-prestige journey, its unfinished recovery
+//   at the budget exit, and the incomplete claim-target outcome ("the pushing
 //   policy");
 // - command-to-engine: the recipe composition and rejection seams ("the
 //   declared recipe", "declared tuning overrides", "declared response
@@ -378,6 +378,52 @@ describe("the pushing policy", () => {
     expect(record.state.prestiges).toBe(2);
     expect(record.stop.kind).toBe("budget");
     expect(record.stop.reason).toContain("worthwhile-prestige journey");
+  });
+
+  it("leaves unfinished recovery marks explicitly unreached at the budget exit", () => {
+    app = boot(undefined, true);
+    const before = JSON.stringify(app.state);
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const scenario = scenarioOf("fresh-start")!;
+    vi.spyOn(scenario, "build").mockImplementation(() => {
+      const state = createInitialState();
+      // Start at a real bank with a high pre-reset rate and a working
+      // charge line. The one-minute next era cannot regain that rate or
+      // the horizon; no action or recovery result is mocked.
+      const generator = createModule(state, "focusKeyed");
+      generator.pos = { q: 1, r: 0 };
+      state.modules.push(generator);
+      state.modules[0]!.level = 100;
+      state.eraEarned = BALANCE.world.entryNous * 10;
+      state.totalEarned = state.eraEarned;
+      return state;
+    });
+    vi.spyOn(scenario, "assert").mockImplementation(() => {});
+    const record = app.devRunPlaythrough({ policyId: "pushing", budgetDays: 1,
+      claimTarget: BALANCE.world.claimBase,
+      schedule: { sessionsPerDay: 1, sessionMinutes: 1, breatherMinutes: 0 } });
+    expect(record.complete).toBe(false);
+    expect(record.stop.kind).toBe("budget");
+    expect(record.stop.reason).toContain("inside the worthwhile-prestige journey");
+    expect(record.claims).toHaveLength(1);
+    expect(record.claims[0]).toBeGreaterThan(0);
+    expect(record.state.prestiges).toBe(1);
+    expect(record.creditedSeconds).toBe(60);
+    expect(record.recovery).not.toBeNull();
+    expect(record.recovery!.claim).toBe(record.claims[0]);
+    expect(record.recovery!.lastingPurchase).not.toBeNull();
+    expect(record.recovery!.columnDeployed).not.toBeNull();
+    expect(record.recovery!.weaponDeployed).toBeNull();
+    expect(record.recovery!.productionRegained).toBeNull();
+    expect(record.recovery!.eligibilityReached).toBeNull();
+    expect(record.recovery!.frontierAdvanced).toBeNull();
+    expect(record.events.some(event => event.milestone && event.label.startsWith("Recovery —") &&
+      /production regained|eligibility reached|frontier advanced/.test(event.label))).toBe(false);
+    expect(app.devPlaythroughNote).toContain("blade unreached");
+    expect(app.devPlaythroughNote).toContain("rate unreached, door unreached, frontier unreached");
+    expect(app.devPlaythroughNote).not.toContain("✓");
+    expect(JSON.stringify(app.state)).toBe(before);
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(saved);
   });
 
   it("keeps World occupants in the tray when no cell satisfies their adjacency rule", () => {
@@ -852,8 +898,10 @@ function importSupplied(facts: SuppliedRecordFacts): PlaythroughRecord {
 // fabricated mark may replace.
 function suppliedJourney(): SuppliedRecordFacts {
   // The two-era board facts: the same generator beside the opening synth,
-  // with era 2's balances and World frontier on the banked board.
-  const journeyBoard = (era: 1 | 2): GameState => suppliedState((state) => {
+  // changing synth levels so selection must read each snapshot's own
+  // rate, with era 2's balances and frontier on the banked board.
+  const journeyBoard = (era: 1 | 2, level: number): GameState => suppliedState((state) => {
+    state.modules[0]!.level = level;
     const generator = createModule(state, "focusKeyed");
     generator.pos = { q: 1, r: 0 };
     state.modules.push(generator);
@@ -871,17 +919,17 @@ function suppliedJourney(): SuppliedRecordFacts {
     }
   });
   const snapshots = [
-    suppliedSnapshot({ state: journeyBoard(1), elapsed: 0, credited: 0 }),
+    suppliedSnapshot({ state: journeyBoard(1, 0), elapsed: 0, credited: 0 }),
     // Session 1's close: the tied clock — the whole span is the session
     // itself, so both clocks read the same.
-    suppliedSnapshot({ state: journeyBoard(1), elapsed: 1500, credited: 1500 }),
-    suppliedSnapshot({ state: journeyBoard(1), elapsed: 3000, credited: 1500 }),
-    suppliedSnapshot({ state: journeyBoard(1), elapsed: 4500, credited: 3000 }),
+    suppliedSnapshot({ state: journeyBoard(1, 1), elapsed: 1500, credited: 1500 }),
+    suppliedSnapshot({ state: journeyBoard(1, 2), elapsed: 3000, credited: 1500 }),
+    suppliedSnapshot({ state: journeyBoard(1, 3), elapsed: 4500, credited: 3000 }),
     // The bank: era 2's board.
-    suppliedSnapshot({ state: journeyBoard(2), elapsed: 5000, credited: 3000 }),
+    suppliedSnapshot({ state: journeyBoard(2, 0), elapsed: 5000, credited: 3000 }),
     // Session 3, era 2's first session boundary — the record's final
     // moment, beyond the last plotted sample.
-    suppliedSnapshot({ state: journeyBoard(2), elapsed: 6500, credited: 4500 }),
+    suppliedSnapshot({ state: journeyBoard(2, 1), elapsed: 6500, credited: 4500 }),
   ];
   const events = [
     suppliedEvent({ at: 0, credited: 0, kind: "purchase", label: "Shelf — generator", snapshot: 0 }),
@@ -894,14 +942,19 @@ function suppliedJourney(): SuppliedRecordFacts {
     suppliedEvent({ at: 5000, credited: 3000, kind: "arete", label: "Catalog entry", snapshot: 4 }),
     suppliedEvent({ at: 6500, credited: 4500, kind: "session", label: "Session 3", snapshot: 5 }),
   ];
-  const trajectory = [
-    suppliedPoint({ elapsed: 0, credited: 0, rate: 1.2, forgeRate: 0, eraEarned: 0, nous: 12, arete: 0, snapshot: 0 }),
-    // The tied sample: both clocks equal at the session's close.
-    suppliedPoint({ elapsed: 1500, credited: 1500, rate: 1.6, forgeRate: 0, eraEarned: 3000, nous: 360, arete: 0, snapshot: 1 }),
-    suppliedPoint({ elapsed: 3000, credited: 1500, rate: 2.4, forgeRate: 0, eraEarned: 6000, nous: 480, arete: 0, snapshot: 2 }),
-    suppliedPoint({ elapsed: 5000, credited: 3000, rate: 1.8, forgeRate: 0, eraEarned: 1800, nous: 240, arete: 3, snapshot: 4 }),
-    suppliedPoint({ elapsed: 6500, credited: 4500, rate: 2.0, forgeRate: 0, eraEarned: 1800, nous: 240, arete: 3, snapshot: 5 }),
-  ];
+  // Plot and inspection read the same captured facts, including the
+  // tied sample at snapshot 1. No independent rate or balance can drift
+  // away from the board the point selects.
+  const trajectory = [0, 1, 2, 4, 5].map(index => {
+    const snapshot = snapshots[index]!;
+    return {
+      elapsed: snapshot.elapsed, credited: snapshot.credited,
+      rate: snapshot.rate, forgeRate: 0,
+      eraEarned: snapshot.numbers.eraEarned,
+      nous: Math.floor(snapshot.numbers.nous), arete: snapshot.numbers.arete,
+      snapshot: index,
+    };
+  });
   return {
     // The target stays below what the record's curve paid — intent and
     // outcome distinguishable in the note, the same shape the real
@@ -922,7 +975,7 @@ function suppliedJourney(): SuppliedRecordFacts {
     trajectory,
     snapshots,
     recovery: {
-      preResetRate: 2.4,
+      preResetRate: snapshots[3]!.rate,
       claim: 4,
       lastingPurchase: { elapsed: 0, credited: 0 },
       lastingPurchaseLabel: "Catalog entry",
@@ -936,7 +989,7 @@ function suppliedJourney(): SuppliedRecordFacts {
     worldDiscoveries: ["w0"],
     eras: [
       { index: 0, startElapsed: 0, startCredited: 0, endElapsed: 5000, endCredited: 3000, claim: 4, frontierAfter: 4, priorDepth: null, priorRate: null, familiarCredited: 3000, newCredited: 0, productionRegained: null, priorDepthPassed: null, finite: true },
-      { index: 1, startElapsed: 5000, startCredited: 3000, endElapsed: null, endCredited: null, claim: null, frontierAfter: null, priorDepth: 4, priorRate: 2.4, familiarCredited: 0, newCredited: 0, productionRegained: null, priorDepthPassed: null, finite: null },
+      { index: 1, startElapsed: 5000, startCredited: 3000, endElapsed: null, endCredited: null, claim: null, frontierAfter: null, priorDepth: 4, priorRate: snapshots[3]!.rate, familiarCredited: 0, newCredited: 0, productionRegained: null, priorDepthPassed: null, finite: null },
     ],
   };
 }
@@ -963,7 +1016,7 @@ describe("historical snapshots and inspection on supplied records", () => {
     expect(inspection.index).toBe(point.snapshot);
     expect(inspection.elapsed).toBe(point.elapsed);
     expect(inspection.credited).toBe(point.credited);
-    expect(inspection.rate).toBe(completeSnapshotsOf(record)[point.snapshot]!.rate);
+    expect(inspection.rate).toBe(point.rate);
     expect(inspection.balances.nous).toBe(point.nous);
     expect(inspection.balances.arete).toBe(point.arete);
     expect(inspection.balances.eraEarned).toBe(point.eraEarned);
@@ -990,6 +1043,21 @@ describe("historical snapshots and inspection on supplied records", () => {
     // A bad index is a thrown, named error and moves nothing.
     expect(() => app.devInspectPlaythrough(record.snapshots.length)).toThrow(/no recorded snapshot/);
     expect(app.devInspected).toBe(boundary.snapshot);
+  });
+
+  it("keeps every plotted sample's rate and balances aligned with its inspected snapshot", () => {
+    app = boot(undefined, true);
+    const record = importSupplied(suppliedJourney());
+    expect(new Set(record.trajectory.map(point => point.rate)).size).toBeGreaterThan(1);
+    for (const point of record.trajectory) {
+      const inspection = app.devInspectPlaythrough(point.snapshot)!;
+      expect(inspection.elapsed).toBe(point.elapsed);
+      expect(inspection.credited).toBe(point.credited);
+      expect(inspection.rate).toBe(point.rate);
+      expect(inspection.balances.nous).toBe(point.nous);
+      expect(inspection.balances.eraEarned).toBe(point.eraEarned);
+      expect(inspection.balances.arete).toBe(point.arete);
+    }
   });
 
   it("keeps preparation decisions at a session boundary without future or stale sessions", () => {
@@ -1046,8 +1114,8 @@ describe("historical snapshots and inspection on supplied records", () => {
     // record carries the journey's marks; the budget record leaves blade
     // and rate explicitly unreached — a slower recovery being valid
     // evidence no fabricated mark may replace. (The walk-produced
-    // ledger's own owner is "the pushing policy"'s journey case and the
-    // it.each budget walk there.)
+    // ledger's owners are "the pushing policy"'s journey case and
+    // "leaves unfinished recovery marks explicitly unreached at the budget exit".)
     const bankState = suppliedState((state) => {
       state.prestiges = 1;
       state.arete = 4;
@@ -1057,6 +1125,7 @@ describe("historical snapshots and inspection on supplied records", () => {
     });
     const eligibility = suppliedEvent({ at: 0, credited: 0, kind: "milestone", label: "Recovery — next prestige eligibility reached", milestone: true, snapshot: 0 });
     const recovered = stop === "recovered";
+    const bankSnapshot = suppliedSnapshot({ state: bankState, elapsed: 0, credited: 0 });
     const record = importSupplied({
       recipe: { seed: 510, policyId: "pushing", claimTarget: 2 },
       complete: recovered,
@@ -1072,8 +1141,10 @@ describe("historical snapshots and inspection on supplied records", () => {
         suppliedEvent({ at: 0, credited: 0, kind: "prestige", label: "Prestige 1 — banked 4 Arete", milestone: true, snapshot: 0 }),
         eligibility,
       ],
-      trajectory: [suppliedPoint({ elapsed: 0, credited: 0, rate: 2, forgeRate: 0, eraEarned: 1_800_000, nous: 900, arete: 4, snapshot: 0 })],
-      snapshots: [suppliedSnapshot({ state: bankState, elapsed: 0, credited: 0 })],
+      trajectory: [{ elapsed: 0, credited: 0, rate: bankSnapshot.rate, forgeRate: 0,
+        eraEarned: bankSnapshot.numbers.eraEarned, nous: Math.floor(bankSnapshot.numbers.nous),
+        arete: bankSnapshot.numbers.arete, snapshot: 0 }],
+      snapshots: [bankSnapshot],
       recovery: {
         preResetRate: 2,
         claim: 4,
