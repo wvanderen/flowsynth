@@ -22,6 +22,15 @@ import { chargeLineCells } from "../src/engine/playthrough-placement";
 import { seededRng } from "../src/engine/capacity-calibration";
 import type { GameState } from "../src/engine/types";
 import { meaningfulDecisions, type DecisionGap } from "./first-prestige";
+import {
+  BASELINE_SESSION_MINUTES,
+  EVALUATION_SEEDS,
+  LONG_SESSION_MINUTES,
+  LATER_ERA_BUDGET_DAYS,
+  LATER_ERA_WINDOW,
+  TARGET_ERAS,
+  WORLD_POLICIES,
+} from "./evaluation-declaration";
 
 // The compiled recording CLI uses exactly the same runner and source read.
 export { playthroughSource, runPlaythrough, stateNumbersFinite };
@@ -47,35 +56,32 @@ export { playthroughSource, runPlaythrough, stateNumbersFinite };
 // roughly 5–10 credited-hour validation range (ADR-0078 as revised) — a
 // validation range, not a timer.
 
+// The declared matrix, session shapes, policies, walk target, budgets,
+// and validation range live in the shared evaluation declaration (issue
+// #512): one reviewable place, importable without the engine so the
+// recorded-report figure generator can read them without simulating.
+export {
+  BASELINE_SESSION_MINUTES,
+  LONG_SESSION_MINUTES,
+  TARGET_ERAS,
+  WORLD_POLICIES,
+  type WorldPolicyId,
+} from "./evaluation-declaration";
+
 // The declared seed matrix (issue #491; the same eight as #490's).
-export const LATER_ERA_SEEDS: readonly number[] = [42, 468, 157, 2026, 7, 99, 11, 23];
-
-// The declared session shapes: the suite's baseline (two 25-minute daily
-// sessions) and its 60-minute variant — the same five-minute breather,
-// one practice habit with a daily goal.
-export const BASELINE_SESSION_MINUTES = 25;
-export const LONG_SESSION_MINUTES = 60;
-
-// The declared World-comparison policies (issue #491; the parent's
-// support-seeking / combat-engaging / enemy-ignoring trio).
-export const WORLD_POLICIES = ["support", "combat", "ignoring"] as const;
-export type WorldPolicyId = (typeof WORLD_POLICIES)[number];
-
-// The declared walk: four claimed frontiers — the opening era plus three
-// later eras, each bank advancing the frontier strictly beyond the last.
-export const TARGET_ERAS = 4;
+export const LATER_ERA_SEEDS: readonly number[] = EVALUATION_SEEDS;
 
 // The declared budgets: the walk's own honest stop when a policy cannot
 // finish. Sized from the recorded calibration walks below (the baseline
 // day credits ~0.83 flow hours, the long day ~2), with a budget miss a
 // recorded miss, never an extended goalpost.
-export const BASELINE_BUDGET_DAYS = 70;
-export const LONG_BUDGET_DAYS = 30;
+export const BASELINE_BUDGET_DAYS = LATER_ERA_BUDGET_DAYS.baseline;
+export const LONG_BUDGET_DAYS = LATER_ERA_BUDGET_DAYS.long;
 
 // The later-era validation range (ADR-0078 as revised): roughly 5–10
 // credited hours. A validation range, not a timer.
-export const LATER_ERA_MIN_HOURS = 5;
-export const LATER_ERA_MAX_HOURS = 10;
+export const LATER_ERA_MIN_HOURS = LATER_ERA_WINDOW.minHours;
+export const LATER_ERA_MAX_HOURS = LATER_ERA_WINDOW.maxHours;
 
 // One later era's timing classification. Era 0 — the opening — is not a
 // later era: its window is #490's, and this evaluation labels it

@@ -21,14 +21,20 @@ import type { PlaythroughSource } from "../src/engine/playthrough";
 // early baseline remain baselines: the target is the ticket's own
 // validation range, not a timer the engine enforces.
 
-// The declared seed matrix (issue #490).
-export const FIRST_PRESTIGE_SEEDS: readonly number[] = [42, 468, 157, 2026, 7, 99, 11, 23];
+// The declared seed matrix (issue #490) and session shapes live in the
+// shared evaluation declaration (issue #512): one reviewable place,
+// importable without the engine so the recorded-report figure generator
+// can read them without simulating.
+export { BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES } from "./evaluation-declaration";
+import {
+  BASELINE_SESSION_MINUTES,
+  EVALUATION_SEEDS,
+  LONG_SESSION_MINUTES,
+  OPENING_WINDOW,
+} from "./evaluation-declaration";
 
-// The declared session shapes: the suite's baseline (two 25-minute daily
-// sessions) and its 60-minute variant — the same five-minute breather,
-// one practice habit with a daily goal.
-export const BASELINE_SESSION_MINUTES = 25;
-export const LONG_SESSION_MINUTES = 60;
+// The declared seed matrix (issue #490).
+export const FIRST_PRESTIGE_SEEDS: readonly number[] = EVALUATION_SEEDS;
 
 // The declared budgets: the walk's own honest stop when a policy cannot
 // finish. The baseline budget clears the full journey for every seed that
@@ -40,8 +46,8 @@ export const LONG_BUDGET_DAYS = 16;
 
 // The validation range (ADR-0078 as revised): 8–12 credited hours,
 // centered around ten. A validation range, not a timer.
-export const TARGET_WINDOW_MIN_HOURS = 8;
-export const TARGET_WINDOW_MAX_HOURS = 12;
+export const TARGET_WINDOW_MIN_HOURS = OPENING_WINDOW.minHours;
+export const TARGET_WINDOW_MAX_HOURS = OPENING_WINDOW.maxHours;
 
 // The worthwhile-prestige target classification for one run — the timing
 // class for a run that demonstrated the whole journey (bank, lasting

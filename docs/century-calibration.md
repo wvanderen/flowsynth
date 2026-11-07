@@ -24,6 +24,10 @@ All 80 walks reached the century mark (`stop.kind` "century"), banked per their 
 
 Later-era timing classes (the opening era reads the 8–12 window, later eras 5–10; open eras are the explicit incomplete outcomes at the mark):
 
+<!-- report-figures:century begin (regenerate: node tools/run-supported.mjs tools/render-report-figures.mjs write) -->
+Legacy evidence: these figures derive from the restored historical recording — engine fingerprint `8790c6cb`, composed at recording commit `6953ebe`, restored byte-for-byte per [the review completion record](evidence/pr514-review/README.md). The legacy rows carry no runtime or timezone metadata, no per-unit provenance, no measurementVersion (the boundary-aware read is version 2); absence is recorded as absence, never invented.
+Generated from the recorded JSON alone — no simulation; regenerate with `node tools/run-supported.mjs tools/render-report-figures.mjs write` and review the diff. The recorded rows are the only numerical truth in this section.
+
 | slice | in-window | under | over | open | banks | max frontier |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
 | prompt, 25m | 37 | 129 | 8 | 6 | 174 | 0 |
@@ -38,24 +42,40 @@ Later-era timing classes (the opening era reads the 8–12 window, later eras 5�
 | ignoring, 60m | 14 | 0 | 29 | 8 | 43 | 19 |
 | **total** | **256** | **203** | **256** | **78** | **715** | — |
 
-The prompt classes are the door policy's own shape: each zero-claim reset opens an era the next door closes, so most of its eras are minutes long — the honest read of a policy that cannot sustain century-scale progression. Excluding it, the claim-pushing policies banked 332 claims across the matrix; their later eras land in-window most often on the baseline schedule (roughly half) and drift over-window as the board matures, especially on the long-session shapes and the sparse seeds — every miss rides the recorded rows, never an average.
+Excluding the prompt rows, the claim-pushing policies bank 426 nonzero claims across the matrix; banks per claim-pushing walk run 2–14. The prompt rows bank 289 doors of which 286 are honest zeros, with a final frontier no higher than 3.
 
 The representative 60-minute support walks read seed by seed (era: hours/class):
 
 | seed | banks | frontier | era spans |
 | --- | ---: | ---: | --- |
-| 23 | 9 | 25 | 0:8/in · 1:5/in · 2:6/in · 3:8/in · 4:10/in · 5:11/over · 6:10/in · 7:11/over · 8:14/over · open |
-| 468 | 9 | 18 | 0:11/in · 1:6/in · 2:7/in · 3:8/in · 4:9/in · 5:12/over · 6:13/over · 7:14/over · 8:17/over · open |
 | 42 | 7 | 14 | 0:20/over · 1:12/over · 2:8/in · 3:9/in · 4:11/over · 5:13/over · 6:17/over · open |
-| 99 | 6 | 12 | 0:20/over · 1:8/in · 2:10/in · 3:12/over · 4:16/over · 5:18/over · open |
-| 7 | 6 | 13 | 0:17/over · 1:7/in · 2:9/in · 3:12/over · 4:17/over · 5:25/over · open |
-| 2026 | 5 | 10 | 0:18/over · 1:11/over · 2:13/over · 3:17/over · 4:20/over · open |
-| 11 | 4 | 8 | 0:30/over · 1:26/over · 2:15/over · 3:17/over · open |
+| 468 | 9 | 18 | 0:11/in · 1:6/in · 2:7/in · 3:8/in · 4:9/in · 5:12/over · 6:13/over · 7:14/over · 8:17/over · open |
 | 157 | 2 | 4 | 0:43/over · 1:50/over · open |
+| 2026 | 5 | 10 | 0:18/over · 1:11/over · 2:13/over · 3:17/over · 4:20/over · open |
+| 7 | 6 | 13 | 0:17/over · 1:7/in · 2:9/in · 3:12/over · 4:17/over · 5:25/over · open |
+| 99 | 6 | 12 | 0:20/over · 1:8/in · 2:10/in · 3:12/over · 4:16/over · 5:18/over · open |
+| 11 | 4 | 8 | 0:30/over · 1:26/over · 2:15/over · 3:17/over · open |
+| 23 | 9 | 25 | 0:8/in · 1:5/in · 2:6/in · 3:8/in · 4:10/in · 5:11/over · 6:10/in · 7:11/over · 8:14/over · open |
+
+Mechanical verdicts — each names its criterion, its observed read, and its state:
+
+| Criterion | Observed read | State |
+| --- | --- | --- |
+| Walks through the 100-credited-hour mark (#492) | 80 of 80 matrix rows stop at the century mark with at least 100 credited hours | met |
+| Finite state and exact serialized round trips (#492) | 80 of 80 rows read finite at every sampled snapshot; 80 of 80 serialized every sampled bank, stride, and final state with exact monetary round trips | met |
+| No grant, no refund (#492) | 80 of 80 walks `noGrant` | met |
+| Long decision-free periods recorded as failures (#492) | legacy gap read at the recorded 6000s threshold: 0 inter-decision gaps at or above it, but start and terminal waits were not measured | **incomplete** — the legacy zero is not evidence of absence; the boundary-aware rerun is owed |
+| Expected-unsuccessful prompt policy distinguished (#492) | 286 of 289 prompt banks are zero-claim; final frontier at most 3 across its rows | recorded as the expected unsuccessful policy — the distinction holds |
+| Sparse seeds and supplied-board continuations included, never pooled (#492) | the sparse seeds (11, 42) ride the matrix rows; both continuations stand outside the 80 matrix rows | met |
+
+An unmet or incomplete verdict is a recorded finding, never an approved exception: this documentation does not waive it, and resolving it takes the declared boundary-aware re-recording or an explicit maintainer scope decision.
+<!-- report-figures:century end -->
+
+The prompt classes are the door policy's own shape: each zero-claim reset opens an era the next door closes, so most of its eras are minutes long — the honest read of a policy that cannot sustain century-scale progression (the generated verdict records the observed shape). Excluding it, the claim-pushing policies bank 426 nonzero claims across the matrix — the generated table above owns the count; their later eras land in-window most often on the baseline schedule (roughly half) and drift over-window as the board matures, especially on the long-session shapes and the sparse seeds — every miss rides the recorded rows, never an average.
 
 ## What the runs revealed, and what was tuned
 
-- **Exhausted choices (slope 2): repaired by the slope.** At the shipped hypothesis the walks' productive banking stopped mid-horizon — a seed-23 walk's last bank landed at hour 61 and the walk sat bankless for the remaining 39 credited hours. At the calibrated slope every claim-pushing walk keeps banking through the mark (2–10 banks per century walk; the strongest reach frontier 32). The archived gap read cannot establish that those open-era tails remain decision-rich; that verdict requires the boundary-aware rerun.
+- **Exhausted choices (slope 2): repaired by the slope.** At the shipped hypothesis the walks' productive banking stopped mid-horizon — a seed-23 walk's last bank landed at hour 61 and the walk sat bankless for the remaining 39 credited hours. At the calibrated slope every claim-pushing walk keeps banking through the mark (2–14 banks per century walk; the strongest reach frontier 32). The archived gap read cannot establish that those open-era tails remain decision-rich; that verdict requires the boundary-aware rerun.
 - **The maturation ceiling (cell ladder): partially relieved by the Row unlock.** With the unlock in the declared rules, boards reach 41 cells inside a century walk where the launch band capped them near 29. The expansion remains priced-out late (the scaler is 2.5ⁿ) — the over-window drift at depth is the honest residue, and cheapening the ladder was probed and rejected: under the declared cell-first rule it starves level sweeps and lengthens the late eras it was meant to shorten.
 - **Capacity ladder and Arete sinks: saturated, recorded.** The Poly Expander's four rungs, the two bays, the discounts, and the Hone ladder's four ranks all complete inside the century for the offerings-first policies; the support and combat policies' World lines consume their claims first. Charge Columns remain the open-ended sink. Extending the ladders needs an Arete-income rebalance beyond this ticket's scope — recorded in the baseline's limitations.
 - **Numeric limits: none engaged.** Maxima across all 80 walks: era-earned 7.5e14, nous 2.2e14, rate 1.2e11 ν/s. The float64 representation holds the target range with wide margin, so the larger-representation clause of the ticket did not engage. Every snapshot's finite read passed, and the real save seam serialized every sampled bank, stride, and final state with exact monetary round trips.
@@ -105,7 +125,7 @@ node tools/run-supported.mjs tools/record-century.mjs fixture collection-reset
 node tools/run-supported.mjs tools/record-century.mjs compose
 ```
 
-The restored ten slices and [composed report](century-calibration-results.json) retain their historical recording commits and compiled engine fingerprint. New composition verifies each slice's fingerprint byte for byte and its commit's ancestry, requires version-2 gap measurements, preserves each input's actual environment (including legacy absence) in `recordingInputs`, and labels its own environment separately as `compositionEnvironment`. The equivalent `FLOWSYNTH_CENTURY_SLICE` / `FLOWSYNTH_CENTURY_REPORT` vitest gates invoke this same recorder. Ordinary suite runs skip the multi-hour evaluation; the always-on cases in `tools/century.test.ts` pin the matrix declaration, the century stop's mechanics, the classification windows, the fixture construction, boundary-gap reads, and the frozen-figure comparison. The rechecks re-recorded their own evaluations: `FLOWSYNTH_FIRST_PRESTIGE_REPORT` and `node tools/record-later-eras.mjs slice … | compose`.
+The restored ten slices and [composed report](century-calibration-results.json) retain their historical recording commits and compiled engine fingerprint. New composition verifies each slice's fingerprint byte for byte and its commit's ancestry, requires version-2 gap measurements, preserves each input's actual environment (including legacy absence) in `recordingInputs`, and labels its own environment separately as `compositionEnvironment`. The equivalent `FLOWSYNTH_CENTURY_SLICE` / `FLOWSYNTH_CENTURY_REPORT` vitest gates invoke this same recorder. Ordinary suite runs skip the multi-hour evaluation; the always-on cases in `tools/century.test.ts` pin the matrix declaration, the century stop's mechanics, the classification windows, the fixture construction, boundary-gap reads, and the frozen-figure comparison. After any re-record and compose, regenerate this report's generated figures — the distribution tables and the mechanical verdicts — with `node tools/run-supported.mjs tools/render-report-figures.mjs write` (issue #512); the suite's staleness check (`tools/report-figures.test.ts`) fails while the committed section disagrees with the recorded JSON. The rechecks re-recorded their own evaluations: `FLOWSYNTH_FIRST_PRESTIGE_REPORT` and `node tools/record-later-eras.mjs slice … | compose`.
 
 ## The smoke tier
 
