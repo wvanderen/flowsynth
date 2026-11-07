@@ -15,6 +15,7 @@ import {
   validateLaterEraEvidence,
   type CenturyInputs,
   type CenturyReportJson,
+  type LaterEraFigures,
   type LaterEraInputs,
   type LaterEraReportJson,
 } from "./report-figures";
@@ -88,6 +89,27 @@ describe("later-era figures from recorded evidence", () => {
     expect(rendered).toContain("107 of 119");
     expect(rendered).toContain("never an approved exception");
     expect(rendered).toContain("no simulation");
+  });
+
+  it("derives each verdict's state from the observed reads rather than hardcoding it", () => {
+    const base = laterEraFigures(laterEraReport(), laterEraInputs());
+    // A hypothetical rerun that moves every figure: each state word must
+    // move with its figure, never keep a hardcoded verdict.
+    const flipped: LaterEraFigures = {
+      ...base,
+      newTerritoryMajorities: 100,
+      rebuilding: { withinHalf: 109, overHalf: 10 },
+      fasterReturn: { faster: 10, notFaster: 109 },
+      noGrantWalks: 47,
+      routes: { ...base.routes, advanced: 19 },
+    };
+    const rendered = renderLaterEraBlock(flipped);
+    expect(rendered).toMatch(/\| New-territory majority of era effort \(#491\) \| 100 of 119 [^|]+\| met by the recorded majority \|/);
+    expect(rendered).toMatch(/\| Rebuilding not most of later eras \(#491\) \| 10 of 119 [^|]+\| met \|/);
+    expect(rendered).toMatch(/\| Faster familiar return \(#491\) \| 10 of 119 [^|]+\| \*\*UNMET\*\* \|/);
+    expect(rendered).toMatch(/\| No grant, no refund \(#491\) \| 47 of 48 walks `noGrant` \| \*\*UNMET\*\* \|/);
+    expect(rendered).toContain("incomplete — 1 recorded order(s) did not advance");
+    expect(rendered).not.toContain("merge blocker");
   });
 });
 

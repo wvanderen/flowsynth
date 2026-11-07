@@ -64,6 +64,13 @@ export const SPARSE_ACQUISITION_SEEDS: readonly number[] = [11, 42];
 // absence of long waits and are refused at composition.
 export const CENTURY_MEASUREMENT_VERSION = 2;
 
-// A decision-free stretch of two credited hours or more inside a century
-// walk is a recorded evaluation failure, not atmosphere.
+// A "long period with no new decisions" is a recorded failure, not a
+// finite-numbers pass. The declared threshold: a credited gap longer than
+// two credited hours between meaningful decisions. The declared decision
+// rule is #490's: acquisitions, purchases, placements, Arete and World
+// products, capacity rungs, feats, World finds; level sweeps and session
+// stamps close no gap. The policies act whenever the engine prices an
+// action affordable, so a recorded gap is exactly a stretch where nothing
+// was affordable and nothing was found — the affordability wait the
+// century criterion names.
 export const LONG_GAP_CREDITED = 2 * 3600;

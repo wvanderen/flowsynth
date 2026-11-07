@@ -18,12 +18,14 @@
 // records its absent metadata as absent — nothing is fabricated.
 
 import {
+  BASELINE_SESSION_MINUTES,
   CENTURY_BUDGET_DAYS,
   CENTURY_MARK_HOURS,
   CENTURY_MEASUREMENT_VERSION,
   CENTURY_POLICIES,
   EVALUATION_SEEDS,
   LONG_GAP_CREDITED,
+  LONG_SESSION_MINUTES,
   LATER_ERA_BUDGET_DAYS,
   LATER_ERA_WINDOW,
   OPENING_WINDOW,
@@ -31,6 +33,9 @@ import {
   TARGET_ERAS,
   WORLD_POLICIES,
 } from "./evaluation-declaration";
+
+// The declared session shapes, as the validators walk the matrix grid.
+const SESSION_SHAPES = [BASELINE_SESSION_MINUTES, LONG_SESSION_MINUTES] as const;
 
 // ── Corrupted evidence ────────────────────────────────────────────────
 
@@ -269,6 +274,66 @@ const formatHours = (hours: number): string => String(hours);
 
 const POLICY_CLASS_LABELS: Record<string, string> = { "in-window": "in", under: "under", over: "over", open: "open" };
 
+// Recorded identity shapes: a compiled engine fingerprint and a git
+// commit are hex of fixed length, and anything else is refused.
+const ENGINE_FINGERPRINT = /^[0-9a-f]{8}$/;
+const COMMIT_ID = /^[0-9a-f]{40}$/;
+
+// Shared matrix completeness (both evaluations): every declared cell
+// exactly once — duplicates, undeclared cells, and missing cells all
+// refuse — with each row's own invariants checked by the caller.
+function checkDeclaredMatrix<T extends { readonly sessionMinutes: number; readonly policy: string; readonly seed: number }>(
+  runs: readonly T[],
+  expectedCells: ReadonlySet<string>,
+  failures: FailureList,
+  validateRow: (row: T) => void,
+): void {
+  const seenCells = new Set<string>();
+  const duplicates: string[] = [];
+  for (const run of runs) {
+    const key = cellKey(run.sessionMinutes, run.policy, run.seed);
+    if (!expectedCells.has(key)) {
+      failures.add(`recorded walk ${key} is not a declared matrix cell`);
+      continue;
+    }
+    if (seenCells.has(key)) duplicates.push(key);
+    seenCells.add(key);
+    validateRow(run);
+  }
+  if (duplicates.length > 0) {
+    failures.add(`duplicate recorded walk(s) ${duplicates.join(", ")} — each declared cell appears exactly once`);
+  }
+  const missing = [...expectedCells].filter((key) => !seenCells.has(key));
+  if (runs.length !== expectedCells.size || missing.length > 0) {
+    failures.add(
+      `expected ${expectedCells.size} recorded walks, found ${runs.length}` +
+        (missing.length > 0 ? ` — missing: ${missing.join(", ")}` : ""),
+    );
+  }
+}
+
+interface ClassCounts {
+  inWindow: number;
+  under: number;
+  over: number;
+  open: number;
+}
+
+// One shared era-class tally. The later-era evaluation skips era 0 (the
+// opening reads #490's window and is not a later era); the century
+// evaluation counts every era against its own window.
+function countEraClasses(eras: readonly { readonly index: number; readonly eraClass: string }[], skipOpening: boolean): ClassCounts {
+  const counts: ClassCounts = { inWindow: 0, under: 0, over: 0, open: 0 };
+  for (const era of eras) {
+    if (skipOpening && era.index === 0) continue;
+    if (era.eraClass === "in-window") counts.inWindow++;
+    else if (era.eraClass === "under") counts.under++;
+    else if (era.eraClass === "over") counts.over++;
+    else if (era.eraClass === "open") counts.open++;
+  }
+  return counts;
+}
+
 // ── Later-era validation ──────────────────────────────────────────────
 
 const LATER_ERA_SLICE_PATH = (minutes: number, policy: string): string => `docs/later-era-slice-${minutes}-${policy}.json`;
@@ -290,33 +355,12 @@ export function validateLaterEraEvidence(report: LaterEraReportJson, inputs: Lat
 
   // Matrix completeness: every declared cell exactly once.
   const expectedCells = new Set(EVALUATION_SEEDS.flatMap((seed) =>
-    [25, 60].flatMap((minutes) => WORLD_POLICIES.map((policy) => cellKey(minutes, policy, seed)))));
-  const seenCells = new Set<string>();
-  const duplicates: string[] = [];
-  for (const run of report.runs) {
-    const key = cellKey(run.sessionMinutes, run.policy, run.seed);
-    if (!expectedCells.has(key)) {
-      failures.add(`recorded walk ${key} is not a declared matrix cell`);
-      continue;
-    }
-    if (seenCells.has(key)) duplicates.push(key);
-    seenCells.add(key);
-    validateLaterEraRun(run, failures);
-  }
-  if (duplicates.length > 0) {
-    failures.add(`duplicate recorded walk(s) ${duplicates.join(", ")} — each declared cell appears exactly once`);
-  }
-  const missing = [...expectedCells].filter((key) => !seenCells.has(key));
-  if (report.runs.length !== expectedCells.size || missing.length > 0) {
-    failures.add(
-      `expected ${expectedCells.size} recorded walks, found ${report.runs.length}` +
-        (missing.length > 0 ? ` — missing: ${missing.join(", ")}` : ""),
-    );
-  }
+    SESSION_SHAPES.flatMap((minutes) => WORLD_POLICIES.map((policy) => cellKey(minutes, policy, seed)))));
+  checkDeclaredMatrix(report.runs, expectedCells, failures, (run) => validateLaterEraRun(run, failures));
 
   // Distributions: one per declared slice, consistent with the recorded
   // eras twice over (internally and against the runs).
-  const expectedSlices = [25, 60].flatMap((minutes) => WORLD_POLICIES.map((policy) => ({ minutes, policy })));
+  const expectedSlices = SESSION_SHAPES.flatMap((minutes) => WORLD_POLICIES.map((policy) => ({ minutes, policy })));
   if (report.distributions.length !== expectedSlices.length) {
     failures.add(`expected ${expectedSlices.length} distributions, found ${report.distributions.length}`);
   }
@@ -342,10 +386,10 @@ export function validateLaterEraEvidence(report: LaterEraReportJson, inputs: Lat
 
   // Provenance: the composed report, its declared inputs, and the
   // published slices must agree — one fingerprint across the set.
-  if (!/^[0-9a-f]{8}$/.test(report.source.engineSource)) {
+  if (!ENGINE_FINGERPRINT.test(report.source.engineSource)) {
     failures.add(`composed source fingerprint "${report.source.engineSource}" is not an 8-hex engine fingerprint`);
   }
-  if (!/^[0-9a-f]{40}$/.test(report.recordingCommit)) {
+  if (!COMMIT_ID.test(report.recordingCommit)) {
     failures.add(`composed recording commit "${report.recordingCommit}" is not a 40-hex commit`);
   }
   const expectedInputPaths = [...expectedSlices.map((s) => LATER_ERA_SLICE_PATH(s.minutes, s.policy)), LATER_ERA_PROBE_PATH].sort();
@@ -358,7 +402,7 @@ export function validateLaterEraEvidence(report: LaterEraReportJson, inputs: Lat
     if (!deepEqual(input.source.engineSource, report.source.engineSource)) {
       failures.add(`input ${input.path} provenance disagrees with the composed report (fingerprint ${input.source.engineSource} vs ${report.source.engineSource})`);
     }
-    if (!/^[0-9a-f]{40}$/.test(input.recordingCommit)) {
+    if (!COMMIT_ID.test(input.recordingCommit)) {
       failures.add(`input ${input.path} carries no 40-hex recording commit`);
     }
     if (input.recordingEnvironment !== undefined) {
@@ -425,20 +469,8 @@ function cellKey(minutes: number, policy: string, seed: number): string {
   return `${minutes}:${policy}:${seed}`;
 }
 
-function laterEraClassCounts(eras: readonly LaterEraEraJson[]): { inWindow: number; under: number; over: number; open: number } {
-  const counts = { inWindow: 0, under: 0, over: 0, open: 0 };
-  for (const era of eras) {
-    if (era.index === 0) continue;
-    if (era.eraClass === "in-window") counts.inWindow++;
-    else if (era.eraClass === "under") counts.under++;
-    else if (era.eraClass === "over") counts.over++;
-    else if (era.eraClass === "open") counts.open++;
-  }
-  return counts;
-}
-
-const countLaterEraClasses = (runs: readonly LaterEraRunJson[]): { inWindow: number; under: number; over: number; open: number } =>
-  laterEraClassCounts(runs.flatMap((run) => run.eras));
+const countLaterEraClasses = (runs: readonly LaterEraRunJson[]): ClassCounts =>
+  countEraClasses(runs.flatMap((run) => run.eras), true);
 
 const recomputeLaterEraClasses = (runs: readonly LaterEraRunJson[]) =>
   EVALUATION_SEEDS.map((seed) => ({
@@ -541,32 +573,11 @@ export function validateCenturyEvidence(report: CenturyReportJson, inputs: Centu
   // Matrix completeness: every declared cell exactly once, every row a
   // representative walk — the supplied-board continuations stay outside.
   const expectedCells = new Set(EVALUATION_SEEDS.flatMap((seed) =>
-    [25, 60].flatMap((minutes) => CENTURY_POLICIES.map((policy) => cellKey(minutes, policy, seed)))));
-  const seenCells = new Set<string>();
-  const duplicates: string[] = [];
-  for (const run of report.runs) {
-    const key = cellKey(run.sessionMinutes, run.policy, run.seed);
-    if (!expectedCells.has(key)) {
-      failures.add(`recorded walk ${key} is not a declared matrix cell`);
-      continue;
-    }
-    if (seenCells.has(key)) duplicates.push(key);
-    seenCells.add(key);
-    validateCenturyRun(run, failures);
-  }
-  if (duplicates.length > 0) {
-    failures.add(`duplicate recorded walk(s) ${duplicates.join(", ")} — each declared cell appears exactly once`);
-  }
-  const missing = [...expectedCells].filter((key) => !seenCells.has(key));
-  if (report.runs.length !== expectedCells.size || missing.length > 0) {
-    failures.add(
-      `expected ${expectedCells.size} recorded walks, found ${report.runs.length}` +
-        (missing.length > 0 ? ` — missing: ${missing.join(", ")}` : ""),
-    );
-  }
+    SESSION_SHAPES.flatMap((minutes) => CENTURY_POLICIES.map((policy) => cellKey(minutes, policy, seed)))));
+  checkDeclaredMatrix(report.runs, expectedCells, failures, (run) => validateCenturyRun(run, failures));
 
   // Distributions, twice over.
-  const expectedSlices = [25, 60].flatMap((minutes) => CENTURY_POLICIES.map((policy) => ({ minutes, policy })));
+  const expectedSlices = SESSION_SHAPES.flatMap((minutes) => CENTURY_POLICIES.map((policy) => ({ minutes, policy })));
   if (report.distributions.length !== expectedSlices.length) {
     failures.add(`expected ${expectedSlices.length} distributions, found ${report.distributions.length}`);
   }
@@ -616,10 +627,10 @@ export function validateCenturyEvidence(report: CenturyReportJson, inputs: Centu
   // Provenance: legacy absence is recorded as absence, never invented;
   // disagreement between the composed report and its published slices is
   // still a hard failure.
-  if (!/^[0-9a-f]{8}$/.test(report.source.engineSource)) {
+  if (!ENGINE_FINGERPRINT.test(report.source.engineSource)) {
     failures.add(`composed source fingerprint "${report.source.engineSource}" is not an 8-hex engine fingerprint`);
   }
-  if (!/^[0-9a-f]{40}$/.test(report.recordingCommit)) {
+  if (!COMMIT_ID.test(report.recordingCommit)) {
     failures.add(`composed recording commit "${report.recordingCommit}" is not a 40-hex commit`);
   }
   if (inputs.slices.length !== expectedSlices.length) {
@@ -651,7 +662,7 @@ export function validateCenturyEvidence(report: CenturyReportJson, inputs: Centu
     if (!deepEqual(withoutTrajectory(fixture.row), withoutTrajectory(report.fixtures[variant]))) {
       failures.add(`fixture ${variant} row disagrees with the composed report's fixtures`);
     }
-    if (!/^[0-9a-f]{40}$/.test(fixture.recordingCommit)) {
+    if (!COMMIT_ID.test(fixture.recordingCommit)) {
       failures.add(`fixture ${variant} carries no 40-hex recording commit`);
     }
   }
@@ -660,16 +671,8 @@ export function validateCenturyEvidence(report: CenturyReportJson, inputs: Centu
   return legacyGapThreshold;
 }
 
-function countCenturyClasses(runs: readonly CenturyRunJson[]): { inWindow: number; under: number; over: number; open: number } {
-  const counts = { inWindow: 0, under: 0, over: 0, open: 0 };
-  for (const era of runs.flatMap((run) => run.eras)) {
-    if (era.eraClass === "in-window") counts.inWindow++;
-    else if (era.eraClass === "under") counts.under++;
-    else if (era.eraClass === "over") counts.over++;
-    else if (era.eraClass === "open") counts.open++;
-  }
-  return counts;
-}
+const countCenturyClasses = (runs: readonly CenturyRunJson[]): ClassCounts =>
+  countEraClasses(runs.flatMap((run) => run.eras), false);
 
 function validateCenturyRun(run: CenturyRunJson, failures: FailureList): void {
   const where = `walk ${cellKey(run.sessionMinutes, run.policy, run.seed)}`;
@@ -833,25 +836,41 @@ export function renderLaterEraBlock(figures: LaterEraFigures): string {
     `- **Cadence:** ${figures.totals.over} closed later eras exceed ten credited hours. The record evaluates the requested window honestly; it does not establish that the shipped deeper eras generally meet it.`,
   );
   lines.push("");
-  lines.push("Mechanical verdicts — each names its criterion, its observed read, and its state:");
+  lines.push("Mechanical verdicts — each names its criterion, its observed read, and its state, derived from the figures above:");
   lines.push("");
   lines.push("| Criterion | Observed read | State |");
   lines.push("| --- | --- | --- |");
+  // Every state below derives from the figures — a rerun that moves a
+  // figure moves its verdict's state with it, never a hardcoded word.
+  const newTerritoryState =
+    figures.newTerritoryMajorities === 0 ? "**UNMET** — merge blocker"
+    : figures.newTerritoryMajorities * 2 > figures.closedEras ? "met by the recorded majority"
+    : "**UNMET** — the criterion's majority does not hold";
+  const rebuildingState = figures.rebuilding.overHalf * 2 > figures.closedEras ? "**UNMET**" : "met";
+  const fasterState = figures.fasterReturn.faster > figures.fasterReturn.notFaster ? "met by the recorded majority" : "**UNMET**";
+  const banksState = figures.budgetWalks === 0 ? "met" : `incomplete — ${figures.budgetWalks} recorded incompletes`;
+  const noGrantState = figures.noGrantWalks === figures.walks ? "met" : "**UNMET**";
+  const routesState =
+    figures.routes.advanced === figures.routes.orders && figures.routes.demonstratedFrontiers === figures.routes.frontiers.length
+      ? "met at the tested states, not extrapolated"
+      : figures.routes.advanced > 0
+        ? `incomplete — ${figures.routes.orders - figures.routes.advanced} recorded order(s) did not advance`
+        : "**UNMET** — no recorded order advanced";
   lines.push(
-    `| New-territory majority of era effort (#491) | ${figures.newTerritoryMajorities} of ${figures.closedEras} closed eras hold a new-territory share above one half | **UNMET** — merge blocker |`,
+    `| New-territory majority of era effort (#491) | ${figures.newTerritoryMajorities} of ${figures.closedEras} closed eras hold a new-territory share above one half | ${newTerritoryState} |`,
   );
   lines.push(
-    `| Rebuilding not most of later eras (#491) | ${figures.rebuilding.overHalf} of ${figures.closedEras} closed eras spend more than half rebuilding | **UNMET** |`,
+    `| Rebuilding not most of later eras (#491) | ${figures.rebuilding.overHalf} of ${figures.closedEras} closed eras spend more than half rebuilding | ${rebuildingState} |`,
   );
   lines.push(
-    `| Faster familiar return (#491) | ${figures.fasterReturn.faster} of ${figures.closedEras} closed eras re-walk the previous bank's depth faster | met by the recorded majority |`,
+    `| Faster familiar return (#491) | ${figures.fasterReturn.faster} of ${figures.closedEras} closed eras re-walk the previous bank's depth faster | ${fasterState} |`,
   );
   lines.push(
-    `| Four declared banks per walk (#491) | ${figures.completeWalks} of ${figures.walks} walks complete; ${figures.budgetWalks} stop at budget | ${figures.completeWalks} met; ${figures.budgetWalks} incompletes recorded |`,
+    `| Four declared banks per walk (#491) | ${figures.completeWalks} of ${figures.walks} walks complete; ${figures.budgetWalks} stop at budget | ${banksState} |`,
   );
-  lines.push(`| No grant, no refund (#491) | ${figures.noGrantWalks} of ${figures.walks} walks \`noGrant\` | met |`);
+  lines.push(`| No grant, no refund (#491) | ${figures.noGrantWalks} of ${figures.walks} walks \`noGrant\` | ${noGrantState} |`);
   lines.push(
-    `| No-refund routes at the probed banks (${figures.routes.frontiers.join(", ")}) | ${figures.routes.advanced} of ${figures.routes.orders} orders advanced strictly within budget; route demonstrated at ${figures.routes.demonstratedFrontiers} of ${figures.routes.frontiers.length} tested banks | met at the tested states, not extrapolated |`,
+    `| No-refund routes at the probed banks (${figures.routes.frontiers.join(", ")}) | ${figures.routes.advanced} of ${figures.routes.orders} orders advanced strictly within budget; route demonstrated at ${figures.routes.demonstratedFrontiers} of ${figures.routes.frontiers.length} tested banks | ${routesState} |`,
   );
   lines.push("");
   lines.push(
@@ -936,7 +955,7 @@ export function centuryFigures(report: CenturyReportJson, inputs: CenturyInputs)
   const banksPerPushingWalk = claimPushingRuns.map((run) => run.claims.length);
   const legacy = {
     environmentAbsent: !runs.some((run) => (run as unknown as Record<string, unknown>).recordingEnvironment !== undefined) &&
-      report.recordingCommit !== undefined && !("compositionEnvironment" in report) && !("recordingInputs" in report),
+      !("compositionEnvironment" in report) && !("recordingInputs" in report),
     unitProvenanceAbsent: !("unitProvenance" in report),
     measurementVersionAbsent: runs.every((run) => run.measurementVersion === undefined),
   };
@@ -959,8 +978,9 @@ export function centuryFigures(report: CenturyReportJson, inputs: CenturyInputs)
       gapThresholdLegacySeconds: legacyGapThreshold,
     },
     representativeSupport60: EVALUATION_SEEDS.map((seed) => {
-      const run = runs.find((candidate) => candidate.seed === seed && candidate.sessionMinutes === 60 && candidate.policy === "support");
-      if (!run) throw new EvidenceError([`no representative support walk recorded for seed ${seed} at 60 minutes`]);
+      const run = runs.find((candidate) =>
+        candidate.seed === seed && candidate.sessionMinutes === LONG_SESSION_MINUTES && candidate.policy === "support");
+      if (!run) throw new EvidenceError([`no representative support walk recorded for seed ${seed} at ${LONG_SESSION_MINUTES} minutes`]);
       return {
         seed,
         banks: run.claims.length,

@@ -90,14 +90,14 @@ Generated from the recorded JSON alone — no simulation; regenerate with `node 
 - **New territory:** 0 eras hold a recorded new-territory share above one half.
 - **Cadence:** 48 closed later eras exceed ten credited hours. The record evaluates the requested window honestly; it does not establish that the shipped deeper eras generally meet it.
 
-Mechanical verdicts — each names its criterion, its observed read, and its state:
+Mechanical verdicts — each names its criterion, its observed read, and its state, derived from the figures above:
 
 | Criterion | Observed read | State |
 | --- | --- | --- |
 | New-territory majority of era effort (#491) | 0 of 119 closed eras hold a new-territory share above one half | **UNMET** — merge blocker |
 | Rebuilding not most of later eras (#491) | 107 of 119 closed eras spend more than half rebuilding | **UNMET** |
 | Faster familiar return (#491) | 104 of 119 closed eras re-walk the previous bank's depth faster | met by the recorded majority |
-| Four declared banks per walk (#491) | 35 of 48 walks complete; 13 stop at budget | 35 met; 13 incompletes recorded |
+| Four declared banks per walk (#491) | 35 of 48 walks complete; 13 stop at budget | incomplete — 13 recorded incompletes |
 | No grant, no refund (#491) | 48 of 48 walks `noGrant` | met |
 | No-refund routes at the probed banks (2, 6, 9, 11) | 20 of 20 orders advanced strictly within budget; route demonstrated at 4 of 4 tested banks | met at the tested states, not extrapolated |
 

@@ -122,16 +122,6 @@ export function classifyCenturyEra(era: PlaythroughEraLedger): CenturyEraClass {
   return "in-window";
 }
 
-// A "long period with no new decisions" is a recorded failure, not a
-// finite-numbers pass. The declared threshold: a credited gap longer than
-// two credited hours between meaningful decisions. The declared decision
-// rule is #490's: acquisitions, purchases, placements, Arete and World
-// products, capacity rungs, feats, World finds; level sweeps and session
-// stamps close no gap. The policies act whenever the engine prices an
-// action affordable, so a recorded gap is exactly a stretch where nothing
-// was affordable and nothing was found — the affordability wait the
-// century criterion names.
-
 export interface CenturyEraView {
   readonly index: number;
   readonly eraClass: CenturyEraClass;
