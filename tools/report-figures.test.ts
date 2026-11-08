@@ -13,6 +13,7 @@ import {
   spliceGeneratedBlock,
   validateCenturyEvidence,
   validateLaterEraEvidence,
+  type CenturyFigures,
   type CenturyInputs,
   type CenturyReportJson,
   type LaterEraFigures,
@@ -124,12 +125,12 @@ describe("century figures from recorded evidence", () => {
     const figures = centuryFigures(centuryReport(), centuryInputs());
     expect(figures.walks).toBe(80);
     expect(figures.slices).toHaveLength(10);
-    expect(figures.totals).toEqual({ inWindow: 256, under: 203, over: 256, open: 78, banks: 715 });
-    expect(figures.promptBanks).toEqual({ banks: 289, nonzeroClaims: 3, maxFrontier: 3 });
-    expect(figures.claimPushingBanks.nonzeroClaims).toBe(426);
-    expect(figures.claimPushingBanks.banks).toBe(426);
+    expect(figures.totals).toEqual({ inWindow: 224, under: 268, over: 193, open: 77, banks: 685 });
+    expect(figures.promptBanks).toEqual({ banks: 290, nonzeroClaims: 2, maxFrontier: 2 });
+    expect(figures.claimPushingBanks.nonzeroClaims).toBe(395);
+    expect(figures.claimPushingBanks.banks).toBe(395);
     expect(figures.walkBanksMin).toBe(2);
-    expect(figures.walkBanksMax).toBe(14);
+    expect(figures.walkBanksMax).toBe(15);
   });
 
   it("renders the committed generated block byte-for-byte from the evidence alone", () => {
@@ -139,14 +140,19 @@ describe("century figures from recorded evidence", () => {
     expect(doc).toContain(generatedBlock(CENTURY_BLOCK_ID, rendered));
   });
 
-  it("records legacy absence as absence and keeps the boundary-aware gap verdict incomplete", () => {
+  it("renders the current recording's own provenance and boundary-aware gap verdict", () => {
     const rendered = renderCenturyBlock(centuryFigures(centuryReport(), centuryInputs()));
-    expect(rendered).toContain("8790c6cb");
-    expect(rendered).toContain("no runtime or timezone metadata");
+    // The committed recording is current: its fingerprint and commit, the
+    // one absence the century recorder still carries (per-unit provenance
+    // is the durable-job interface's scope, issue #508), and the
+    // boundary-aware gap verdict.
+    expect(rendered).toContain("Century figures composed from the recorded matrix");
+    expect(rendered).toContain("`ed2bd449`");
     expect(rendered).toContain("no per-unit provenance");
-    expect(rendered).toContain("no measurementVersion");
-    expect(rendered).toContain("incomplete");
-    expect(rendered).toContain("start and terminal waits were not measured");
+    expect(rendered).not.toContain("no runtime or timezone metadata");
+    expect(rendered).not.toContain("no measurementVersion");
+    expect(rendered).toContain("measured across starts, terminals, and whole-run spans | **met**");
+    expect(rendered).not.toContain("the legacy zero is not evidence of absence");
     expect(rendered).toContain("never an approved exception");
     expect(rendered).toContain("no simulation");
     // The sparse seeds ride the matrix rows; the continuations stay outside them.
@@ -156,13 +162,39 @@ describe("century figures from recorded evidence", () => {
     expect(rendered).toContain("0:8/in");
   });
 
+  it("records legacy absence as absence and keeps the boundary-aware gap verdict incomplete for a restored recording", () => {
+    // The #514 restoration shape: absent provenance and legacy gaps. The
+    // flags flip, the preamble and the gap verdict name the absences, and
+    // no absence is ever invented.
+    const base = centuryFigures(centuryReport(), centuryInputs());
+    const legacy: CenturyFigures = {
+      ...base,
+      legacy: {
+        ...base.legacy,
+        environmentAbsent: true,
+        unitProvenanceAbsent: true,
+        measurementVersionAbsent: true,
+        gapThresholdLegacySeconds: 6000,
+      },
+    };
+    const rendered = renderCenturyBlock(legacy);
+    expect(rendered).toContain("Century figures composed from the recorded matrix");
+    expect(rendered).toContain("no runtime or timezone metadata");
+    expect(rendered).toContain("no per-unit provenance");
+    expect(rendered).toContain("no measurementVersion");
+    expect(rendered).toContain("incomplete");
+    expect(rendered).toContain("legacy gap read at the recorded 6000s threshold");
+    expect(rendered).toContain("start and terminal waits were not measured");
+    expect(rendered).toContain("the legacy zero is not evidence of absence");
+  });
+
   it("reads the representative support walks the recorded rows carry", () => {
     const figures = centuryFigures(centuryReport(), centuryInputs());
     const seed23 = figures.representativeSupport60.find((row) => row.seed === 23);
-    expect(seed23?.banks).toBe(9);
-    expect(seed23?.frontier).toBe(25);
+    expect(seed23?.banks).toBe(6);
+    expect(seed23?.frontier).toBe(14);
     expect(seed23?.spans).toBe(
-      "0:8/in · 1:5/in · 2:6/in · 3:8/in · 4:10/in · 5:11/over · 6:10/in · 7:11/over · 8:14/over · open",
+      "0:8/in · 1:2/under · 2:3/under · 3:5/in · 4:6/in · 5:5/in · open",
     );
   });
 });

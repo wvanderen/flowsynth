@@ -1,15 +1,17 @@
 {
   "source": {
     "game": "flowsynth",
-    "saveVersion": 12,
+    "saveVersion": 13,
     "runnerVersion": 15,
-    "engineSource": "8790c6cb"
+    "engineSource": "ed2bd449"
   },
-  "recordingCommit": "e6e1665ada261bca53f5d931c6a50bf5fe0856a7",
+  "recordingCommit": "eb4e1850df67ec3c2a4ce347e7b0e1e00cd6b120",
   "minutes": 25,
   "policy": "prompt",
   "rows": [
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 42,
       "sessionMinutes": 25,
       "policy": "prompt",
@@ -109,6 +111,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3752.07653983931,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
@@ -120,9 +123,9 @@
           "placements": 15,
           "defeats": [],
           "gaps": {
-            "count": 80,
+            "count": 18,
             "maxCredited": 1500,
-            "meanCredited": 319
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -133,6 +136,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 5485.91688445906,
           "priorDepth": 12663006.48872832,
           "depthGrowth": null,
           "familiarHours": 2.5,
@@ -144,9 +148,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -157,6 +161,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 15386843.801497096,
           "depthGrowth": 1.22,
           "familiarHours": 2.5,
@@ -168,9 +173,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 750
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -181,6 +186,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18399166.957027346,
           "depthGrowth": 1.2,
           "familiarHours": 2.5,
@@ -192,9 +198,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 857
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -205,6 +211,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18399164.87655198,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -218,7 +225,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -229,6 +236,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18398206.464881677,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -240,9 +248,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1071
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -253,6 +261,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18398176.833236855,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -266,7 +275,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -277,6 +286,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18397143.34202051,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -290,7 +300,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -301,6 +311,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18396776.041604728,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -312,9 +323,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1071
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -325,6 +336,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18396775.690730907,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -338,7 +350,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -349,6 +361,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18396434.752798624,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -362,7 +375,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -373,6 +386,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18396434.12122575,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -384,9 +398,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 857
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -397,6 +411,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18396271.742082916,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -410,7 +425,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -421,6 +436,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 6819.163425450109,
           "priorDepth": 18395393.874617074,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -434,7 +450,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -445,6 +461,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 18395143.48776915,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -458,7 +475,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -469,6 +486,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11309011.308563896,
           "depthGrowth": 0.61,
           "familiarHours": 2.5,
@@ -482,7 +500,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -493,6 +511,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11309002.383760802,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -506,7 +525,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -517,6 +536,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11309002.383760802,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -528,9 +548,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1071
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -541,6 +561,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308946.628192598,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -554,7 +575,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -565,6 +586,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308946.628192598,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -578,7 +600,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -589,6 +611,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308649.863936327,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -602,7 +625,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -613,6 +636,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308387.922298893,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -626,7 +650,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -637,6 +661,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308342.284038052,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -650,7 +675,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -661,6 +686,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308308.272476172,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -674,7 +700,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -685,6 +711,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308232.762271967,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -698,7 +725,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -709,6 +736,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11308054.534217363,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -722,7 +750,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -733,6 +761,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307898.134649329,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -744,9 +773,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 857
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -757,6 +786,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307842.939368514,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -770,7 +800,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -781,6 +811,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307750.692278728,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -794,7 +825,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -805,6 +836,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307743.07923095,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -818,7 +850,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -829,6 +861,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307693.643549372,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -842,7 +875,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -853,6 +886,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307668.088496096,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -866,7 +900,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -877,6 +911,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307665.322380433,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -890,7 +925,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -901,6 +936,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307665.322380433,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -914,7 +950,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -925,6 +961,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307665.322380433,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -938,7 +975,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -949,6 +986,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307643.05187429,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -962,7 +1000,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -973,6 +1011,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307562.763133423,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -986,7 +1025,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -997,6 +1036,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 4151.912412274634,
           "priorDepth": 11307445.236761589,
           "depthGrowth": 1,
           "familiarHours": 2.5,
@@ -1010,7 +1050,7 @@
           "gaps": {
             "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2057,21 +2097,23 @@
         "maxLevel": 23,
         "maxReserve": 6900.77,
         "finiteSnapshots": true,
-        "serializedChecks": 112,
-        "serializedOk": 112
+        "serializedChecks": 113,
+        "serializedOk": 113
       },
       "gaps": {
-        "count": 350,
+        "count": 208,
         "maxCredited": 3000,
-        "meanCredited": 1020,
+        "meanCredited": 1731,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 42 · fresh-start · fresh-start-s42-7f7cb201 · no Arete spent · recovery — none: the door banked 0 Arete (3752.08ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 38 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 42 · fresh-start · fresh-start-s42-6947dcda · no Arete spent · recovery — none: the door banked 0 Arete (3752.08ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 38 era(s) banked."
     },
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 468,
       "sessionMinutes": 25,
       "policy": "prompt",
@@ -2159,6 +2201,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2188.556064996225,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
@@ -2170,9 +2213,9 @@
           "placements": 15,
           "defeats": [],
           "gaps": {
-            "count": 79,
+            "count": 18,
             "maxCredited": 1500,
-            "meanCredited": 323
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2183,6 +2226,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2315.7554121342037,
           "priorDepth": 10667605.600725954,
           "depthGrowth": null,
           "familiarHours": 2.92,
@@ -2194,9 +2238,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 10,
+            "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1050
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2207,6 +2251,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 8354778.879099844,
           "depthGrowth": 0.78,
           "familiarHours": 2.88,
@@ -2218,9 +2263,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1125
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2231,6 +2276,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9960626.666351618,
           "depthGrowth": 1.19,
           "familiarHours": 2.92,
@@ -2242,9 +2288,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1125
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2255,6 +2301,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10739375.974781947,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2266,9 +2313,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1125
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2279,6 +2326,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9960185.970513899,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2292,7 +2340,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2303,6 +2351,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10739375.974781947,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2314,9 +2363,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1125
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2327,6 +2376,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9960020.505826885,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2339,8 +2389,8 @@
           "defeats": [],
           "gaps": {
             "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "maxCredited": 3000,
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2351,6 +2401,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10739103.439041262,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2362,9 +2413,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2375,6 +2426,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9959771.486912541,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2386,9 +2438,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1125
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2399,6 +2451,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10738823.621433191,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2410,9 +2463,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2423,6 +2476,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9959413.994279351,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2436,7 +2490,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2447,6 +2501,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10738330.02824743,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2460,7 +2515,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2471,6 +2526,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9959019.212968398,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2483,8 +2539,8 @@
           "defeats": [],
           "gaps": {
             "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "maxCredited": 3000,
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2495,6 +2551,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10738227.17678555,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2506,9 +2563,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1125
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2519,6 +2576,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9958947.722758887,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2530,9 +2588,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2543,6 +2601,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10737831.822950913,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2554,9 +2613,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2567,6 +2626,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3041.4134664673406,
           "priorDepth": 9958375.976357687,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2580,7 +2640,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2591,6 +2651,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 10737337.446992189,
           "depthGrowth": 1.08,
           "familiarHours": 2.92,
@@ -2604,7 +2665,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2615,6 +2676,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9957939.024466671,
           "depthGrowth": 0.93,
           "familiarHours": 2.92,
@@ -2627,8 +2689,8 @@
           "defeats": [],
           "gaps": {
             "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "maxCredited": 3000,
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2639,6 +2701,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 9838677.074575888,
           "depthGrowth": 0.99,
           "familiarHours": 2.92,
@@ -2650,9 +2713,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2663,6 +2726,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9957577.96933802,
           "depthGrowth": 1.01,
           "familiarHours": 2.92,
@@ -2674,9 +2738,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2687,6 +2751,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 9838254.255263615,
           "depthGrowth": 0.99,
           "familiarHours": 2.92,
@@ -2698,9 +2763,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1125
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2711,6 +2776,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9957499.913845483,
           "depthGrowth": 1.01,
           "familiarHours": 2.92,
@@ -2724,7 +2790,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2735,6 +2801,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2757.5615356370563,
           "priorDepth": 9838040.333838087,
           "depthGrowth": 0.99,
           "familiarHours": 2.92,
@@ -2748,7 +2815,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2759,6 +2826,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9957395.378841644,
           "depthGrowth": 1.01,
           "familiarHours": 2.92,
@@ -2771,8 +2839,8 @@
           "defeats": [],
           "gaps": {
             "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "maxCredited": 3000,
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2783,6 +2851,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9837516.311488189,
           "depthGrowth": 0.99,
           "familiarHours": 2.92,
@@ -2794,9 +2863,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2807,6 +2876,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9834499.04309056,
           "depthGrowth": 1,
           "familiarHours": 2.92,
@@ -2818,9 +2888,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2831,6 +2901,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9837214.384684024,
           "depthGrowth": 1,
           "familiarHours": 2.92,
@@ -2842,9 +2913,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 3000,
-            "meanCredited": 1286
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2855,6 +2926,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9834235.884998066,
           "depthGrowth": 1,
           "familiarHours": 2.92,
@@ -2868,7 +2940,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2879,6 +2951,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9836803.13460719,
           "depthGrowth": 1,
           "familiarHours": 2.92,
@@ -2892,7 +2965,7 @@
           "gaps": {
             "count": 7,
             "maxCredited": 1500,
-            "meanCredited": 1286
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -2903,6 +2976,7 @@
           "hours": 2.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2690.0204900925773,
           "priorDepth": 9833952.385333622,
           "depthGrowth": 1,
           "familiarHours": 2.92,
@@ -2915,8 +2989,8 @@
           "defeats": [],
           "gaps": {
             "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "maxCredited": 3000,
+            "meanCredited": 1750
           },
           "longGaps": [],
           "finite": true
@@ -2927,6 +3001,7 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
+          "rateAtBank": null,
           "priorDepth": 9836267.924158014,
           "depthGrowth": 1,
           "familiarHours": 2.08,
@@ -2938,9 +3013,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
+            "count": 5,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": null
@@ -3981,17 +4056,19 @@
         "serializedOk": 108
       },
       "gaps": {
-        "count": 339,
+        "count": 215,
         "maxCredited": 3000,
-        "meanCredited": 1053,
+        "meanCredited": 1674,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 468 · fresh-start · fresh-start-s468-c6239469 · no Arete spent · recovery — none: the door banked 0 Arete (2188.56ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 32 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 468 · fresh-start · fresh-start-s468-1f7b3592 · no Arete spent · recovery — none: the door banked 0 Arete (2188.56ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 32 era(s) banked."
     },
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 157,
       "sessionMinutes": 25,
       "policy": "prompt",
@@ -4039,6 +4116,7 @@
           "hours": 14.17,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 629.3631352133183,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
@@ -4050,9 +4128,9 @@
           "placements": 14,
           "defeats": [],
           "gaps": {
-            "count": 99,
+            "count": 34,
             "maxCredited": 1500,
-            "meanCredited": 500
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -4063,6 +4141,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 653.8253697741886,
           "priorDepth": 7960916.787575944,
           "depthGrowth": null,
           "familiarHours": 7.5,
@@ -4074,9 +4153,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 18,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1417
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4087,6 +4166,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 653.8253697741886,
           "priorDepth": 7679108.661311508,
           "depthGrowth": 0.96,
           "familiarHours": 7.5,
@@ -4098,9 +4178,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 17,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4111,6 +4191,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 653.8253697741886,
           "priorDepth": 7679096.032553584,
           "depthGrowth": 1,
           "familiarHours": 7.5,
@@ -4122,9 +4203,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 17,
+            "count": 16,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1688
           },
           "longGaps": [],
           "finite": true
@@ -4135,6 +4216,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 695.9141222918207,
           "priorDepth": 7678861.882993124,
           "depthGrowth": 1,
           "familiarHours": 7.48,
@@ -4146,9 +4228,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 16,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1594
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4159,6 +4241,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 695.9141222918207,
           "priorDepth": 8023419.719986504,
           "depthGrowth": 1.04,
           "familiarHours": 7.5,
@@ -4170,9 +4253,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 17,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4183,6 +4266,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 695.9141222918207,
           "priorDepth": 8023292.679415985,
           "depthGrowth": 1,
           "familiarHours": 7.5,
@@ -4194,9 +4278,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 16,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1594
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4207,6 +4291,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 695.9141222918207,
           "priorDepth": 8023249.729352159,
           "depthGrowth": 1,
           "familiarHours": 7.5,
@@ -4218,9 +4303,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 16,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1594
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4231,6 +4316,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 695.9141222918207,
           "priorDepth": 8023015.285820677,
           "depthGrowth": 1,
           "familiarHours": 7.5,
@@ -4242,9 +4328,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 17,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4255,6 +4341,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 695.9141222918207,
           "priorDepth": 8022946.442429841,
           "depthGrowth": 1,
           "familiarHours": 7.5,
@@ -4266,9 +4353,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 16,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1594
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4279,6 +4366,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 576.608400842378,
           "priorDepth": 8022886.496909929,
           "depthGrowth": 1,
           "familiarHours": 7.5,
@@ -4290,9 +4378,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 16,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1594
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4303,6 +4391,7 @@
           "hours": 7.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 576.608400842378,
           "priorDepth": 7526852.764204902,
           "depthGrowth": 0.94,
           "familiarHours": 7.5,
@@ -4314,9 +4403,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 16,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1594
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -4327,6 +4416,7 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
+          "rateAtBank": null,
           "priorDepth": 7526807.411729979,
           "depthGrowth": 1,
           "familiarHours": 3.33,
@@ -4338,9 +4428,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
+            "count": 7,
             "maxCredited": 3000,
-            "meanCredited": 1313
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": null
@@ -5381,17 +5471,19 @@
         "serializedOk": 83
       },
       "gaps": {
-        "count": 301,
+        "count": 207,
         "maxCredited": 3000,
-        "meanCredited": 1186,
+        "meanCredited": 1739,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 157 · fresh-start · fresh-start-s157-b24aeae8 · no Arete spent · recovery — none: the door banked 0 Arete (629.36ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 12 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 157 · fresh-start · fresh-start-s157-173c2ad7 · no Arete spent · recovery — none: the door banked 0 Arete (629.36ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 12 era(s) banked."
     },
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 2026,
       "sessionMinutes": 25,
       "policy": "prompt",
@@ -5430,13 +5522,14 @@
         {
           "index": 0,
           "eraClass": "over",
-          "hours": 12.5,
+          "hours": 12.92,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 392.9502087390183,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
-          "newHours": 12.5,
+          "newHours": 12.92,
           "newShare": 1,
           "rebuildingShare": null,
           "purchases": [],
@@ -5444,9 +5537,9 @@
           "placements": 14,
           "defeats": [],
           "gaps": {
-            "count": 93,
-            "maxCredited": 1500,
-            "meanCredited": 468
+            "count": 29,
+            "maxCredited": 3000,
+            "meanCredited": 1603
           },
           "longGaps": [],
           "finite": true
@@ -5454,11 +5547,37 @@
         {
           "index": 1,
           "eraClass": "over",
+          "hours": 10.42,
+          "claim": 0,
+          "frontierAfter": 0,
+          "rateAtBank": 468.03067776313287,
+          "priorDepth": 7496949.486950808,
+          "depthGrowth": null,
+          "familiarHours": 10.33,
+          "newHours": 0.08,
+          "newShare": 0.008,
+          "rebuildingShare": 0.8,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": 0,
+          "defeats": [],
+          "gaps": {
+            "count": 21,
+            "maxCredited": 3000,
+            "meanCredited": 1786
+          },
+          "longGaps": [],
+          "finite": true
+        },
+        {
+          "index": 2,
+          "eraClass": "over",
           "hours": 11.25,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 7529654.393507218,
-          "depthGrowth": null,
+          "rateAtBank": 561.80850731094,
+          "priorDepth": 7841362.944127433,
+          "depthGrowth": 1.05,
           "familiarHours": 11.25,
           "newHours": 0,
           "newShare": 0,
@@ -5468,33 +5587,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 26,
-            "maxCredited": 3000,
-            "meanCredited": 1500
-          },
-          "longGaps": [],
-          "finite": true
-        },
-        {
-          "index": 2,
-          "eraClass": "over",
-          "hours": 10.42,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 7720502.32848929,
-          "depthGrowth": 1.03,
-          "familiarHours": 10.42,
-          "newHours": 0,
-          "newShare": 0,
-          "rebuildingShare": null,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
-          "defeats": [],
-          "gaps": {
             "count": 23,
             "maxCredited": 3000,
-            "meanCredited": 1565
+            "meanCredited": 1761
           },
           "longGaps": [],
           "finite": true
@@ -5505,8 +5600,9 @@
           "hours": 10.42,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 7841721.755174859,
-          "depthGrowth": 1.02,
+          "rateAtBank": 503.6893859391382,
+          "priorDepth": 7718041.111967992,
+          "depthGrowth": 0.98,
           "familiarHours": 10.42,
           "newHours": 0,
           "newShare": 0,
@@ -5518,7 +5614,7 @@
           "gaps": {
             "count": 23,
             "maxCredited": 3000,
-            "meanCredited": 1565
+            "meanCredited": 1630
           },
           "longGaps": [],
           "finite": true
@@ -5529,33 +5625,10 @@
           "hours": 10.42,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 7763007.899753313,
-          "depthGrowth": 0.99,
+          "rateAtBank": 486.95506368428374,
+          "priorDepth": 7326579.386445605,
+          "depthGrowth": 0.95,
           "familiarHours": 10.42,
-          "newHours": 0,
-          "newShare": 0,
-          "rebuildingShare": 0.92,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
-          "defeats": [],
-          "gaps": {
-            "count": 22,
-            "maxCredited": 3000,
-            "meanCredited": 1636
-          },
-          "longGaps": [],
-          "finite": true
-        },
-        {
-          "index": 5,
-          "eraClass": "in-window",
-          "hours": 10,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 7958418.488001111,
-          "depthGrowth": 1.03,
-          "familiarHours": 10,
           "newHours": 0,
           "newShare": 0,
           "rebuildingShare": null,
@@ -5564,9 +5637,34 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 22,
+            "count": 21,
             "maxCredited": 3000,
-            "meanCredited": 1568
+            "meanCredited": 1786
+          },
+          "longGaps": [],
+          "finite": true
+        },
+        {
+          "index": 5,
+          "eraClass": "over",
+          "hours": 10.42,
+          "claim": 0,
+          "frontierAfter": 0,
+          "rateAtBank": 714.5122906705532,
+          "priorDepth": 7516836.945820649,
+          "depthGrowth": 1.03,
+          "familiarHours": 10.37,
+          "newHours": 0.05,
+          "newShare": 0.005,
+          "rebuildingShare": 0.92,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": 0,
+          "defeats": [],
+          "gaps": {
+            "count": 21,
+            "maxCredited": 3000,
+            "meanCredited": 1786
           },
           "longGaps": [],
           "finite": true
@@ -5577,20 +5675,21 @@
           "hours": 10,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 7491755.521919454,
-          "depthGrowth": 0.94,
+          "rateAtBank": 510.97697460099795,
+          "priorDepth": 7955773.173976243,
+          "depthGrowth": 1.06,
           "familiarHours": 10,
           "newHours": 0,
           "newShare": 0,
-          "rebuildingShare": 0.833,
+          "rebuildingShare": null,
           "purchases": [],
           "nousPurchases": 0,
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 21,
+            "count": 20,
             "maxCredited": 3000,
-            "meanCredited": 1571
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -5598,35 +5697,12 @@
         {
           "index": 7,
           "eraClass": "in-window",
-          "hours": 10,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 7491586.590631435,
-          "depthGrowth": 1,
-          "familiarHours": 10,
-          "newHours": 0,
-          "newShare": 0,
-          "rebuildingShare": 0.833,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
-          "defeats": [],
-          "gaps": {
-            "count": 22,
-            "maxCredited": 3000,
-            "meanCredited": 1500
-          },
-          "longGaps": [],
-          "finite": true
-        },
-        {
-          "index": 8,
-          "eraClass": "in-window",
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 7491442.042706072,
-          "depthGrowth": 1,
+          "rateAtBank": 530.1697936842853,
+          "priorDepth": 7490176.470841079,
+          "depthGrowth": 0.94,
           "familiarHours": 9.58,
           "newHours": 0,
           "newShare": 0,
@@ -5636,9 +5712,34 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 20,
+            "count": 19,
             "maxCredited": 3000,
-            "meanCredited": 1575
+            "meanCredited": 1816
+          },
+          "longGaps": [],
+          "finite": true
+        },
+        {
+          "index": 8,
+          "eraClass": "over",
+          "hours": 10.42,
+          "claim": 0,
+          "frontierAfter": 0,
+          "rateAtBank": 714.5122906705532,
+          "priorDepth": 7082875.028443862,
+          "depthGrowth": 0.95,
+          "familiarHours": 10.2,
+          "newHours": 0.22,
+          "newShare": 0.021,
+          "rebuildingShare": 0.96,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": 0,
+          "defeats": [],
+          "gaps": {
+            "count": 21,
+            "maxCredited": 3000,
+            "meanCredited": 1786
           },
           "longGaps": [],
           "finite": true
@@ -5649,9 +5750,10 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
-          "priorDepth": 7083669.267619417,
-          "depthGrowth": 0.95,
-          "familiarHours": 5.42,
+          "rateAtBank": null,
+          "priorDepth": 7955213.947647174,
+          "depthGrowth": 1.12,
+          "familiarHours": 4.17,
           "newHours": 0,
           "newShare": 0,
           "rebuildingShare": null,
@@ -5660,9 +5762,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 12,
-            "maxCredited": 1500,
-            "meanCredited": 1500
+            "count": 9,
+            "maxCredited": 3000,
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": null
@@ -5841,12 +5943,12 @@
         },
         {
           "key": "feat eyes-on-the-horizon",
-          "creditedHour": 12.5,
+          "creditedHour": 12.9,
           "era": 0
         },
         {
           "key": "feat first-prestige",
-          "creditedHour": 12.5,
+          "creditedHour": 12.9,
           "era": 1
         },
         {
@@ -5918,7 +6020,7 @@
         },
         {
           "hour": 5,
-          "rate": 32.24,
+          "rate": 31.03,
           "eraEarned": 215723,
           "nous": 237,
           "frontier": 0,
@@ -5926,761 +6028,761 @@
         },
         {
           "hour": 6,
-          "rate": 112.57,
-          "eraEarned": 376547,
-          "nous": 1207,
+          "rate": 74.86,
+          "eraEarned": 374211,
+          "nous": 3375,
           "frontier": 0,
           "bankCount": 0
         },
         {
           "hour": 7,
-          "rate": 125.71,
-          "eraEarned": 799652,
-          "nous": 1193,
+          "rate": 80.3,
+          "eraEarned": 662627,
+          "nous": 4032,
           "frontier": 0,
           "bankCount": 0
         },
         {
           "hour": 8,
-          "rate": 127.74,
-          "eraEarned": 1510905,
-          "nous": 27731,
+          "rate": 125.18,
+          "eraEarned": 1280767,
+          "nous": 15118,
           "frontier": 0,
           "bankCount": 0
         },
         {
           "hour": 9,
-          "rate": 201.81,
-          "eraEarned": 2132526,
-          "nous": 26002,
+          "rate": 149.38,
+          "eraEarned": 1802576,
+          "nous": 784,
           "frontier": 0,
           "bankCount": 0
         },
         {
           "hour": 10,
-          "rate": 300.21,
-          "eraEarned": 3510860,
-          "nous": 9012,
+          "rate": 190.3,
+          "eraEarned": 2744055,
+          "nous": 42746,
           "frontier": 0,
           "bankCount": 0
         },
         {
           "hour": 11,
-          "rate": 330.48,
-          "eraEarned": 4674806,
-          "nous": 43742,
+          "rate": 375.87,
+          "eraEarned": 3827613,
+          "nous": 3510,
           "frontier": 0,
           "bankCount": 0
         },
         {
           "hour": 12,
-          "rate": 345.37,
-          "eraEarned": 5978198,
-          "nous": 53,
+          "rate": 381.57,
+          "eraEarned": 5268547,
+          "nous": 16937,
           "frontier": 0,
           "bankCount": 0
         },
         {
           "hour": 13,
-          "rate": 3.08,
-          "eraEarned": 2160,
+          "rate": 1.12,
+          "eraEarned": 0,
           "nous": 2,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 14,
-          "rate": 8.17,
-          "eraEarned": 17562,
-          "nous": 59,
+          "rate": 4.96,
+          "eraEarned": 8134,
+          "nous": 12,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 15,
-          "rate": 15.24,
-          "eraEarned": 89165,
-          "nous": 1050,
+          "rate": 14.25,
+          "eraEarned": 58903,
+          "nous": 552,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 16,
-          "rate": 43.63,
-          "eraEarned": 164388,
-          "nous": 1324,
+          "rate": 16.01,
+          "eraEarned": 114104,
+          "nous": 625,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 17,
-          "rate": 72.15,
-          "eraEarned": 339695,
-          "nous": 2422,
+          "rate": 48.99,
+          "eraEarned": 193939,
+          "nous": 936,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 18,
-          "rate": 106.91,
-          "eraEarned": 819963,
-          "nous": 639,
+          "rate": 101.67,
+          "eraEarned": 576452,
+          "nous": 396,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 19,
-          "rate": 128.72,
-          "eraEarned": 1239223,
-          "nous": 7389,
+          "rate": 111.44,
+          "eraEarned": 979061,
+          "nous": 5521,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 20,
-          "rate": 200.98,
-          "eraEarned": 2181116,
-          "nous": 3416,
+          "rate": 225.7,
+          "eraEarned": 2040388,
+          "nous": 25610,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 21,
-          "rate": 265.8,
-          "eraEarned": 2961741,
-          "nous": 20431,
+          "rate": 256.81,
+          "eraEarned": 2958573,
+          "nous": 22174,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 22,
-          "rate": 320.57,
-          "eraEarned": 4028740,
-          "nous": 14882,
+          "rate": 452.43,
+          "eraEarned": 4314271,
+          "nous": 24172,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 23,
-          "rate": 360.02,
-          "eraEarned": 5953534,
-          "nous": 105729,
+          "rate": 468.03,
+          "eraEarned": 6949278,
+          "nous": 47286,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 24,
-          "rate": 1.12,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 3.08,
+          "eraEarned": 2159,
+          "nous": 1,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 25,
-          "rate": 8.43,
-          "eraEarned": 17718,
-          "nous": 51,
+          "rate": 13.61,
+          "eraEarned": 33479,
+          "nous": 410,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 26,
-          "rate": 14.25,
-          "eraEarned": 58887,
-          "nous": 536,
+          "rate": 15.24,
+          "eraEarned": 89151,
+          "nous": 1036,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 27,
-          "rate": 16.01,
-          "eraEarned": 114084,
-          "nous": 605,
+          "rate": 43.63,
+          "eraEarned": 164346,
+          "nous": 1282,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 28,
-          "rate": 53.85,
-          "eraEarned": 288540,
-          "nous": 1958,
+          "rate": 88.27,
+          "eraEarned": 478651,
+          "nous": 4236,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 29,
-          "rate": 101.67,
-          "eraEarned": 576689,
-          "nous": 633,
+          "rate": 106.91,
+          "eraEarned": 819823,
+          "nous": 499,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 30,
-          "rate": 222.48,
-          "eraEarned": 1192801,
-          "nous": 7010,
+          "rate": 176.63,
+          "eraEarned": 1487800,
+          "nous": 366,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 31,
-          "rate": 225.7,
-          "eraEarned": 2040876,
-          "nous": 26098,
+          "rate": 200.98,
+          "eraEarned": 2180809,
+          "nous": 3109,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 32,
-          "rate": 256.81,
-          "eraEarned": 2959060,
-          "nous": 22661,
+          "rate": 265.8,
+          "eraEarned": 2961298,
+          "nous": 19988,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 33,
-          "rate": 459.96,
-          "eraEarned": 5179438,
-          "nous": 38857,
+          "rate": 322.28,
+          "eraEarned": 4643110,
+          "nous": 42921,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 34,
-          "rate": 468.03,
-          "eraEarned": 6949637,
-          "nous": 47645,
+          "rate": 360.02,
+          "eraEarned": 5951764,
+          "nous": 103959,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 35,
-          "rate": 4.78,
-          "eraEarned": 8067,
-          "nous": 46,
+          "rate": 3.06,
+          "eraEarned": 2145,
+          "nous": 3,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 36,
-          "rate": 13.55,
-          "eraEarned": 33964,
-          "nous": 619,
+          "rate": 8.52,
+          "eraEarned": 17391,
+          "nous": 56,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 37,
-          "rate": 18.51,
-          "eraEarned": 89830,
-          "nous": 0,
+          "rate": 14.68,
+          "eraEarned": 58669,
+          "nous": 978,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 38,
-          "rate": 44.23,
-          "eraEarned": 247167,
-          "nous": 223,
+          "rate": 44.74,
+          "eraEarned": 182492,
+          "nous": 508,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 39,
-          "rate": 78.51,
-          "eraEarned": 478611,
-          "nous": 5236,
+          "rate": 68.92,
+          "eraEarned": 395734,
+          "nous": 16,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 40,
-          "rate": 173.64,
-          "eraEarned": 1130597,
-          "nous": 12985,
+          "rate": 97.21,
+          "eraEarned": 889344,
+          "nous": 10066,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 41,
-          "rate": 176.01,
-          "eraEarned": 1795032,
-          "nous": 9290,
+          "rate": 128.82,
+          "eraEarned": 1320056,
+          "nous": 14434,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 42,
-          "rate": 319.59,
-          "eraEarned": 2734870,
-          "nous": 44035,
+          "rate": 219.88,
+          "eraEarned": 1948796,
+          "nous": 26577,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 43,
-          "rate": 341.63,
-          "eraEarned": 4626045,
-          "nous": 21624,
+          "rate": 252.84,
+          "eraEarned": 3316711,
+          "nous": 35767,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 44,
-          "rate": 420.27,
-          "eraEarned": 6075205,
-          "nous": 33971,
+          "rate": 450.66,
+          "eraEarned": 4646099,
+          "nous": 11455,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 45,
-          "rate": 3.06,
-          "eraEarned": 2145,
-          "nous": 3,
+          "rate": 1.12,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 46,
-          "rate": 8.52,
-          "eraEarned": 17385,
-          "nous": 50,
+          "rate": 4.78,
+          "eraEarned": 8061,
+          "nous": 40,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 47,
-          "rate": 14.68,
-          "eraEarned": 58648,
-          "nous": 957,
+          "rate": 13.55,
+          "eraEarned": 33948,
+          "nous": 603,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 48,
-          "rate": 44.74,
-          "eraEarned": 182460,
-          "nous": 476,
+          "rate": 31.48,
+          "eraEarned": 123919,
+          "nous": 129,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 49,
-          "rate": 69.21,
-          "eraEarned": 395646,
-          "nous": 2630,
+          "rate": 40.87,
+          "eraEarned": 255543,
+          "nous": 2335,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 50,
-          "rate": 103.65,
-          "eraEarned": 879765,
-          "nous": 10836,
+          "rate": 109.1,
+          "eraEarned": 701643,
+          "nous": 424,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 51,
-          "rate": 191.89,
-          "eraEarned": 1284261,
-          "nous": 6973,
+          "rate": 118.41,
+          "eraEarned": 1138749,
+          "nous": 3152,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 52,
-          "rate": 229.69,
-          "eraEarned": 2029764,
-          "nous": 14986,
+          "rate": 208.98,
+          "eraEarned": 1603724,
+          "nous": 738,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 53,
-          "rate": 329.59,
-          "eraEarned": 3669350,
-          "nous": 3059,
+          "rate": 297.95,
+          "eraEarned": 3015663,
+          "nous": 35062,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 54,
-          "rate": 334.92,
-          "eraEarned": 4941728,
-          "nous": 27217,
+          "rate": 308.66,
+          "eraEarned": 4165938,
+          "nous": 37231,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 55,
-          "rate": 1.12,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 486.96,
+          "eraEarned": 6582973,
+          "nous": 33988,
           "frontier": 0,
-          "bankCount": 5
+          "bankCount": 4
         },
         {
           "hour": 56,
-          "rate": 4.78,
-          "eraEarned": 8062,
-          "nous": 41,
+          "rate": 3.06,
+          "eraEarned": 2145,
+          "nous": 3,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 57,
-          "rate": 13.55,
-          "eraEarned": 33940,
-          "nous": 595,
+          "rate": 8.52,
+          "eraEarned": 17368,
+          "nous": 33,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 58,
-          "rate": 31.48,
-          "eraEarned": 123874,
-          "nous": 84,
+          "rate": 18.7,
+          "eraEarned": 87011,
+          "nous": 656,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 59,
-          "rate": 40.87,
-          "eraEarned": 255482,
-          "nous": 2274,
+          "rate": 44.74,
+          "eraEarned": 182320,
+          "nous": 336,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 60,
-          "rate": 109.1,
-          "eraEarned": 701582,
-          "nous": 363,
+          "rate": 90.27,
+          "eraEarned": 528077,
+          "nous": 2403,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 61,
-          "rate": 116.12,
-          "eraEarned": 1132908,
-          "nous": 4228,
+          "rate": 103.65,
+          "eraEarned": 879513,
+          "nous": 10584,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 62,
-          "rate": 161.7,
-          "eraEarned": 1612224,
-          "nous": 9238,
+          "rate": 191.89,
+          "eraEarned": 1283959,
+          "nous": 6671,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 63,
-          "rate": 287.73,
-          "eraEarned": 2991715,
-          "nous": 11114,
+          "rate": 307.89,
+          "eraEarned": 2468599,
+          "nous": 28334,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 64,
-          "rate": 525.07,
-          "eraEarned": 4516963,
-          "nous": 33435,
+          "rate": 329.02,
+          "eraEarned": 3667986,
+          "nous": 1695,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 65,
-          "rate": 1.12,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 518.26,
+          "eraEarned": 5581076,
+          "nous": 42757,
           "frontier": 0,
-          "bankCount": 6
+          "bankCount": 5
         },
         {
           "hour": 66,
-          "rate": 4.78,
-          "eraEarned": 8062,
-          "nous": 41,
+          "rate": 1.12,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 67,
-          "rate": 13.55,
-          "eraEarned": 33940,
-          "nous": 595,
+          "rate": 4.78,
+          "eraEarned": 8058,
+          "nous": 37,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 68,
-          "rate": 31.48,
-          "eraEarned": 123870,
-          "nous": 80,
+          "rate": 15.43,
+          "eraEarned": 60076,
+          "nous": 10,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 69,
-          "rate": 40.87,
-          "eraEarned": 255475,
-          "nous": 2267,
+          "rate": 31.48,
+          "eraEarned": 123862,
+          "nous": 72,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 70,
-          "rate": 109.1,
-          "eraEarned": 701562,
-          "nous": 343,
+          "rate": 92.88,
+          "eraEarned": 335163,
+          "nous": 2390,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 71,
-          "rate": 116.12,
-          "eraEarned": 1132877,
-          "nous": 4197,
+          "rate": 109.1,
+          "eraEarned": 701475,
+          "nous": 256,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 72,
-          "rate": 161.7,
-          "eraEarned": 1612188,
-          "nous": 9202,
+          "rate": 116.12,
+          "eraEarned": 1132767,
+          "nous": 4087,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 73,
-          "rate": 287.73,
-          "eraEarned": 2991626,
-          "nous": 11025,
+          "rate": 276.61,
+          "eraEarned": 1925082,
+          "nous": 19391,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 74,
-          "rate": 525.07,
-          "eraEarned": 4516836,
-          "nous": 33308,
+          "rate": 287.37,
+          "eraEarned": 2991290,
+          "nous": 10689,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 75,
-          "rate": 1.12,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 535.12,
+          "eraEarned": 5503513,
+          "nous": 48610,
           "frontier": 0,
-          "bankCount": 7
+          "bankCount": 6
         },
         {
           "hour": 76,
-          "rate": 4.78,
-          "eraEarned": 8061,
-          "nous": 40,
+          "rate": 1.12,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 77,
-          "rate": 13.55,
-          "eraEarned": 33934,
-          "nous": 589,
+          "rate": 4.78,
+          "eraEarned": 8057,
+          "nous": 36,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 78,
-          "rate": 31.48,
-          "eraEarned": 123847,
-          "nous": 57,
+          "rate": 15.79,
+          "eraEarned": 60064,
+          "nous": 613,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 79,
-          "rate": 40.87,
-          "eraEarned": 255444,
-          "nous": 2236,
+          "rate": 43.94,
+          "eraEarned": 137602,
+          "nous": 342,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 80,
-          "rate": 109.1,
-          "eraEarned": 701496,
-          "nous": 277,
+          "rate": 74.02,
+          "eraEarned": 444071,
+          "nous": 4535,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 81,
-          "rate": 116.12,
-          "eraEarned": 1132781,
-          "nous": 4101,
+          "rate": 140.11,
+          "eraEarned": 740609,
+          "nous": 1456,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 82,
-          "rate": 161.7,
-          "eraEarned": 1612073,
-          "nous": 9087,
+          "rate": 166.15,
+          "eraEarned": 1280267,
+          "nous": 10358,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 83,
-          "rate": 287.73,
-          "eraEarned": 2991502,
-          "nous": 10901,
+          "rate": 310.36,
+          "eraEarned": 2734323,
+          "nous": 23890,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 84,
-          "rate": 525.07,
-          "eraEarned": 4516702,
-          "nous": 33174,
+          "rate": 303.75,
+          "eraEarned": 3921558,
+          "nous": 61838,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 85,
-          "rate": 1.12,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 530.17,
+          "eraEarned": 6061445,
+          "nous": 15375,
           "frontier": 0,
-          "bankCount": 8
+          "bankCount": 7
         },
         {
           "hour": 86,
-          "rate": 4.78,
-          "eraEarned": 8061,
-          "nous": 40,
+          "rate": 3.06,
+          "eraEarned": 2145,
+          "nous": 3,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 87,
-          "rate": 13.55,
-          "eraEarned": 33933,
-          "nous": 588,
+          "rate": 8.52,
+          "eraEarned": 17363,
+          "nous": 28,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 88,
-          "rate": 43.94,
-          "eraEarned": 137625,
-          "nous": 365,
+          "rate": 18.7,
+          "eraEarned": 86985,
+          "nous": 630,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 89,
-          "rate": 66.46,
-          "eraEarned": 316180,
-          "nous": 1243,
+          "rate": 44.74,
+          "eraEarned": 182263,
+          "nous": 279,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 90,
-          "rate": 140.11,
-          "eraEarned": 740695,
-          "nous": 1542,
+          "rate": 90.27,
+          "eraEarned": 527970,
+          "nous": 2296,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 91,
-          "rate": 166.15,
-          "eraEarned": 1280458,
-          "nous": 10549,
+          "rate": 103.65,
+          "eraEarned": 879362,
+          "nous": 10433,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 92,
-          "rate": 298.43,
-          "eraEarned": 2165318,
-          "nous": 27758,
+          "rate": 191.89,
+          "eraEarned": 1283764,
+          "nous": 6476,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 93,
-          "rate": 303.75,
-          "eraEarned": 3922223,
-          "nous": 62503,
+          "rate": 307.89,
+          "eraEarned": 2468318,
+          "nous": 28053,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 94,
-          "rate": 497.52,
-          "eraEarned": 5099429,
-          "nous": 67047,
+          "rate": 329.02,
+          "eraEarned": 3667627,
+          "nous": 1336,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 95,
-          "rate": 3.06,
-          "eraEarned": 2145,
-          "nous": 3,
+          "rate": 518.26,
+          "eraEarned": 5580646,
+          "nous": 42327,
           "frontier": 0,
-          "bankCount": 9
+          "bankCount": 8
         },
         {
           "hour": 96,
-          "rate": 8.52,
-          "eraEarned": 17361,
-          "nous": 26,
+          "rate": 1.12,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 9
         },
         {
           "hour": 97,
-          "rate": 14.68,
-          "eraEarned": 58597,
-          "nous": 906,
+          "rate": 4.78,
+          "eraEarned": 8056,
+          "nous": 35,
           "frontier": 0,
           "bankCount": 9
         },
         {
           "hour": 98,
-          "rate": 44.74,
-          "eraEarned": 182279,
-          "nous": 295,
+          "rate": 15.79,
+          "eraEarned": 60049,
+          "nous": 598,
           "frontier": 0,
           "bankCount": 9
         },
         {
           "hour": 99,
-          "rate": 69.21,
-          "eraEarned": 395311,
-          "nous": 2295,
+          "rate": 43.94,
+          "eraEarned": 137555,
+          "nous": 295,
           "frontier": 0,
           "bankCount": 9
         },
         {
           "hour": 100,
-          "rate": 92.39,
-          "eraEarned": 879275,
-          "nous": 183760,
+          "rate": 64.47,
+          "eraEarned": 439139,
+          "nous": 126615,
           "frontier": 0,
           "bankCount": 9
         }
@@ -6691,29 +6793,31 @@
         "rollsPerCreditedHour": 2.3
       },
       "numeric": {
-        "maxNous": 1481969.49,
-        "maxEraEarned": 7958418.49,
-        "maxTotalEarned": 69251033.05,
+        "maxNous": 1479324.17,
+        "maxEraEarned": 7955773.17,
+        "maxTotalEarned": 68822947.36,
         "maxRate": 714.51,
         "maxArete": 0,
         "maxLevel": 23,
-        "maxReserve": 9993.05,
+        "maxReserve": 10008.1,
         "finiteSnapshots": true,
-        "serializedChecks": 84,
-        "serializedOk": 84
+        "serializedChecks": 83,
+        "serializedOk": 83
       },
       "gaps": {
-        "count": 293,
+        "count": 206,
         "maxCredited": 3000,
-        "meanCredited": 1218,
+        "meanCredited": 1748,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 2026 · fresh-start · fresh-start-s2026-6f8641f9 · no Arete spent · recovery — none: the door banked 0 Arete (470.03ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 9 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 2026 · fresh-start · fresh-start-s2026-c1c02dc2 · no Arete spent · recovery — none: the door banked 0 Arete (392.95ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 9 era(s) banked."
     },
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 7,
       "sessionMinutes": 25,
       "policy": "prompt",
@@ -6779,6 +6883,7 @@
           "hours": 12.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 934.6883619790178,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
@@ -6790,9 +6895,9 @@
           "placements": 14,
           "defeats": [],
           "gaps": {
-            "count": 94,
+            "count": 29,
             "maxCredited": 3000,
-            "meanCredited": 463
+            "meanCredited": 1552
           },
           "longGaps": [],
           "finite": true
@@ -6803,7 +6908,8 @@
           "hours": 4.58,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8669521.08689986,
+          "rateAtBank": 1174.2409007474791,
+          "priorDepth": 8666095.449770756,
           "depthGrowth": null,
           "familiarHours": 4.58,
           "newHours": 0,
@@ -6814,9 +6920,9 @@
           "placements": 1,
           "defeats": [],
           "gaps": {
-            "count": 14,
+            "count": 10,
             "maxCredited": 3000,
-            "meanCredited": 1071
+            "meanCredited": 1650
           },
           "longGaps": [],
           "finite": true
@@ -6827,20 +6933,21 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8262027.70750551,
-          "depthGrowth": 0.95,
-          "familiarHours": 4.13,
-          "newHours": 0.03,
-          "newShare": 0.008,
+          "rateAtBank": 1562.8343832720657,
+          "priorDepth": 8983116.457548069,
+          "depthGrowth": 1.04,
+          "familiarHours": 4.17,
+          "newHours": 0,
+          "newShare": 0,
           "rebuildingShare": 0.9,
           "purchases": [],
           "nousPurchases": 0,
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 10,
+            "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1350
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -6851,8 +6958,9 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 9303602.93648462,
-          "depthGrowth": 1.13,
+          "rateAtBank": 1562.8343832720657,
+          "priorDepth": 9301956.080818206,
+          "depthGrowth": 1.04,
           "familiarHours": 4.17,
           "newHours": 0,
           "newShare": 0,
@@ -6862,9 +6970,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 8,
             "maxCredited": 3000,
-            "meanCredited": 1333
+            "meanCredited": 1875
           },
           "longGaps": [],
           "finite": true
@@ -6875,7 +6983,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 9303945.230210308,
+          "rateAtBank": 1562.8343832720657,
+          "priorDepth": 9301777.336913416,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -6886,9 +6995,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 11,
+            "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1227
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -6899,7 +7008,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 9303463.65735722,
+          "rateAtBank": 1562.8343832720657,
+          "priorDepth": 9301144.973241154,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -6912,7 +7022,7 @@
           "gaps": {
             "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -6923,7 +7033,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 9302917.19104589,
+          "rateAtBank": 1383.682473684487,
+          "priorDepth": 9300607.264729505,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -6934,9 +7045,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 10,
+            "count": 8,
             "maxCredited": 3000,
-            "meanCredited": 1350
+            "meanCredited": 1875
           },
           "longGaps": [],
           "finite": true
@@ -6947,8 +7058,9 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8891090.735163635,
-          "depthGrowth": 0.96,
+          "rateAtBank": 1383.682473684487,
+          "priorDepth": 8846533.47514494,
+          "depthGrowth": 0.95,
           "familiarHours": 4.17,
           "newHours": 0,
           "newShare": 0,
@@ -6958,9 +7070,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 10,
+            "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1350
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -6971,7 +7083,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8890922.509731855,
+          "rateAtBank": 1383.682473684487,
+          "priorDepth": 8847284.508243255,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -6984,7 +7097,7 @@
           "gaps": {
             "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -6995,7 +7108,33 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8890566.005761962,
+          "rateAtBank": 1383.682473684487,
+          "priorDepth": 8846933.061622975,
+          "depthGrowth": 1,
+          "familiarHours": 4.17,
+          "newHours": 0,
+          "newShare": 0,
+          "rebuildingShare": 0.9,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": 0,
+          "defeats": [],
+          "gaps": {
+            "count": 8,
+            "maxCredited": 3000,
+            "meanCredited": 1875
+          },
+          "longGaps": [],
+          "finite": true
+        },
+        {
+          "index": 10,
+          "eraClass": "under",
+          "hours": 4.17,
+          "claim": 0,
+          "frontierAfter": 0,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8846867.386273045,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7008,31 +7147,7 @@
           "gaps": {
             "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1333
-          },
-          "longGaps": [],
-          "finite": true
-        },
-        {
-          "index": 10,
-          "eraClass": "under",
-          "hours": 4.17,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 8890493.916767173,
-          "depthGrowth": 1,
-          "familiarHours": 4.17,
-          "newHours": 0,
-          "newShare": 0,
-          "rebuildingShare": 0.9,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
-          "defeats": [],
-          "gaps": {
-            "count": 11,
-            "maxCredited": 3000,
-            "meanCredited": 1227
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7043,7 +7158,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8942803.368090488,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8941397.806990845,
           "depthGrowth": 1.01,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7056,7 +7172,7 @@
           "gaps": {
             "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7067,7 +7183,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8942476.522513619,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8941128.68980769,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7078,9 +7195,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 8,
             "maxCredited": 3000,
-            "meanCredited": 1333
+            "meanCredited": 1875
           },
           "longGaps": [],
           "finite": true
@@ -7091,7 +7208,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8942318.245304745,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940970.412598817,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7102,9 +7220,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 10,
+            "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1350
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7115,7 +7233,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8942168.550291793,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940818.320022345,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7128,7 +7247,7 @@
           "gaps": {
             "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7139,7 +7258,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8942057.685030276,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940705.344126245,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7150,9 +7270,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 8,
             "maxCredited": 3000,
-            "meanCredited": 1333
+            "meanCredited": 1875
           },
           "longGaps": [],
           "finite": true
@@ -7163,7 +7283,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8942005.17004039,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940652.053954665,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7174,9 +7295,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 11,
+            "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1227
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7187,7 +7308,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8941914.397184022,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940560.906940667,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7200,7 +7322,7 @@
           "gaps": {
             "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7211,7 +7333,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8941761.657137185,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940406.091726664,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7222,9 +7345,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 8,
             "maxCredited": 3000,
-            "meanCredited": 1333
+            "meanCredited": 1875
           },
           "longGaps": [],
           "finite": true
@@ -7235,7 +7358,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8941669.19255194,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940313.30715711,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7246,9 +7370,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 10,
+            "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1350
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7259,7 +7383,8 @@
           "hours": 4.17,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 8941497.245407458,
+          "rateAtBank": 1424.5143115347753,
+          "priorDepth": 8940139.575094836,
           "depthGrowth": 1,
           "familiarHours": 4.17,
           "newHours": 0,
@@ -7272,7 +7397,7 @@
           "gaps": {
             "count": 9,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1667
           },
           "longGaps": [],
           "finite": true
@@ -7283,7 +7408,8 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
-          "priorDepth": 8941360.53424306,
+          "rateAtBank": null,
+          "priorDepth": 8940001.532981599,
           "depthGrowth": 1,
           "familiarHours": 3.75,
           "newHours": 0,
@@ -7294,9 +7420,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 8,
             "maxCredited": 3000,
-            "meanCredited": 1333
+            "meanCredited": 1688
           },
           "longGaps": [],
           "finite": null
@@ -7515,7 +7641,7 @@
         },
         {
           "key": "module echo",
-          "creditedHour": 53.3,
+          "creditedHour": 52.9,
           "era": 10
         }
       ],
@@ -7634,7 +7760,7 @@
         },
         {
           "hour": 14,
-          "rate": 97.9,
+          "rate": 93.45,
           "eraEarned": 109624,
           "nous": 526,
           "frontier": 0,
@@ -7642,25 +7768,25 @@
         },
         {
           "hour": 15,
-          "rate": 285.09,
-          "eraEarned": 1295959,
-          "nous": 5910,
+          "rate": 323.99,
+          "eraEarned": 1376993,
+          "nous": 8267,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 16,
-          "rate": 576.46,
-          "eraEarned": 2573816,
-          "nous": 27770,
+          "rate": 666.28,
+          "eraEarned": 2940008,
+          "nous": 18721,
           "frontier": 0,
           "bankCount": 1
         },
         {
           "hour": 17,
-          "rate": 1149.98,
-          "eraEarned": 5907064,
-          "nous": 24481,
+          "rate": 1174.24,
+          "eraEarned": 6522574,
+          "nous": 61518,
           "frontier": 0,
           "bankCount": 1
         },
@@ -7675,24 +7801,24 @@
         {
           "hour": 19,
           "rate": 296.15,
-          "eraEarned": 513263,
-          "nous": 9845,
+          "eraEarned": 512602,
+          "nous": 9184,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 20,
           "rate": 676.97,
-          "eraEarned": 2793203,
-          "nous": 18083,
+          "eraEarned": 2791673,
+          "nous": 16553,
           "frontier": 0,
           "bankCount": 2
         },
         {
           "hour": 21,
           "rate": 1562.83,
-          "eraEarned": 6119614,
-          "nous": 10369,
+          "eraEarned": 6117967,
+          "nous": 8722,
           "frontier": 0,
           "bankCount": 2
         },
@@ -7707,24 +7833,24 @@
         {
           "hour": 23,
           "rate": 296.15,
-          "eraEarned": 513895,
-          "nous": 10477,
+          "eraEarned": 512591,
+          "nous": 9173,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 24,
           "rate": 458.79,
-          "eraEarned": 1848737,
-          "nous": 9909,
+          "eraEarned": 1847433,
+          "nous": 8605,
           "frontier": 0,
           "bankCount": 3
         },
         {
           "hour": 25,
           "rate": 1562.83,
-          "eraEarned": 6120060,
-          "nous": 10815,
+          "eraEarned": 6117892,
+          "nous": 8647,
           "frontier": 0,
           "bankCount": 3
         },
@@ -7747,16 +7873,16 @@
         {
           "hour": 28,
           "rate": 458.79,
-          "eraEarned": 1848385,
-          "nous": 9557,
+          "eraEarned": 1847052,
+          "nous": 8224,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 29,
           "rate": 927.02,
-          "eraEarned": 4178750,
-          "nous": 8749,
+          "eraEarned": 4176431,
+          "nous": 6430,
           "frontier": 0,
           "bankCount": 4
         },
@@ -7779,16 +7905,16 @@
         {
           "hour": 32,
           "rate": 360.48,
-          "eraEarned": 1113136,
-          "nous": 3404,
+          "eraEarned": 1111812,
+          "nous": 2080,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 33,
           "rate": 927.02,
-          "eraEarned": 4178299,
-          "nous": 8298,
+          "eraEarned": 4175989,
+          "nous": 5988,
           "frontier": 0,
           "bankCount": 5
         },
@@ -7811,16 +7937,16 @@
         {
           "hour": 36,
           "rate": 360.48,
-          "eraEarned": 1111923,
-          "nous": 2191,
+          "eraEarned": 1111046,
+          "nous": 1314,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 37,
-          "rate": 660.31,
-          "eraEarned": 2791169,
-          "nous": 16049,
+          "rate": 627.69,
+          "eraEarned": 2789423,
+          "nous": 14303,
           "frontier": 0,
           "bankCount": 6
         },
@@ -7850,17 +7976,17 @@
         },
         {
           "hour": 41,
-          "rate": 660.31,
-          "eraEarned": 2791130,
-          "nous": 16010,
+          "rate": 627.69,
+          "eraEarned": 2790261,
+          "nous": 15141,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 42,
-          "rate": 1414.73,
-          "eraEarned": 5999552,
-          "nous": 11200,
+          "rate": 1383.68,
+          "eraEarned": 6026902,
+          "nous": 38550,
           "frontier": 0,
           "bankCount": 7
         },
@@ -7882,17 +8008,17 @@
         },
         {
           "hour": 45,
-          "rate": 660.31,
-          "eraEarned": 2790892,
-          "nous": 15772,
+          "rate": 627.69,
+          "eraEarned": 2790022,
+          "nous": 14902,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 46,
-          "rate": 1414.73,
-          "eraEarned": 5999213,
-          "nous": 10861,
+          "rate": 1383.68,
+          "eraEarned": 6026561,
+          "nous": 38209,
           "frontier": 0,
           "bankCount": 8
         },
@@ -7922,9 +8048,9 @@
         },
         {
           "hour": 50,
-          "rate": 1414.73,
-          "eraEarned": 5999159,
-          "nous": 10807,
+          "rate": 1383.68,
+          "eraEarned": 6026506,
+          "nous": 38154,
           "frontier": 0,
           "bankCount": 9
         },
@@ -7939,24 +8065,24 @@
         {
           "hour": 52,
           "rate": 172.19,
-          "eraEarned": 167134,
-          "nous": 147,
+          "eraEarned": 167131,
+          "nous": 144,
           "frontier": 0,
           "bankCount": 10
         },
         {
           "hour": 53,
           "rate": 495.26,
-          "eraEarned": 1855193,
-          "nous": 4835,
+          "eraEarned": 1853787,
+          "nous": 3429,
           "frontier": 0,
           "bankCount": 10
         },
         {
           "hour": 54,
           "rate": 931.8,
-          "eraEarned": 4111484,
-          "nous": 18930,
+          "eraEarned": 4110078,
+          "nous": 17524,
           "frontier": 0,
           "bankCount": 10
         },
@@ -7979,16 +8105,16 @@
         {
           "hour": 57,
           "rate": 362.56,
-          "eraEarned": 1117020,
-          "nous": 7288,
+          "eraEarned": 1115672,
+          "nous": 5940,
           "frontier": 0,
           "bankCount": 11
         },
         {
           "hour": 58,
           "rate": 931.8,
-          "eraEarned": 4111214,
-          "nous": 18660,
+          "eraEarned": 4109866,
+          "nous": 17312,
           "frontier": 0,
           "bankCount": 11
         },
@@ -8011,16 +8137,16 @@
         {
           "hour": 61,
           "rate": 362.56,
-          "eraEarned": 1117012,
-          "nous": 7280,
+          "eraEarned": 1115664,
+          "nous": 5932,
           "frontier": 0,
           "bankCount": 12
         },
         {
           "hour": 62,
           "rate": 610.16,
-          "eraEarned": 2859308,
-          "nous": 20406,
+          "eraEarned": 2857960,
+          "nous": 19058,
           "frontier": 0,
           "bankCount": 12
         },
@@ -8043,24 +8169,24 @@
         {
           "hour": 65,
           "rate": 362.56,
-          "eraEarned": 1116963,
-          "nous": 7231,
+          "eraEarned": 1115612,
+          "nous": 5880,
           "frontier": 0,
           "bankCount": 13
         },
         {
           "hour": 66,
           "rate": 610.16,
-          "eraEarned": 2859259,
-          "nous": 20357,
+          "eraEarned": 2857908,
+          "nous": 19006,
           "frontier": 0,
           "bankCount": 13
         },
         {
           "hour": 67,
           "rate": 1424.51,
-          "eraEarned": 6042580,
-          "nous": 8893,
+          "eraEarned": 6041230,
+          "nous": 7543,
           "frontier": 0,
           "bankCount": 13
         },
@@ -8075,24 +8201,24 @@
         {
           "hour": 69,
           "rate": 298.02,
-          "eraEarned": 514048,
-          "nous": 10630,
+          "eraEarned": 512696,
+          "nous": 9278,
           "frontier": 0,
           "bankCount": 14
         },
         {
           "hour": 70,
           "rate": 610.16,
-          "eraEarned": 2859167,
-          "nous": 20265,
+          "eraEarned": 2857815,
+          "nous": 18913,
           "frontier": 0,
           "bankCount": 14
         },
         {
           "hour": 71,
           "rate": 1424.51,
-          "eraEarned": 6042479,
-          "nous": 8792,
+          "eraEarned": 6041127,
+          "nous": 7440,
           "frontier": 0,
           "bankCount": 14
         },
@@ -8107,24 +8233,24 @@
         {
           "hour": 73,
           "rate": 298.02,
-          "eraEarned": 514033,
-          "nous": 10615,
+          "eraEarned": 512679,
+          "nous": 9261,
           "frontier": 0,
           "bankCount": 15
         },
         {
           "hour": 74,
           "rate": 495.26,
-          "eraEarned": 1854774,
-          "nous": 4416,
+          "eraEarned": 1853421,
+          "nous": 3063,
           "frontier": 0,
           "bankCount": 15
         },
         {
           "hour": 75,
           "rate": 1424.51,
-          "eraEarned": 6042447,
-          "nous": 8760,
+          "eraEarned": 6041094,
+          "nous": 7407,
           "frontier": 0,
           "bankCount": 15
         },
@@ -8147,16 +8273,16 @@
         {
           "hour": 78,
           "rate": 495.26,
-          "eraEarned": 1854759,
-          "nous": 4401,
+          "eraEarned": 1853406,
+          "nous": 3048,
           "frontier": 0,
           "bankCount": 16
         },
         {
           "hour": 79,
           "rate": 931.8,
-          "eraEarned": 4110845,
-          "nous": 18291,
+          "eraEarned": 4109492,
+          "nous": 16938,
           "frontier": 0,
           "bankCount": 16
         },
@@ -8179,16 +8305,16 @@
         {
           "hour": 82,
           "rate": 362.56,
-          "eraEarned": 1116854,
-          "nous": 7122,
+          "eraEarned": 1115499,
+          "nous": 5767,
           "frontier": 0,
           "bankCount": 17
         },
         {
           "hour": 83,
           "rate": 931.8,
-          "eraEarned": 4110702,
-          "nous": 18148,
+          "eraEarned": 4109346,
+          "nous": 16792,
           "frontier": 0,
           "bankCount": 17
         },
@@ -8211,16 +8337,16 @@
         {
           "hour": 86,
           "rate": 362.56,
-          "eraEarned": 1116848,
-          "nous": 7116,
+          "eraEarned": 1115492,
+          "nous": 5760,
           "frontier": 0,
           "bankCount": 18
         },
         {
           "hour": 87,
           "rate": 610.16,
-          "eraEarned": 2859031,
-          "nous": 20129,
+          "eraEarned": 2857675,
+          "nous": 18773,
           "frontier": 0,
           "bankCount": 18
         },
@@ -8243,24 +8369,24 @@
         {
           "hour": 90,
           "rate": 362.56,
-          "eraEarned": 1116812,
-          "nous": 7080,
+          "eraEarned": 1115454,
+          "nous": 5722,
           "frontier": 0,
           "bankCount": 19
         },
         {
           "hour": 91,
           "rate": 610.16,
-          "eraEarned": 2858957,
-          "nous": 20055,
+          "eraEarned": 2857599,
+          "nous": 18697,
           "frontier": 0,
           "bankCount": 19
         },
         {
           "hour": 92,
           "rate": 1424.51,
-          "eraEarned": 6042102,
-          "nous": 8415,
+          "eraEarned": 6040745,
+          "nous": 7058,
           "frontier": 0,
           "bankCount": 19
         },
@@ -8275,24 +8401,24 @@
         {
           "hour": 94,
           "rate": 298.02,
-          "eraEarned": 513914,
-          "nous": 10496,
+          "eraEarned": 512555,
+          "nous": 9137,
           "frontier": 0,
           "bankCount": 20
         },
         {
           "hour": 95,
           "rate": 610.16,
-          "eraEarned": 2858901,
-          "nous": 19999,
+          "eraEarned": 2857542,
+          "nous": 18640,
           "frontier": 0,
           "bankCount": 20
         },
         {
           "hour": 96,
           "rate": 1424.51,
-          "eraEarned": 6042046,
-          "nous": 8359,
+          "eraEarned": 6040687,
+          "nous": 7000,
           "frontier": 0,
           "bankCount": 20
         },
@@ -8307,24 +8433,24 @@
         {
           "hour": 98,
           "rate": 298.02,
-          "eraEarned": 513845,
-          "nous": 10427,
+          "eraEarned": 512483,
+          "nous": 9065,
           "frontier": 0,
           "bankCount": 21
         },
         {
           "hour": 99,
           "rate": 495.26,
-          "eraEarned": 1854381,
-          "nous": 4023,
+          "eraEarned": 1853019,
+          "nous": 2661,
           "frontier": 0,
           "bankCount": 21
         },
         {
           "hour": 100,
           "rate": 931.8,
-          "eraEarned": 6041756,
-          "nous": 1949202,
+          "eraEarned": 6040394,
+          "nous": 1947840,
           "frontier": 0,
           "bankCount": 21
         }
@@ -8335,29 +8461,31 @@
         "rollsPerCreditedHour": 2.31
       },
       "numeric": {
-        "maxNous": 3194700.23,
-        "maxEraEarned": 9303945.23,
-        "maxTotalEarned": 194112339.94,
+        "maxNous": 3192711.08,
+        "maxEraEarned": 9301956.08,
+        "maxTotalEarned": 194629803.92,
         "maxRate": 1562.83,
         "maxArete": 0,
         "maxLevel": 24,
-        "maxReserve": 12043.5,
+        "maxReserve": 12044.55,
         "finiteSnapshots": true,
         "serializedChecks": 95,
         "serializedOk": 95
       },
       "gaps": {
-        "count": 320,
+        "count": 212,
         "maxCredited": 3000,
-        "meanCredited": 1116,
+        "meanCredited": 1698,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 7 · fresh-start · fresh-start-s7-fee774aa · no Arete spent · recovery — none: the door banked 0 Arete (934.69ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 21 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 7 · fresh-start · fresh-start-s7-7e08ad7d · no Arete spent · recovery — none: the door banked 0 Arete (934.69ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 21 era(s) banked."
     },
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 99,
       "sessionMinutes": 25,
       "policy": "prompt",
@@ -8399,6 +8527,7 @@
           "hours": 16.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 454.8844238267327,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
@@ -8410,9 +8539,9 @@
           "placements": 14,
           "defeats": [],
           "gaps": {
-            "count": 103,
+            "count": 37,
             "maxCredited": 3000,
-            "meanCredited": 568
+            "meanCredited": 1622
           },
           "longGaps": [],
           "finite": true
@@ -8423,6 +8552,7 @@
           "hours": 9.17,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 510.0542791980063,
           "priorDepth": 7652343.213431442,
           "depthGrowth": null,
           "familiarHours": 9.17,
@@ -8434,9 +8564,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 22,
+            "count": 20,
             "maxCredited": 3000,
-            "meanCredited": 1432
+            "meanCredited": 1650
           },
           "longGaps": [],
           "finite": true
@@ -8447,6 +8577,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 428.6008744502925,
           "priorDepth": 7117765.222200316,
           "depthGrowth": 0.93,
           "familiarHours": 9.55,
@@ -8458,9 +8589,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 21,
+            "count": 20,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1725
           },
           "longGaps": [],
           "finite": true
@@ -8471,6 +8602,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 428.6008744502925,
           "priorDepth": 7368203.879039397,
           "depthGrowth": 1.04,
           "familiarHours": 9.58,
@@ -8482,9 +8614,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 21,
+            "count": 20,
             "maxCredited": 3000,
-            "meanCredited": 1571
+            "meanCredited": 1725
           },
           "longGaps": [],
           "finite": true
@@ -8495,6 +8627,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 428.6008744502925,
           "priorDepth": 7367777.673380148,
           "depthGrowth": 1,
           "familiarHours": 9.58,
@@ -8506,9 +8639,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 21,
+            "count": 20,
             "maxCredited": 3000,
-            "meanCredited": 1571
+            "meanCredited": 1725
           },
           "longGaps": [],
           "finite": true
@@ -8519,6 +8652,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 428.6008744502925,
           "priorDepth": 7368029.337451409,
           "depthGrowth": 1,
           "familiarHours": 9.58,
@@ -8532,7 +8666,7 @@
           "gaps": {
             "count": 20,
             "maxCredited": 3000,
-            "meanCredited": 1650
+            "meanCredited": 1725
           },
           "longGaps": [],
           "finite": true
@@ -8543,6 +8677,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 428.6008744502925,
           "priorDepth": 7367498.531886823,
           "depthGrowth": 1,
           "familiarHours": 9.58,
@@ -8554,9 +8689,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 21,
+            "count": 19,
             "maxCredited": 3000,
-            "meanCredited": 1571
+            "meanCredited": 1816
           },
           "longGaps": [],
           "finite": true
@@ -8567,6 +8702,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 428.6008744502925,
           "priorDepth": 7367830.193922489,
           "depthGrowth": 1,
           "familiarHours": 9.58,
@@ -8578,9 +8714,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 20,
+            "count": 19,
             "maxCredited": 3000,
-            "meanCredited": 1650
+            "meanCredited": 1816
           },
           "longGaps": [],
           "finite": true
@@ -8591,6 +8727,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 428.6008744502925,
           "priorDepth": 7367359.942351264,
           "depthGrowth": 1,
           "familiarHours": 9.58,
@@ -8604,7 +8741,7 @@
           "gaps": {
             "count": 20,
             "maxCredited": 3000,
-            "meanCredited": 1575
+            "meanCredited": 1725
           },
           "longGaps": [],
           "finite": true
@@ -8615,6 +8752,7 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
+          "rateAtBank": null,
           "priorDepth": 7367607.710871708,
           "depthGrowth": 1,
           "familiarHours": 7.08,
@@ -8626,9 +8764,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 17,
+            "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1412
+            "meanCredited": 1700
           },
           "longGaps": [],
           "finite": null
@@ -9679,17 +9817,19 @@
         "serializedOk": 82
       },
       "gaps": {
-        "count": 295,
+        "count": 210,
         "maxCredited": 3000,
-        "meanCredited": 1210,
+        "meanCredited": 1714,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 99 · fresh-start · fresh-start-s99-afa7f72d · no Arete spent · recovery — none: the door banked 0 Arete (454.88ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 9 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 99 · fresh-start · fresh-start-s99-9937961e · no Arete spent · recovery — none: the door banked 0 Arete (454.88ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 9 era(s) banked."
     },
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 11,
       "sessionMinutes": 25,
       "policy": "prompt",
@@ -9741,6 +9881,7 @@
           "hours": 9.58,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 765.291172527134,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
@@ -9752,9 +9893,9 @@
           "placements": 14,
           "defeats": [],
           "gaps": {
-            "count": 86,
+            "count": 23,
             "maxCredited": 1500,
-            "meanCredited": 384
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -9765,6 +9906,7 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 908.6868698202072,
           "priorDepth": 8205844.491857332,
           "depthGrowth": null,
           "familiarHours": 6.67,
@@ -9776,9 +9918,9 @@
           "placements": 1,
           "defeats": [],
           "gaps": {
-            "count": 20,
+            "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1125
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -9789,6 +9931,7 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7300334.851344003,
           "depthGrowth": 0.89,
           "familiarHours": 6.67,
@@ -9800,9 +9943,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 15,
+            "count": 13,
             "maxCredited": 3000,
-            "meanCredited": 1400
+            "meanCredited": 1846
           },
           "longGaps": [],
           "finite": true
@@ -9813,6 +9956,7 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7514359.268092759,
           "depthGrowth": 1.03,
           "familiarHours": 6.67,
@@ -9824,9 +9968,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 16,
+            "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1406
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -9837,6 +9981,7 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7514329.245580335,
           "depthGrowth": 1,
           "familiarHours": 6.67,
@@ -9850,7 +9995,7 @@
           "gaps": {
             "count": 15,
             "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1600
           },
           "longGaps": [],
           "finite": true
@@ -9861,7 +10006,33 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7514246.325417667,
+          "depthGrowth": 1,
+          "familiarHours": 6.67,
+          "newHours": 0,
+          "newShare": 0,
+          "rebuildingShare": 0.875,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": 0,
+          "defeats": [],
+          "gaps": {
+            "count": 13,
+            "maxCredited": 3000,
+            "meanCredited": 1846
+          },
+          "longGaps": [],
+          "finite": true
+        },
+        {
+          "index": 6,
+          "eraClass": "in-window",
+          "hours": 6.67,
+          "claim": 0,
+          "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
+          "priorDepth": 7514200.722794208,
           "depthGrowth": 1,
           "familiarHours": 6.67,
           "newHours": 0,
@@ -9874,31 +10045,7 @@
           "gaps": {
             "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1500
-          },
-          "longGaps": [],
-          "finite": true
-        },
-        {
-          "index": 6,
-          "eraClass": "in-window",
-          "hours": 6.67,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 7514200.722794208,
-          "depthGrowth": 1,
-          "familiarHours": 6.67,
-          "newHours": 0,
-          "newShare": 0,
-          "rebuildingShare": 0.875,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
-          "defeats": [],
-          "gaps": {
-            "count": 16,
-            "maxCredited": 3000,
-            "meanCredited": 1406
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -9909,6 +10056,7 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7514194.493179661,
           "depthGrowth": 1,
           "familiarHours": 6.67,
@@ -9922,7 +10070,7 @@
           "gaps": {
             "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1607
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -9933,7 +10081,33 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7514154.284435627,
+          "depthGrowth": 1,
+          "familiarHours": 6.67,
+          "newHours": 0,
+          "newShare": 0,
+          "rebuildingShare": 0.875,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": 0,
+          "defeats": [],
+          "gaps": {
+            "count": 13,
+            "maxCredited": 3000,
+            "meanCredited": 1846
+          },
+          "longGaps": [],
+          "finite": true
+        },
+        {
+          "index": 9,
+          "eraClass": "in-window",
+          "hours": 6.67,
+          "claim": 0,
+          "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
+          "priorDepth": 7514097.157048914,
           "depthGrowth": 1,
           "familiarHours": 6.67,
           "newHours": 0,
@@ -9946,31 +10120,7 @@
           "gaps": {
             "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1500
-          },
-          "longGaps": [],
-          "finite": true
-        },
-        {
-          "index": 9,
-          "eraClass": "in-window",
-          "hours": 6.67,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 7514097.157048914,
-          "depthGrowth": 1,
-          "familiarHours": 6.67,
-          "newHours": 0,
-          "newShare": 0,
-          "rebuildingShare": 0.875,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
-          "defeats": [],
-          "gaps": {
-            "count": 16,
-            "maxCredited": 3000,
-            "meanCredited": 1406
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -9981,6 +10131,7 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7514083.4350449005,
           "depthGrowth": 1,
           "familiarHours": 6.67,
@@ -9994,7 +10145,7 @@
           "gaps": {
             "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1607
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -10005,7 +10156,33 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7514011.142927988,
+          "depthGrowth": 1,
+          "familiarHours": 6.67,
+          "newHours": 0,
+          "newShare": 0,
+          "rebuildingShare": 0.875,
+          "purchases": [],
+          "nousPurchases": 0,
+          "placements": 0,
+          "defeats": [],
+          "gaps": {
+            "count": 13,
+            "maxCredited": 3000,
+            "meanCredited": 1846
+          },
+          "longGaps": [],
+          "finite": true
+        },
+        {
+          "index": 12,
+          "eraClass": "in-window",
+          "hours": 6.67,
+          "claim": 0,
+          "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
+          "priorDepth": 7513975.482036559,
           "depthGrowth": 1,
           "familiarHours": 6.67,
           "newHours": 0,
@@ -10018,31 +10195,7 @@
           "gaps": {
             "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1500
-          },
-          "longGaps": [],
-          "finite": true
-        },
-        {
-          "index": 12,
-          "eraClass": "in-window",
-          "hours": 6.67,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 7513975.482036559,
-          "depthGrowth": 1,
-          "familiarHours": 6.67,
-          "newHours": 0,
-          "newShare": 0,
-          "rebuildingShare": 0.875,
-          "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
-          "defeats": [],
-          "gaps": {
-            "count": 15,
-            "maxCredited": 3000,
-            "meanCredited": 1500
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -10053,6 +10206,7 @@
           "hours": 6.67,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 627.2910223637404,
           "priorDepth": 7513969.204918133,
           "depthGrowth": 1,
           "familiarHours": 6.67,
@@ -10066,7 +10220,7 @@
           "gaps": {
             "count": 14,
             "maxCredited": 3000,
-            "meanCredited": 1607
+            "meanCredited": 1714
           },
           "longGaps": [],
           "finite": true
@@ -10077,6 +10231,7 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
+          "rateAtBank": null,
           "priorDepth": 7513934.439631059,
           "depthGrowth": 1,
           "familiarHours": 3.75,
@@ -10088,9 +10243,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 8,
             "maxCredited": 3000,
-            "meanCredited": 1333
+            "meanCredited": 1688
           },
           "longGaps": [],
           "finite": null
@@ -11151,30 +11306,31 @@
         "serializedOk": 85
       },
       "gaps": {
-        "count": 306,
+        "count": 210,
         "maxCredited": 3000,
-        "meanCredited": 1167,
+        "meanCredited": 1714,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 11 · fresh-start · fresh-start-s11-62adf5cd · no Arete spent · recovery — none: the door banked 0 Arete (765.29ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 14 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 11 · fresh-start · fresh-start-s11-c72b21be · no Arete spent · recovery — none: the door banked 0 Arete (765.29ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 14 era(s) banked."
     },
     {
+      "measurementVersion": 2,
+      "decisionGapsOk": true,
       "seed": 23,
       "sessionMinutes": 25,
       "policy": "prompt",
       "kind": "representative",
       "complete": true,
       "stopKind": "century",
-      "stopReason": "The declared 100-credited-hour mark reached at day 120 — 39 era(s) banked.",
+      "stopReason": "The declared 100-credited-hour mark reached at day 120 — 38 era(s) banked.",
       "days": 120,
       "elapsedHours": 2856,
       "creditedHours": 100,
       "manageBreaks": 240,
       "claims": [
-        0,
         0,
         0,
         0,
@@ -11253,7 +11409,6 @@
         0,
         0,
         0,
-        0,
         0
       ],
       "eras": [
@@ -11263,6 +11418,7 @@
           "hours": 5.42,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 2000.9605867802527,
           "priorDepth": null,
           "depthGrowth": null,
           "familiarHours": 0,
@@ -11274,9 +11430,9 @@
           "placements": 15,
           "defeats": [],
           "gaps": {
-            "count": 74,
+            "count": 13,
             "maxCredited": 1500,
-            "meanCredited": 243
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -11287,6 +11443,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 5417.45622395055,
           "priorDepth": 8627509.078998594,
           "depthGrowth": null,
           "familiarHours": 2.28,
@@ -11298,9 +11455,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 833
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -11311,6 +11468,7 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 5589.438961218822,
           "priorDepth": 15008822.393933415,
           "depthGrowth": 1.74,
           "familiarHours": 2.5,
@@ -11322,9 +11480,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 9,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -11332,23 +11490,24 @@
         {
           "index": 3,
           "eraClass": "under",
-          "hours": 2.08,
+          "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
+          "rateAtBank": 3304.1030880939697,
           "priorDepth": 15343143.951788044,
           "depthGrowth": 1.02,
-          "familiarHours": 2.08,
+          "familiarHours": 2.5,
           "newHours": 0,
           "newShare": 0,
           "rebuildingShare": null,
           "purchases": [],
-          "nousPurchases": 0,
-          "placements": 0,
+          "nousPurchases": 1,
+          "placements": 1,
           "defeats": [],
           "gaps": {
-            "count": 7,
+            "count": 6,
             "maxCredited": 1500,
-            "meanCredited": 857
+            "meanCredited": 1500
           },
           "longGaps": [],
           "finite": true
@@ -11359,20 +11518,21 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 7008068.616884426,
-          "depthGrowth": 0.46,
-          "familiarHours": 2.2,
-          "newHours": 0.3,
-          "newShare": 0.12,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 13107334.66088419,
+          "depthGrowth": 0.85,
+          "familiarHours": 2.35,
+          "newHours": 0.15,
+          "newShare": 0.06,
           "rebuildingShare": 0.833,
           "purchases": [],
           "nousPurchases": 0,
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11383,8 +11543,9 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13278810.36368609,
-          "depthGrowth": 1.89,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19467794.396493953,
+          "depthGrowth": 1.49,
           "familiarHours": 2.5,
           "newHours": 0,
           "newShare": 0,
@@ -11394,9 +11555,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
-            "maxCredited": 1500,
-            "meanCredited": 1071
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11407,7 +11568,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13278086.167791821,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19467669.458464466,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11418,9 +11580,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11431,7 +11593,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13278086.167791821,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19467547.682900287,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11442,9 +11605,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
-            "maxCredited": 1500,
-            "meanCredited": 1071
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11455,7 +11618,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13276709.580634508,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19465731.526336078,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11466,9 +11630,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11479,7 +11643,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13276639.274909072,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19465718.22738228,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11490,9 +11655,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
-            "maxCredited": 1500,
-            "meanCredited": 857
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11503,7 +11668,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13276502.877986463,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19465503.939641222,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11514,9 +11680,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11527,7 +11693,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13276160.551759113,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19465080.40048025,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11538,9 +11705,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11551,7 +11718,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13275871.815705804,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19464434.53681411,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11562,9 +11730,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11575,7 +11743,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13275837.864056263,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19464428.057554565,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11586,9 +11755,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
-            "maxCredited": 1500,
-            "meanCredited": 1071
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11599,7 +11768,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13275748.10726132,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19464276.731163576,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11610,9 +11780,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11623,7 +11793,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13275748.10726132,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19464276.731163576,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11634,9 +11805,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11647,7 +11818,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13275748.10726132,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19464276.731163576,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11658,9 +11830,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11671,7 +11843,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13275529.544030137,
+          "rateAtBank": 7047.493853381113,
+          "priorDepth": 19463864.57734994,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11682,9 +11855,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11695,7 +11868,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13275430.80993535,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19463731.94191287,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11706,9 +11880,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
-            "maxCredited": 1500,
-            "meanCredited": 857
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11719,20 +11893,21 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 13274993.191117031,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508877.275298223,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
           "newShare": 0,
-          "rebuildingShare": null,
+          "rebuildingShare": 0.833,
           "purchases": [],
-          "nousPurchases": 1,
-          "placements": 1,
+          "nousPurchases": 0,
+          "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 8,
-            "maxCredited": 1500,
-            "meanCredited": 750
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11743,20 +11918,21 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 10638895.12579431,
-          "depthGrowth": 0.8,
-          "familiarHours": 2.27,
-          "newHours": 0.23,
-          "newShare": 0.093,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508765.546669163,
+          "depthGrowth": 1,
+          "familiarHours": 2.5,
+          "newHours": 0,
+          "newShare": 0,
           "rebuildingShare": 0.833,
           "purchases": [],
           "nousPurchases": 0,
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11767,8 +11943,9 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461382.317589387,
-          "depthGrowth": 1.83,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508765.546669163,
+          "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
           "newShare": 0,
@@ -11778,9 +11955,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11791,7 +11968,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461382.317589387,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508765.546669163,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11802,9 +11980,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11815,7 +11993,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461191.463339936,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508330.152994316,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11826,9 +12005,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11839,7 +12018,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461190.147510376,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508330.152994316,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11850,9 +12030,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11863,7 +12043,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461168.082893506,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508284.67578598,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11874,9 +12055,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11887,7 +12068,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461156.34183246,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508250.862562705,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11898,9 +12080,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11911,7 +12093,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461135.065400522,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508206.474562034,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11922,9 +12105,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11935,7 +12118,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19461083.511739634,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19508058.587447662,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11946,9 +12130,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11959,7 +12143,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460903.75294608,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19507631.520421825,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11970,9 +12155,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -11983,7 +12168,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460903.60993532,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19507630.191095177,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -11994,9 +12180,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -12007,7 +12193,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460903.60993532,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19507630.191095177,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -12018,9 +12205,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -12031,7 +12218,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460774.46019441,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19507290.82472529,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -12042,9 +12230,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -12055,7 +12243,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460760.669303775,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19507239.949735608,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -12066,9 +12255,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -12079,7 +12268,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460729.221356273,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19507140.636596892,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -12090,9 +12280,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 7,
-            "maxCredited": 1500,
-            "meanCredited": 1071
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -12103,7 +12293,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460649.333657797,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19506949.75202763,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -12114,9 +12305,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -12127,7 +12318,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460618.407204404,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19506863.677376777,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -12138,9 +12330,9 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
@@ -12151,7 +12343,8 @@
           "hours": 2.5,
           "claim": 0,
           "frontierAfter": 0,
-          "priorDepth": 19460529.08560083,
+          "rateAtBank": 7069.720857509114,
+          "priorDepth": 19506598.42712689,
           "depthGrowth": 1,
           "familiarHours": 2.5,
           "newHours": 0,
@@ -12162,36 +12355,37 @@
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
-            "maxCredited": 1500,
-            "meanCredited": 1000
+            "count": 5,
+            "maxCredited": 3000,
+            "meanCredited": 1800
           },
           "longGaps": [],
           "finite": true
         },
         {
           "index": 38,
-          "eraClass": "under",
-          "hours": 2.5,
-          "claim": 0,
-          "frontierAfter": 0,
-          "priorDepth": 19460521.190489355,
+          "eraClass": "open",
+          "hours": null,
+          "claim": null,
+          "frontierAfter": null,
+          "rateAtBank": null,
+          "priorDepth": 19506584.16752011,
           "depthGrowth": 1,
-          "familiarHours": 2.5,
+          "familiarHours": 2.08,
           "newHours": 0,
           "newShare": 0,
-          "rebuildingShare": 0.833,
+          "rebuildingShare": null,
           "purchases": [],
           "nousPurchases": 0,
           "placements": 0,
           "defeats": [],
           "gaps": {
-            "count": 6,
+            "count": 5,
             "maxCredited": 1500,
-            "meanCredited": 1000
+            "meanCredited": 1500
           },
           "longGaps": [],
-          "finite": true
+          "finite": null
         }
       ],
       "investments": [
@@ -12402,13 +12596,13 @@
         },
         {
           "key": "module goalKeyed",
-          "creditedHour": 20,
+          "creditedHour": 20.4,
           "era": 7
         },
         {
           "key": "module spotlight",
-          "creditedHour": 52.1,
-          "era": 19
+          "creditedHour": 53.3,
+          "era": 20
         }
       ],
       "trajectory": [
@@ -12518,736 +12712,741 @@
         },
         {
           "hour": 13,
-          "rate": 26.42,
-          "eraEarned": 7246,
-          "nous": 42,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 14,
-          "rate": 787.44,
-          "eraEarned": 378678,
-          "nous": 6236,
+          "rate": 223.75,
+          "eraEarned": 67177,
+          "nous": 606,
           "frontier": 0,
           "bankCount": 4
         },
         {
           "hour": 15,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7047.49,
+          "eraEarned": 6326275,
+          "nous": 80350,
           "frontier": 0,
-          "bankCount": 5
+          "bankCount": 4
         },
         {
           "hour": 16,
-          "rate": 158.2,
-          "eraEarned": 59849,
-          "nous": 175,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 17,
-          "rate": 1758.05,
-          "eraEarned": 1900268,
-          "nous": 10142,
+          "rate": 923.8,
+          "eraEarned": 493751,
+          "nous": 1106,
           "frontier": 0,
           "bankCount": 5
         },
         {
           "hour": 18,
-          "rate": 26.42,
-          "eraEarned": 7157,
-          "nous": 58,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 19,
-          "rate": 787.44,
-          "eraEarned": 377954,
-          "nous": 5512,
+          "rate": 223.75,
+          "eraEarned": 67052,
+          "nous": 481,
           "frontier": 0,
           "bankCount": 6
         },
         {
           "hour": 20,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7047.49,
+          "eraEarned": 6326150,
+          "nous": 80225,
           "frontier": 0,
-          "bankCount": 7
+          "bankCount": 6
         },
         {
           "hour": 21,
-          "rate": 158.2,
-          "eraEarned": 59809,
-          "nous": 135,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 22,
-          "rate": 1758.05,
-          "eraEarned": 1899529,
-          "nous": 9403,
+          "rate": 923.8,
+          "eraEarned": 493613,
+          "nous": 968,
           "frontier": 0,
           "bankCount": 7
         },
         {
           "hour": 23,
-          "rate": 26.42,
-          "eraEarned": 7114,
-          "nous": 15,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 24,
-          "rate": 787.44,
-          "eraEarned": 377144,
-          "nous": 4702,
+          "rate": 223.75,
+          "eraEarned": 66901,
+          "nous": 330,
           "frontier": 0,
           "bankCount": 8
         },
         {
           "hour": 25,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7047.49,
+          "eraEarned": 6324960,
+          "nous": 79035,
           "frontier": 0,
-          "bankCount": 9
+          "bankCount": 8
         },
         {
           "hour": 26,
-          "rate": 158.2,
-          "eraEarned": 59806,
-          "nous": 132,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 9
         },
         {
           "hour": 27,
-          "rate": 1758.05,
-          "eraEarned": 1899398,
-          "nous": 9272,
+          "rate": 923.8,
+          "eraEarned": 493588,
+          "nous": 943,
           "frontier": 0,
           "bankCount": 9
         },
         {
           "hour": 28,
-          "rate": 26.42,
-          "eraEarned": 7112,
-          "nous": 13,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 10
         },
         {
           "hour": 29,
-          "rate": 787.44,
-          "eraEarned": 377081,
-          "nous": 4639,
+          "rate": 223.75,
+          "eraEarned": 66890,
+          "nous": 319,
           "frontier": 0,
           "bankCount": 10
         },
         {
           "hour": 30,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7047.49,
+          "eraEarned": 6324840,
+          "nous": 78915,
           "frontier": 0,
-          "bankCount": 11
+          "bankCount": 10
         },
         {
           "hour": 31,
-          "rate": 158.2,
-          "eraEarned": 59796,
-          "nous": 122,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 11
         },
         {
           "hour": 32,
-          "rate": 1758.05,
-          "eraEarned": 1899168,
-          "nous": 9042,
+          "rate": 923.8,
+          "eraEarned": 493545,
+          "nous": 900,
           "frontier": 0,
           "bankCount": 11
         },
         {
           "hour": 33,
-          "rate": 26.42,
-          "eraEarned": 7104,
-          "nous": 5,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 12
         },
         {
           "hour": 34,
-          "rate": 787.44,
-          "eraEarned": 376819,
-          "nous": 4377,
+          "rate": 223.75,
+          "eraEarned": 66840,
+          "nous": 269,
           "frontier": 0,
           "bankCount": 12
         },
         {
           "hour": 35,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7047.49,
+          "eraEarned": 6324264,
+          "nous": 78339,
           "frontier": 0,
-          "bankCount": 13
+          "bankCount": 12
         },
         {
           "hour": 36,
-          "rate": 158.2,
-          "eraEarned": 59795,
-          "nous": 121,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 13
         },
         {
           "hour": 37,
-          "rate": 1758.05,
-          "eraEarned": 1899103,
-          "nous": 8977,
+          "rate": 923.8,
+          "eraEarned": 493532,
+          "nous": 887,
           "frontier": 0,
           "bankCount": 13
         },
         {
           "hour": 38,
-          "rate": 26.42,
-          "eraEarned": 7103,
-          "nous": 4,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 14
         },
         {
           "hour": 39,
-          "rate": 787.44,
-          "eraEarned": 376788,
-          "nous": 4346,
+          "rate": 223.75,
+          "eraEarned": 66834,
+          "nous": 263,
           "frontier": 0,
           "bankCount": 14
         },
         {
           "hour": 40,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7047.49,
+          "eraEarned": 6324187,
+          "nous": 78262,
           "frontier": 0,
-          "bankCount": 15
+          "bankCount": 14
         },
         {
           "hour": 41,
-          "rate": 158.2,
-          "eraEarned": 59795,
-          "nous": 121,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 15
         },
         {
           "hour": 42,
-          "rate": 1758.05,
-          "eraEarned": 1899103,
-          "nous": 8977,
+          "rate": 923.8,
+          "eraEarned": 493532,
+          "nous": 887,
           "frontier": 0,
           "bankCount": 15
         },
         {
           "hour": 43,
-          "rate": 26.42,
-          "eraEarned": 7102,
-          "nous": 3,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 16
         },
         {
           "hour": 44,
-          "rate": 787.44,
-          "eraEarned": 376734,
-          "nous": 4292,
+          "rate": 223.75,
+          "eraEarned": 66823,
+          "nous": 252,
           "frontier": 0,
           "bankCount": 16
         },
         {
           "hour": 45,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7047.49,
+          "eraEarned": 6323985,
+          "nous": 78060,
           "frontier": 0,
-          "bankCount": 17
+          "bankCount": 16
         },
         {
           "hour": 46,
-          "rate": 158.2,
-          "eraEarned": 59792,
-          "nous": 118,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 17
         },
         {
           "hour": 47,
-          "rate": 1758.05,
-          "eraEarned": 1899001,
-          "nous": 8875,
+          "rate": 923.8,
+          "eraEarned": 493513,
+          "nous": 868,
           "frontier": 0,
           "bankCount": 17
         },
         {
           "hour": 48,
-          "rate": 26.42,
-          "eraEarned": 7100,
-          "nous": 1,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 18
         },
         {
           "hour": 49,
-          "rate": 787.44,
-          "eraEarned": 376564,
-          "nous": 4122,
+          "rate": 223.75,
+          "eraEarned": 66806,
+          "nous": 235,
           "frontier": 0,
           "bankCount": 18
         },
         {
           "hour": 50,
-          "rate": 3.48,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6328029,
+          "nous": 77268,
           "frontier": 0,
-          "bankCount": 19
+          "bankCount": 18
         },
         {
           "hour": 51,
-          "rate": 146.61,
-          "eraEarned": 58965,
-          "nous": 15,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 19
         },
         {
           "hour": 52,
-          "rate": 2379.74,
-          "eraEarned": 1642152,
-          "nous": 9858,
+          "rate": 923.8,
+          "eraEarned": 493486,
+          "nous": 841,
           "frontier": 0,
           "bankCount": 19
         },
         {
           "hour": 53,
-          "rate": 30.22,
-          "eraEarned": 7810,
-          "nous": 17,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 20
         },
         {
           "hour": 54,
-          "rate": 923.8,
-          "eraEarned": 494198,
-          "nous": 1553,
+          "rate": 223.75,
+          "eraEarned": 66788,
+          "nous": 217,
           "frontier": 0,
           "bankCount": 20
         },
         {
           "hour": 55,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327970,
+          "nous": 77209,
           "frontier": 0,
-          "bankCount": 21
+          "bankCount": 20
         },
         {
           "hour": 56,
-          "rate": 223.75,
-          "eraEarned": 66702,
-          "nous": 131,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 21
         },
         {
           "hour": 57,
-          "rate": 2168.84,
-          "eraEarned": 2193673,
-          "nous": 1070,
+          "rate": 923.8,
+          "eraEarned": 493486,
+          "nous": 841,
           "frontier": 0,
           "bankCount": 21
         },
         {
           "hour": 58,
-          "rate": 30.22,
-          "eraEarned": 7810,
-          "nous": 17,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 22
         },
         {
           "hour": 59,
-          "rate": 923.8,
-          "eraEarned": 494131,
-          "nous": 1486,
+          "rate": 223.75,
+          "eraEarned": 66776,
+          "nous": 205,
           "frontier": 0,
           "bankCount": 22
         },
         {
           "hour": 60,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327780,
+          "nous": 77019,
           "frontier": 0,
-          "bankCount": 23
+          "bankCount": 22
         },
         {
           "hour": 61,
-          "rate": 223.75,
-          "eraEarned": 66701,
-          "nous": 130,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 23
         },
         {
           "hour": 62,
-          "rate": 2168.84,
-          "eraEarned": 2193605,
-          "nous": 1002,
+          "rate": 923.8,
+          "eraEarned": 493475,
+          "nous": 830,
           "frontier": 0,
           "bankCount": 23
         },
         {
           "hour": 63,
-          "rate": 30.22,
-          "eraEarned": 7809,
-          "nous": 16,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 24
         },
         {
           "hour": 64,
-          "rate": 923.8,
-          "eraEarned": 494130,
-          "nous": 1485,
+          "rate": 223.75,
+          "eraEarned": 66776,
+          "nous": 205,
           "frontier": 0,
           "bankCount": 24
         },
         {
           "hour": 65,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327780,
+          "nous": 77019,
           "frontier": 0,
-          "bankCount": 25
+          "bankCount": 24
         },
         {
           "hour": 66,
-          "rate": 223.75,
-          "eraEarned": 66701,
-          "nous": 130,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 25
         },
         {
           "hour": 67,
-          "rate": 2168.84,
-          "eraEarned": 2193593,
-          "nous": 990,
+          "rate": 923.8,
+          "eraEarned": 493473,
+          "nous": 828,
           "frontier": 0,
           "bankCount": 25
         },
         {
           "hour": 68,
-          "rate": 30.22,
-          "eraEarned": 7808,
-          "nous": 15,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 26
         },
         {
           "hour": 69,
-          "rate": 923.8,
-          "eraEarned": 494118,
-          "nous": 1473,
+          "rate": 223.75,
+          "eraEarned": 66774,
+          "nous": 203,
           "frontier": 0,
           "bankCount": 26
         },
         {
           "hour": 70,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327746,
+          "nous": 76985,
           "frontier": 0,
-          "bankCount": 27
+          "bankCount": 26
         },
         {
           "hour": 71,
-          "rate": 223.75,
-          "eraEarned": 66701,
-          "nous": 130,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 27
         },
         {
           "hour": 72,
-          "rate": 2168.84,
-          "eraEarned": 2193582,
-          "nous": 979,
+          "rate": 923.8,
+          "eraEarned": 493471,
+          "nous": 826,
           "frontier": 0,
           "bankCount": 27
         },
         {
           "hour": 73,
-          "rate": 30.22,
-          "eraEarned": 7807,
-          "nous": 14,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 28
         },
         {
           "hour": 74,
-          "rate": 923.8,
-          "eraEarned": 494033,
-          "nous": 1388,
+          "rate": 223.75,
+          "eraEarned": 66761,
+          "nous": 190,
           "frontier": 0,
           "bankCount": 28
         },
         {
           "hour": 75,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327491,
+          "nous": 76730,
           "frontier": 0,
-          "bankCount": 29
+          "bankCount": 28
         },
         {
           "hour": 76,
-          "rate": 223.75,
-          "eraEarned": 66699,
-          "nous": 128,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 29
         },
         {
           "hour": 77,
-          "rate": 2168.84,
-          "eraEarned": 2193508,
-          "nous": 905,
+          "rate": 923.8,
+          "eraEarned": 493459,
+          "nous": 814,
           "frontier": 0,
           "bankCount": 29
         },
         {
           "hour": 78,
-          "rate": 30.22,
-          "eraEarned": 7807,
-          "nous": 14,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 30
         },
         {
           "hour": 79,
-          "rate": 923.8,
-          "eraEarned": 494033,
-          "nous": 1388,
+          "rate": 223.75,
+          "eraEarned": 66760,
+          "nous": 189,
           "frontier": 0,
           "bankCount": 30
         },
         {
           "hour": 80,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327490,
+          "nous": 76729,
           "frontier": 0,
-          "bankCount": 31
+          "bankCount": 30
         },
         {
           "hour": 81,
-          "rate": 223.75,
-          "eraEarned": 66699,
-          "nous": 128,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 31
         },
         {
           "hour": 82,
-          "rate": 2168.84,
-          "eraEarned": 2193467,
-          "nous": 864,
+          "rate": 923.8,
+          "eraEarned": 493452,
+          "nous": 807,
           "frontier": 0,
           "bankCount": 31
         },
         {
           "hour": 83,
-          "rate": 30.22,
-          "eraEarned": 7806,
-          "nous": 13,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 32
         },
         {
           "hour": 84,
-          "rate": 923.8,
-          "eraEarned": 493991,
-          "nous": 1346,
+          "rate": 223.75,
+          "eraEarned": 66753,
+          "nous": 182,
           "frontier": 0,
           "bankCount": 32
         },
         {
           "hour": 85,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327337,
+          "nous": 76576,
           "frontier": 0,
-          "bankCount": 33
+          "bankCount": 32
         },
         {
           "hour": 86,
-          "rate": 223.75,
-          "eraEarned": 66698,
-          "nous": 127,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 33
         },
         {
           "hour": 87,
-          "rate": 2168.84,
-          "eraEarned": 2193460,
-          "nous": 857,
+          "rate": 923.8,
+          "eraEarned": 493451,
+          "nous": 806,
           "frontier": 0,
           "bankCount": 33
         },
         {
           "hour": 88,
-          "rate": 30.22,
-          "eraEarned": 7806,
-          "nous": 13,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 34
         },
         {
           "hour": 89,
-          "rate": 923.8,
-          "eraEarned": 493973,
-          "nous": 1328,
+          "rate": 223.75,
+          "eraEarned": 66750,
+          "nous": 179,
           "frontier": 0,
           "bankCount": 34
         },
         {
           "hour": 90,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327280,
+          "nous": 76519,
           "frontier": 0,
-          "bankCount": 35
+          "bankCount": 34
         },
         {
           "hour": 91,
-          "rate": 223.75,
-          "eraEarned": 66698,
-          "nous": 127,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 35
         },
         {
           "hour": 92,
-          "rate": 2168.84,
-          "eraEarned": 2193417,
-          "nous": 814,
+          "rate": 923.8,
+          "eraEarned": 493443,
+          "nous": 798,
           "frontier": 0,
           "bankCount": 35
         },
         {
           "hour": 93,
-          "rate": 30.22,
-          "eraEarned": 7805,
-          "nous": 12,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 36
         },
         {
           "hour": 94,
-          "rate": 923.8,
-          "eraEarned": 493920,
-          "nous": 1275,
+          "rate": 223.75,
+          "eraEarned": 66741,
+          "nous": 170,
           "frontier": 0,
           "bankCount": 36
         },
         {
           "hour": 95,
-          "rate": 3.89,
-          "eraEarned": 0,
-          "nous": 2,
+          "rate": 7069.72,
+          "eraEarned": 6327106,
+          "nous": 76345,
           "frontier": 0,
-          "bankCount": 37
+          "bankCount": 36
         },
         {
           "hour": 96,
-          "rate": 223.75,
-          "eraEarned": 66697,
-          "nous": 126,
+          "rate": 30.22,
+          "eraEarned": 7800,
+          "nous": 7,
           "frontier": 0,
           "bankCount": 37
         },
         {
           "hour": 97,
-          "rate": 2168.84,
-          "eraEarned": 2193387,
-          "nous": 784,
+          "rate": 923.8,
+          "eraEarned": 493438,
+          "nous": 793,
           "frontier": 0,
           "bankCount": 37
         },
         {
           "hour": 98,
-          "rate": 30.22,
-          "eraEarned": 7805,
-          "nous": 12,
+          "rate": 3.89,
+          "eraEarned": 0,
+          "nous": 2,
           "frontier": 0,
           "bankCount": 38
         },
         {
           "hour": 99,
-          "rate": 923.8,
-          "eraEarned": 493909,
-          "nous": 1264,
+          "rate": 223.75,
+          "eraEarned": 66739,
+          "nous": 168,
           "frontier": 0,
           "bankCount": 38
         },
         {
           "hour": 100,
-          "rate": 3.81,
-          "eraEarned": 0,
-          "nous": 12,
+          "rate": 2180.14,
+          "eraEarned": 6327079,
+          "nous": 4152461,
           "frontier": 0,
-          "bankCount": 39
+          "bankCount": 38
         }
       ],
       "acquisition": {
-        "rollsAccepted": 230,
+        "rollsAccepted": 229,
         "distinctTypes": 22,
-        "rollsPerCreditedHour": 2.3
+        "rollsPerCreditedHour": 2.29
       },
       "numeric": {
-        "maxNous": 13215457.32,
-        "maxEraEarned": 19461382.32,
-        "maxTotalEarned": 625529832.93,
+        "maxNous": 13258116.28,
+        "maxEraEarned": 19508877.28,
+        "maxTotalEarned": 721084417.76,
         "maxRate": 7093.86,
         "maxArete": 0,
         "maxLevel": 23,
-        "maxReserve": 9937.11,
+        "maxReserve": 7200.77,
         "finiteSnapshots": true,
-        "serializedChecks": 112,
-        "serializedOk": 112
+        "serializedChecks": 111,
+        "serializedOk": 111
       },
       "gaps": {
-        "count": 355,
+        "count": 206,
         "maxCredited": 3000,
-        "meanCredited": 1006,
+        "meanCredited": 1748,
         "longCount": 0
       },
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 23 · fresh-start · fresh-start-s23-3a5a65f0 · no Arete spent · recovery — none: the door banked 0 Arete (2000.96ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 39 era(s) banked."
+      "note": "Prompt prestige ✓ 120d · 6000m credited of 171360m elapsed · claim 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 Arete · seed 23 · fresh-start · fresh-start-s23-1a8346cf · no Arete spent · recovery — none: the door banked 0 Arete (2000.96ν/s pre-reset) · The declared 100-credited-hour mark reached at day 120 — 38 era(s) banked."
     }
-  ]
+  ],
+  "recordingEnvironment": {
+    "node": "v22.23.4",
+    "timeZone": "America/Chicago",
+    "utcOffsetMinutes": -360
+  }
 }
