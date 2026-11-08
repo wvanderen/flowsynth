@@ -662,11 +662,12 @@ export function walkRouteForward(
     schedule: { ...parent.recipe.schedule, startAt: parent.recipe.schedule.startAt + bank.at * 1000 },
   });
   const continuation = continuePlaythrough(recipe, state, parent.source);
-  // The branch's earned production is its sessions and breathers — the
-  // banked claim's grant (issue #484) is authored intake that bypasses
-  // `totalEarned`, so the ledger reads without it.
+  // The banked claim's grant (issue #484) is authored intake that bypasses
+  // `totalEarned`, and `earnedNous` counts only the sessions' and
+  // breathers' earned production — so the ledger needs no adjustment: the
+  // grants ride `grantNous`, never this arithmetic.
   const earned = continuation.state.totalEarned - state.totalEarned;
-  const drift = Math.abs(earned - (continuation.earnedNous - continuation.grantNous));
+  const drift = Math.abs(earned - continuation.earnedNous);
   return {
     outcome: continuation.state.world.frontier > state.world.frontier ? "advanced" : "unreached",
     runId: continuation.runId,
@@ -698,7 +699,11 @@ export function walkRouteForward(
 // era reads, the report's assertions, the probe reads. A change here
 // invalidates every stored unit (the figures would read differently), and
 // a report-format change that does not touch these semantics must not.
-export const LATER_ERA_EVALUATION_VERSION = 1;
+// 2 (issue #484): the route forward's no-grant ledger re-reads against
+// the recorded earned production, correctly ignoring the claim grant the
+// era-start reset paid — the v1 reader subtracted the grant a second
+// time and recorded false flags.
+export const LATER_ERA_EVALUATION_VERSION = 2;
 
 // The probe walk's declared basis (issue #491's recorded probes): the
 // seed-23 long-session support walk whose banks the route probes read.

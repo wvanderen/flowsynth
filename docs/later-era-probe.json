@@ -3,9 +3,9 @@
     "game": "flowsynth",
     "saveVersion": 13,
     "runnerVersion": 15,
-    "engineSource": "ccab0a92"
+    "engineSource": "ed2bd449"
   },
-  "recordingCommit": "dd0170158044eedf38480eccbd184d1e8195a628",
+  "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
   "seed": 23,
   "minutes": 60,
   "policy": "support",
@@ -36,23 +36,23 @@
       "policy": "support",
       "complete": true,
       "stopKind": "frontier",
-      "stopReason": "The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete.",
-      "days": 14,
-      "elapsedHours": 313.08,
-      "creditedHours": 27,
-      "manageBreaks": 27,
+      "stopReason": "The declared 4 claimed frontiers banked at day 9 — the frontier stands at 9 Arete.",
+      "days": 9,
+      "elapsedHours": 194.17,
+      "creditedHours": 18,
+      "manageBreaks": 18,
       "claims": [
         2,
-        4,
+        2,
         3,
         2
       ],
       "claimTarget": 2,
       "frontiers": [
         2,
-        6,
-        9,
-        11
+        4,
+        7,
+        9
       ],
       "eras": [
         {
@@ -83,19 +83,19 @@
         },
         {
           "index": 1,
-          "eraClass": "in-window",
-          "hours": 5,
-          "claim": 4,
-          "frontierAfter": 6,
+          "eraClass": "under",
+          "hours": 2,
+          "claim": 2,
+          "frontierAfter": 4,
           "priorDepth": 28813930.03751924,
-          "familiarHours": 3.72,
-          "newHours": 1.28,
-          "newShare": 0.257,
+          "familiarHours": 0.78,
+          "newHours": 1.22,
+          "newShare": 0.608,
           "familiarFaster": true,
           "priorSpanHours": 8,
-          "productionRegainedHours": 3,
-          "priorDepthPassedHours": 3.72,
-          "rebuildingShare": 0.6,
+          "productionRegainedHours": 0,
+          "priorDepthPassedHours": 0.78,
+          "rebuildingShare": 0,
           "purchases": [
             "Catalog entry",
             "Rack Extenders — row 3"
@@ -106,71 +106,69 @@
           ],
           "defeats": [],
           "gaps": {
-            "count": 26,
+            "count": 20,
             "maxCredited": 3600,
-            "meanCredited": 692
+            "meanCredited": 360
           },
           "finite": true
         },
         {
           "index": 2,
-          "eraClass": "in-window",
-          "hours": 6,
+          "eraClass": "under",
+          "hours": 3,
           "claim": 3,
-          "frontierAfter": 9,
-          "priorDepth": 242156477.15511763,
-          "familiarHours": 4.7,
-          "newHours": 1.3,
-          "newShare": 0.217,
+          "frontierAfter": 7,
+          "priorDepth": 259312494.80652595,
+          "familiarHours": 1.13,
+          "newHours": 1.87,
+          "newShare": 0.622,
           "familiarFaster": true,
-          "priorSpanHours": 5,
-          "productionRegainedHours": 4,
-          "priorDepthPassedHours": 4.7,
-          "rebuildingShare": 0.667,
+          "priorSpanHours": 2,
+          "productionRegainedHours": 0,
+          "priorDepthPassedHours": 1.13,
+          "rebuildingShare": 0,
           "purchases": [
-            "Rack Extenders — row -2",
-            "World Column",
-            "Hone rank — chargeBlade"
+            "Rack Extenders — row -2"
           ],
-          "nousPurchases": 2,
-          "placements": [
-            "Placed a Charge Column at -2,2"
-          ],
+          "nousPurchases": 3,
+          "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 48,
+            "count": 43,
             "maxCredited": 3600,
-            "meanCredited": 375
+            "meanCredited": 251
           },
           "finite": true
         },
         {
           "index": 3,
           "eraClass": "in-window",
-          "hours": 8,
+          "hours": 5,
           "claim": 2,
-          "frontierAfter": 11,
-          "priorDepth": 1341475362.9722743,
-          "familiarHours": 6,
-          "newHours": 2,
-          "newShare": 0.25,
-          "familiarFaster": false,
-          "priorSpanHours": 6,
-          "productionRegainedHours": 6,
-          "priorDepthPassedHours": 6,
-          "rebuildingShare": 0.75,
+          "frontierAfter": 9,
+          "priorDepth": 2030289771.920614,
+          "familiarHours": 1.42,
+          "newHours": 3.58,
+          "newShare": 0.717,
+          "familiarFaster": true,
+          "priorSpanHours": 3,
+          "productionRegainedHours": 0,
+          "priorDepthPassedHours": 1.42,
+          "rebuildingShare": 0,
           "purchases": [
+            "World Column",
             "World Column"
           ],
-          "nousPurchases": 3,
+          "nousPurchases": 2,
           "placements": [
+            "Placed a Charge Column at -2,2",
             "Placed a Charge Column at -1,1"
           ],
           "defeats": [],
           "gaps": {
-            "count": 51,
+            "count": 48,
             "maxCredited": 3600,
-            "meanCredited": 494
+            "meanCredited": 300
           },
           "finite": true
         }
@@ -178,7 +176,7 @@
       "noGrant": true,
       "defeats": [],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 14d · 1620m credited of 18785m elapsed · claim 2, 4, 3, 2 Arete · seed 23 · fresh-start · fresh-start-s23-44909dda · spent Catalog entry + 2× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 2.0d/240m, column 3.0d/300m, rate 2.0d/180m, door 2.0d/240m, frontier 3.0d/300m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 14 — the frontier stands at 11 Arete."
+      "note": "Support-seeking ✓ 9d · 1080m credited of 11650m elapsed · claim 2, 2, 3, 2 Arete · seed 23 · fresh-start · fresh-start-s23-cfdcf94f · spent Catalog entry + 2× Charge Column + 2× Rack Extenders · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 1.0d/60m, column 3.0d/300m, rate 0.0d/0m, door 1.0d/60m, frontier 1.0d/120m (5140.28ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 9 — the frontier stands at 9 Arete."
     }
   },
   "banks": [
@@ -209,7 +207,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-52dfb33c",
+            "runId": "fresh-start-s23-f2ff0fd9-from-213ab947",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -230,10 +228,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -248,7 +246,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-adef16d2",
+            "runId": "fresh-start-s23-f2ff0fd9-from-558586c1",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -269,10 +267,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -288,7 +286,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-5b29d67c",
+            "runId": "fresh-start-s23-f2ff0fd9-from-13620540",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -309,10 +307,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -328,7 +326,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-96fff5a9",
+            "runId": "fresh-start-s23-f2ff0fd9-from-6f32b6f3",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -349,10 +347,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -367,7 +365,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-ece27210",
+            "runId": "fresh-start-s23-f2ff0fd9-from-b3cc5493",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -388,10 +386,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -407,7 +405,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-c586dd32",
+            "runId": "fresh-start-s23-f2ff0fd9-from-88e4c20b",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -428,10 +426,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -447,7 +445,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-adceee0a",
+            "runId": "fresh-start-s23-f2ff0fd9-from-2e19de65",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -468,10 +466,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -486,7 +484,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-86679f60",
+            "runId": "fresh-start-s23-f2ff0fd9-from-fd9dd09b",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -507,10 +505,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -526,7 +524,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-148c183d",
+            "runId": "fresh-start-s23-f2ff0fd9-from-06c06e1a",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -547,10 +545,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -566,7 +564,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s23-a69682a4-from-adceee0a",
+            "runId": "fresh-start-s23-f2ff0fd9-from-2e19de65",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 23,
@@ -587,10 +585,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 3,
-            "creditedHours": 4,
+            "frontierAfter": 4,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -599,9 +597,9 @@
       "routeDemonstrated": true
     },
     {
-      "frontier": 6,
-      "claim": 4,
-      "budget": 4,
+      "frontier": 4,
+      "claim": 2,
+      "budget": 2,
       "pieces": [
         {
           "piece": "column",
@@ -621,7 +619,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s24-6412a058-from-7fb5199e",
+            "runId": "fresh-start-s24-401f2402-from-d8953aec",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 24,
@@ -633,7 +631,7 @@
                 "breatherMinutes": 5,
                 "habitName": "Practice",
                 "goalMinutes": 25,
-                "startAt": 1768125900000,
+                "startAt": 1767957000000,
                 "timeZone": "America/Chicago"
               },
               "budgetDays": 30,
@@ -642,10 +640,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 9,
-            "creditedHours": 6,
+            "frontierAfter": 5,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -660,7 +658,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s24-6412a058-from-b9813a53",
+            "runId": "fresh-start-s24-401f2402-from-ed2ccc00",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 24,
@@ -672,7 +670,7 @@
                 "breatherMinutes": 5,
                 "habitName": "Practice",
                 "goalMinutes": 25,
-                "startAt": 1768125900000,
+                "startAt": 1767957000000,
                 "timeZone": "America/Chicago"
               },
               "budgetDays": 30,
@@ -681,10 +679,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 9,
-            "creditedHours": 6,
+            "frontierAfter": 5,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -700,7 +698,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s24-6412a058-from-f49218d3",
+            "runId": "fresh-start-s24-401f2402-from-2d6f8766",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 24,
@@ -712,7 +710,7 @@
                 "breatherMinutes": 5,
                 "habitName": "Practice",
                 "goalMinutes": 25,
-                "startAt": 1768125900000,
+                "startAt": 1767957000000,
                 "timeZone": "America/Chicago"
               },
               "budgetDays": 30,
@@ -721,10 +719,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 9,
-            "creditedHours": 6,
+            "frontierAfter": 5,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -739,7 +737,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s24-6412a058-from-5ad53ab8",
+            "runId": "fresh-start-s24-401f2402-from-ff041724",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 24,
@@ -751,7 +749,7 @@
                 "breatherMinutes": 5,
                 "habitName": "Practice",
                 "goalMinutes": 25,
-                "startAt": 1768125900000,
+                "startAt": 1767957000000,
                 "timeZone": "America/Chicago"
               },
               "budgetDays": 30,
@@ -760,10 +758,10 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 9,
-            "creditedHours": 6,
+            "frontierAfter": 5,
+            "creditedHours": 2,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -779,10 +777,65 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s24-6412a058-from-f49218d3",
+            "runId": "fresh-start-s24-401f2402-from-2d6f8766",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 24,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767957000000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 5,
+            "creditedHours": 2,
+            "defeats": [],
+            "noGrant": false,
+            "noRefund": true,
+            "finite": true
+          }
+        }
+      ],
+      "routeDemonstrated": true
+    },
+    {
+      "frontier": 7,
+      "claim": 3,
+      "budget": 3,
+      "pieces": [
+        {
+          "piece": "column",
+          "price": 1
+        },
+        {
+          "piece": "hone",
+          "price": 1
+        }
+      ],
+      "orders": [
+        {
+          "order": [],
+          "spend": 0,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-fe4689ce-from-551b3ae9",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
               "policyId": "support",
               "claimTarget": 1,
               "schedule": {
@@ -800,10 +853,168 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 9,
-            "creditedHours": 6,
+            "frontierAfter": 8,
+            "creditedHours": 4,
             "defeats": [],
-            "noGrant": true,
+            "noGrant": false,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-fe4689ce-from-bea2e21a",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 8,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": false,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "column",
+            "hone"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-fe4689ce-from-262aa9ba",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 8,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": false,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone"
+          ],
+          "spend": 1,
+          "purchasesOk": true,
+          "placementsOk": false,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-fe4689ce-from-4cb0838f",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 8,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": false,
+            "noRefund": true,
+            "finite": true
+          }
+        },
+        {
+          "order": [
+            "hone",
+            "column"
+          ],
+          "spend": 2,
+          "purchasesOk": true,
+          "placementsOk": true,
+          "finite": true,
+          "forward": {
+            "outcome": "advanced",
+            "runId": "fresh-start-s25-fe4689ce-from-262aa9ba",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 25,
+              "policyId": "support",
+              "claimTarget": 1,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768125900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 1,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "frontierAfter": 8,
+            "creditedHours": 4,
+            "defeats": [],
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -813,141 +1024,8 @@
     },
     {
       "frontier": 9,
-      "claim": 3,
-      "budget": 3,
-      "pieces": [
-        {
-          "piece": "column",
-          "price": 2
-        },
-        {
-          "piece": "hone",
-          "price": 2
-        }
-      ],
-      "orders": [
-        {
-          "order": [],
-          "spend": 0,
-          "purchasesOk": true,
-          "placementsOk": true,
-          "finite": true,
-          "forward": {
-            "outcome": "advanced",
-            "runId": "fresh-start-s25-20f18867-from-af0aab96",
-            "recipe": {
-              "scenarioId": "fresh-start",
-              "seed": 25,
-              "policyId": "support",
-              "claimTarget": 1,
-              "schedule": {
-                "sessionsPerDay": 2,
-                "sessionMinutes": 60,
-                "breatherMinutes": 5,
-                "habitName": "Practice",
-                "goalMinutes": 25,
-                "startAt": 1768385100000,
-                "timeZone": "America/Chicago"
-              },
-              "budgetDays": 30,
-              "eras": 1,
-              "stopCreditedHours": 0,
-              "responseCurve": "shipped",
-              "overrides": {}
-            },
-            "frontierAfter": 10,
-            "creditedHours": 7,
-            "defeats": [],
-            "noGrant": true,
-            "noRefund": true,
-            "finite": true
-          }
-        },
-        {
-          "order": [
-            "column"
-          ],
-          "spend": 2,
-          "purchasesOk": true,
-          "placementsOk": true,
-          "finite": true,
-          "forward": {
-            "outcome": "advanced",
-            "runId": "fresh-start-s25-20f18867-from-bbd5fb45",
-            "recipe": {
-              "scenarioId": "fresh-start",
-              "seed": 25,
-              "policyId": "support",
-              "claimTarget": 1,
-              "schedule": {
-                "sessionsPerDay": 2,
-                "sessionMinutes": 60,
-                "breatherMinutes": 5,
-                "habitName": "Practice",
-                "goalMinutes": 25,
-                "startAt": 1768385100000,
-                "timeZone": "America/Chicago"
-              },
-              "budgetDays": 30,
-              "eras": 1,
-              "stopCreditedHours": 0,
-              "responseCurve": "shipped",
-              "overrides": {}
-            },
-            "frontierAfter": 10,
-            "creditedHours": 7,
-            "defeats": [],
-            "noGrant": true,
-            "noRefund": true,
-            "finite": true
-          }
-        },
-        {
-          "order": [
-            "hone"
-          ],
-          "spend": 2,
-          "purchasesOk": true,
-          "placementsOk": true,
-          "finite": true,
-          "forward": {
-            "outcome": "advanced",
-            "runId": "fresh-start-s25-20f18867-from-5bd3317f",
-            "recipe": {
-              "scenarioId": "fresh-start",
-              "seed": 25,
-              "policyId": "support",
-              "claimTarget": 1,
-              "schedule": {
-                "sessionsPerDay": 2,
-                "sessionMinutes": 60,
-                "breatherMinutes": 5,
-                "habitName": "Practice",
-                "goalMinutes": 25,
-                "startAt": 1768385100000,
-                "timeZone": "America/Chicago"
-              },
-              "budgetDays": 30,
-              "eras": 1,
-              "stopCreditedHours": 0,
-              "responseCurve": "shipped",
-              "overrides": {}
-            },
-            "frontierAfter": 10,
-            "creditedHours": 7,
-            "defeats": [],
-            "noGrant": true,
-            "noRefund": true,
-            "finite": true
-          }
-        }
-      ],
-      "routeDemonstrated": true
-    },
-    {
-      "frontier": 11,
       "claim": 2,
-      "budget": 3,
+      "budget": 2,
       "pieces": [
         {
           "piece": "column",
@@ -955,7 +1033,7 @@
         },
         {
           "piece": "hone",
-          "price": 2
+          "price": 1
         }
       ],
       "orders": [
@@ -967,7 +1045,7 @@
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s26-497aa620-from-d0dab790",
+            "runId": "fresh-start-s26-a9ef8db9-from-9c81fab4",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 26,
@@ -979,7 +1057,7 @@
                 "breatherMinutes": 5,
                 "habitName": "Practice",
                 "goalMinutes": 25,
-                "startAt": 1768730700000,
+                "startAt": 1768302600000,
                 "timeZone": "America/Chicago"
               },
               "budgetDays": 30,
@@ -988,10 +1066,12 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 12,
-            "creditedHours": 8,
-            "defeats": [],
-            "noGrant": true,
+            "frontierAfter": 10,
+            "creditedHours": 5,
+            "defeats": [
+              "w0"
+            ],
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -1000,13 +1080,13 @@
           "order": [
             "hone"
           ],
-          "spend": 2,
+          "spend": 1,
           "purchasesOk": true,
           "placementsOk": true,
           "finite": true,
           "forward": {
             "outcome": "advanced",
-            "runId": "fresh-start-s26-497aa620-from-330fba61",
+            "runId": "fresh-start-s26-a9ef8db9-from-76ca6b00",
             "recipe": {
               "scenarioId": "fresh-start",
               "seed": 26,
@@ -1018,7 +1098,7 @@
                 "breatherMinutes": 5,
                 "habitName": "Practice",
                 "goalMinutes": 25,
-                "startAt": 1768730700000,
+                "startAt": 1768302600000,
                 "timeZone": "America/Chicago"
               },
               "budgetDays": 30,
@@ -1027,10 +1107,12 @@
               "responseCurve": "shipped",
               "overrides": {}
             },
-            "frontierAfter": 12,
-            "creditedHours": 8,
-            "defeats": [],
-            "noGrant": true,
+            "frontierAfter": 10,
+            "creditedHours": 5,
+            "defeats": [
+              "w0"
+            ],
+            "noGrant": false,
             "noRefund": true,
             "finite": true
           }
@@ -1041,7 +1123,7 @@
   ],
   "unitProvenance": {
     "probe-walk": {
-      "recordingCommit": "6c6dc864503d1dba31152d29641bc33ea78f0bc2",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1052,7 +1134,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1086,7 +1168,7 @@
       }
     },
     "forward-b0-o0": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1097,7 +1179,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1117,7 +1199,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1153,7 +1235,7 @@
       }
     },
     "forward-b0-o1": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1164,7 +1246,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1186,7 +1268,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1222,7 +1304,7 @@
       }
     },
     "forward-b0-o2": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1233,7 +1315,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1256,7 +1338,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1292,7 +1374,7 @@
       }
     },
     "forward-b0-o3": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1303,7 +1385,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1326,7 +1408,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1362,7 +1444,7 @@
       }
     },
     "forward-b0-o4": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1373,7 +1455,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1395,7 +1477,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1431,7 +1513,7 @@
       }
     },
     "forward-b0-o5": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1442,7 +1524,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1465,7 +1547,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1501,7 +1583,7 @@
       }
     },
     "forward-b0-o6": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1512,7 +1594,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1535,7 +1617,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1571,7 +1653,7 @@
       }
     },
     "forward-b0-o7": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1582,7 +1664,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1604,7 +1686,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1640,7 +1722,7 @@
       }
     },
     "forward-b0-o8": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1651,7 +1733,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1674,7 +1756,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1710,7 +1792,7 @@
       }
     },
     "forward-b0-o9": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1721,7 +1803,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1744,7 +1826,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1780,7 +1862,7 @@
       }
     },
     "forward-b1-o0": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1791,7 +1873,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1811,7 +1893,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1847,7 +1929,7 @@
       }
     },
     "forward-b1-o1": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1858,7 +1940,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1880,7 +1962,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1916,7 +1998,7 @@
       }
     },
     "forward-b1-o2": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1927,7 +2009,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -1950,7 +2032,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -1986,7 +2068,7 @@
       }
     },
     "forward-b1-o3": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1997,7 +2079,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -2019,7 +2101,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -2055,7 +2137,7 @@
       }
     },
     "forward-b1-o4": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -2066,7 +2148,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -2089,7 +2171,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -2125,7 +2207,7 @@
       }
     },
     "forward-b2-o0": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -2136,7 +2218,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -2156,7 +2238,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -2192,7 +2274,7 @@
       }
     },
     "forward-b2-o1": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -2203,7 +2285,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -2225,7 +2307,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -2261,7 +2343,7 @@
       }
     },
     "forward-b2-o2": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -2272,7 +2354,77 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 2,
+          "order": [
+            "column",
+            "hone"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ed2bd449"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b2-o3": {
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -2294,7 +2446,77 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
+            },
+            "evaluation": 1,
+            "solver": {
+              "maxNodes": 250000,
+              "maxMs": 750
+            },
+            "runtime": {
+              "node": "v22.23.4"
+            },
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767603600000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 30,
+              "eras": 4,
+              "stopCreditedHours": 0,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "forward": null
+          }
+        }
+      }
+    },
+    "forward-b2-o4": {
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingEnvironment": {
+        "node": "v22.23.4",
+        "timeZone": "America/Chicago",
+        "utcOffsetMinutes": -360
+      },
+      "identity": {
+        "engine": {
+          "game": "flowsynth",
+          "saveVersion": 13,
+          "runnerVersion": 15,
+          "engineSource": "ed2bd449"
+        },
+        "evaluation": 1,
+        "solver": {
+          "maxNodes": 250000,
+          "maxMs": 750
+        },
+        "runtime": {
+          "node": "v22.23.4"
+        },
+        "recipe": null,
+        "forward": {
+          "bank": 2,
+          "order": [
+            "hone",
+            "column"
+          ],
+          "budgetDays": 30,
+          "parent": {
+            "engine": {
+              "game": "flowsynth",
+              "saveVersion": 13,
+              "runnerVersion": 15,
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -2330,7 +2552,7 @@
       }
     },
     "forward-b3-o0": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -2341,7 +2563,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -2361,7 +2583,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
@@ -2397,7 +2619,7 @@
       }
     },
     "forward-b3-o1": {
-      "recordingCommit": "d2fc242e8542ee33e55b20a39e02c3f3fe55e7c4",
+      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -2408,7 +2630,7 @@
           "game": "flowsynth",
           "saveVersion": 13,
           "runnerVersion": 15,
-          "engineSource": "ccab0a92"
+          "engineSource": "ed2bd449"
         },
         "evaluation": 1,
         "solver": {
@@ -2430,7 +2652,7 @@
               "game": "flowsynth",
               "saveVersion": 13,
               "runnerVersion": 15,
-              "engineSource": "ccab0a92"
+              "engineSource": "ed2bd449"
             },
             "evaluation": 1,
             "solver": {
