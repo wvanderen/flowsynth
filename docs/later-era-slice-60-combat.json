@@ -5,7 +5,7 @@
     "runnerVersion": 15,
     "engineSource": "ed2bd449"
   },
-  "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+  "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
   "minutes": 60,
   "policy": "combat",
   "rows": [
@@ -495,7 +495,7 @@
           "hours": 9,
           "claim": 2,
           "frontierAfter": 6,
-          "priorDepth": 132589472.91139957,
+          "priorDepth": 132589309.01505482,
           "familiarHours": 3.77,
           "newHours": 5.23,
           "newShare": 0.581,
@@ -523,7 +523,7 @@
           "hours": 17,
           "claim": 2,
           "frontierAfter": 8,
-          "priorDepth": 868373484.604718,
+          "priorDepth": 868361142.7567667,
           "familiarHours": 6,
           "newHours": 11,
           "newShare": 0.647,
@@ -1149,7 +1149,7 @@
   ],
   "unitProvenance": {
     "seed-60-combat-42": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1162,7 +1162,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1194,7 +1194,7 @@
       }
     },
     "seed-60-combat-468": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1207,7 +1207,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1239,7 +1239,7 @@
       }
     },
     "seed-60-combat-157": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1252,7 +1252,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1284,7 +1284,7 @@
       }
     },
     "seed-60-combat-2026": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1297,7 +1297,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1329,7 +1329,7 @@
       }
     },
     "seed-60-combat-7": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1342,7 +1342,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1374,7 +1374,7 @@
       }
     },
     "seed-60-combat-99": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1387,7 +1387,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1419,7 +1419,7 @@
       }
     },
     "seed-60-combat-11": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1432,7 +1432,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1464,7 +1464,7 @@
       }
     },
     "seed-60-combat-23": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1477,7 +1477,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750

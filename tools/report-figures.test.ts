@@ -57,18 +57,18 @@ describe("later-era figures from recorded evidence", () => {
     const figures = laterEraFigures(laterEraReport(), laterEraInputs());
     expect(figures.walks).toBe(48);
     expect(figures.slices).toHaveLength(6);
-    expect(figures.totals).toEqual({ inWindow: 64, under: 7, over: 48, open: 12 });
-    expect(figures.closedEras).toBe(119);
-    expect(figures.completeWalks).toBe(35);
-    expect(figures.budgetWalks).toBe(13);
-    expect(figures.fasterReturn).toEqual({ faster: 104, notFaster: 15 });
-    expect(figures.rebuilding).toEqual({ withinHalf: 12, overHalf: 107 });
-    expect(figures.newTerritoryMajorities).toBe(0);
+    expect(figures.totals).toEqual({ inWindow: 47, under: 34, over: 34, open: 18 });
+    expect(figures.closedEras).toBe(115);
+    expect(figures.completeWalks).toBe(31);
+    expect(figures.budgetWalks).toBe(17);
+    expect(figures.fasterReturn).toEqual({ faster: 115, notFaster: 0 });
+    expect(figures.rebuilding).toEqual({ withinHalf: 115, overHalf: 0 });
+    expect(figures.newTerritoryMajorities).toBe(91);
     expect(figures.noGrantWalks).toBe(48);
     expect(figures.routes).toEqual({
-      frontiers: [2, 6, 9, 11],
-      orders: 20,
-      advanced: 20,
+      frontiers: [2, 4, 7, 9],
+      orders: 22,
+      advanced: 22,
       demonstratedFrontiers: 4,
     });
   });
@@ -80,13 +80,15 @@ describe("later-era figures from recorded evidence", () => {
     expect(doc).toContain(generatedBlock(LATER_ERA_BLOCK_ID, rendered));
   });
 
-  it("names the unmet criteria and never promotes a documented miss to an approved exception", () => {
+  it("names the recorded verdicts and never promotes a documented miss to an approved exception", () => {
     const rendered = renderLaterEraBlock(laterEraFigures(laterEraReport(), laterEraInputs()));
+    // The ADR-0086 calibration's recorded reads: the effort criteria met,
+    // the incomplete bank outcomes still explicit.
     expect(rendered).toContain("New-territory majority");
-    expect(rendered).toContain("0 of 119");
-    expect(rendered).toContain("UNMET");
-    expect(rendered).toContain("Rebuilding");
-    expect(rendered).toContain("107 of 119");
+    expect(rendered).toContain("91 of 115");
+    expect(rendered).toContain("0 of 115 closed eras spend more than half rebuilding");
+    expect(rendered).toContain("met by the recorded majority");
+    expect(rendered).toContain("incomplete — 17 recorded incompletes");
     expect(rendered).toContain("never an approved exception");
     expect(rendered).toContain("no simulation");
   });
@@ -104,11 +106,11 @@ describe("later-era figures from recorded evidence", () => {
       routes: { ...base.routes, advanced: 19 },
     };
     const rendered = renderLaterEraBlock(flipped);
-    expect(rendered).toMatch(/\| New-territory majority of era effort \(#491\) \| 100 of 119 [^|]+\| met by the recorded majority \|/);
-    expect(rendered).toMatch(/\| Rebuilding not most of later eras \(#491\) \| 10 of 119 [^|]+\| met \|/);
-    expect(rendered).toMatch(/\| Faster familiar return \(#491\) \| 10 of 119 [^|]+\| \*\*UNMET\*\* \|/);
+    expect(rendered).toMatch(/\| New-territory majority of era effort \(#491\) \| 100 of 115 [^|]+\| met by the recorded majority \|/);
+    expect(rendered).toMatch(/\| Rebuilding not most of later eras \(#491\) \| 10 of 115 [^|]+\| met \|/);
+    expect(rendered).toMatch(/\| Faster familiar return \(#491\) \| 10 of 115 [^|]+\| \*\*UNMET\*\* \|/);
     expect(rendered).toMatch(/\| No grant, no refund \(#491\) \| 47 of 48 walks `noGrant` \| \*\*UNMET\*\* \|/);
-    expect(rendered).toContain("incomplete — 1 recorded order(s) did not advance");
+    expect(rendered).toContain("incomplete — 3 recorded order(s) did not advance");
     expect(rendered).not.toContain("merge blocker");
   });
 });
@@ -252,7 +254,7 @@ describe("stale generated figures and splice integrity", () => {
   it("flags a committed block that no longer matches the regenerated figures", () => {
     const doc = readDoc("later-era-productivity.md");
     const rendered = renderLaterEraBlock(laterEraFigures(laterEraReport(), laterEraInputs()));
-    const tampered = doc.replace("104 re-walk", "999 re-walk");
+    const tampered = doc.replace("115 regain the previous production", "999 regain the previous production");
     expect(tampered).not.toBe(doc);
     expect(figuresCurrent(tampered, LATER_ERA_BLOCK_ID, rendered)).toBe(false);
   });
@@ -267,7 +269,7 @@ describe("stale generated figures and splice integrity", () => {
     expect(altered.replace(generatedBlock(LATER_ERA_BLOCK_ID, rendered + "\n regenerated at a later commit."), ""))
       .toBe(doc.replace(generatedBlock(LATER_ERA_BLOCK_ID, rendered), ""));
     // The handwritten paragraphs outside the block survive untouched.
-    expect(altered).toContain("These results do not satisfy the new-frontier-effort requirement.");
+    expect(altered).toContain("The policy comparison remains material");
   });
 
   it("rejects duplicate stale blocks even when one block is current", () => {

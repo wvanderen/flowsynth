@@ -5,7 +5,7 @@
     "runnerVersion": 15,
     "engineSource": "ed2bd449"
   },
-  "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+  "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
   "minutes": 25,
   "policy": "support",
   "rows": [
@@ -411,7 +411,7 @@
           "hours": 22.92,
           "claim": 2,
           "frontierAfter": 6,
-          "priorDepth": 129372175.7072514,
+          "priorDepth": 129395898.26436763,
           "familiarHours": 9.78,
           "newHours": 13.13,
           "newShare": 0.573,
@@ -439,7 +439,7 @@
           "hours": null,
           "claim": null,
           "frontierAfter": null,
-          "priorDepth": 806277529.2913034,
+          "priorDepth": 806278835.4127975,
           "familiarHours": 5.42,
           "newHours": 0,
           "newShare": 0,
@@ -482,9 +482,9 @@
       "stopKind": "frontier",
       "stopReason": "The declared 4 claimed frontiers banked at day 45 — the frontier stands at 8 Arete.",
       "days": 45,
-      "elapsedHours": 1057,
-      "creditedHours": 37.5,
-      "manageBreaks": 90,
+      "elapsedHours": 1056.5,
+      "creditedHours": 37.08,
+      "manageBreaks": 89,
       "claims": [
         2,
         2,
@@ -502,12 +502,12 @@
         {
           "index": 0,
           "eraClass": "opening",
-          "hours": 17.5,
+          "hours": 17.08,
           "claim": 2,
           "frontierAfter": 2,
           "priorDepth": null,
           "familiarHours": 0,
-          "newHours": 17.5,
+          "newHours": 17.08,
           "newShare": 1,
           "familiarFaster": null,
           "priorSpanHours": null,
@@ -519,9 +519,9 @@
           "placements": [],
           "defeats": [],
           "gaps": {
-            "count": 109,
+            "count": 108,
             "maxCredited": 3000,
-            "meanCredited": 564
+            "meanCredited": 556
           },
           "finite": true
         },
@@ -531,15 +531,15 @@
           "hours": 11.67,
           "claim": 2,
           "frontierAfter": 4,
-          "priorDepth": 20542970.99447871,
-          "familiarHours": 6.5,
-          "newHours": 5.17,
-          "newShare": 0.443,
+          "priorDepth": 21141080.812778097,
+          "familiarHours": 6.63,
+          "newHours": 5.03,
+          "newShare": 0.431,
           "familiarFaster": true,
-          "priorSpanHours": 17.5,
-          "productionRegainedHours": 2.08,
-          "priorDepthPassedHours": 6.5,
-          "rebuildingShare": 0.179,
+          "priorSpanHours": 17.08,
+          "productionRegainedHours": 3.33,
+          "priorDepthPassedHours": 6.63,
+          "rebuildingShare": 0.286,
           "purchases": [
             "Catalog entry",
             "Rack Extenders — row 3"
@@ -562,7 +562,7 @@
           "hours": 4.58,
           "claim": 2,
           "frontierAfter": 6,
-          "priorDepth": 129024573.82800311,
+          "priorDepth": 129018089.02413991,
           "familiarHours": 1.67,
           "newHours": 2.92,
           "newShare": 0.636,
@@ -579,7 +579,7 @@
           "defeats": [],
           "gaps": {
             "count": 19,
-            "maxCredited": 3000,
+            "maxCredited": 1500,
             "meanCredited": 789
           },
           "finite": true
@@ -590,7 +590,7 @@
           "hours": 3.75,
           "claim": 2,
           "frontierAfter": 8,
-          "priorDepth": 997607695.7392582,
+          "priorDepth": 997729549.9842846,
           "familiarHours": 2.12,
           "newHours": 1.63,
           "newShare": 0.436,
@@ -630,7 +630,7 @@
         "w2"
       ],
       "bottleneck": null,
-      "note": "Support-seeking ✓ 45d · 2250m credited of 63420m elapsed · claim 2, 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-8b07fdc5 · spent Catalog entry + 1× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 8.0d/400m, column 20.0d/975m, rate 3.0d/125m, door 4.0d/200m, frontier 14.0d/700m (632.67ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 45 — the frontier stands at 8 Arete."
+      "note": "Support-seeking ✓ 45d · 2225m credited of 63390m elapsed · claim 2, 2, 2, 2 Arete · seed 2026 · fresh-start · fresh-start-s2026-8b07fdc5 · spent Catalog entry + 1× Charge Column + 2× Rack Extenders + 1× Hone (chargeBlade) · recovery — bank 2, purchase 0.0d/0m (Catalog entry), blade 8.0d/400m, column 19.0d/975m, rate 4.0d/200m, door 4.0d/200m, frontier 14.0d/700m (704.66ν/s pre-reset) · eras 4/4 closed · The declared 4 claimed frontiers banked at day 45 — the frontier stands at 8 Arete."
     },
     {
       "seed": 7,
@@ -720,7 +720,7 @@
           "hours": 18.75,
           "claim": 2,
           "frontierAfter": 6,
-          "priorDepth": 133209190.93106365,
+          "priorDepth": 133226687.69285451,
           "familiarHours": 5.48,
           "newHours": 13.27,
           "newShare": 0.708,
@@ -748,7 +748,7 @@
           "hours": 13.33,
           "claim": 2,
           "frontierAfter": 8,
-          "priorDepth": 815607667.6650333,
+          "priorDepth": 815714181.7788986,
           "familiarHours": 8.88,
           "newHours": 4.45,
           "newShare": 0.334,
@@ -1174,7 +1174,7 @@
           "hours": 2.08,
           "claim": 2,
           "frontierAfter": 8,
-          "priorDepth": 870289015.4106395,
+          "priorDepth": 870289449.9163212,
           "familiarHours": 1.32,
           "newHours": 0.77,
           "newShare": 0.368,
@@ -1219,7 +1219,7 @@
   ],
   "unitProvenance": {
     "seed-25-support-42": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1232,7 +1232,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1264,7 +1264,7 @@
       }
     },
     "seed-25-support-468": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1277,7 +1277,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1309,7 +1309,7 @@
       }
     },
     "seed-25-support-157": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1322,7 +1322,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1354,7 +1354,7 @@
       }
     },
     "seed-25-support-2026": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1367,7 +1367,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1399,7 +1399,7 @@
       }
     },
     "seed-25-support-7": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1412,7 +1412,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1444,7 +1444,7 @@
       }
     },
     "seed-25-support-99": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1457,7 +1457,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1489,7 +1489,7 @@
       }
     },
     "seed-25-support-11": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1502,7 +1502,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750
@@ -1534,7 +1534,7 @@
       }
     },
     "seed-25-support-23": {
-      "recordingCommit": "50b90d7f6d2648225ee6bdec22b123a1bfeb4efd",
+      "recordingCommit": "a139bbeb6e34ca515543226e1c3e8ffcd970d1a8",
       "recordingEnvironment": {
         "node": "v22.23.4",
         "timeZone": "America/Chicago",
@@ -1547,7 +1547,7 @@
           "runnerVersion": 15,
           "engineSource": "ed2bd449"
         },
-        "evaluation": 1,
+        "evaluation": 2,
         "solver": {
           "maxNodes": 250000,
           "maxMs": 750

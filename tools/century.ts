@@ -581,9 +581,7 @@ export function centuryRow(
   // The continuation's branch input reads the first captured figure — the
   // one store both retentions carry (issue #509).
   const startTotal = record.kind === "continuation" ? (record.snapshots[0]?.numbers.totalEarned ?? 0) : 0;
-  const drift = Math.abs(
-    (record.state.totalEarned - startTotal) - (record.sessionNous + record.breatherNous + record.grantNous),
-  );
+  const drift = Math.abs((record.state.totalEarned - startTotal) - record.earnedNous);
   return {
     measurementVersion: CENTURY_MEASUREMENT_VERSION,
     decisionGapsOk: gapRead.gaps.every((gap) => gap.credited <= LONG_GAP_CREDITED),
