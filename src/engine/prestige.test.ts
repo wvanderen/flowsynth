@@ -252,7 +252,25 @@ describe("the prestige action", () => {
     expect(s.nous).toBe(120);
   });
 
-  it("the grant curve reads finite inside the ν representation and overflows to a refusal past it", () => {
+  it("an unrepresentable claim grant refuses prestige without changing state or serialized save bytes", () => {
+    const s = atHorizon();
+    s.eraEarned = BALANCE.world.entryNous;
+    const before = structuredClone(s);
+    const savedAt = 1000;
+    const saved = serialize(s, savedAt);
+    // Stress the public transaction with a declared claim beyond ordinary
+    // play's reachable frontier, without mutating shared balance constants.
+    const result = prestige(s, { claimBase: 2000 });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("The frontier grant cannot be read safely, so nothing was banked.");
+    expect(s).toEqual(before);
+    expect(serialize(s, savedAt)).toBe(saved);
+    const restored = deserialize(saved).state!;
+    expect(restored).toBeTruthy();
+    expect(serialize(restored, savedAt)).toBe(saved);
+  });
+
+  it("the grant curve reads finite inside the ν representation and overflows past it", () => {
     expect(eraStartGrantOf(0)).toBe(BALANCE.openingGrant);
     expect(Number.isFinite(eraStartGrantOf(2))).toBe(true);
     // Monotone in the frontier the claim opened.
