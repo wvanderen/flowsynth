@@ -18,4 +18,6 @@ The narrow verification addition and narrative correction are ready for checking
 
 - Supported-runtime preflight: passed under Node v22.23.4, America/Chicago, storage roundtrip available.
 - Targeted: `npm test -- src/engine/prestige.test.ts` — 16 passed.
-- Final `npm run check` and `npm test`: pending at the source freeze; results will be recorded here without changing production source.
+- Source freeze: `8b81776` (test/documentation-only revision).
+- Final `npm run check`: passed, including the recorder static gate (5 scripts).
+- Final `npm test`: 127 files passed; 2394 tests passed, 9 skipped. Both engine and UI projects ran once at the source freeze. This evidence-only update does not change the checked source.
