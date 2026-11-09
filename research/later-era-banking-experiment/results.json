@@ -1,0 +1,1633 @@
+{
+  "diagnosticOnly": true,
+  "source": {
+    "game": "flowsynth",
+    "saveVersion": 13,
+    "runnerVersion": 15,
+    "engineSource": "ed2bd449"
+  },
+  "revision": "a467d2e3c5a837b6dd97ea8586d072e22f04e94a",
+  "environment": {
+    "node": "v22.23.4",
+    "timeZone": "America/Chicago"
+  },
+  "budget": {
+    "days": 30,
+    "creditedHoursAvailable": 60
+  },
+  "comparisonNote": "Raw states retain original wall-clock logging timestamps. Prefix state comparison excludes only achievement timestamp values and chordDiscovery.firstFormedAt, preserving exact achievement membership, all chord-discovery facts, and every other state field.",
+  "solver": {
+    "maxNodes": 250000,
+    "maxMs": 750
+  },
+  "cases": [
+    {
+      "name": "strong",
+      "seed": 23,
+      "inputHash": "6b879f9fa76a05168d3fdff8411346a9825ba548907991c94e44e1c8f6148708",
+      "startAt": 1767870600000,
+      "parentBankHours": 8,
+      "parentPreResetRate": 5140.2785597509,
+      "prefixIdentical": true,
+      "branches": [
+        {
+          "runId": "fresh-start-s23-4bbb2df9-from-784a18bb",
+          "source": {
+            "game": "flowsynth",
+            "saveVersion": 13,
+            "runnerVersion": 15,
+            "engineSource": "ed2bd449"
+          },
+          "recipe": {
+            "scenarioId": "fresh-start",
+            "seed": 23,
+            "policyId": "support",
+            "claimTarget": 2,
+            "schedule": {
+              "sessionsPerDay": 2,
+              "sessionMinutes": 60,
+              "breatherMinutes": 5,
+              "habitName": "Practice",
+              "goalMinutes": 25,
+              "startAt": 1767870600000,
+              "timeZone": "America/Chicago"
+            },
+            "budgetDays": 30,
+            "eras": 2,
+            "stopCreditedHours": 0,
+            "responseCurve": "shipped",
+            "overrides": {}
+          },
+          "complete": true,
+          "stop": {
+            "kind": "frontier",
+            "reason": "The declared 2 claimed frontiers banked at day 3 \u2014 the frontier stands at 7 Arete."
+          },
+          "inputHash": "6b879f9fa76a05168d3fdff8411346a9825ba548907991c94e44e1c8f6148708",
+          "endStateHash": "93ef13f71b8a19db467442457da522510fc6a0a3102813c9332f6a3e2f460f77",
+          "claims": [
+            2,
+            3
+          ],
+          "frontier": 7,
+          "creditedHours": 5,
+          "earnedNous": 2289601926.21542,
+          "grantNous": 295094845.43999994,
+          "breatherNous": 160387888.48573494,
+          "areteSpent": {
+            "entry": 1,
+            "discounts": 0,
+            "ceilings": 0,
+            "columns": 0,
+            "rowUnlocks": 2,
+            "hone": {
+              "chargeBlade": 0
+            }
+          },
+          "defeats": [],
+          "endStateFacts": {
+            "credited": 18000,
+            "rate": 4.597217087760002,
+            "nous": 275188285.43999994,
+            "eraEarned": 0,
+            "totalEarned": 2318415856.2529335,
+            "arete": 3,
+            "prestiges": 3,
+            "frontier": 7,
+            "maxLevel": 0,
+            "maxAbsReserve": 0,
+            "finite": true,
+            "serializedChecks": 0,
+            "serializedOk": 0,
+            "modules": 55,
+            "cells": 21,
+            "columns": 0,
+            "hone": 0,
+            "capacity": 0,
+            "moduleTypes": [
+              "additive",
+              "afterglow",
+              "amplifier",
+              "blaster",
+              "echo",
+              "field",
+              "focusKeyed",
+              "forge",
+              "goalKeyed",
+              "infusor",
+              "mutatorForge",
+              "noteKeyed",
+              "release",
+              "saw",
+              "square",
+              "standby",
+              "triangle"
+            ]
+          },
+          "spans": [
+            {
+              "bankAtHours": 2,
+              "claim": 2,
+              "preReset": {
+                "credited": 7200,
+                "rate": 42678.27521196308,
+                "nous": 220455762.72608075,
+                "eraEarned": 259311702.72608083,
+                "totalEarned": 288125632.7636001,
+                "arete": 0,
+                "prestiges": 1,
+                "frontier": 2,
+                "maxLevel": 25,
+                "maxAbsReserve": 5723.77299864414,
+                "finite": true,
+                "serializedChecks": 0,
+                "serializedOk": 0,
+                "modules": 23,
+                "cells": 18,
+                "columns": 0,
+                "hone": 0,
+                "capacity": 2,
+                "moduleTypes": [
+                  "additive",
+                  "afterglow",
+                  "amplifier",
+                  "blaster",
+                  "echo",
+                  "focusKeyed",
+                  "forge",
+                  "infusor",
+                  "mutatorForge",
+                  "release",
+                  "square",
+                  "standby",
+                  "triangle"
+                ]
+              },
+              "eventCounts": {
+                "milestone": 21,
+                "roll": 5,
+                "upgrade": 2,
+                "arete": 2,
+                "session": 2,
+                "breather": 2,
+                "purchase": 2,
+                "placement": 2,
+                "world": 1
+              },
+              "purchasesAndPlacements": [
+                {
+                  "at": 0,
+                  "credited": 0,
+                  "kind": "arete",
+                  "label": "Catalog entry",
+                  "snapshot": 1
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "arete",
+                  "label": "Rack Extenders \u2014 row 3",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "purchase",
+                  "label": "Cell at 0,3",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "purchase",
+                  "label": "Cell at -1,4",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "placement",
+                  "label": "Placed a triangle at 0,3",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "placement",
+                  "label": "Placed a release at -1,4",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "world",
+                  "label": "Placed the chargeBlade at -2,1",
+                  "snapshot": 5
+                }
+              ]
+            },
+            {
+              "bankAtHours": 5,
+              "claim": 3,
+              "preReset": {
+                "credited": 18000,
+                "rate": 174732.84780629005,
+                "nous": 1347832252.4893389,
+                "eraEarned": 2030290223.4893346,
+                "totalEarned": 2318415856.2529335,
+                "arete": 0,
+                "prestiges": 2,
+                "frontier": 4,
+                "maxLevel": 30,
+                "maxAbsReserve": 9890.679741657068,
+                "finite": true,
+                "serializedChecks": 0,
+                "serializedOk": 0,
+                "modules": 55,
+                "cells": 21,
+                "columns": 0,
+                "hone": 0,
+                "capacity": 2,
+                "moduleTypes": [
+                  "additive",
+                  "afterglow",
+                  "amplifier",
+                  "blaster",
+                  "echo",
+                  "field",
+                  "focusKeyed",
+                  "forge",
+                  "goalKeyed",
+                  "infusor",
+                  "mutatorForge",
+                  "noteKeyed",
+                  "release",
+                  "saw",
+                  "square",
+                  "standby",
+                  "triangle"
+                ]
+              },
+              "eventCounts": {
+                "roll": 32,
+                "arete": 1,
+                "milestone": 9,
+                "upgrade": 3,
+                "session": 3,
+                "breather": 3,
+                "purchase": 3,
+                "placement": 3
+              },
+              "purchasesAndPlacements": [
+                {
+                  "at": 7800,
+                  "credited": 7200,
+                  "kind": "arete",
+                  "label": "Rack Extenders \u2014 row -2",
+                  "snapshot": 9
+                },
+                {
+                  "at": 90300,
+                  "credited": 10800,
+                  "kind": "purchase",
+                  "label": "Cell at 0,-2",
+                  "snapshot": 13
+                },
+                {
+                  "at": 90300,
+                  "credited": 10800,
+                  "kind": "purchase",
+                  "label": "Cell at -1,-1",
+                  "snapshot": 13
+                },
+                {
+                  "at": 90300,
+                  "credited": 10800,
+                  "kind": "placement",
+                  "label": "Placed a forge at 0,-2",
+                  "snapshot": 13
+                },
+                {
+                  "at": 90300,
+                  "credited": 10800,
+                  "kind": "placement",
+                  "label": "Placed a triangle at -1,-1",
+                  "snapshot": 13
+                },
+                {
+                  "at": 94200,
+                  "credited": 14400,
+                  "kind": "purchase",
+                  "label": "Cell at 1,-2",
+                  "snapshot": 17
+                },
+                {
+                  "at": 94200,
+                  "credited": 14400,
+                  "kind": "placement",
+                  "label": "Placed a mutatorForge at 1,-2",
+                  "snapshot": 17
+                }
+              ]
+            }
+          ],
+          "oneHourAfter": {
+            "runId": "fresh-start-s23-ba92c061-from-6a6455de",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1768047300000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 1,
+              "eras": 1,
+              "stopCreditedHours": 1,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "inputHash": "93ef13f71b8a19db467442457da522510fc6a0a3102813c9332f6a3e2f460f77",
+            "endStateHash": "3901109b3b1c9c5068a9c821ff8cae2ccea370c09699cb3a836e68692cc61f53",
+            "claims": [],
+            "creditedHours": 1,
+            "frontier": 7,
+            "areteSpent": {
+              "entry": 0,
+              "discounts": 0,
+              "ceilings": 0,
+              "columns": 2,
+              "rowUnlocks": 0,
+              "hone": {
+                "chargeBlade": 0
+              }
+            },
+            "defeats": [],
+            "endStateFacts": {
+              "credited": 3600,
+              "rate": 296539.66771136055,
+              "nous": 1240596367.7929492,
+              "eraEarned": 1240094847.3529494,
+              "totalEarned": 3558510703.6058836,
+              "arete": 0,
+              "prestiges": 3,
+              "frontier": 7,
+              "maxLevel": 30,
+              "maxAbsReserve": 14242.578827986174,
+              "finite": true,
+              "serializedChecks": 0,
+              "serializedOk": 0,
+              "modules": 60,
+              "cells": 21,
+              "columns": 2,
+              "hone": 0,
+              "capacity": 2,
+              "moduleTypes": [
+                "additive",
+                "afterglow",
+                "amplifier",
+                "blaster",
+                "echo",
+                "field",
+                "focusKeyed",
+                "forge",
+                "goalKeyed",
+                "infusor",
+                "mutatorForge",
+                "noteKeyed",
+                "release",
+                "ritual",
+                "saw",
+                "square",
+                "standby",
+                "triangle"
+              ]
+            },
+            "postManagementRate": 570268.5917526163,
+            "purchasesAndCombat": [
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "World Column",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "World Column",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Placed a Charge Column at -2,2",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Placed a Charge Column at -1,1",
+                "snapshot": 1
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w0 discovered",
+                "snapshot": 3
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w1 discovered",
+                "snapshot": 3
+              }
+            ]
+          },
+          "rawRecordSha256": "58a713350a073b63d71d6aa53b5e607cf08204644dc415c3705d1218dfb801d1",
+          "rawFollowUpSha256": "57682cb547a9502bb61d9857d818690a308920183ad2b06f8e10ed550e89f22a"
+        },
+        {
+          "runId": "fresh-start-s23-8603cf0c-from-784a18bb",
+          "source": {
+            "game": "flowsynth",
+            "saveVersion": 13,
+            "runnerVersion": 15,
+            "engineSource": "ed2bd449"
+          },
+          "recipe": {
+            "scenarioId": "fresh-start",
+            "seed": 23,
+            "policyId": "support",
+            "claimTarget": 4,
+            "schedule": {
+              "sessionsPerDay": 2,
+              "sessionMinutes": 60,
+              "breatherMinutes": 5,
+              "habitName": "Practice",
+              "goalMinutes": 25,
+              "startAt": 1767870600000,
+              "timeZone": "America/Chicago"
+            },
+            "budgetDays": 30,
+            "eras": 1,
+            "stopCreditedHours": 0,
+            "responseCurve": "shipped",
+            "overrides": {}
+          },
+          "complete": true,
+          "stop": {
+            "kind": "frontier",
+            "reason": "The declared 1 claimed frontiers banked at day 2 \u2014 the frontier stands at 6 Arete."
+          },
+          "inputHash": "6b879f9fa76a05168d3fdff8411346a9825ba548907991c94e44e1c8f6148708",
+          "endStateHash": "6569c3b70e980cef1d7047b405126bd87d1759a017b89399f6d3e2e5914097be",
+          "claims": [
+            4
+          ],
+          "frontier": 6,
+          "creditedHours": 3,
+          "earnedNous": 1300073135.5664577,
+          "grantNous": 114661785.59999998,
+          "breatherNous": 104636155.7662979,
+          "areteSpent": {
+            "entry": 1,
+            "discounts": 0,
+            "ceilings": 0,
+            "columns": 0,
+            "rowUnlocks": 1,
+            "hone": {
+              "chargeBlade": 0
+            }
+          },
+          "defeats": [],
+          "endStateFacts": {
+            "credited": 10800,
+            "rate": 4.924012267680002,
+            "nous": 114661785.59999998,
+            "eraEarned": 0,
+            "totalEarned": 1328887065.6039774,
+            "arete": 4,
+            "prestiges": 2,
+            "frontier": 6,
+            "maxLevel": 0,
+            "maxAbsReserve": 0,
+            "finite": true,
+            "serializedChecks": 0,
+            "serializedOk": 0,
+            "modules": 25,
+            "cells": 20,
+            "columns": 0,
+            "hone": 0,
+            "capacity": 0,
+            "moduleTypes": [
+              "additive",
+              "afterglow",
+              "amplifier",
+              "blaster",
+              "echo",
+              "focusKeyed",
+              "forge",
+              "infusor",
+              "mutatorForge",
+              "release",
+              "square",
+              "standby",
+              "triangle"
+            ]
+          },
+          "spans": [
+            {
+              "bankAtHours": 3,
+              "claim": 4,
+              "preReset": {
+                "credited": 10800,
+                "rate": 264620.6721452845,
+                "nous": 1041003394.566458,
+                "eraEarned": 1300073135.566458,
+                "totalEarned": 1328887065.6039774,
+                "arete": 0,
+                "prestiges": 1,
+                "frontier": 2,
+                "maxLevel": 30,
+                "maxAbsReserve": 14242.578827986174,
+                "finite": true,
+                "serializedChecks": 0,
+                "serializedOk": 0,
+                "modules": 25,
+                "cells": 20,
+                "columns": 0,
+                "hone": 0,
+                "capacity": 2,
+                "moduleTypes": [
+                  "additive",
+                  "afterglow",
+                  "amplifier",
+                  "blaster",
+                  "echo",
+                  "focusKeyed",
+                  "forge",
+                  "infusor",
+                  "mutatorForge",
+                  "release",
+                  "square",
+                  "standby",
+                  "triangle"
+                ]
+              },
+              "eventCounts": {
+                "milestone": 21,
+                "roll": 7,
+                "upgrade": 3,
+                "arete": 2,
+                "session": 3,
+                "breather": 3,
+                "purchase": 4,
+                "placement": 4,
+                "world": 1
+              },
+              "purchasesAndPlacements": [
+                {
+                  "at": 0,
+                  "credited": 0,
+                  "kind": "arete",
+                  "label": "Catalog entry",
+                  "snapshot": 1
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "arete",
+                  "label": "Rack Extenders \u2014 row 3",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "purchase",
+                  "label": "Cell at 0,3",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "purchase",
+                  "label": "Cell at -1,4",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "placement",
+                  "label": "Placed a triangle at 0,3",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "placement",
+                  "label": "Placed a release at -1,4",
+                  "snapshot": 5
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "world",
+                  "label": "Placed the chargeBlade at -2,1",
+                  "snapshot": 5
+                },
+                {
+                  "at": 7800,
+                  "credited": 7200,
+                  "kind": "purchase",
+                  "label": "Cell at 1,3",
+                  "snapshot": 8
+                },
+                {
+                  "at": 7800,
+                  "credited": 7200,
+                  "kind": "purchase",
+                  "label": "Cell at 2,-2",
+                  "snapshot": 8
+                },
+                {
+                  "at": 7800,
+                  "credited": 7200,
+                  "kind": "placement",
+                  "label": "Placed a forge at 1,3",
+                  "snapshot": 8
+                },
+                {
+                  "at": 7800,
+                  "credited": 7200,
+                  "kind": "placement",
+                  "label": "Placed a triangle at 2,-2",
+                  "snapshot": 8
+                }
+              ]
+            }
+          ],
+          "oneHourAfter": {
+            "runId": "fresh-start-s23-192e703c-from-19284549",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 23,
+              "policyId": "support",
+              "claimTarget": 4,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1767960900000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 1,
+              "eras": 1,
+              "stopCreditedHours": 1,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "inputHash": "6569c3b70e980cef1d7047b405126bd87d1759a017b89399f6d3e2e5914097be",
+            "endStateHash": "0fc8ff54a986688b4dbc5ccdd8d8033bde9dcea108e063b2c4ab0fca9c4b09ba",
+            "claims": [],
+            "creditedHours": 1,
+            "frontier": 6,
+            "areteSpent": {
+              "entry": 0,
+              "discounts": 0,
+              "ceilings": 0,
+              "columns": 1,
+              "rowUnlocks": 1,
+              "hone": {
+                "chargeBlade": 1
+              }
+            },
+            "defeats": [],
+            "endStateFacts": {
+              "credited": 3600,
+              "rate": 87101.32836362055,
+              "nous": 416207245.40128416,
+              "eraEarned": 415687484.8012842,
+              "totalEarned": 1744574550.4052613,
+              "arete": 0,
+              "prestiges": 2,
+              "frontier": 6,
+              "maxLevel": 30,
+              "maxAbsReserve": 11868.81568998848,
+              "finite": true,
+              "serializedChecks": 0,
+              "serializedOk": 0,
+              "modules": 27,
+              "cells": 20,
+              "columns": 1,
+              "hone": 1,
+              "capacity": 2,
+              "moduleTypes": [
+                "additive",
+                "afterglow",
+                "amplifier",
+                "blaster",
+                "echo",
+                "field",
+                "focusKeyed",
+                "forge",
+                "infusor",
+                "mutatorForge",
+                "release",
+                "square",
+                "standby",
+                "triangle"
+              ]
+            },
+            "postManagementRate": 167502.5545454241,
+            "purchasesAndCombat": [
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "arete",
+                "label": "Rack Extenders \u2014 row -2",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "World Column",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Hone rank \u2014 chargeBlade",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Placed a Charge Column at -2,2",
+                "snapshot": 1
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w0 discovered",
+                "snapshot": 3
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w1 discovered",
+                "snapshot": 3
+              }
+            ]
+          },
+          "rawRecordSha256": "580b593b227a199875212344c0956bb90e7124e20f9793667c43d008b72d96db",
+          "rawFollowUpSha256": "2891e90b2b47737294784c93e3de02d21d55d182546aac553a2727dbcd301ee4"
+        }
+      ]
+    },
+    {
+      "name": "weak",
+      "seed": 11,
+      "inputHash": "1b1daed2a75a6a66a6d2fddfdf875da260407072996f42d4844ca2cad96a41e9",
+      "startAt": 1768821000000,
+      "parentBankHours": 30,
+      "parentPreResetRate": 450.860965279036,
+      "prefixIdentical": true,
+      "branches": [
+        {
+          "runId": "fresh-start-s11-66bf8edf-from-75b5064c",
+          "source": {
+            "game": "flowsynth",
+            "saveVersion": 13,
+            "runnerVersion": 15,
+            "engineSource": "ed2bd449"
+          },
+          "recipe": {
+            "scenarioId": "fresh-start",
+            "seed": 11,
+            "policyId": "support",
+            "claimTarget": 2,
+            "schedule": {
+              "sessionsPerDay": 2,
+              "sessionMinutes": 60,
+              "breatherMinutes": 5,
+              "habitName": "Practice",
+              "goalMinutes": 25,
+              "startAt": 1768821000000,
+              "timeZone": "America/Chicago"
+            },
+            "budgetDays": 30,
+            "eras": 2,
+            "stopCreditedHours": 0,
+            "responseCurve": "shipped",
+            "overrides": {}
+          },
+          "complete": true,
+          "stop": {
+            "kind": "frontier",
+            "reason": "The declared 2 claimed frontiers banked at day 17 \u2014 the frontier stands at 6 Arete."
+          },
+          "inputHash": "1b1daed2a75a6a66a6d2fddfdf875da260407072996f42d4844ca2cad96a41e9",
+          "endStateHash": "17eebe504e196c467e6ad478e0b812e74d2c8d169159858ef5f10ce855d8e319",
+          "claims": [
+            2,
+            2
+          ],
+          "frontier": 6,
+          "creditedHours": 34,
+          "earnedNous": 1140244380.7932427,
+          "grantNous": 134568345.59999996,
+          "breatherNous": 250410921.64480826,
+          "areteSpent": {
+            "entry": 1,
+            "discounts": 0,
+            "ceilings": 0,
+            "columns": 0,
+            "rowUnlocks": 2,
+            "hone": {
+              "chargeBlade": 0
+            }
+          },
+          "defeats": [],
+          "endStateFacts": {
+            "credited": 122400,
+            "rate": 2.17038568808,
+            "nous": 114661785.59999998,
+            "eraEarned": 0,
+            "totalEarned": 1161567302.1741967,
+            "arete": 2,
+            "prestiges": 3,
+            "frontier": 6,
+            "maxLevel": 0,
+            "maxAbsReserve": 0,
+            "finite": true,
+            "serializedChecks": 0,
+            "serializedOk": 0,
+            "modules": 168,
+            "cells": 20,
+            "columns": 0,
+            "hone": 0,
+            "capacity": 0,
+            "moduleTypes": [
+              "additive",
+              "afterglow",
+              "amplifier",
+              "bend",
+              "blaster",
+              "echo",
+              "field",
+              "focusKeyed",
+              "forge",
+              "goalKeyed",
+              "harmonizer",
+              "infusor",
+              "mutatorForge",
+              "noteKeyed",
+              "pulsewell",
+              "release",
+              "ritual",
+              "saw",
+              "sideband",
+              "spacer",
+              "spotlight",
+              "square",
+              "standby",
+              "triangle"
+            ]
+          },
+          "spans": [
+            {
+              "bankAtHours": 18,
+              "claim": 2,
+              "preReset": {
+                "credited": 64800,
+                "rate": 9706.573443001787,
+                "nous": 48384279.60722142,
+                "eraEarned": 157179691.6072223,
+                "totalEarned": 178502612.98817527,
+                "arete": 0,
+                "prestiges": 1,
+                "frontier": 2,
+                "maxLevel": 29,
+                "maxAbsReserve": 11868.81568998848,
+                "finite": true,
+                "serializedChecks": 0,
+                "serializedOk": 0,
+                "modules": 131,
+                "cells": 18,
+                "columns": 0,
+                "hone": 0,
+                "capacity": 2,
+                "moduleTypes": [
+                  "additive",
+                  "afterglow",
+                  "amplifier",
+                  "bend",
+                  "blaster",
+                  "echo",
+                  "field",
+                  "focusKeyed",
+                  "forge",
+                  "goalKeyed",
+                  "infusor",
+                  "mutatorForge",
+                  "noteKeyed",
+                  "release",
+                  "ritual",
+                  "saw",
+                  "sideband",
+                  "spacer",
+                  "spotlight",
+                  "square",
+                  "standby",
+                  "triangle"
+                ]
+              },
+              "eventCounts": {
+                "milestone": 21,
+                "roll": 40,
+                "upgrade": 18,
+                "arete": 2,
+                "session": 18,
+                "breather": 18,
+                "world": 1,
+                "purchase": 2,
+                "placement": 2
+              },
+              "purchasesAndPlacements": [
+                {
+                  "at": 0,
+                  "credited": 0,
+                  "kind": "arete",
+                  "label": "Catalog entry",
+                  "snapshot": 1
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "arete",
+                  "label": "Rack Extenders \u2014 row 3",
+                  "snapshot": 4
+                },
+                {
+                  "at": 435900,
+                  "credited": 39600,
+                  "kind": "world",
+                  "label": "Placed the chargeBlade at -2,1",
+                  "snapshot": 35
+                },
+                {
+                  "at": 526200,
+                  "credited": 50400,
+                  "kind": "purchase",
+                  "label": "Cell at 0,3",
+                  "snapshot": 44
+                },
+                {
+                  "at": 526200,
+                  "credited": 50400,
+                  "kind": "placement",
+                  "label": "Placed a bend at 0,3",
+                  "snapshot": 44
+                },
+                {
+                  "at": 608700,
+                  "credited": 54000,
+                  "kind": "purchase",
+                  "label": "Cell at -1,4",
+                  "snapshot": 47
+                },
+                {
+                  "at": 608700,
+                  "credited": 54000,
+                  "kind": "placement",
+                  "label": "Placed a additive at -1,4",
+                  "snapshot": 47
+                }
+              ]
+            },
+            {
+              "bankAtHours": 34,
+              "claim": 2,
+              "preReset": {
+                "credited": 122400,
+                "rate": 44700.470123329105,
+                "nous": 227001905.18602124,
+                "eraEarned": 983064689.1860204,
+                "totalEarned": 1161567302.1741967,
+                "arete": 0,
+                "prestiges": 2,
+                "frontier": 4,
+                "maxLevel": 33,
+                "maxAbsReserve": 17091.094593583413,
+                "finite": true,
+                "serializedChecks": 0,
+                "serializedOk": 0,
+                "modules": 168,
+                "cells": 20,
+                "columns": 0,
+                "hone": 0,
+                "capacity": 2,
+                "moduleTypes": [
+                  "additive",
+                  "afterglow",
+                  "amplifier",
+                  "bend",
+                  "blaster",
+                  "echo",
+                  "field",
+                  "focusKeyed",
+                  "forge",
+                  "goalKeyed",
+                  "harmonizer",
+                  "infusor",
+                  "mutatorForge",
+                  "noteKeyed",
+                  "pulsewell",
+                  "release",
+                  "ritual",
+                  "saw",
+                  "sideband",
+                  "spacer",
+                  "spotlight",
+                  "square",
+                  "standby",
+                  "triangle"
+                ]
+              },
+              "eventCounts": {
+                "roll": 37,
+                "arete": 1,
+                "milestone": 8,
+                "upgrade": 16,
+                "session": 16,
+                "breather": 16,
+                "purchase": 2,
+                "placement": 2
+              },
+              "purchasesAndPlacements": [
+                {
+                  "at": 699000,
+                  "credited": 64800,
+                  "kind": "arete",
+                  "label": "Rack Extenders \u2014 row -2",
+                  "snapshot": 57
+                },
+                {
+                  "at": 871800,
+                  "credited": 79200,
+                  "kind": "purchase",
+                  "label": "Cell at 0,-2",
+                  "snapshot": 70
+                },
+                {
+                  "at": 871800,
+                  "credited": 79200,
+                  "kind": "placement",
+                  "label": "Placed a square at 0,-2",
+                  "snapshot": 70
+                },
+                {
+                  "at": 1303800,
+                  "credited": 115200,
+                  "kind": "purchase",
+                  "label": "Cell at -1,-1",
+                  "snapshot": 101
+                },
+                {
+                  "at": 1303800,
+                  "credited": 115200,
+                  "kind": "placement",
+                  "label": "Placed a focusKeyed at -1,-1",
+                  "snapshot": 101
+                }
+              ]
+            }
+          ],
+          "oneHourAfter": {
+            "runId": "fresh-start-s11-78dedecb-from-220e8153",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 11,
+              "policyId": "support",
+              "claimTarget": 2,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1770211200000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 1,
+              "eras": 1,
+              "stopCreditedHours": 1,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "inputHash": "17eebe504e196c467e6ad478e0b812e74d2c8d169159858ef5f10ce855d8e319",
+            "endStateHash": "196b92f8b7dbe6c7fd17292260ad2e8fcbbe220a70eb883eb4d0223f2f230e5b",
+            "claims": [],
+            "creditedHours": 1,
+            "frontier": 6,
+            "areteSpent": {
+              "entry": 0,
+              "discounts": 0,
+              "ceilings": 0,
+              "columns": 1,
+              "rowUnlocks": 0,
+              "hone": {
+                "chargeBlade": 1
+              }
+            },
+            "defeats": [
+              "w0"
+            ],
+            "endStateFacts": {
+              "credited": 3600,
+              "rate": 6927.553657078853,
+              "nous": 31903219.55423192,
+              "eraEarned": 31383458.954231936,
+              "totalEarned": 1192950761.1284246,
+              "arete": 0,
+              "prestiges": 3,
+              "frontier": 6,
+              "maxLevel": 30,
+              "maxAbsReserve": 11868.815689988485,
+              "finite": true,
+              "serializedChecks": 0,
+              "serializedOk": 0,
+              "modules": 170,
+              "cells": 20,
+              "columns": 1,
+              "hone": 1,
+              "capacity": 2,
+              "moduleTypes": [
+                "additive",
+                "afterglow",
+                "amplifier",
+                "bend",
+                "blaster",
+                "echo",
+                "field",
+                "focusKeyed",
+                "forge",
+                "goalKeyed",
+                "harmonizer",
+                "infusor",
+                "mutatorForge",
+                "noteKeyed",
+                "pulsewell",
+                "release",
+                "ritual",
+                "saw",
+                "sideband",
+                "spacer",
+                "spotlight",
+                "square",
+                "standby",
+                "triangle"
+              ]
+            },
+            "postManagementRate": 6414.401534332273,
+            "purchasesAndCombat": [
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "World Column",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Hone rank \u2014 chargeBlade",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Placed a Charge Column at -2,2",
+                "snapshot": 1
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w0 discovered",
+                "snapshot": 3
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w0 defeated",
+                "snapshot": 3
+              }
+            ]
+          },
+          "rawRecordSha256": "8ca6f25c998c38a3e3e66d5547594d44f3d9935a34a91b04c49fb5406cb46c92",
+          "rawFollowUpSha256": "7b36d50e60e0cbf6c639e8fb173ddd89fb9ff89f76cbb778e475931d93fa635c"
+        },
+        {
+          "runId": "fresh-start-s11-3efa56d6-from-75b5064c",
+          "source": {
+            "game": "flowsynth",
+            "saveVersion": 13,
+            "runnerVersion": 15,
+            "engineSource": "ed2bd449"
+          },
+          "recipe": {
+            "scenarioId": "fresh-start",
+            "seed": 11,
+            "policyId": "support",
+            "claimTarget": 4,
+            "schedule": {
+              "sessionsPerDay": 2,
+              "sessionMinutes": 60,
+              "breatherMinutes": 5,
+              "habitName": "Practice",
+              "goalMinutes": 25,
+              "startAt": 1768821000000,
+              "timeZone": "America/Chicago"
+            },
+            "budgetDays": 30,
+            "eras": 1,
+            "stopCreditedHours": 0,
+            "responseCurve": "shipped",
+            "overrides": {}
+          },
+          "complete": true,
+          "stop": {
+            "kind": "frontier",
+            "reason": "The declared 1 claimed frontiers banked at day 15 \u2014 the frontier stands at 6 Arete."
+          },
+          "inputHash": "1b1daed2a75a6a66a6d2fddfdf875da260407072996f42d4844ca2cad96a41e9",
+          "endStateHash": "fa4bbb860727f56763a71afe0243e2adfb7a45d9b30a8828adc6c809a1a249a7",
+          "claims": [
+            4
+          ],
+          "frontier": 6,
+          "creditedHours": 29,
+          "earnedNous": 881160670.7283078,
+          "grantNous": 114661785.59999998,
+          "breatherNous": 196741473.46648338,
+          "areteSpent": {
+            "entry": 1,
+            "discounts": 0,
+            "ceilings": 0,
+            "columns": 0,
+            "rowUnlocks": 1,
+            "hone": {
+              "chargeBlade": 0
+            }
+          },
+          "defeats": [],
+          "endStateFacts": {
+            "credited": 104400,
+            "rate": 2.26334802728,
+            "nous": 114661785.59999998,
+            "eraEarned": 0,
+            "totalEarned": 902483592.1092762,
+            "arete": 4,
+            "prestiges": 2,
+            "frontier": 6,
+            "maxLevel": 0,
+            "maxAbsReserve": 0,
+            "finite": true,
+            "serializedChecks": 0,
+            "serializedOk": 0,
+            "modules": 157,
+            "cells": 20,
+            "columns": 0,
+            "hone": 0,
+            "capacity": 0,
+            "moduleTypes": [
+              "additive",
+              "afterglow",
+              "amplifier",
+              "bend",
+              "blaster",
+              "echo",
+              "field",
+              "focusKeyed",
+              "forge",
+              "goalKeyed",
+              "harmonizer",
+              "infusor",
+              "mutatorForge",
+              "noteKeyed",
+              "pulsewell",
+              "release",
+              "ritual",
+              "saw",
+              "sideband",
+              "spacer",
+              "spotlight",
+              "square",
+              "standby",
+              "triangle"
+            ]
+          },
+          "spans": [
+            {
+              "bankAtHours": 29,
+              "claim": 4,
+              "preReset": {
+                "credited": 104400,
+                "rate": 20187.9413110565,
+                "nous": 98849709.72830792,
+                "eraEarned": 881160670.7283206,
+                "totalEarned": 902483592.1092762,
+                "arete": 0,
+                "prestiges": 1,
+                "frontier": 2,
+                "maxLevel": 33,
+                "maxAbsReserve": 14242.57882798618,
+                "finite": true,
+                "serializedChecks": 0,
+                "serializedOk": 0,
+                "modules": 157,
+                "cells": 20,
+                "columns": 0,
+                "hone": 0,
+                "capacity": 2,
+                "moduleTypes": [
+                  "additive",
+                  "afterglow",
+                  "amplifier",
+                  "bend",
+                  "blaster",
+                  "echo",
+                  "field",
+                  "focusKeyed",
+                  "forge",
+                  "goalKeyed",
+                  "harmonizer",
+                  "infusor",
+                  "mutatorForge",
+                  "noteKeyed",
+                  "pulsewell",
+                  "release",
+                  "ritual",
+                  "saw",
+                  "sideband",
+                  "spacer",
+                  "spotlight",
+                  "square",
+                  "standby",
+                  "triangle"
+                ]
+              },
+              "eventCounts": {
+                "milestone": 22,
+                "roll": 66,
+                "upgrade": 29,
+                "arete": 2,
+                "session": 29,
+                "breather": 29,
+                "world": 1,
+                "purchase": 4,
+                "placement": 4
+              },
+              "purchasesAndPlacements": [
+                {
+                  "at": 0,
+                  "credited": 0,
+                  "kind": "arete",
+                  "label": "Catalog entry",
+                  "snapshot": 1
+                },
+                {
+                  "at": 3900,
+                  "credited": 3600,
+                  "kind": "arete",
+                  "label": "Rack Extenders \u2014 row 3",
+                  "snapshot": 4
+                },
+                {
+                  "at": 435900,
+                  "credited": 39600,
+                  "kind": "world",
+                  "label": "Placed the chargeBlade at -2,1",
+                  "snapshot": 35
+                },
+                {
+                  "at": 526200,
+                  "credited": 50400,
+                  "kind": "purchase",
+                  "label": "Cell at 0,3",
+                  "snapshot": 44
+                },
+                {
+                  "at": 526200,
+                  "credited": 50400,
+                  "kind": "placement",
+                  "label": "Placed a bend at 0,3",
+                  "snapshot": 44
+                },
+                {
+                  "at": 608700,
+                  "credited": 54000,
+                  "kind": "purchase",
+                  "label": "Cell at -1,4",
+                  "snapshot": 47
+                },
+                {
+                  "at": 608700,
+                  "credited": 54000,
+                  "kind": "placement",
+                  "label": "Placed a additive at -1,4",
+                  "snapshot": 47
+                },
+                {
+                  "at": 699000,
+                  "credited": 64800,
+                  "kind": "purchase",
+                  "label": "Cell at 1,3",
+                  "snapshot": 56
+                },
+                {
+                  "at": 699000,
+                  "credited": 64800,
+                  "kind": "placement",
+                  "label": "Placed a square at 1,3",
+                  "snapshot": 56
+                },
+                {
+                  "at": 1044600,
+                  "credited": 93600,
+                  "kind": "purchase",
+                  "label": "Cell at 2,-2",
+                  "snapshot": 80
+                },
+                {
+                  "at": 1044600,
+                  "credited": 93600,
+                  "kind": "placement",
+                  "label": "Placed a focusKeyed at 2,-2",
+                  "snapshot": 80
+                }
+              ]
+            }
+          ],
+          "oneHourAfter": {
+            "runId": "fresh-start-s11-d1ae6b09-from-c7769912",
+            "recipe": {
+              "scenarioId": "fresh-start",
+              "seed": 11,
+              "policyId": "support",
+              "claimTarget": 4,
+              "schedule": {
+                "sessionsPerDay": 2,
+                "sessionMinutes": 60,
+                "breatherMinutes": 5,
+                "habitName": "Practice",
+                "goalMinutes": 25,
+                "startAt": 1770034500000,
+                "timeZone": "America/Chicago"
+              },
+              "budgetDays": 1,
+              "eras": 1,
+              "stopCreditedHours": 1,
+              "responseCurve": "shipped",
+              "overrides": {}
+            },
+            "inputHash": "fa4bbb860727f56763a71afe0243e2adfb7a45d9b30a8828adc6c809a1a249a7",
+            "endStateHash": "df1b8ecf054830e20037a89d64a749471ca14f8f1898cd9cbd7540cfdab8beb1",
+            "claims": [],
+            "creditedHours": 1,
+            "frontier": 6,
+            "areteSpent": {
+              "entry": 0,
+              "discounts": 0,
+              "ceilings": 0,
+              "columns": 1,
+              "rowUnlocks": 1,
+              "hone": {
+                "chargeBlade": 1
+              }
+            },
+            "defeats": [
+              "w0"
+            ],
+            "endStateFacts": {
+              "credited": 3600,
+              "rate": 6975.957502638559,
+              "nous": 32155611.48907796,
+              "eraEarned": 31635850.88907798,
+              "totalEarned": 934119442.9983554,
+              "arete": 0,
+              "prestiges": 2,
+              "frontier": 6,
+              "maxLevel": 30,
+              "maxAbsReserve": 11868.815689988485,
+              "finite": true,
+              "serializedChecks": 0,
+              "serializedOk": 0,
+              "modules": 160,
+              "cells": 20,
+              "columns": 1,
+              "hone": 1,
+              "capacity": 2,
+              "moduleTypes": [
+                "additive",
+                "afterglow",
+                "amplifier",
+                "bend",
+                "blaster",
+                "echo",
+                "field",
+                "focusKeyed",
+                "forge",
+                "goalKeyed",
+                "harmonizer",
+                "infusor",
+                "mutatorForge",
+                "noteKeyed",
+                "pulsewell",
+                "release",
+                "ritual",
+                "saw",
+                "sideband",
+                "spacer",
+                "spotlight",
+                "square",
+                "standby",
+                "triangle"
+              ]
+            },
+            "postManagementRate": 6459.219909850518,
+            "purchasesAndCombat": [
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "arete",
+                "label": "Rack Extenders \u2014 row -2",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "World Column",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Hone rank \u2014 chargeBlade",
+                "snapshot": 1
+              },
+              {
+                "at": 0,
+                "credited": 0,
+                "kind": "world",
+                "label": "Placed a Charge Column at -2,2",
+                "snapshot": 1
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w0 discovered",
+                "snapshot": 3
+              },
+              {
+                "at": 3900,
+                "credited": 3600,
+                "kind": "milestone",
+                "label": "World \u2014 enemy w0 defeated",
+                "snapshot": 3
+              }
+            ]
+          },
+          "rawRecordSha256": "7c6e9db2d3fd78497420dec17612977b384ee5e7e18e6f40b242f0125a959465",
+          "rawFollowUpSha256": "e1ba731bbd89553f1dfb833fbbd6eaf27d07c2ec807b9db2ae45795920ce4c92"
+        }
+      ]
+    }
+  ]
+}
