@@ -266,10 +266,13 @@ describe("the launch command", () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     const record = app.devRunPlaythrough({ scenarioId: "after-first-bank", budgetDays: 1 });
     // The run's identity and its walked starting state: the run id names
-    // the preset, and the record's state carries the first bank's era.
+    // the preset, and the record's state carries the first bank's era —
+    // plus whatever era the fixture's long sessions reach: the claim
+    // grant (issue #484) funds that rebuild, so a 1-day walk from the
+    // bank can legitimately re-reach the horizon and bank again.
     expect(record.runId).toMatch(/^after-first-bank-s468-/);
     expect(record.recipe.scenarioId).toBe("after-first-bank");
-    expect(record.state.prestiges).toBe(1);
+    expect(record.state.prestiges).toBeGreaterThanOrEqual(1);
     expect(app.devPlaythroughNote).toContain("after-first-bank");
     // The run never touched the live state or the save.
     expect(app.state).toBe(before);

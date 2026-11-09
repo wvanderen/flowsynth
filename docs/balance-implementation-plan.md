@@ -1,6 +1,6 @@
 # Balance implementation plan
 
-Status: implementation plan and initial experiments, 2026-10-30. Gameplay tuning is unchanged. The accepted product decisions live in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md); this document owns the implementation sequence and evidence gaps.
+Status: implementation plan and initial experiments, 2026-10-30; the later-era effort repair landed 2026-11-07 ([ADR-0086](adr/0086-the-claim-grant-funds-each-attempts-rebuild.md) — sequence item 4 below). The accepted product decisions live in [ADR-0078](adr/0078-breakthroughs-preserve-further-progression-cycles.md); this document owns the implementation sequence and evidence gaps.
 
 ## Intent and priorities
 
@@ -63,6 +63,8 @@ Prefer authored depth bands for the first experiment: each band increases the pe
 Verify discovery exactly at threshold; simultaneous discovery/band crossings; spending without relief; one defeat removing only its own pressure; prestige restoring the initial state; paused, trusted, breather, and provisional/rejected time; and equal earnings/damage for one long advance versus many short advances across every boundary. Tune pressure after repairing response growth, so it supplies resistance rather than disguising runaway production.
 
 ### 4. Re-derive worthwhile prestige and the 100-hour loop
+
+Landed 2026-11-07 (issue #484's later-era repair, [ADR-0086](adr/0086-the-claim-grant-funds-each-attempts-rebuild.md)): the claim grant funds each banked claim's next attempt, and the claim slope re-prices at 2.5, so the push beside a banked claim carries most of an era's credited time. The recorded re-evaluations — the later-era matrix, the century matrix and its re-frozen baseline, and the first-prestige recheck — carry the evidence; their records note what moved and what stayed.
 
 Extend the existing playthrough recipe/runner with explicit candidate response and enemy-band settings and repeated productive eras. Preserve source/run identity and state isolation. Never mutate shared `BALANCE` during a candidate run. Keep calendar, session duration, management breaks, rest, and credited flow clocks distinct.
 

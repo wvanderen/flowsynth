@@ -1007,8 +1007,11 @@ export function renderCenturyBlock(figures: CenturyFigures): string {
   if (figures.legacy.environmentAbsent) legacyNotes.push("no runtime or timezone metadata");
   if (figures.legacy.unitProvenanceAbsent) legacyNotes.push("no per-unit provenance");
   if (figures.legacy.measurementVersionAbsent) legacyNotes.push(`no measurementVersion (the boundary-aware read is version ${CENTURY_MEASUREMENT_VERSION})`);
+  const isLegacy = legacyNotes.length > 0;
   lines.push(
-    `Legacy evidence: these figures derive from the restored historical recording — engine fingerprint \`${figures.provenance.engineSource}\`, composed at recording commit \`${shortCommit(figures.provenance.recordingCommit)}\`, restored byte-for-byte per [the review completion record](evidence/pr514-review/README.md). The legacy rows carry ${legacyNotes.join(", ")}; absence is recorded as absence, never invented.`,
+    isLegacy
+      ? `Century figures composed from the recorded matrix — engine fingerprint \`${figures.provenance.engineSource}\`, composed at recording commit \`${shortCommit(figures.provenance.recordingCommit)}\`. The rows carry ${legacyNotes.join(", ")}; absence is recorded as absence, never invented.`
+      : `Current recording: these figures compose the declared matrix as recorded — engine fingerprint \`${figures.provenance.engineSource}\`, composed at recording commit \`${shortCommit(figures.provenance.recordingCommit)}\`, every row's provenance and boundary-aware gap read riding the recorded JSON.`,
   );
   lines.push(
     `Generated from the recorded JSON alone — no simulation; regenerate with \`${REGENERATE_HINT}\` and review the diff. The recorded rows are the only numerical truth in this section.`,
@@ -1057,8 +1060,11 @@ export function renderCenturyBlock(figures: CenturyFigures): string {
   const gapThreshold = figures.legacy.gapThresholdLegacySeconds !== null
     ? `legacy gap read at the recorded ${figures.legacy.gapThresholdLegacySeconds}s threshold`
     : `gap read at the declared ${LONG_GAP_CREDITED}s threshold`;
+  const gapBoundaryAware = !figures.legacy.measurementVersionAbsent;
   lines.push(
-    `| Long decision-free periods recorded as failures (#492) | ${gapThreshold}: ${figures.longGapCount} inter-decision gaps at or above it, but start and terminal waits were not measured | **${gapState}** — the legacy zero is not evidence of absence; the boundary-aware rerun is owed |`,
+    gapBoundaryAware
+      ? `| Long decision-free periods recorded as failures (#492) | ${gapThreshold}: ${figures.longGapCount} inter-decision gaps at or above it, measured across starts, terminals, and whole-run spans | **${gapState}** |`
+      : `| Long decision-free periods recorded as failures (#492) | ${gapThreshold}: ${figures.longGapCount} inter-decision gaps at or above it, but start and terminal waits were not measured | **${gapState}** — the legacy zero is not evidence of absence; the boundary-aware rerun is owed |`,
   );
   lines.push(
     `| Expected-unsuccessful prompt policy distinguished (#492) | ${figures.promptBanks.banks - figures.promptBanks.nonzeroClaims} of ${figures.promptBanks.banks} prompt banks are zero-claim; final frontier at most ${figures.promptBanks.maxFrontier} across its rows | recorded as the expected unsuccessful policy — the distinction holds |`,

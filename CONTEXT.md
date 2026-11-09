@@ -595,12 +595,16 @@ _Avoid_: fuel bar, goal energy
 **Habit class**:
 A freely switchable specialization through which credited flow time with a selected habit shapes its gameplay contribution. Each habit–class pair retains its own experience and upgrade tree; switching classes preserves that history without transferring it to another habit.
 
+**Claim grant**:
+The ν a banked claim pays beside its Arete (issue #484, ADR-0086): the reset that banks a positive claim funds its next attempt's rebuild on the frontier that claim opened — authored as base × growth^claimed-frontier in BALANCE, read only by the reset that pays it and the playthrough ledger that counts it. The grant lands once, at that reset; it never rides unearned depth. A frontier the claim curve never opened — a fresh game, and every zero-claim reset — reads the plain opening grant, so the honest zero-claim reset mints nothing its claim did not bank.
+_Avoid_: reset bonus, prestige reward (the Arete is the reward's lasting half), opening grant (the frontier-zero figure)
+
 **Claimed frontier**:
 The greatest era-earned entitlement whose Arete has already been claimed through prestige. The frontier advances only on prestige, atomically with banking, and always by whole banked steps — which is what makes arbitrary prestige splittings telescope to the single-climb total and leaves the sub-unit fraction pending rather than lost. Returning to a previously reached depth awards nothing; surpassing it builds a pending claim banked only on prestige.
 _Avoid_: high-water mark (the implementation reads entitlement, never depth), banked depth
 
 **Frontier entitlement**:
-The cumulative curve E assigning total Arete entitlement to era-earned nous depth: zero below the World entry depth (`BALANCE.world.entryNous`, calibrated at 20M era-earned — issue #490 — a short hold past the prestige horizon so the first positive claim banks around ten credited hours), then the calibrated curve's `2 + 4·log₁₀(x)` over x = era-earned ÷ entry — the discontinuous entry grant paying exactly one weapon plus one Column. Fractionally valued, always; increasing with diminishing marginal reward per nous. The entry depth is the first-worthwhile-prestige calibration (#490); the slope is the century calibration (#492, ADR-0079).
+The cumulative curve E assigning total Arete entitlement to era-earned nous depth: zero below the World entry depth (`BALANCE.world.entryNous`, calibrated at 20M era-earned — issue #490 — a short hold past the prestige horizon so the first positive claim banks around ten credited hours), then the calibrated curve's `2 + 2.5·log₁₀(x)` over x = era-earned ÷ entry — the discontinuous entry grant paying exactly one weapon plus one Column. Fractionally valued, always; increasing with diminishing marginal reward per nous. The entry depth is the first-worthwhile-prestige calibration (#490); the slope is the century calibration (#492, ADR-0079) as re-priced by the later-era repair (#484, ADR-0086) so each banked claim's push carries most of its era's credited time.
 _Avoid_: claim formula (the pending difference is the claim; the curve is the entitlement), accumulator claim (the retired prestige-count sense)
 
 **Pending claim**:

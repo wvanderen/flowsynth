@@ -7,6 +7,7 @@ import { fresh, give, plainHabit } from "./fixtures";
 import { serialize, deserialize } from "./save";
 import { hex } from "./hex";
 import { levelCost } from "./economy";
+import { eraStartGrantOf } from "./state";
 import type { GameState } from "./types";
 
 // The prestige reset boundary (ADR-0039, issue #194): what a reset banks,
@@ -60,7 +61,9 @@ describe("the prestige action", () => {
     // reset's depth and the next door banks the difference.
     s.eraEarned = BALANCE.world.entryNous * 10;
     prestige(s);
-    expect(s.arete).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
+    // One decade past the entry reads entitlement 4.5 at the later-era
+    // slope (issue #484); the bank floors to whole Arete.
+    expect(s.arete).toBe(Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope));
   });
 
   it("resets module levels to base while keeping every owned module", () => {
@@ -212,6 +215,69 @@ describe("the prestige action", () => {
     expect(levelCost(synth.level)).toBeGreaterThan(levelCost(0));
     prestige(s);
     expect(levelCost(synth.level)).toBe(levelCost(0));
+  });
+
+  // The claim grant (issue #484's later-era repair): the reset that banks
+  // a claim funds its next attempt on the frontier the claim opened, so
+  // retained World strength shortens familiar territory. The honest
+  // zero-claim reset keeps exactly what it shipped as.
+  it("a banked claim funds its next attempt on the frontier it opened", () => {
+    const s = atHorizon();
+    s.eraEarned = BALANCE.world.entryNous * 10; // entitlement 4.5, floored to 4
+    expect(prestige(s).ok).toBe(true);
+    expect(s.world.frontier).toBe(4);
+    expect(s.nous).toBe(BALANCE.prestigeGrantBase * BALANCE.prestigeGrantGrowth ** 4);
+  });
+
+  it("an unadvanced frontier pays the plain opening grant — fresh game and every zero-claim reset", () => {
+    // The fresh game's own first door: below the entry depth, zero claim.
+    const freshStart = atHorizon();
+    expect(prestige(freshStart).ok).toBe(true);
+    expect(freshStart.world.frontier).toBe(0);
+    expect(freshStart.nous).toBe(BALANCE.openingGrant);
+    // A zero-claim reset beside a claimed frontier: the frontier stands,
+    // and the grant mints nothing its claim did not bank (story 28).
+    const held = atHorizon();
+    held.world.frontier = 6;
+    expect(prestige(held).ok).toBe(true);
+    expect(held.world.frontier).toBe(6);
+    expect(held.arete).toBe(0);
+    expect(held.nous).toBe(BALANCE.openingGrant);
+  });
+
+  it("the declared tuning figure replaces the curve whole (issue #472 isolation)", () => {
+    const s = atHorizon();
+    s.eraEarned = BALANCE.world.entryNous * 10;
+    expect(prestige(s, { openingGrant: 120 }).ok).toBe(true);
+    expect(s.nous).toBe(120);
+  });
+
+  it("an unrepresentable claim grant refuses prestige without changing state or serialized save bytes", () => {
+    const s = atHorizon();
+    s.eraEarned = BALANCE.world.entryNous;
+    const before = structuredClone(s);
+    const savedAt = 1000;
+    const saved = serialize(s, savedAt);
+    // Stress the public transaction with a declared claim beyond ordinary
+    // play's reachable frontier, without mutating shared balance constants.
+    const result = prestige(s, { claimBase: 2000 });
+    expect(result.ok).toBe(false);
+    expect(result.reason).toBe("The frontier grant cannot be read safely, so nothing was banked.");
+    expect(s).toEqual(before);
+    expect(serialize(s, savedAt)).toBe(saved);
+    const restored = deserialize(saved).state!;
+    expect(restored).toBeTruthy();
+    expect(serialize(restored, savedAt)).toBe(saved);
+  });
+
+  it("the grant curve reads finite inside the ν representation and overflows past it", () => {
+    expect(eraStartGrantOf(0)).toBe(BALANCE.openingGrant);
+    expect(Number.isFinite(eraStartGrantOf(2))).toBe(true);
+    // Monotone in the frontier the claim opened.
+    expect(eraStartGrantOf(6)).toBeGreaterThan(eraStartGrantOf(2));
+    // Past the representation the payer refuses whole (issue #486's
+    // precedent) — the curve never writes a nonfinite balance.
+    expect(eraStartGrantOf(2000)).toBe(Infinity);
   });
 });
 

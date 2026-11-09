@@ -165,6 +165,7 @@ export interface SuppliedRecordFacts {
   readonly manageBreaks?: number;
   readonly sessionNous?: number;
   readonly breatherNous?: number;
+  readonly grantNous?: number;
   readonly lastMilestone?: string | null;
   readonly bottleneck?: string | null;
   readonly areteSpent?: PlaythroughAreteSpent;
@@ -200,6 +201,7 @@ export function suppliedRecord(facts: SuppliedRecordFacts = {}): PlaythroughReco
   const creditedSeconds = facts.creditedSeconds ?? last.credited;
   const sessionNous = facts.sessionNous ?? 0;
   const breatherNous = facts.breatherNous ?? 0;
+  const grantNous = facts.grantNous ?? 0;
   const complete = facts.complete ?? false;
   const days = facts.days ?? Math.max(1, Math.ceil(elapsedSeconds / 86_400));
   const stop = facts.stop ?? {
@@ -228,6 +230,7 @@ export function suppliedRecord(facts: SuppliedRecordFacts = {}): PlaythroughReco
     earnedNous: sessionNous + breatherNous,
     sessionNous,
     breatherNous,
+    grantNous,
     lastMilestone: facts.lastMilestone ?? null,
     bottleneck: facts.bottleneck ?? (complete ? null : stop.reason),
     events: facts.events ?? [],

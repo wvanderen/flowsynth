@@ -371,12 +371,16 @@ describe("the pushing policy", () => {
     // The second bank advanced the frontier beyond the first bank's claim
     // — the journey's last mark — and the walk banked no more: three
     // further breaks followed with the refill mock always offering a
-    // claim, and none of them prestaged.
+    // claim, and none of them prestaged. The grant-funded era recovers
+    // inside the budget (issue #484), so the journey completes and the
+    // walk's honest stop is completion, not exhaustion — the cap itself
+    // is what must never move: exactly two banks, however deep the refill
+    // mock's claims would farm.
     expect(bank).toHaveBeenCalledTimes(2);
     expect(record.claims).toHaveLength(2);
     expect(record.recovery!.frontierAdvanced).not.toBeNull();
     expect(record.state.prestiges).toBe(2);
-    expect(record.stop.kind).toBe("budget");
+    expect(record.stop.kind).toBe("recovered");
     expect(record.stop.reason).toContain("worthwhile-prestige journey");
   });
 
@@ -492,12 +496,16 @@ describe("the pushing policy", () => {
     expect(record.areteSpent.columns).toBeGreaterThanOrEqual(1);
     expect(record.state.world.starterWeaponGranted).toBe(true);
     expect(record.state.arete).toBeLessThan(record.claims[0]! + record.claims[1]!);
-    // No grants: every ν the state ever banked is what the run earned —
-    // the sessions and their breathers, each recorded separately. At this
-    // scale the summations drift by float rounding alone, so the
-    // guarantee reads as a relative tolerance, not an exact figure.
+    // No fabricated production: every ν the state ever earned is what the
+    // run's sessions and breathers produced. At this scale the summations
+    // drift by float rounding alone, so the guarantee reads as a relative
+    // tolerance, not an exact figure. The resets' authored era-start
+    // grants — the claim grants the banks paid (issue #484) — bypass
+    // `totalEarned` by design: they ride the ledger's grantNous figure,
+    // present because this walk banked claims, never in the arithmetic.
     expect(record.sessionNous).toBeGreaterThan(record.breatherNous);
     expect(record.sessionNous + record.breatherNous).toBe(record.earnedNous);
+    expect(record.grantNous).toBeGreaterThan(0);
     expect(Math.abs(record.state.totalEarned - record.earnedNous)).toBeLessThan(Math.max(1, record.earnedNous) * 1e-12);
 
     // The functioning starter rig, through the real actions: the weapon

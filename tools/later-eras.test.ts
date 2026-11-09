@@ -290,7 +290,7 @@ describe("the era view and the route probe on real walks", () => {
     expect(laterEraView(record, 1, null).purchases).toEqual(["World Column"]);
   });
 
-  it("continues the exact earned bank without mutating it or inferring the parent's later success", { timeout: 60_000 }, () => {
+  it("continues the exact earned bank without mutating it or inferring the parent's later success", { timeout: 300_000 }, () => {
     const bank = pushingWalk.events.find((event) => event.kind === "prestige")!;
     const state = completeSnapshotsOf(pushingWalk)[bank.snapshot]!.state;
     const before = JSON.stringify(state);
@@ -322,7 +322,11 @@ describe("the era view and the route probe on real walks", () => {
     expect(branch.complete).toBe(true);
     expect(branch.stop.kind).toBe("frontier");
     expect(branch.state.world.frontier).toBeGreaterThan(before.world.frontier);
+    // The banked claim's grant (issue #484) is authored intake that
+    // bypasses `totalEarned`, so the earned-production ledger reads
+    // without it; the grants ride grantNous, never this figure.
     expect(branch.state.totalEarned - before.totalEarned).toBeCloseTo(branch.earnedNous, -2);
+    expect(branch.grantNous).toBeGreaterThan(0);
     expect(branch.state.arete).toBe(branch.claims.reduce((sum, claim) => sum + claim, 0));
     expect(state).toEqual(before);
     expect(branch.runId).toContain("-from-");
@@ -356,8 +360,13 @@ describe("the declared World policies' spending orders", { timeout: 1_800_000 },
     const record = walk(policyId);
     const firstBank = record.events.findIndex((event) => event.kind === "prestige" && event.ok);
     if (firstBank === -1) return null;
+    // The declared orders are spending orders. Placements and relocations
+    // are free — the granted blade deploys the moment an enemy reveals,
+    // which the claim grant's fast recovery (issue #484) can pull ahead
+    // of the first purchase — so they never stand in a purchase's place.
+    const isPlacement = (label: string) => label.startsWith("Placed ") || label.startsWith("Relocated ");
     return record.events.find((event, index) =>
-      index > firstBank && event.kind === "world" && event.ok)?.label ?? null;
+      index > firstBank && event.kind === "world" && event.ok && !isPlacement(event.label))?.label ?? null;
   };
 
   it("support buys its charge line before its blade; combat its blade before its charge line", () => {

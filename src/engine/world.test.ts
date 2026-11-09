@@ -177,7 +177,7 @@ describe("the pending claim and its banking (issue #425)", () => {
     // recombine to the single-climb figure.
     s.eraEarned = BALANCE.world.entryNous * 10;
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
+    expect(s.arete).toBe(Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope));
   });
 
   it("repeating a previously reached depth awards nothing, shallower still nothing", () => {
@@ -186,7 +186,7 @@ describe("the pending claim and its banking (issue #425)", () => {
     s.eraEarned = BALANCE.world.entryNous * 100;
     expect(prestige(s).ok).toBe(true);
     const banked = s.arete;
-    expect(banked).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * 2);
+    expect(banked).toBe(Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * 2));
     // The exact same depth: high-water, no reward.
     s.eraEarned = BALANCE.world.entryNous * 100;
     expect(pendingClaimOf(s)).toBeCloseTo(0, 10);
@@ -205,7 +205,7 @@ describe("the pending claim and its banking (issue #425)", () => {
     s.mode = "upgrade";
     s.eraEarned = BALANCE.world.entryNous * 10;
     expect(prestige(s).ok).toBe(true);
-    const first = BALANCE.world.claimBase + BALANCE.world.claimDepthSlope;
+    const first = Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
     expect(s.arete).toBe(first);
     s.eraEarned = ARETE_HORIZON; // a fresh, shallow era past the door
     expect(bankableClaimOf(s)).toBe(0);
@@ -1079,7 +1079,7 @@ describe("the prestige round-trip with World persistence (issue #425, priority 9
     s.eraEarned = BALANCE.world.entryNous * 10;
     expect(prestige(s).ok).toBe(true);
     // Persisted: the frontier, the purchase, the copy with its pick.
-    expect(s.world.frontier).toBe(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope);
+    expect(s.world.frontier).toBe(Math.floor(BALANCE.world.claimBase + BALANCE.world.claimDepthSlope));
     expect(s.world.columns).toHaveLength(1);
     expect(s.world.hone.chargeBlade).toBe(1);
     expect(s.world.weapons[0]!.id).toBe(weapon.id);
@@ -1161,16 +1161,18 @@ describe("shipped tuning defaults are hypothesis knobs — calibration unavailab
   // records no current-engine calibration and no playtest export). Every
   // figure here is pinned as a hypothesis: changing one must fail this
   // suite and force a fresh citation, never silently claim recoverability.
-  it("the frontier curve ships the calibrated entry and the century-calibrated slope", () => {
+  it("the frontier curve ships the calibrated entry and the later-era-calibrated slope", () => {
     // The entry depth is the first-worthwhile-prestige calibration (issue
     // #490): a short hold past the horizon banks the first positive claim
     // around ten credited hours. The slope is the century calibration
-    // (issue #492): each advance demands 2/4 of a decade of era-earned
-    // depth, matched against the mature board's demonstrated production
-    // growth through the recorded 100-credited-hour walks.
+    // (issue #492, ADR-0079) as re-priced by the later-era repair (issue
+    // #484, ADR-0086): each advance now demands 2/2.5 of a decade of
+    // era-earned depth, so the push beside each banked claim carries most
+    // of its era's credited time while the claim grant compresses the
+    // rebuild that era re-walks.
     expect(BALANCE.world.entryNous).toBe(2e7);
     expect(BALANCE.world.claimBase).toBe(2);
-    expect(BALANCE.world.claimDepthSlope).toBe(4);
+    expect(BALANCE.world.claimDepthSlope).toBe(2.5);
   });
 
   it("the encounter table ships findings.md's nine fixed enemies, flagged", () => {

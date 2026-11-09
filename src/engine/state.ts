@@ -29,6 +29,23 @@ export function openingGrant(declared?: number): number {
   return declared ?? BALANCE.openingGrant;
 }
 
+// The claim grant (issue #484's later-era repair): the era-start figure a
+// banked claim funds — the one read for the reset that pays it, the
+// playthrough ledger that counts it, and every reader in between, so no
+// surface can quote a grant the reset does not pay. A frontier the claim
+// curve opened reads the authored curve over the claimed frontier; an
+// unopened frontier — a fresh game, and every zero-claim reset — reads the
+// plain opening grant, declared override included. The figure is authored
+// whole ν; a frontier deep enough to price past the ν representation
+// overflows to Infinity, and the paying reset refuses whole (issue #486's
+// integrity precedent) — it never writes a nonfinite balance.
+export function eraStartGrantOf(frontier: number, declared?: number): number {
+  if (declared !== undefined) return declared;
+  if (frontier <= 0) return openingGrant();
+  const grant = BALANCE.prestigeGrantBase * BALANCE.prestigeGrantGrowth ** frontier;
+  return grant >= Number.MAX_VALUE ? Infinity : grant;
+}
+
 export function createInitialState(): GameState {
   const state: GameState = {
     mode: "upgrade",

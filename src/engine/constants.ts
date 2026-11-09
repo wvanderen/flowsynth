@@ -150,6 +150,13 @@ export interface Balance {
   // The opening grant (ADR-0022): affords — but no longer exactly equals —
   // the first upgrade of the pre-placed synthesizer. Provisional tuning.
   openingGrant: number;
+  // The claim grant (issue #484's later-era repair): the era-start ν a
+  // banked claim funds, base × growth^claimed-frontier — the next
+  // attempt's working capital, read only by the reset that banked (and
+  // the walk ledger that counts it). An unadvanced frontier reads the
+  // opening grant. Provisional — the later-era calibration tunes it.
+  prestigeGrantBase: number;
+  prestigeGrantGrowth: number;
   // Console long goals (ADR-0012 as amended by ADR-0034, issue #150):
   // RETIRED by the World experiment (issue #423) — the shared goal-slot
   // economy and its Channel Strips purchase no longer sell. The purchase
@@ -318,24 +325,24 @@ export interface Balance {
     // (thresholds ×10ⁱ below) scales with it. The findings.md hypothesis
     // figure (1e12) sat five decades past the horizon and banked no claim
     // inside any baseline-budgeted run.
-    // The depth slope is issue #492's calibration: the shipped 2 was
-    // findings.md's flagged hypothesis, never selected balance. The
-    // century walks priced it against the board's demonstrated production
-    // growth — a mature board compounds its rate roughly ×3–4 per
-    // productive era, so each banked claim (the declared two-Arete
-    // target) now demands two fifths of a decade (×3.16) of era-earned
-    // depth instead of a full decade (×10). On the baseline
-    // schedule the century's productive eras then hold the 5–10
-    // credited-hour window, the century banks roughly twice the claimed
-    // frontiers, and no bankless stretch passes two credited hours
-    // without a consequential decision. The slope never touches the
-    // opening: the first worthwhile bank lands at the entry depth
-    // whatever the slope reads.
+    // The depth slope is the century calibration (issue #492, ADR-0079)
+    // as re-priced by the later-era repair (issue #484, ADR-0086): the
+    // slope-4 century fix held the horizon but left every later era's
+    // time below the previous bank's depth — the push beside the claim
+    // never out-weighed the familiar re-walk. The shipped 2.5 asks ×6.3
+    // of era-earned depth per banked claim, so the push beside each
+    // banked claim carries most of the era's credited time, while the
+    // claim grant below compresses the rebuild those eras re-walk. The
+    // century walks still bank through the mark at this demand (6–7
+    // productive banks per century on the recorded spot checks) and the
+    // slope never touches the opening: the first worthwhile bank lands
+    // at the entry depth whatever the slope reads.
     entryNous: number;
     claimBase: number;
     claimDepthSlope: number;
-    // Calibrated by the century walks (issue #492): 4. See the curve
-    // comment above for the evidence and the shape of the demand.
+    // Calibrated by the later-era repair (issue #484, ADR-0086): 2.5,
+    // re-priced from the century walks' 4. See the curve comment above
+    // for the evidence and the shape of the demand.
     // The Charge Blade's combat figures (findings.md: one copied charge
     // per attack, one attack per minute maximum, storage a hypothesis):
     // the fixed charge cost per attack, the capped cadence, and the
@@ -461,6 +468,24 @@ export const BALANCE: Balance = {
   rowUnlockCosts: [1, 2],
   fifthsColumns: 12,
   openingGrant: 12,
+  // The claim grant (issue #484's later-era repair): the ν a banked claim
+  // pays beside its Arete, so the next attempt starts its rebuild on the
+  // frontier the claim opened instead of re-crawling the whole level ladder
+  // from the opening grant. Authored as base × growth^claimed-frontier,
+  // read only where the reset that banked the claim lands it (the claim
+  // grant's one payer, actions.prestige) — never during an era. A frontier
+  // the claim curve never opened (zero, and every zero-claim reset) reads
+  // the plain opening grant, so the honest zero-claim reset stays exactly
+  // what it shipped as. The calibration (issue #484, ADR-0086): the base
+  // sits at the standing collection's rebuild-to-peak investment at the
+  // first banked frontier, and the growth tracks that investment's own
+  // compounding — enough to re-run the era's rebuild at roughly the
+  // previous bank's production, never enough to start past it. The
+  // later-era walks then hold the 5–10 credited-hour window with most of
+  // each era's credited time beyond the previous bank's depth (issue
+  // #491's effort criterion). Provisional — recorded evidence tunes it.
+  prestigeGrantBase: 600_000,
+  prestigeGrantGrowth: 2.4,
   longGoalFirstCost: 500,
   longGoalGrowthNumerator: 5n,
   longGoalGrowthDenominator: 1n,
@@ -512,7 +537,7 @@ export const BALANCE: Balance = {
   world: {
     entryNous: 2e7,
     claimBase: 2,
-    claimDepthSlope: 4,
+    claimDepthSlope: 2.5,
     attackCost: 1,
     attackCadenceSeconds: 60,
     storageCap: 30,

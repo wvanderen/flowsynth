@@ -8,7 +8,7 @@ import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
 import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
-import { createModule, createMutator, createWeapon, createWorldColumn, freshEnemyStates, openingGrant } from "./state";
+import { createModule, createMutator, createWeapon, createWorldColumn, eraStartGrantOf, freshEnemyStates, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
@@ -1217,6 +1217,19 @@ export function prestige(state: GameState, tuning: PrestigeTuning = {}): ActionR
   // figure that would serialize to null.
   const claim = bankableClaimOf(state, tuning.claimBase);
   if (!Number.isFinite(claim)) return fail("The pending claim cannot be read safely, so nothing was banked.");
+  // The claim grant (issue #484's later-era repair): a banked claim funds
+  // its next attempt's rebuild on the frontier it opened — the reset's
+  // era-start ν reads the frontier curve instead of the flat opening
+  // grant, so retained World strength shortens familiar territory instead
+  // of every era re-crawling the whole level ladder. The grant's own
+  // integrity check (issue #486's precedent) runs before anything this
+  // reset could not undo: a frontier deep enough to price past the ν
+  // representation refuses the reset whole, never a banked claim beside
+  // an unwriteable balance. An unadvanced frontier — a zero-claim reset,
+  // the honest one — pays the plain opening grant, so the honest choice
+  // never mints what its claim did not bank.
+  const grant = claim > 0 ? eraStartGrantOf(state.world.frontier + claim, tuning.openingGrant) : openingGrant(tuning.openingGrant);
+  if (!Number.isFinite(grant)) return fail("The frontier grant cannot be read safely, so nothing was banked.");
   state.arete += claim;
   state.world.frontier += claim;
   // The starter grant (issue #425, priority 2): the first World-eligible
@@ -1233,7 +1246,7 @@ export function prestige(state: GameState, tuning: PrestigeTuning = {}): ActionR
     module.level = 0;
     module.invested = 0;
   }
-  state.nous = openingGrant(tuning.openingGrant);
+  state.nous = grant;
   // Reserves are charge state (ADR-0047): they reset with everything else
   // charge-shaped. Class development, practice history, and the discovery
   // ledger persist.

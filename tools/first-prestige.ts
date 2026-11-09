@@ -188,8 +188,11 @@ export interface FirstPrestigeRow {
     readonly longest: readonly DecisionGap[];
   };
   // The currency-integrity read (issue #490's fourth criterion): the
-  // state's whole intake against the run's own earned ν — a hidden grant,
-  // missing currency, or fabricated reward fails this row.
+  // state's whole earned production against the run's own earned ν — a
+  // hidden grant, missing currency, or fabricated reward fails this row.
+  // The authored era-start grants (the claim grant included, issue #484)
+  // bypass `totalEarned` — authored intake, never earned production — so
+  // they ride the ledger's own grantNous figure, never this arithmetic.
   readonly noGrant: boolean;
   readonly discoveries: readonly string[];
   readonly defeats: readonly string[];
