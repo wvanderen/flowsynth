@@ -488,7 +488,7 @@ describe("the pushing policy", () => {
     expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
-    // The legacy entry still spends in this recipe until #529 retires it.
+    // The legacy entry still spends pending the remaining retirement slice.
     // The Column now comes from the positive bank, never an Arete purchase.
     expect(record.areteSpent.entry).toBe(1);
     expect(record.areteSpent.columns).toBe(0);

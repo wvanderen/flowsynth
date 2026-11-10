@@ -13,7 +13,7 @@ import type { GameState } from "../engine/types";
 
 // The World layer's UI (issue #426): the board's second face at the
 // design round's approved language — the layer legend (World leading,
-// locked-but-visible pre-reveal), one square-cut plate per coordinate
+// locked-but-visible pre-reveal), one World hex plate per coordinate
 // (reserved, discovered, cleared, occupant, open), the module layer
 // suppressed while it stands, the free placement gestures with the
 // engine-sourced lift preview, the World tray, and the flow locks. Every
@@ -165,6 +165,37 @@ describe("the enemy plates (issue #426, priority 2)", () => {
     expect(face("world-w1")!.querySelector(".world-plate.firm")).not.toBeNull();
     expect(face("world-w2")!.querySelector(".world-plate.reserved")).not.toBeNull();
     expect(openFace(0, 0).closest("g")!.querySelector(".world-plate.open")).not.toBeNull();
+  });
+});
+
+describe("World hex identity (issue #529)", () => {
+  it("carries a six-sided steel silhouette from board to inventory, drag artwork and detail without changing cell hits", async () => {
+    seedEra();
+    app.setBoardLayer("world");
+    const { worldTileSvg } = await import("./world");
+    // Silhouette is the explicit presentation contract, not the paths of
+    // glyphs, bars, or other incidental SVG internals.
+    const sixSides = (outline: Element | null) => {
+      expect(outline?.tagName.toLowerCase()).toBe("polygon");
+      expect(outline?.getAttribute("points")?.trim().split(/\s+/)).toHaveLength(6);
+    };
+    sixSides(face("world-occ-1,0").querySelector(".world-plate"));
+    const hits = [...grid().querySelectorAll("[data-world-cell]")].map(el => [el.getAttribute("data-world-cell"), el.getAttribute("points")]);
+    const before = JSON.stringify(app.state);
+    const tray = document.getElementById("world-tray")!;
+    sixSides(tray.querySelector('[data-world-tray="wp2"] .world-tile-plate'));
+    // The real pointer ghost consumes this same public face builder.
+    const ghost = document.createElement("div");
+    ghost.innerHTML = worldTileSvg("column");
+    sixSides(ghost.querySelector(".world-tile-plate"));
+    tray.querySelector<HTMLButtonElement>('[data-world-tray="wp2"]')!.click();
+    sixSides(tray.querySelector(".inventory-detail-face .world-tile-plate"));
+    app.openDetail(hex(1, 0), "world");
+    sixSides(document.querySelector(".world-stack .world-plate"));
+    expect(document.querySelector(".world-stack")?.textContent).toContain("UNFED");
+    expect(document.querySelector(".world-stack")?.textContent).not.toMatch(/Lv\.|Tier/);
+    expect(JSON.stringify(app.state)).toBe(before);
+    expect([...grid().querySelectorAll("[data-world-cell]")].map(el => [el.getAttribute("data-world-cell"), el.getAttribute("points")])).toEqual(hits);
   });
 });
 

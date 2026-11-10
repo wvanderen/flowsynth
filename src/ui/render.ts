@@ -3472,7 +3472,7 @@ const ACCELERATOR_PLACEHOLDER_PRICE = 3;
 
 // ADR-0087 (#526): no entry screen and no Column sale. Hone leads the
 // Arete face, followed by existing upgrades. The remaining legacy offers
-// and state audit belong to #529; this slice does not claim their retirement.
+// and state audit belong to the retirement slice; this slice does not claim them.
 // Prices mute when unaffordable or in flow ("spent between sessions").
 function catalogAreteFaceHtml(app: App): string {
   const { state } = app;
