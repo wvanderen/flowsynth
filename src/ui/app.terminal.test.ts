@@ -367,7 +367,11 @@ describe("declared game-action catalog", () => {
     app.worldRetrieve(id);
     expect(app.devInterventions.at(-1)).toMatchObject({ ok: true, label: "retrieveWorldOccupant" });
     expect(app.state.world.columns.find((c) => c.id === id)!.pos).toBeNull();
-    expect(app.devTerminalRun("world-buy")).toMatch(/^✓/);
+    const columnsBefore = app.state.world.columns.length;
+    const areteBefore = app.state.arete;
+    expect(app.devTerminalRun("world-buy")).toBe("✗ Charge Columns are no longer sold.");
+    expect(app.state.world.columns).toHaveLength(columnsBefore);
+    expect(app.state.arete).toBe(areteBefore);
     expect(app.devTerminalRun("world-hone chargeBlade")).toMatch(/^✓/);
   });
 });

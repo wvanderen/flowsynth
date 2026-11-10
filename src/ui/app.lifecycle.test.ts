@@ -49,6 +49,7 @@ describe("App lifetime", () => {
     const current = fixture.boot();
     current.state.catalogEntryOwned = true;
     current.state.eraEarned = BALANCE.world.entryNous * 1.5;
+    current.state.world.unlocked = true;
     current.ui.buyingCell = true;
     current.setBoardLayer("world");
     const toast = document.getElementById("mode-toast")!;
@@ -148,6 +149,7 @@ describe("App lifetime", () => {
     const app = fixture.boot();
     app.state.catalogEntryOwned = true;
     app.state.eraEarned = BALANCE.world.entryNous * 1.5;
+    app.state.world.unlocked = true;
     app.state.world.weapons.push({ id: "owned-weapon", type: "chargeBlade", pos: { q: 1, r: 0 }, store: 0, cooldown: 0, targetPriority: [] });
     app.ui.boardLayer = "world";
     app.render();
