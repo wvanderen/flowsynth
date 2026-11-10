@@ -1,0 +1,19 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-10T22:15:43.285Z",
+  "url": "http://localhost:5174",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-eccd493d-848ec94453851f78",
+  "branch": "t3/world-hex-presentation",
+  "commit": "f1e66f05fefc04272947792419821488aac6b120",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/529-world-hex/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

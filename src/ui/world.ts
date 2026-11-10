@@ -3,7 +3,7 @@ import { BALANCE, WORLD_ENEMIES } from "../engine/constants";
 // built to the design round's approved presentation language
 // (`world-faces.prototype.html` at c32438a, variant A — recorded on the
 // issue). The layer legend's World face leads the pair; the layer renders
-// one square-cut plate per coordinate — the reserved enemy positions with
+// one steel hex plate per coordinate (#529 / ADR-0087) — the reserved enemy positions with
 // their identity concealed, the discovered enemies' HP and penalty, the
 // cleared plates' engraved era bonus, the occupants' own figures, and the
 // quiet open cells — while the module layer never enters the drawing at
@@ -67,11 +67,9 @@ export function layerLegendActiveFace(app: App): "modules" | "world" {
   return app.ui.detail ? app.ui.detail.face : app.ui.boardLayer;
 }
 
-// The layers' symbols: the square-cut plate for the World — the second
-// face's own silhouette from the design round — and the hex chassis for
-// modules, the board's module voice. One spelling shared with the Hex
-// detail's section heads.
-export const LAYER_WORLD_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16"/><path d="M8.5 15.5v-4.2l3.5-3.3 3.5 3.3v4.2z"/></svg>`;
+// World keeps the steel plate and functional glyph register, with a
+// flat-crowned hex distinct from Modules' pointy chassis, rails and rings.
+export const LAYER_WORLD_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"><path d="M3 12 6 4h12l3 8-3 8H6Z"/><path d="M8.5 15.5v-4.2l3.5-3.3 3.5 3.3v4.2z"/></svg>`;
 export const LAYER_MODULES_SVG = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.6 20.2 7.3v9.4L12 21.4 3.8 16.7V7.3Z"/><path d="M12 8.2v7.6M8.4 10.1l7.2 3.8M15.6 10.1l-7.2 3.8"/></svg>`;
 
 export function layerLegendHtml(app: App): string {
@@ -128,11 +126,11 @@ export function renderLayerLegend(app: App): void {
 }
 
 /* ── The World faces ──────────────────────────────────
-   The layer's drawing inside the board svg: one square-cut plate per
-   coordinate — the authored enemy positions (reserved, discovered,
-   cleared) wherever they sit, and every owned cell's occupant or open
-   face. The plate is the design round's own silhouette: 74 units inscribed
-   in the hex cell, square-cut, in the layer's steel register. */
+   One steel hex per coordinate: reserved, discovered, cleared, occupant
+   and open. The World amendment changes the visible plate only; the
+   coordinate projection, full-cell hits and engine footprint stay intact.
+   Flat crowns keep the existing name/figure bands legible and distinguish
+   World from Modules without borrowing module rarity or merge rings. */
 
 const PLATE_HALF = 37;
 
@@ -166,8 +164,12 @@ export function worldPlacementVerdict(state: GameState, pos: Hex): string | null
 
 // The plate's polygon, shared by every face variant; the Hex detail's
 // enlarged chassis takes the bigger cut (the mutator chassis's own scale).
+function worldHexPoints(half: number): string {
+  return `${-half * 1.25},0 ${-half * 0.8},${-half} ${half * 0.8},${-half} ${half * 1.25},0 ${half * 0.8},${half} ${-half * 0.8},${half}`;
+}
+
 function plate(cls: string, half: number = PLATE_HALF): string {
-  return `<rect class="world-plate ${cls}" x="${-half}" y="${-half}" width="${half * 2}" height="${half * 2}"/>`;
+  return `<polygon class="world-plate ${cls}" points="${worldHexPoints(half)}"/>`;
 }
 
 // The weapon's charge bar: the stored charge against capacity, the fill in
@@ -214,7 +216,7 @@ function columnFaceHtml(state: GameState, lift: number, pos: Hex): string {
 // with a discovered enemy's firm plate.
 function reservedFaceHtml(pos: Hex): string {
   return `${plate("reserved")}
-    <rect class="world-hatch" x="${-PLATE_HALF}" y="${-PLATE_HALF}" width="${PLATE_HALF * 2}" height="${PLATE_HALF * 2}"/>
+    <polygon class="world-hatch" points="${worldHexPoints(PLATE_HALF)}"/>
     <text class="world-word" y="-6" text-anchor="middle">RESERVED</text>
     <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
@@ -410,11 +412,9 @@ export function worldTrayOccupants(state: GameState): { weapons: WeaponCopy[]; c
   };
 }
 
-// The minimal tray mark (the mutator tile's pattern): the square-cut plate
-// outline in the layer's register over the occupant's glyph — what you
-// carry is what you drop.
+// Inventory and the real pointer ghost share the board's steel hex.
 export function worldTileInner(kind: "weapon" | "column"): string {
-  return `<rect class="world-tile-plate" x="-46" y="-46" width="92" height="92"/>
+  return `<polygon class="world-tile-plate" points="${worldHexPoints(46)}"/>
     ${worldGlyph(kind === "weapon" ? "weapon" : "column", false, 1.9)}`;
 }
 
@@ -424,7 +424,7 @@ export function worldTileSvg(kind: "weapon" | "column"): string {
 
 // The collapsed tray's one mark: the plate symbol + the stored count — the
 // inventory's own collapsed grammar.
-const WORLD_TRAY_ICON = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" style="width:17px;height:17px"><rect x="4" y="4" width="16" height="16"/><path d="M8.5 15.5v-4.2l3.5-3.3 3.5 3.3v4.2z"/></svg>`;
+const WORLD_TRAY_ICON = LAYER_WORLD_SVG;
 
 function weaponTrayRead(state: GameState, weapon: WeaponCopy): string {
   return `⌁${formatInt(Math.floor(weapon.store))}/${BALANCE.world.storageCap} · ATK ${formatInt(attackPowerOf(state, weapon.type))}`;
@@ -742,7 +742,7 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
     const live = state.world.enemies[def.key];
     if (!live?.discovered) {
       return {
-        chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("reserved", 52)}<rect class="world-hatch" x="-52" y="-52" width="104" height="104"/><text class="world-word" y="4" text-anchor="middle">RESERVED</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
+        chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("reserved", 52)}<polygon class="world-hatch" points="${worldHexPoints(52)}"/><text class="world-word" y="4" text-anchor="middle">RESERVED</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
         tip: `Reserved cell · silent until its reveal`,
       };
     }
