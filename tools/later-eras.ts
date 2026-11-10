@@ -16,7 +16,7 @@ import {
   type PlaythroughSource,
 } from "../src/engine/playthrough";
 import { buyCatalogEntry, buyChargeColumn, buyHoneRank, placeWorldOccupant } from "../src/engine/actions";
-import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "../src/engine/world";
+import { enemyDefAt, honeCostOf, worldOccupantAt } from "../src/engine/world";
 import { adjacent } from "../src/engine/hex";
 import { chargeLineCells } from "../src/engine/playthrough-placement";
 import { seededRng } from "../src/engine/capacity-calibration";
@@ -427,7 +427,9 @@ export type RoutePiece = "entry" | "column" | "hone";
 // later frontier enumerates its own prices, never the first rungs.
 export function routePiecePriceAt(state: GameState, piece: RoutePiece): number | null {
   if (piece === "entry") return state.catalogEntryOwned ? null : BALANCE.catalogEntryCost;
-  if (piece === "column") return columnCost(state.world.columns.length);
+  // Keep the historical piece identity readable in stored reports, but
+  // never enumerate a retired purchase against the current engine (#526).
+  if (piece === "column") return null;
   return honeCostOf(state, "chargeBlade");
 }
 
