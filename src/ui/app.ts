@@ -46,13 +46,13 @@ import {
   type ActionResult,
   type BulkPurchase,
 } from "../engine/actions";
-import { ARETE_HORIZON, bankableClaimOf, frontierEntitlement, horizonReached } from "../engine/accumulator";
-import { columnCost, worldOccupantAt } from "../engine/world";
+import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumulator";
+import { worldOccupantAt } from "../engine/world";
 import type { WeaponType, ResponseCurveId } from "../engine/types";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
 import { displayedRates, flowLive, deployedAt, syncRates, wholeNous } from "../engine/economy";
-import { worldEntered, refreshWorldPreview, worldRevealPreview, worldBoardLive } from "./world";
+import { worldEntered, refreshWorldPreview, worldBoardLive } from "./world";
 import { WORLD_ENEMIES, RESPONSE_CURVES } from "../engine/constants";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY, type MigrationReport } from "../engine/save";
@@ -965,7 +965,7 @@ export class App {
   // later claim silent.
   confirmPrestige(): void {
     const claim = bankableClaimOf(this.state);
-    const grantsStarter = !this.state.world.starterWeaponGranted && frontierEntitlement(this.state.eraEarned) >= columnCost(0);
+    const grantsStarter = !this.state.world.unlocked && claim > 0;
     const result = this.gameAction("prestige", () => prestige(this.state));
     if (!result.ok) {
       this.say(result.reason ?? "The door is not open.");
@@ -1618,7 +1618,6 @@ export class App {
   setBoardLayer(layer: "modules" | "world"): void {
     if (this.ui.boardLayer === layer) return;
     if (layer === "world" && !worldEntered(this.state)) {
-      this.say(`The World layer reveals at ${worldRevealPreview()}.`);
       return;
     }
     const cancelled: string[] = [];
@@ -3015,6 +3014,9 @@ export class App {
     s.catalogEntryOwned = true;
     s.arete = Math.max(s.arete, 20);
     s.eraEarned = Math.max(s.eraEarned, BALANCE.world.entryNous * 1.5);
+    s.world.unlocked = true;
+    s.world.starterWeaponGranted = true;
+    s.world.starterColumnGranted = true;
     if (!s.world.weapons.some((w) => w.pos !== null)) {
       const weapon = createWeapon(s, "chargeBlade");
       weapon.pos = hex(1, 0);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { bankableClaimOf } from "../src/engine/accumulator";
-import { buyChargeColumn, endSession, startSession, upgradeModule } from "../src/engine/actions";
+import { buyHoneRank, endSession, startSession, upgradeModule } from "../src/engine/actions";
 import { advance } from "../src/engine/advance";
 import { BALANCE } from "../src/engine/constants";
 import { deserialize, serialize } from "../src/engine/save";
@@ -83,11 +83,11 @@ describe("the calibrated translation's recoverability (issue #493)", () => {
     const loaded = deserialize(JSON.stringify(file));
     const state = loaded.state!;
     expect(loaded.migration!.areteRetained).toBe(6);
-    // The World purchase route: a Charge Column buys at the calibrated
-    // ladder's floor, and no refund path exists to unwind it.
-    const result = buyChargeColumn(state);
+    // Hone remains the irreversible World spending route; Columns are
+    // no longer sold (ADR-0087). This does not revalidate calibration.
+    const result = buyHoneRank(state, "chargeBlade");
     expect(result.ok).toBe(true);
-    expect(state.world.columns).toHaveLength(1);
+    expect(state.world.hone.chargeBlade).toBe(1);
     expect(state.arete).toBe(5);
     expect(stateNumbersFinite(state)).toBe(true);
     // And the claim route stands beside it: the frontier at zero leaves

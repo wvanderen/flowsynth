@@ -25,17 +25,14 @@ import { HEX_RADIUS, boardPoint, hexPoints } from "./face";
 import { COLUMN_SHORT, COLUMN_WORD, WORLD_META } from "./meta";
 import { formatInt, formatNumber } from "./format";
 import { wireTooltips } from "./instrument";
-import { lockMarkSvg } from "./icons";
 import { termTipHtml } from "./terms";
 
 /* ── The layer's liveness ───────────────────────────── */
 
-// Whether the World layer has arrived in this era: the entry is the World
-// entry depth's era-earned reveal (BALANCE.world.entryNous) — the first
-// enemy's discovery threshold — never a purchase. The layer re-locks each
-// prestige until the era climbs back.
+// Permanent discovery follows the first positive prestige bank (ADR-0087),
+// independent of this era's depth, current wallet or Catalog ownership.
 export function worldEntered(state: GameState): boolean {
-  return state.eraEarned >= BALANCE.world.entryNous;
+  return state.world.unlocked;
 }
 
 // The layer standing on the board: entered and selected — whatever the
@@ -58,10 +55,8 @@ export function worldLayerLive(app: App): boolean {
    detail reads ui.detail.face, and one builder renders both so the
    vocabulary can never drift. World leads the pair (the co-listing order:
    World leads, as Mutators led). Every mode's furniture: the legend stands
-   through flow and pause. Pre-entry the World face stands locked-but-
-   visible — muted outline, the lock mark — and its click previews what is
-   coming (the reveal threshold, in figures) rather than flipping anything;
-   in flow the preview stands too, the reveal being no spending surface. */
+   through flow and pause after discovery. Before discovery only Modules
+   stands: there is no locked World symbol, preview or reveal-threshold door. */
 
 export function layerLegendActiveFace(app: App): "modules" | "world" {
   return app.ui.detail ? app.ui.detail.face : app.ui.boardLayer;
@@ -79,18 +74,10 @@ export function layerLegendHtml(app: App): string {
   const active = layerLegendActiveFace(app);
   const locked = !worldEntered(state);
   const worldSelected = active === "world";
-  // One mark per state: the padlock stands for the locked layer, the plate
-  // register for the arrived one — never both at once. World leads the
-  // pair. The locked click previews the reveal in figures; the click never
-  // flips and never opens a sheet — the World arrives, it is not bought.
-  const preview = worldRevealPreview();
-  return `<button class="legend-symbol${worldSelected ? " active" : ""}${locked ? " locked" : ""}" data-legend-layer="world" aria-pressed="${worldSelected}" aria-label="${locked ? `World layer — locked; reveals at ${preview}` : "World layer"}" title="${locked ? `World — reveals at ${preview}` : "World — enemies, weapons, Columns"}">${locked ? LOCK_MARK : LAYER_WORLD_SVG}</button>
+  // Discovery reveals a real door, never a locked preview.
+  return `${locked ? "" : `<button class="legend-symbol${worldSelected ? " active" : ""}" data-legend-layer="world" aria-pressed="${worldSelected}" aria-label="World layer" title="World — enemies, weapons, Columns">${LAYER_WORLD_SVG}</button>`}
     <button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>`;
 }
-
-// The locked face's one mark: the shared padlock in the instrument's
-// stroke language — the layer is locked, not merely elsewhere.
-const LOCK_MARK = lockMarkSvg("world-tab-lock");
 
 // The locked World face's preview line: the reveal's threshold in figures
 // — the click's whole answer, in flow as in upgrade.

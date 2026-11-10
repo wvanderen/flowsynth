@@ -54,7 +54,7 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, WORLD_META, rarityMark, tierNumeral, tierWord } from "./meta";
-import { columnCost, honeCostOf } from "../engine/world";
+import { honeCostOf } from "../engine/world";
 import { typeRarityOf } from "../engine/constants";
 import { formatBalance, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
 import { renderBoardLedger, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
@@ -2953,10 +2953,9 @@ function wireClose(app: App): void {
 function renderGrantModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("GRANTED")}
-    <h2 id="modal-title">The Charge Blade is yours</h2>
+    <h2 id="modal-title">World discovered</h2>
     <div class="grant-face" aria-hidden="true">${worldTileSvg("weapon")}</div>
-    <p class="lead">A ${termTipHtml("Charge Blade")} waits in the ${termTipHtml("World tray")} — place it over an owned cell, feed it from a ${termTipHtml("Charge Column")}, and it engages the adjacent enemies on its own cadence.</p>
-    <p class="lead muted">The World face stands with the era: it reopens at ${formatNumber(BALANCE.world.entryNous)} era-earned.</p>
+    <p class="lead">One ${termTipHtml("Charge Column")} and one ${termTipHtml("Charge Blade")} wait in the ${termTipHtml("World tray")}.</p>
     <div class="modal-actions">
       <button id="grant-close" class="primary">Continue</button>
     </div>`;
@@ -3208,9 +3207,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   app.listen(byId("buy-capacity-ceiling"), "click", () => app.buyCapacityCeilingAction());
   app.listen(byId("buy-capacity-discount"), "click", () => app.buyCapacityDiscountAction());
   app.listen(byId("buy-arete-beam"), "click", () => app.buyMergeCapAction());
-  app.listen(byId("buy-arete-entry"), "click", () => app.buyCatalogEntryAction());
   app.listen(byId("buy-arete-pool"), "click", () => app.joinRollPoolAction());
-  app.listen(byId("buy-world-column"), "click", () => app.buyChargeColumnAction());
   app.listen(byId("buy-world-hone"), "click", () => app.buyHoneRankAction("chargeBlade"));
   // The scrap face's purchases and rolls (issues #378, #379): the same
   // handlers the rows carried on the Forge, one sheet home now.
@@ -3469,30 +3466,18 @@ function catalogOwnedHtml(word: string): string {
 // so the number lives here alone, named for what it is.
 const ACCELERATOR_PLACEHOLDER_PRICE = 3;
 
-// The arete face: the single centered lock screen until the Mutator entry
-// is bought, then its sections (issue #310 steering) — World first (the
-// co-listing order: World leads, issue #426), then Upgrades (the capacity
-// products, the inert Accelerator placeholder) and Module Types (the roll
-// pool join, previewed by the module's own face). The Mutator tree's own
-// entry retired with the Mutator Grid's surfaces (issue #426); the face
-// restructures around what remains without orphaned placeholders. Prices
-// mute when unaffordable or in flow ("spent between sessions").
+// ADR-0087 (#526): no entry screen and no Column sale. Hone leads the
+// Arete face, followed by existing upgrades. The remaining legacy offers
+// and state audit belong to #529; this slice does not claim their retirement.
+// Prices mute when unaffordable or in flow ("spent between sessions").
 function catalogAreteFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
-  if (!state.catalogEntryOwned) {
-    const affordable = state.arete >= BALANCE.catalogEntryCost;
-    return `<div class="entry-screen">
-      <button class="entry-buy" id="buy-arete-entry"${upgrade && affordable ? "" : " disabled"}><span>Unlock Mutator Layer</span><span class="mono">${BALANCE.catalogEntryCost} Arete</span></button>
-    </div>
-    ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
-  }
   const joined = state.rollPoolJoined;
   return `<div class="catalog-sections">
     <section>
       <h2 class="t-condensed">World</h2>
       <div class="catalog-rows">
-        ${catalogColumnRowHtml(app)}
         ${catalogHoneRowHtml(app, "chargeBlade")}
       </div>
     </section>
@@ -3523,21 +3508,6 @@ function catalogAreteFaceHtml(app: App): string {
     </section>
   </div>
   ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
-}
-
-// The Charge Column's ladder row (issue #426, priority 6): the entry is
-// the Column itself — never a per-copy upsell and never `memorized`
-// (persistence rides the reset contract, not the memorized family). The
-// owned count reads beside the name; the price rides the authored
-// escalation.
-function catalogColumnRowHtml(app: App): string {
-  const { state } = app;
-  const owned = state.world.columns.length;
-  const price = columnCost(owned);
-  return `<article class="catalog-row">
-    <div class="with-preview"><span class="module-preview world-preview">${worldTileSvg("column")}</span><div><h3 class="t-condensed">${termTipHtml("Charge Column")} <span class="mono">${owned}</span></h3><p class="t-note">Copies its cell's received ${termTipHtml("charge")} to adjacent weapons · placed free</p></div></div>
-    ${areteBuyButtonHtml(app, "buy-world-column", price)}
-  </article>`;
 }
 
 // The Hone row (issue #426, priority 6): one entry per weapon type, each

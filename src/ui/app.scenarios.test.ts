@@ -222,7 +222,7 @@ describe("the launch command", () => {
     const living = Object.values(app.state.world.enemies).filter((enemy) => enemy.discovered && enemy.hp > 0);
     expect(living.length).toBeGreaterThanOrEqual(1);
     expect(app.state.world.weapons.some((weapon) => weapon.pos === null)).toBe(true);
-    expect(app.state.arete).toBe(0);
+    expect(app.state.arete).toBe(1);
     expect(app.devScenarioNote).toContain("World enemy ✓");
     expect(app.devScenarioNote).toContain("placement decision unplayed");
     expect(app.devScenarioNote).toContain("recipe checkpoint · isolated save");

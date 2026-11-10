@@ -3,7 +3,6 @@ import {
   advanceWorldCharge,
   attackPowerOf,
   bandBoundarySeconds,
-  columnCost,
   columnLiftsOf,
   combatBoundaryOf,
   eligibleTargetsOf,
@@ -96,8 +95,9 @@ describe("the frontier entitlement curve (issue #425)", () => {
     expect(marginal(BALANCE.world.entryNous * 10)).toBeGreaterThan(marginal(BALANCE.world.entryNous * 100));
   });
 
-  it("constructs the entry grant to cover the Charge Column's price", () => {
-    expect(frontierEntitlement(BALANCE.world.entryNous)).toBeGreaterThanOrEqual(columnCost(0));
+  it("preserves the first positive entitlement at 20M independently of retired Column prices", () => {
+    expect(frontierEntitlement(20_000_000 - 1)).toBe(0);
+    expect(frontierEntitlement(20_000_000)).toBe(2);
   });
 
   it("the horizon line stays the prestige gate and is never rescaled by the World work", () => {
@@ -224,10 +224,14 @@ describe("the first World-eligible claim (issue #425, priority 2)", () => {
     return s;
   }
 
-  it("banks at least the Column's price and grants the starter weapon outright", () => {
+  it("a positive bank permanently unlocks World and grants an unplaced starting kit", () => {
     const s = eligible();
     expect(prestige(s).ok).toBe(true);
-    expect(s.arete).toBeGreaterThanOrEqual(columnCost(0));
+    expect(s.arete).toBe(2);
+    expect(s.world.unlocked).toBe(true);
+    expect(s.world.starterColumnGranted).toBe(true);
+    expect(s.world.columns).toHaveLength(1);
+    expect(s.world.columns[0]!.pos).toBeNull();
     expect(s.world.starterWeaponGranted).toBe(true);
     expect(s.world.weapons).toHaveLength(1);
     expect(s.world.weapons[0]!.type).toBe("chargeBlade");
@@ -999,22 +1003,12 @@ describe("weapons store; Arete upgrades the type (issue #425, priority 7)", () =
 });
 
 describe("no refunds — World purchases are permanent (issue #425, priority 8)", () => {
-  it("Columns buy on the escalating ladder, persist through prestige, and Arete never returns", () => {
+  it("Columns cannot be purchased or refunded through the retired purchase action", () => {
     const s = fresh();
-    s.mode = "upgrade";
     s.arete = 20;
-    expect(columnCost(0)).toBe(BALANCE.world.columnFirstPrice);
-    expect(buyChargeColumn(s).ok).toBe(true);
-    expect(buyChargeColumn(s).ok).toBe(true);
-    expect(columnCost(2)).toBe(BALANCE.world.columnFirstPrice * BALANCE.world.columnPriceGrowth ** 2);
-    expect(s.arete).toBe(20 - columnCost(0) - columnCost(1));
-    const columnsBefore = s.world.columns.length;
-    s.eraEarned = BALANCE.world.entryNous * 100;
-    expect(prestige(s).ok).toBe(true);
-    expect(s.world.columns.length).toBe(columnsBefore);
-    // The reset mints nothing back: the balance only ever grew by the
-    // claim, and no refund action exists to reverse a purchase.
-    expect(s.arete).toBe(20 - columnCost(0) - columnCost(1) + BALANCE.world.claimBase + BALANCE.world.claimDepthSlope * 2);
+    const before = serialize(s, 5_000);
+    expect(buyChargeColumn(s).ok).toBe(false);
+    expect(serialize(s, 5_000)).toBe(before);
   });
 
   it("placement is between-sessions only, on owned cells, never on reserved enemy cells", () => {
@@ -1064,7 +1058,8 @@ describe("the prestige round-trip with World persistence (issue #425, priority 9
     const s = fresh();
     s.mode = "upgrade";
     s.arete = 30;
-    expect(buyChargeColumn(s).ok).toBe(true);
+    s.world.columns.push({ id: "retained-column", pos: null });
+    s.world.starterColumnGranted = true;
     expect(buyHoneRank(s, "chargeBlade").ok).toBe(true);
     const weapon = grantWeapon(s, null);
     s.cells.push(hex(0, 1));
@@ -1135,7 +1130,9 @@ describe("the save schema (issue #425)", () => {
     const loaded = deserialize(JSON.stringify(file)).state!;
     expect(loaded.world.frontier).toBe(0);
     expect(loaded.world.starterWeaponGranted).toBe(true);
-    expect(loaded.world.columns).toEqual([{ id: "c1", pos: { q: 0, r: 1 } }]);
+    expect(loaded.world.columns[0]).toEqual({ id: "c1", pos: { q: 0, r: 1 } });
+    expect(loaded.world.columns).toHaveLength(2);
+    expect(loaded.world.columns[1]!.pos).toBeNull();
     expect(loaded.world.weapons).toHaveLength(1);
     expect(loaded.world.weapons[0]!.store).toBe(BALANCE.world.storageCap);
     expect(loaded.world.weapons[0]!.cooldown).toBe(97 % BALANCE.world.attackCadenceSeconds);

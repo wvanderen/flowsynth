@@ -241,6 +241,8 @@ export interface WorldEnemyState {
 // enemies' live state. World purchases persist through prestige; enemy
 // encounters, damage, and stored World charge reset with the era.
 export interface WorldState {
+  unlocked: boolean;
+  starterColumnGranted: boolean;
   frontier: number;
   starterWeaponGranted: boolean;
   columns: WorldColumn[];
