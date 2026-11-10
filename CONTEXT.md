@@ -2,6 +2,12 @@
 
 FlowSynth is an incremental game in which real-life practices drive a configurable hex board of modules — the board is the optimization game, and a console carries the focus tools.
 
+## Confirmed World feedback design (implementation pending)
+
+The [World feedback brief](docs/world-layer-feedback-brief.md) and [ADR-0087](docs/adr/0087-world-unlocks-through-prestige-and-collection-growth-uses-drafts.md) supersede conflicting World/Mutator passages below as **intended behavior**, not a claim of shipped implementation. World permanently unlocks on the first positive-Arete prestige, with one free Column and starter Blade; Columns then join ordinary drafts alongside additional Blades rather than costing Arete. Hone remains an Arete purchase. World faces become hexagons, pre-unlock enemy pressure stays legible in the ledger, and the ambient resource strip gains pending yield and a reset entry point. Mutator mechanics and Catalog remnants retire. Historical descriptions below must be reconciled as implementation lands; they must not be used to restore the retired design.
+
+**Prestige versus Arete purchase**: prestige ends an era and banks its pending Arete claim; an Arete purchase spends already-banked Arete. The first positive-Arete prestige, not the first purchase or a zero-yield reset, is the permanent World discovery boundary.
+
 ## Language
 
 ### The board
