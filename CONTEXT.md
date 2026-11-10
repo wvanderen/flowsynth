@@ -373,6 +373,9 @@ The pure control surface organized around the Enter/Exit main switch — the dom
 
 **The display panel** (the [header-status brief](docs/header-status-brief.md), 2026-10-19): the door's interior is a recessed display well in the synth-faceplate register. The full-height display clock leads — the time is the device's face — and the program block follows: the selected habit's name (wearing completion's engraved check when the displayed goal is done), the caption (a planned session reads the bare target; running states name themselves), and the provisional line while the honesty pool holds. The goal meter closes the well flush at its right edge: the selected habit's goal progress as a seven-segment vertical LED column in the habit's palette token — the goal inherits it (issue #445) — with no meter at all when nothing qualifies (no habit, no goal, or an unresolved migration choice). Its tooltip gloss names the goal and what remains; activation of the meter, including touch, opens PLAN with the rest of the door (owner-confirmed review amendment, 2026-10-19). The provisional logo is the inventory hypercube with its filled core, adopted from the collapsed inventory's symbol; a later round may name a permanent mark.
 
+**Enemy pressure disclosure**:
+The shared ledger shows actual combined active-enemy production reduction and each living discovered source's penalty and remaining-production factor. Factors multiply; defeated bonuses are not counted as pressure. Pressure deepens with era progress. Disclosure needs no World access and reveals no coordinates or placement controls; positive-Arete prestige is explained as the intended World discovery boundary (unlock implementation belongs to #526).
+
 **Board ledger**:
 One clipped instrument panel docked above the board — the board owns its production numbers. The resources group left: nous, rate, the arete read, the scrap read (issue #377), and the harmonic-capacity read (issue #333) — the per-voice whole-chord allowance with its canonical mark, the one ambient figure the allocation economy spends; the selected voice's used/available stays local to the reserved readout and Hex detail, never a board-wide meter. Each value with its unit, no session read anywhere on it. The arete read wears the resource's color and its canonical mark; before the first prestige it stands as a dim `— ◇` slot — the unconditional telegraph that prestige will bank there. The scrap read wears the scrap register and the chipped-hex mark; the balance's one home (ADR-0066). A hairline then separates the feats and chords chips, right-aligned as paired icon + count chips. The rate read is the door to the rate details: above the 760px breakpoint a hover or focus anywhere on the panel opens the module-linked roster as a ledger-wide popover (the rate read wears no inner border of its own — the panel is the affordance, not the figure); a tap on the rate read opens the same roster as a modal sheet at every width. (On portrait phone the door moves to the game-info strip's rate read.) Bonuses never ride the ledger — they show in the feats and chords sheets and in the rate details' one Feats · Discoveries line (ADR-0037 as amended by #334).
 
@@ -614,7 +617,7 @@ The cumulative curve E assigning total Arete entitlement to era-earned nous dept
 _Avoid_: claim formula (the pending difference is the claim; the curve is the entitlement), accumulator claim (the retired prestige-count sense)
 
 **Pending claim**:
-The positive difference between the frontier entitlement at the current era score and the claimed frontier — the Arete waiting to bank on the next prestige. It reads only on the prestige door and its confirm; no board-wide or ledger claim figure exists. Banked claims floor to whole Arete; the fraction stays pending, never lost. A zero claim is a valid prestige, confirmed outright.
+The positive difference between the frontier entitlement at the current era score and the claimed frontier — the Arete waiting to bank on the next prestige. It reads beside the explicit Reset era entry on the desktop and phone resource strips, in the ledger, and in confirmation. Banked claims floor to whole Arete; the fraction stays pending, never lost. A zero claim is a valid prestige, confirmed outright.
 _Avoid_: live claim (the retired accumulator sense), claim preview
 
 **Engineer**:
@@ -698,14 +701,14 @@ _Avoid_: Row unlock, Octave tree (retired), row expansion, vertical unlock
 The former log-scale presentation of current-era nous earned toward prestige eligibility. Its ambient horizon bar is retired: the eligibility threshold remains, while the frontier claim determines Arete banked by prestige.
 
 **Horizon bar**:
-Retired presentation of prestige eligibility. The shared ledger's Arete section now owns the prestige action and its live claim; no ambient bar replaces it.
+Retired presentation of prestige eligibility. The ambient desktop and phone strips expose pending yield beside Reset era; the shared ledger retains its Arete section. No ambient bar replaces it.
 _Avoid_: Arete pill
 
 **Horizon line**:
 The fixed current-era nous threshold for prestige eligibility, the same every era. Reaching it enables the ledger's prestige action; it mints nothing by itself.
 
 **Prestige**:
-The arete reset: once the current era's fill reaches the horizon line, prestige banks the era's pending frontier claim (issue #425) and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through the shared ledger's Arete section, behind a confirm; the confirm names the zero-claim case outright.
+The arete reset: once the current era's fill reaches the horizon line, prestige banks the era's pending frontier claim (issue #425) and begins the next era — module levels, nous, and charge state reset while the board's modules, cells, and placement, the mutator layer (Catalog unlocks, Mutator slots, placed mutators, the Mutator tray), and the whole life record persist. Performed in upgrade mode through Reset era beside ambient pending yield or the shared ledger's Arete section, behind a confirm; the confirm names the zero-claim case outright. Unavailable ambient reset stays focusable with a visible, accessible reason.
 _Avoid_: reset (bare — the reset's player-facing name is arete reset; Prestige stays the verb)
 
 **Headroom**:
@@ -734,7 +737,7 @@ A reward for an already completed task that waits for full funding from task rew
 
 ### Header/ledger refinement — 2026-10-20 follow-up
 
-Logo alone at the header's left edge; Pause/Resume is icon-only before the centered dark clock/Notes well, Finish after it with a save-and-check mark. Nous balance and production are paired in the banner and ledger. The entire banner resource region is one ledger button; resource spans have no independent actions. Feats/Chords retain destinations and repeat their icons/totals in the ledger. Harmonic capacity reads allowance / ceiling. See [brief](docs/interface-refinement-brief.md#header-and-ledger-follow-up).
+Logo alone at the header's left edge; Pause/Resume is icon-only before the centered dark clock/Notes well, Finish after it with a save-and-check mark. Nous balance and production are paired in the banner and ledger. The entire banner resource region is one ledger button; resource spans have no independent actions. The explicit ambient Reset era control beside pending yield is the sole exception (#527). Feats/Chords retain destinations and repeat their icons/totals in the ledger. Harmonic capacity reads allowance / ceiling. See [brief](docs/interface-refinement-brief.md#header-and-ledger-follow-up).
 
 
 ### Header presentation amendment — 2026-10-22
