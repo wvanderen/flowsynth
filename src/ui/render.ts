@@ -57,7 +57,7 @@ import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPEC
 import { columnCost, honeCostOf } from "../engine/world";
 import { typeRarityOf } from "../engine/constants";
 import { formatBalance, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
-import { renderBoardLedger, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
+import { enemyPressureHtml, renderBoardLedger, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { profileGradesHtml } from "./profile";
@@ -2808,6 +2808,7 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   content.innerHTML = `
     ${modalTop("LEDGER", "modal-title")}
     <section id="ledger-nous" class="ledger-section" tabindex="-1"><h3>Nous</h3><div class="ledger-detail-row"><span>Balance</span><b class="mono" data-live="ledger-nous"></b></div><div id="ledger-production" class="rate-details-sheet" tabindex="-1">${rateDetailsHtml(app.state, snapshot, true, "sheet")}</div></section>
+    <section id="ledger-pressure" class="ledger-section"></section>
     <section id="ledger-arete" class="ledger-section" tabindex="-1"><h3>Arete</h3><div class="ledger-detail-row"><span>Banked</span><b class="mono" data-live="ledger-arete"></b></div><button id="prestige-door" class="prestige-door"></button><small class="prestige-availability" data-live="prestige-availability"></small></section>
     <section id="ledger-scrap" class="ledger-section" tabindex="-1"><h3>Scrap</h3><div class="ledger-detail-row"><span>Recovered from modules and skipped drafts</span><b class="mono" data-live="ledger-scrap"></b></div></section>
     <section id="ledger-capacity" class="ledger-section" tabindex="-1"><h3>Harmonic capacity</h3><div class="ledger-detail-row"><span>Whole-chord budget per standard voice</span><b class="mono" data-live="ledger-capacity"></b></div></section>
@@ -2829,6 +2830,9 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
 }
 
 function updateLedgerModal(app: App, content: HTMLElement): void {
+  const pressure = content.querySelector("#ledger-pressure");
+  const pressureHtml = enemyPressureHtml(app.state);
+  if (pressure && pressure.innerHTML !== pressureHtml) pressure.innerHTML = pressureHtml;
   liveSet(content, "ledger-nous", `${formatBalance(app.state.nous)} ν`);
   liveSet(content, "ledger-arete", `${formatInt(app.state.arete)} Arete`);
   liveSet(content, "ledger-scrap", formatInt(app.state.scrap));
@@ -3950,7 +3954,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
     <p class="lead">${zero
-      ? `This prestige banks <strong>no Arete</strong> — the frontier already covers how far this era climbed.`
+      ? `This prestige banks no Arete (<strong>0 Arete</strong>)`
       : `Prestige banks <strong class="mono">${claim} Arete</strong>`} and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
     <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, your scrap, and lifetime nous all stay — as do your World columns, weapons, and ${termTipHtml("Hone")} ranks.</p>
     <div class="modal-actions">
