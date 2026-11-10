@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/ui/world.test.ts src/ui/hexdetail.test.ts src/ui/app.inventory.test.ts src/ui/app.board.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-eccd493d-848ec94453851f78
+
+
+ Test Files  4 passed (4)
+      Tests  226 passed (226)
+   Start at  16:15:43
+   Duration  15.23s (transform 1.13s, setup 0ms, import 1.76s, tests 11.61s, environment 856ms)
+
