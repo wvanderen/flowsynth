@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-10T21:54:18.884Z",
+  "url": "http://localhost:5175",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-9cfc79a2-95de935c950a9a71",
+  "branch": "t3/ledger-reset-enemy-pressure",
+  "commit": "e54b19b12dc8a3a841ef8ddf099da4441e8a12ba",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}
