@@ -33,6 +33,62 @@ function stubChannels() {
 }
 
 describe("the board ledger (§7, issue #270)", () => {
+  it("ledger explains pre-unlock pressure with multiplicative sources and live deepening", () => {
+    app.state.world.enemies.w0 = { discovered: true, hp: 100 };
+    app.state.world.enemies.w1 = { discovered: true, hp: 100 };
+    app.render();
+    document.getElementById("ledger-overview")!.click();
+    const pressure = () => document.getElementById("ledger-pressure")!.textContent!;
+    // Two 20% sources leave 0.8 × 0.8 = 64%, not 60%.
+    expect(pressure()).toContain("36.0% production reduction");
+    expect(pressure()).toContain("−20.0% · ×0.800 remaining");
+    expect(pressure()).toContain("Enemy 1");
+    expect(pressure()).toContain("Enemy 2");
+    expect(pressure()).toContain("Pressure deepens with era progress");
+    expect(pressure()).toContain("positive Arete unlocks World");
+    expect(document.querySelector("#ledger-pressure button")).toBeNull();
+    app.state.eraEarned = 1e15;
+    app.render();
+    expect(pressure()).toContain("87.8% production reduction");
+    expect(pressure()).toContain("−65.0% · ×0.350 remaining");
+    app.state.world.enemies.w0.hp = 0;
+    app.render();
+    expect(pressure()).not.toContain("Enemy 1");
+    expect(pressure()).toContain("65.0% production reduction");
+  });
+
+  it("ambient reset on desktop and phone explains eligibility and retains zero-yield confirmation", () => {
+    app.render();
+    for (const id of ["ambient-reset", "phone-reset"]) {
+      const door = document.getElementById(id)!;
+      expect(door.textContent).toContain("Reset");
+      expect(door.getAttribute("aria-disabled")).toBe("true");
+      expect(document.getElementById(door.getAttribute("aria-describedby")!)!.textContent).toContain("Requires");
+    }
+    app.state.eraEarned = ARETE_HORIZON;
+    app.render();
+    expect(document.querySelector('[data-live="ambient-yield"]')!.textContent).toBe("+0 Arete pending");
+    document.getElementById("ambient-reset")!.click();
+    expect(app.ui.modal).toBe("prestige");
+    expect(document.getElementById("modal-content")!.textContent).toContain("0 Arete");
+    app.closeModal();
+    document.getElementById("phone-reset")!.click();
+    expect(app.ui.modal).toBe("prestige");
+    app.closeModal();
+    app.state.mode = "flow";
+    app.render();
+    expect(document.getElementById("ambient-reset-reason")!.textContent).toContain("between sessions");
+    document.getElementById("ambient-reset")!.click();
+    expect(app.ui.modal).not.toBe("prestige");
+    app.state.mode = "upgrade";
+    app.state.eraEarned = 2e7;
+    app.render();
+    expect(document.querySelector('[data-live="ambient-yield"]')!.textContent).toBe("+2 Arete pending");
+    document.getElementById("phone-reset")!.click();
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.state.arete).toBe(2);
+    expect(app.state.prestiges).toBe(1);
+  });
   it("docks above the board: grouped resource reads left, paired feats/chords chips right, no session read", () => {
     app.render();
     const ledger = document.getElementById("board-ledger")!;

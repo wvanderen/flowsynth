@@ -4737,5 +4737,15 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
   .clock-anchor .display-well { padding: 4px 6px; }
 }
 
+.ambient-reset { display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 8px 12px; font-size: 12px; }
+.ambient-reset button { min-height: 44px; }
+.ambient-reset button[aria-disabled="true"] { color: var(--muted); border-style: dashed; }
+.ambient-reset small { max-width: 22ch; }
+@media (max-width: 760px) {
+  #game-info-strip { display: flex; flex-wrap: wrap; }
+  #game-info-strip > .ambient-reset { flex: 1; flex-direction: row; align-items: center; flex-wrap: wrap; }
+  #board-ledger .ambient-reset { display: none; }
+}
+
 .dev-tuning-label { display: flex; flex-direction: column; gap: 3px; font: 11px var(--mono); color: var(--ink); }
 .dev-panel .dev-tuning-label input[type="number"] { width: 126px; }
