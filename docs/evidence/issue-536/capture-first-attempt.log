@@ -1,0 +1,11 @@
+desktop completed
+file:///home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11/docs/evidence/issue-536/capture.mjs:12
+const evaluate=async expression=>{const r=await send('Runtime.evaluate',{expression,awaitPromise:true,returnByValue:true});if(r.exceptionDetails)throw new Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
+                                                                                                                                                       ^
+
+Error: {"exceptionId":1,"text":"Uncaught","lineNumber":0,"columnNumber":70,"scriptId":"128","exception":{"type":"object","subtype":"error","className":"Error","description":"Error: Missing [data-entry=\"charge\"]\n    at <anonymous>:1:77\n    at <anonymous>:1:244","objectId":"-8681988152955418673.2.2"}}
+    at evaluate (file:///home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11/docs/evidence/issue-536/capture.mjs:12:152)
+    at async act (file:///home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11/docs/evidence/issue-536/capture.mjs:18:15)
+    at async file:///home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11/docs/evidence/issue-536/capture.mjs:67:3
+
+Node.js v26.13.0

@@ -1,0 +1,131 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T23:29:55.390Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11",
+  "branch": "t3/integrated-encyclopedia-acceptance-1",
+  "commit": "3027445959f905703ea4be2b8f8c3de7fb631f64",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-536/browser-observations-obstructed.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/capture-first-attempt.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/capture-instrumentation-obstruction.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/capture-preflight.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/capture-second-attempt.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/capture-third-attempt.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/capture.mjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/desktop-charge.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/desktop-chords.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/desktop-confirmation.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/desktop-global.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/desktop-inspection-return.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/desktop-prestige.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/desktop-topics.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/interrupted-full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-charge-lower.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-charge.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-chords-lower.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-chords.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-confirmation.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-global.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-inspection-attempt.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-inspection-unavailable.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-prestige-lower.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-prestige.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/phone-topics.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

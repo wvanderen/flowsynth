@@ -1,0 +1,3 @@
+desktop completed
+phone inspection unavailable {"unavailable":"Error: {\"exceptionId\":4,\"text\":\"Uncaught\",\"lineNumber\":0,\"columnNumber\":70,\"scriptId\":\"273\",\"exception\":{\"type\":\"object\",\"subtype\":\"error\",\"className\":\"Error\",\"description\":\"Error: Missing [data-entry=\\\"charge\\\"]\\n    at <anonymous>:1:77\\n    at <anonymous>:1:187\",\"objectId\":\"-8681988152955418673.5.2\"}}","actual":{"size":[390,844],"modal":null,"detail":"hex-detail sheet","button":{"x":78,"y":532.375,"width":282,"height":44,"top":532.375,"right":360,"bottom":576.375,"left":78}}}
+phone completed
