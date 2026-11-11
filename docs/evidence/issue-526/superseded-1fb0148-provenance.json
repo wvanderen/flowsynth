@@ -1,0 +1,87 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-10T23:02:18.387Z",
+  "url": "http://localhost:5176/",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74",
+  "branch": "t3/world-progression-526",
+  "commit": "1fb01489f0a9605477bdfba5a51b83767b164387",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-526/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/browser-checks.js",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/browser-healthcheck.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/browser-results.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/check.exit",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/recovery-policy.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/recovery-targeted.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/superseded-9f5f514-browser-results.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/superseded-9f5f514-check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/superseded-9f5f514-provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/superseded-9f5f514-test-incomplete.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/targeted-final-merge.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/targeted-implementation.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/targeted-merge.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/targeted-recipes.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/test.log",
+        "state": "??"
+      }
+    ]
+  }
+}

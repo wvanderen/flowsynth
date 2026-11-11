@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run tools/later-eras.test.ts -t neither World policy records
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 15 skipped (16)
+   Start at  16:53:52
+   Duration  412.66s (transform 642ms, setup 0ms, import 184.46s, tests 227.84s, environment 0ms)
+

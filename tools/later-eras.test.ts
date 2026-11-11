@@ -105,12 +105,14 @@ describe("the declared evaluation matrix", () => {
     // read off the authored ladders, never restated; a deeper bank's
     // ladders price their own enumeration.
     const firstRungs = { catalogEntryOwned: false, arete: 2, world: { columns: [], hone: { chargeBlade: 0 } } } as unknown as GameState;
-    for (const piece of ["entry", "column", "hone"] as const) {
+    for (const piece of ["entry", "hone"] as const) {
       expect(routePiecePriceAt(firstRungs, piece)).toBe(1);
     }
+    expect(routePiecePriceAt(firstRungs, "column")).toBeNull();
     const orders = affordableOrdersAt(firstRungs);
-    // The empty route, three singles, and all six two-piece permutations.
-    expect(orders).toHaveLength(10);
+    // Empty, two singles, both orders of the remaining entry/Hone pair.
+    expect(orders).toHaveLength(5);
+    expect(orders.every((order) => !order.includes("column"))).toBe(true);
     expect(orders[0]).toEqual([]);
     for (const order of orders) {
       const spend = order.reduce((sum, piece) => sum + (routePiecePriceAt(firstRungs, piece) ?? 0), 0);
@@ -216,7 +218,8 @@ describe("the era view and the route probe on real walks", () => {
     expect(defeatViews.length).toBeGreaterThan(0);
     // The era that killed carried the route's purchases and placements.
     const route = defeatViews[0]!;
-    expect(route.purchases.some((label) => label.startsWith("World Column"))).toBe(true);
+    expect(route.purchases.some((label) => label.startsWith("World Column"))).toBe(false);
+    expect(pushingWalk.state.world.starterColumnGranted).toBe(true);
     expect(route.placements.length).toBeGreaterThan(0);
     // The routine nous purchases ride their count; the route is the
     // Arete-scale line.
@@ -247,10 +250,10 @@ describe("the era view and the route probe on real walks", () => {
         expect(row.spend).toBeLessThanOrEqual(probe.budget);
       }
     }
-    // The empty first-bank order has no Column: a weapon seat alone is
-    // not a functioning rig, and the parent's later bank proves nothing
-    // about any enumerated branch.
-    expect(probes[0]!.orders[0]!.placementsOk).toBe(false);
+    // The free starter kit makes even the empty order structurally
+    // placeable. Seats alone still prove no continued forward progress,
+    // and the parent's later bank proves nothing about these branches.
+    expect(probes[0]!.orders[0]!.placementsOk).toBe(true);
     expect(probes.every((probe) => !probe.routeDemonstrated)).toBe(true);
   });
 
@@ -369,14 +372,15 @@ describe("the declared World policies' spending orders", { timeout: 1_800_000 },
       index > firstBank && event.kind === "world" && event.ok && !isPlacement(event.label))?.label ?? null;
   };
 
-  it("support buys its charge line before its blade; combat its blade before its charge line", () => {
+  it("neither World policy records a World purchase within the four-day fixture after Column retirement", () => {
     const support = firstWorldPurchaseAfterFirstBank("support");
     const combat = firstWorldPurchaseAfterFirstBank("combat");
-    // The starter grant lands at the first bank, so both orders have a
-    // blade to hone and a line to build — the first post-bank World
-    // purchase names the policy's declared order.
-    expect(support).toBe("World Column");
-    expect(combat).toBe("Hone rank — chargeBlade");
+    // The starter kit replaces Column spending. Historical policy names
+    // remain readable, but neither policy can buy another Column.
+    // Neither reaches a World purchase within this fixture's budget now
+    // that the Column purchase is gone. Do not invent later Hone evidence.
+    expect(support).toBeNull();
+    expect(combat).toBeNull();
   });
 
   it("ignoring never buys or deploys a World occupant, and still banks its claims", () => {

@@ -488,12 +488,11 @@ describe("the pushing policy", () => {
     expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
-    // The earned spending: the Catalog entry with the first claim and at
-    // least the first Charge Column — nothing granted, nothing minted.
-    // The starter Charge Blade is the first World-eligible claim's own
-    // grant; the exact rung count the bank funds rides the balance.
+    // The legacy entry still spends pending the remaining retirement slice.
+    // The Column now comes from the positive bank, never an Arete purchase.
     expect(record.areteSpent.entry).toBe(1);
-    expect(record.areteSpent.columns).toBeGreaterThanOrEqual(1);
+    expect(record.areteSpent.columns).toBe(0);
+    expect(record.state.world.starterColumnGranted).toBe(true);
     expect(record.state.world.starterWeaponGranted).toBe(true);
     expect(record.state.arete).toBeLessThan(record.claims[0]! + record.claims[1]!);
     // No fabricated production: every ν the state ever earned is what the
@@ -533,7 +532,7 @@ describe("the pushing policy", () => {
     // placement rule too.
     expect(column.pos !== null && record.state.modules.some((m) => m.pos !== null && sameHex(m.pos, column.pos!))).toBe(true);
     const worldEvents = record.events.filter((event) => event.kind === "world" && event.ok);
-    expect(worldEvents.map((event) => event.label)).toContain("World Column");
+    expect(worldEvents.map((event) => event.label)).not.toContain("World Column");
     expect(worldEvents.some((event) => event.label.startsWith("Placed the chargeBlade at"))).toBe(true);
     expect(worldEvents.some((event) => event.label.startsWith("Placed a Charge Column at"))).toBe(true);
 

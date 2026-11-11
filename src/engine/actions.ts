@@ -1,9 +1,9 @@
 import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf, WORLD_ENEMIES } from "./constants";
-import { bankableClaimOf, frontierEntitlement, horizonReached } from "./accumulator";
+import { bankableClaimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
 import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, isPriceableLevel, isResponseSupport, levelCost, levelsCost, modulePower, mutatorSlotCost, responseSupportPowerOf, rowGateOwed, syncRates, wholeNous } from "./economy";
-import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "./world";
+import { enemyDefAt, honeCostOf, worldOccupantAt } from "./world";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
 import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
@@ -1106,12 +1106,9 @@ export function buyCapacity(state: GameState): ActionResult {
 // further, to prototype maximums four and five — and two discounts off the
 // original rung prices, 20% then 40% in total. One-time, Arete-paid, and
 // surviving prestige; every ceiling costs more than the discount standing
-// beside it. Both render only past the Arete Catalog's entry (the face's
-// lock screen), so the entry is their mandatory prerequisite here too —
-// the playable purchase path the harness buys (issue #262).
+// beside it. ADR-0087 removes the obsolete Catalog entry prerequisite.
 export function buyCapacityCeiling(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  if (!state.catalogEntryOwned) return fail("Enter the Arete Catalog first.");
   const price = nextCeilingPrice(state);
   if (price === null) return fail("Both ceiling unlocks are owned.");
   if (state.arete < price) return fail("Not enough Arete.");
@@ -1122,7 +1119,6 @@ export function buyCapacityCeiling(state: GameState): ActionResult {
 
 export function buyCapacityDiscount(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  if (!state.catalogEntryOwned) return fail("Enter the Arete Catalog first.");
   const price = nextDiscountPrice(state);
   if (price === null) return fail("Both discounts are owned.");
   if (state.arete < price) return fail("Not enough Arete.");
@@ -1137,11 +1133,9 @@ export function buyCapacityDiscount(state: GameState): ActionResult {
 // milestone past the base ceiling. One-time, Arete-paid, escalating
 // ladder, strictly finite; the rungs are memorized and survive prestige
 // like the Catalog's other sheet purchases. Refusals land before any
-// charge: the Arete mode lock, the Catalog entry the surface stands
-// behind, the exhausted ladder, and the unaffordable price.
+// charge: the Arete mode lock, the exhausted ladder, and the unaffordable price.
 export function buyMergeCapIncrease(state: GameState): ActionResult {
   if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  if (!state.catalogEntryOwned) return fail("Enter the Arete Catalog first.");
   const price = mergeCapIncreaseCost(state);
   if (price === null) return fail("The merge ladder is at its cap.");
   if (state.arete < price) return fail("Not enough Arete.");
@@ -1232,14 +1226,19 @@ export function prestige(state: GameState, tuning: PrestigeTuning = {}): ActionR
   if (!Number.isFinite(grant)) return fail("The frontier grant cannot be read safely, so nothing was banked.");
   state.arete += claim;
   state.world.frontier += claim;
-  // The starter grant (issue #425, priority 2): the first World-eligible
-  // claim — the era's entitlement reaching at least the Column's price,
-  // which the entry grant's construction guarantees — lands the Charge
-  // Blade copy outright. Granted exactly once, ever; the eligibility read
-  // keeps the grant tied to the curve, not to the claim's rounded figure.
-  if (!state.world.starterWeaponGranted && frontierEntitlement(state.eraEarned, tuning.claimBase) >= columnCost(0)) {
-    state.world.weapons.push(createWeapon(state, "chargeBlade"));
-    state.world.starterWeaponGranted = true;
+  // Discovery is the actual positive bank, not pending entitlement or a
+  // purchase. Each starter entitlement is permanent and independently
+  // recorded so translated saves cannot receive either copy twice.
+  if (claim > 0) {
+    state.world.unlocked = true;
+    if (!state.world.starterColumnGranted) {
+      state.world.columns.push(createWorldColumn(state));
+      state.world.starterColumnGranted = true;
+    }
+    if (!state.world.starterWeaponGranted) {
+      state.world.weapons.push(createWeapon(state, "chargeBlade"));
+      state.world.starterWeaponGranted = true;
+    }
   }
   state.prestiges++;
   for (const module of state.modules) {
@@ -1313,18 +1312,10 @@ export function setBoosterTarget(state: GameState, id: string, targetId: string 
 
 // ── The World layer's between-session actions (issue #425, ADR-0074) ──
 
-// The Charge Column's Arete purchase (issue #425, priority 6): another
-// copy on the authored escalating ladder — multiple copies allowed, the
-// entry priced from the frontier curve's floor. The purchase is permanent:
-// it is memorized by nothing but the reset contract, and no refund path
-// exists for it or any World purchase.
-export function buyChargeColumn(state: GameState): ActionResult {
-  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  const price = columnCost(state.world.columns.length);
-  if (state.arete < price) return fail("Not enough Arete.");
-  state.arete -= price;
-  state.world.columns.push(createWorldColumn(state));
-  return { ok: true, unlocked: checkUnlocks(state) };
+// Compatibility refusal for old command/recording clients. ADR-0087
+// retires Column purchases; no caller may still spend Arete or mint one.
+export function buyChargeColumn(_state: GameState): ActionResult {
+  return fail("Charge Columns are no longer sold.");
 }
 
 // The Hone purchase (issue #425, priority 7): one rank of the weapon

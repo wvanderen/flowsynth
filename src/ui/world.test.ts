@@ -44,6 +44,7 @@ function seedEra(): void {
   s.catalogEntryOwned = true;
   s.arete = 20;
   s.eraEarned = BALANCE.world.entryNous * 1.5;
+  s.world.unlocked = true;
   s.world.weapons.push(
     { id: "wp1", type: "chargeBlade", pos: hex(1, 0), store: 0, cooldown: 0, targetPriority: [] },
     { id: "wp2", type: "chargeBlade", pos: null, store: 0, cooldown: 0, targetPriority: [] },
@@ -66,25 +67,20 @@ describe("the layer legend (issue #426)", () => {
     expect(layers).toEqual(["world", "modules"]);
   });
 
-  it("pre-reveal the World face stands locked-but-visible; the click previews the reveal and flips nothing", () => {
-    const legend = document.getElementById("layer-legend")!;
-    const world = legend.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!;
-    expect(world.classList.contains("locked")).toBe(true);
-    expect(world.querySelector(".world-tab-lock")).not.toBeNull();
-    world.click();
+  it("before discovery World has no navigation or map preview", () => {
+    expect(document.querySelector('[data-legend-layer="world"]')).toBeNull();
+    app.setBoardLayer("world");
     expect(app.ui.boardLayer).toBe("modules");
-    expect(status()).toContain("era-earned");
-    expect(status()).not.toContain("era-earned era-earned");
     expect(grid().querySelector("[data-world-cell]")).toBeNull();
   });
 
-  it("pre-reveal in flow the preview stands too — the reveal is no spending surface", () => {
+  it("before discovery flow has no World preview either", () => {
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
-    document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="world"]')!.click();
+    expect(document.querySelector('#layer-legend [data-legend-layer="world"]')).toBeNull();
+    app.setBoardLayer("world");
     expect(app.ui.boardLayer).toBe("modules");
-    expect(status()).toContain("era-earned");
     endSession(app.state);
   });
 

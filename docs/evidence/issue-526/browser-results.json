@@ -1,0 +1,52 @@
+{
+  "sourceCommit": "bddde9aea7a60c3e6a44069f5a9466ff93ab2da4",
+  "url": "http://localhost:5176/?dev=1",
+  "desktop": {
+    "viewport": [1280, 900],
+    "scriptedChecksPassed": 18,
+    "catalogBounds": { "left": 330, "top": 150, "right": 950, "bottom": 750, "width": 620, "height": 600 }
+  },
+  "phone": {
+    "viewport": [390, 844],
+    "scriptedChecksPassed": 18,
+    "catalogBounds": { "left": 10, "top": 209.453125, "right": 380, "bottom": 834, "width": 370, "height": 624.546875 }
+  },
+  "scriptExecution": "(async () => eval(await (await fetch('/docs/evidence/issue-526/browser-checks.js')).text()))()",
+  "scriptedCheckCountNote": "15 recorded checks plus three confirmation assertions at each viewport",
+  "scriptedObservations": [
+    "Fresh World navigation absent",
+    "Fresh Hex detail has no World placeholder",
+    "Each of three resets retains confirmation",
+    "Zero-yield reset leaves World hidden",
+    "Pending positive entitlement leaves World hidden",
+    "Positive bank presents starter kit",
+    "Positive bank reveals World and exactly one Column and Blade",
+    "World map reachable immediately in fresh era",
+    "Later zero reset retains World and does not duplicate kit",
+    "Catalog contains neither entry gate nor Column sale",
+    "Hone available with catalogEntryOwned false",
+    "Keyboard focus opens Hone disclosure and Escape dismisses it",
+    "Click/tap handler opens Hone disclosure and tap-away handler dismisses it",
+    "Hone debits one Arete without entry"
+  ],
+  "snapshotRecovery": {
+    "classification": "browser-snapshot",
+    "rawFailureEachAttempt": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms.",
+    "attempts": 3,
+    "recovery": [
+      "Ran evidence-healthcheck against verified URL; server/provenance healthy",
+      "preview_status available true, loading false, dialog null, expected URL; visible false",
+      "preview_open open true; preview_status still visible false, otherwise ready",
+      "Second identical snapshot timed out",
+      "preview_status again ready except visible false",
+      "Third identical snapshot timed out; budget exhausted, no further snapshots attempted"
+    ]
+  },
+  "unavailable": [
+    "Desktop screenshots of affected navigation, grant and Catalog states",
+    "Phone screenshots of affected navigation, grant and Catalog states (snapshot pass exhausted)",
+    "Visual comparison of final composition, clipping, keyboard focus and non-color state distinctions against pinned prototype",
+    "Physical touch input (scripted click/tap handlers only)",
+    "Reduced-motion browser emulation and visual inspection"
+  ]
+}

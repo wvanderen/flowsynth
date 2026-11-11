@@ -1,4 +1,4 @@
-import { createInitialState, createModule, freshEnemyStates, normalizeChordDiscovery, normalizeModules, normalizeWorld, openingGrant } from "./state";
+import { createInitialState, createModule, createWorldColumn, createWeapon, freshEnemyStates, normalizeChordDiscovery, normalizeModules, normalizeWorld, openingGrant } from "./state";
 import { classDefOf, freshClassPair, normalizeHabitClasses } from "./classes";
 import { activeGoals, normalizeGoals } from "./goals";
 import { DEFAULT_HABIT_COLOR, normalizeHabitColor } from "./habits";
@@ -532,6 +532,27 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
   // cannot make shipped play read a comparison curve.
   delete (merged as unknown as Record<string, unknown>).candidates;
   merged.purchased = { ...fresh.purchased, ...merged.purchased };
+  // ADR-0087 (#526): translate World discovery without resetting the era
+  // or refunding purchases. A banked frontier, the old starter receipt,
+  // or retained World possessions prove eligibility; pending entitlement,
+  // generic Arete spending and prestige count do not. The new receipt
+  // makes the free Column additive even for owners of purchased Columns.
+  const world = merged.world;
+  if (!isRecord(raw.world) || typeof raw.world.unlocked !== "boolean") {
+    world.unlocked = world.frontier > 0 || world.starterWeaponGranted ||
+      world.columns.length > 0 || world.weapons.length > 0 || world.hone.chargeBlade > 0;
+  }
+  if (world.unlocked) {
+    if (!world.starterColumnGranted) {
+      world.columns.push(createWorldColumn(merged));
+      world.starterColumnGranted = true;
+    }
+    if (!world.starterWeaponGranted) {
+      // A retained copy already satisfies the old starter entitlement.
+      if (world.weapons.length === 0) world.weapons.push(createWeapon(merged, "chargeBlade"));
+      world.starterWeaponGranted = true;
+    }
+  }
   if (recovered) return { state: merged, recovered };
   return migration ? { state: merged, migration } : { state: merged };
 }

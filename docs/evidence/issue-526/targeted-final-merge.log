@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/ui/world.test.ts src/ui/app.world-progression.test.ts src/ui/app.board.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74
+
+
+ Test Files  3 passed (3)
+      Tests  149 passed (149)
+   Start at  17:01:49
+   Duration  10.28s (transform 1.09s, setup 0ms, import 1.57s, tests 7.34s, environment 727ms)
+

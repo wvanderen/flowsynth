@@ -172,10 +172,9 @@ export function attackPowerOf(state: GameState, type: WeaponType): number {
   return BALANCE.world.attackBase + state.world.hone[type] * BALANCE.world.honeAttackPerRank;
 }
 
-// The Charge Column's escalating Arete ladder (issue #425): the copy `owned`
-// columns already stand behind costs firstPrice × growth^owned. The entry
-// price is the floor the frontier curve's construction asserts the first
-// World-eligible claim clears.
+// Historical Column-price arithmetic retained for calibration/translation
+// tooling provenance. ADR-0087 retires the purchase: the action refuses and
+// neither the live starter grant nor Catalog reads this price.
 export function columnCost(owned: number): number {
   if (owned < 0) throw new Error("owned must be non-negative");
   return BALANCE.world.columnFirstPrice * BALANCE.world.columnPriceGrowth ** owned;

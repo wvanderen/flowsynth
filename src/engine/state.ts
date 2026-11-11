@@ -206,6 +206,8 @@ export function freshEnemyStates(): WorldState["enemies"] {
 
 export function freshWorld(): WorldState {
   return {
+    unlocked: false,
+    starterColumnGranted: false,
     frontier: 0,
     starterWeaponGranted: false,
     columns: [],
@@ -253,6 +255,8 @@ export function normalizeWorld(raw: unknown): WorldState {
   if (typeof shape.frontier === "number" && Number.isFinite(shape.frontier) && shape.frontier > 0) {
     world.frontier = shape.frontier;
   }
+  if (shape.unlocked === true) world.unlocked = true;
+  if (shape.starterColumnGranted === true) world.starterColumnGranted = true;
   if (shape.starterWeaponGranted === true) world.starterWeaponGranted = true;
   if (Array.isArray(shape.columns)) {
     for (const column of shape.columns) {

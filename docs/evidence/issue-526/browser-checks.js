@@ -1,0 +1,54 @@
+// Run in the verified ?dev=1 tab at each viewport; no ordinary save touched.
+(async () => {
+  const app = window.__flowsynth;
+  await app.devLaunchScenario("fresh-start");
+  app.devScenarioAssert();
+  const assert = (ok, name) => { if (!ok) throw new Error(name); };
+  const worldDoor = () => document.querySelector('[data-legend-layer="world"]');
+  const observations = { viewport: [innerWidth, innerHeight], url: location.href, checks: [] };
+  const check = (ok, name) => { assert(ok, name); observations.checks.push(name); };
+  check(!worldDoor(), "fresh World navigation absent");
+  app.openDetail(app.state.cells[0]);
+  check(!document.querySelector('[data-detail-face="world"]'), "fresh detail has no World placeholder");
+  app.closeDetail();
+  const reset = (depth) => {
+    app.state.eraEarned = depth;
+    app.render();
+    app.openLedger("arete");
+    document.getElementById("prestige-door").click();
+    assert(app.ui.modal === "prestige", "confirmation retained");
+    document.getElementById("prestige-confirm").click();
+  };
+  reset(7_000_000);
+  check(!worldDoor() && app.state.arete === 0, "confirmed zero reset leaves World hidden");
+  app.state.eraEarned = 20_000_000;
+  app.render();
+  check(!worldDoor(), "pending positive entitlement leaves World hidden");
+  reset(20_000_000);
+  check(app.ui.modal === "grant" && document.getElementById("modal-content").textContent.includes("Column"), "positive bank presents starter kit");
+  app.closeModal();
+  check(!!worldDoor() && app.state.world.columns.length === 1 && app.state.world.weapons.length === 1, "positive bank reveals World and exact kit");
+  worldDoor().click();
+  check(app.ui.boardLayer === "world" && !!document.querySelector("[data-world-cell]"), "World navigation opens map in fresh era");
+  reset(7_000_000);
+  check(!!worldDoor() && app.state.world.columns.length === 1 && app.state.world.weapons.length === 1, "later zero reset keeps World and does not duplicate kit");
+  app.openModal("catalog");
+  document.querySelector('[data-catalog-face="arete"]').click();
+  check(!document.getElementById("buy-arete-entry") && !document.getElementById("buy-world-column"), "Catalog has neither entry gate nor Column sale");
+  check(!app.state.catalogEntryOwned && !document.getElementById("buy-world-hone").disabled, "Hone available without legacy entry");
+  const honeRow = document.getElementById("buy-world-hone").closest(".catalog-row");
+  const term = honeRow.querySelector(".term-trigger");
+  term.focus();
+  const tip = document.getElementById(term.getAttribute("aria-describedby"));
+  check(tip.classList.contains("inst-show"), "Hone disclosure opens on keyboard focus");
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  check(!tip.classList.contains("inst-show"), "Escape dismisses disclosure");
+  term.click();
+  check(tip.classList.contains("inst-show"), "Hone disclosure opens on click/tap handler");
+  document.body.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+  check(!tip.classList.contains("inst-show"), "tap-away handler dismisses disclosure");
+  document.getElementById("buy-world-hone").click();
+  check(app.state.world.hone.chargeBlade === 1 && app.state.arete === 1, "Hone purchase debits one Arete without entry");
+  observations.catalogBounds = document.getElementById("modal-content").getBoundingClientRect().toJSON();
+  return observations;
+})()

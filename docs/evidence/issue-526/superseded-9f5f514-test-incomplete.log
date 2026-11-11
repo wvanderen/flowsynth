@@ -1,0 +1,21 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74
+
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+ ❯ |engine| src/engine/progression-presets.test.ts (9 tests | 1 failed) 337523ms
+     × stops the pushing walk at the living fight with the placement unplayed 15ms
+ ❯ |engine| tools/later-eras.test.ts (16 tests | 3 failed | 1 skipped) 371076ms
+     × demonstrates the combat route surpassing the first frontier's resistance 7ms
+     × enumerates orders without mistaking seats or another branch for forward progress 605ms
+     × support buys its charge line before its blade; combat its blade before its charge line 233299ms
