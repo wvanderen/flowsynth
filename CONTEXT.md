@@ -10,6 +10,20 @@ The [World feedback brief](docs/world-layer-feedback-brief.md) and [ADR-0087](do
 
 ## Language
 
+### Learning and reference (confirmed direction; not yet implemented)
+
+**Encyclopedia**:
+The browsable reference that teaches reusable concepts and exceptional behavior through short explanations and illustrative examples. Reading is voluntary; it does not replace the live facts needed to make a decision. See the [confirmed brief](docs/encyclopedia-disclosure-brief.md).
+
+**Encyclopedia entry**:
+A durable explanation of a concept, available when that concept becomes relevant to the player. Entries explain mental models rather than cataloging every named module or purchase.
+
+**Concept introduction**:
+The occasion when a concept becomes relevant and its entry becomes available. It invites reading without automatically opening a lesson or requiring a tutorial sequence.
+
+**Unseen entry**:
+An available encyclopedia entry the player has not opened. Opening makes it seen, not learned or completed; understanding is not inferred from reading state.
+
 ### The board
 
 **Board**:

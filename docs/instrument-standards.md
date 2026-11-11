@@ -57,6 +57,18 @@ Inventory rows are compact open lines; collapse leaves a hypercube symbol and st
 
 ## Writing and disclosure
 
+### Confirmed Encyclopedia and selective-disclosure amendment (not yet implemented)
+
+The owner-confirmed [Encyclopedia brief](encyclopedia-disclosure-brief.md) replaces blanket domain-term disclosure and tooltip-only conceptual teaching as the target policy. The Encyclopedia teaches concepts through short explanations and illustrative examples; entries become available when relevant but never open automatically. A quiet unseen dot invites voluntary reading. Contextual help supplies a deliberately placed route to the relevant available entry, not a control on every term occurrence.
+
+Live surfaces retain current state, concrete effects, costs, requirements, exceptional conditions and consequential warnings. Short local disclosures remain when useful. The removal test is: **could a player who understands the concept still make a materially mistaken choice because this fact is missing?** If yes, retain it locally. Accessible names and unfamiliar-action labels remain. Reading must preserve the underlying task and must neither pause nor end flow.
+
+Migration is concept-by-concept: deliver its entry, availability trigger, contextual routes and useful example before removing redundant teaching. Unmigrated surfaces retain their existing contracts; this is not a global tooltip purge. The confirmed first slice is Charge, Chords and harmonic capacity, and Prestige. Exact icon placement and reading-surface composition still require layout review. No implementation or visual acceptance is claimed here.
+
+**Precedence:** this amendment supersedes the blanket “wherever it appears” term rule, the requirement that every product effect use hoverable terms, and the unexceptioned tooltip-only doctrine below for migrated conceptual teaching. Historical ADR-0037's corresponding doctrine is superseded on that point only: the rate roster does not gain inline calculations or expansion controls. Retained local tooltips still follow the short-gloss, plain-layer, keyboard/touch-access rules below. This amendment does not authorize expandable Details sections or change unrelated interaction contracts.
+
+The following historical rules apply subject to that precedence and transition:
+
 - **The readout is name + state + concrete effect**, compact: `Chords (4/11) +8% ν`. An effect may be a concise symbol or relation when it communicates the concrete outcome: `Fill with charge → Mutator draft`.
 - **Units identify figures.** Cut redundant labels, repeated balances, repeated names, generic furniture, and every explanatory paragraph for behavior the controls or visuals already show; filler absent from the intentional content outline goes.
 - **Deeper mechanics live in the tooltip layer**, not expandable Details sections. *Amended 2026-10-14 (issue #334): the transient chord readout carries no disclosures at all — plain chips only, no interactive terms, no dotted disclosure underlines — with the deeper facts a click away in the Hex detail. The play-feedback interview's inline-calculation exception for the rate roster was narrowed by same-day review: no expansion controls ship for now (an arrow on the hover-disclosed popover reads as a hover affordance, not an accessible door), and the tooltip doctrine stands unexceptioned.*
@@ -92,8 +104,8 @@ Compare the changed surface with the pinned prototype. A surface passes when:
 - module, category, and resource semantics stay intact (hexes are modules; hues are categories and resources);
 - no paragraph is needed to explain behavior the controls or visuals show;
 - every tooltip earns its existence — it shows a mechanic the surface cannot, and it restates nothing visible — and its copy holds the gloss standard;
-- every purchasable thing is named per the register: proper name, one effect line, hoverable terms;
-- domain terms in copy hover to their CONTEXT.md meanings;
+- every purchasable thing is named per the register: proper name and one concrete effect line; migrated concepts use selective contextual help rather than blanket hoverable terms;
+- migrated conceptual teaching is reachable through the relevant available Encyclopedia entry; retained local facts pass the decision-critical removal test, and unmigrated terms keep their existing disclosure contracts;
 - wherever modules and mutators co-list, mutators lead.
 
 Judged specifically on: clipped outer panels where the silhouette calls for them, open internal divisions instead of nested cards, control shape against the controls sheet (square-cut controls, the vertical goal bars, the plain tooltip layer, the swatch grammar), purposeful visible content, compact name/state/effect/cost readouts, tooltip economy, product naming, and usable disclosure. Critical prompts stay (dismissal affordances, destructive-action warnings), as does accessibility: readable text, visible keyboard focus, touch targets, non-color state distinctions, reduced motion.
