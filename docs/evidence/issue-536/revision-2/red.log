@@ -1,0 +1,35 @@
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-de769b0b-5f1f9adc92c0d752
+
+ ❯ |ui| src/ui/app.encyclopedia.test.ts (15 tests | 2 failed | 13 skipped) 199ms
+     × returns from the rate section door with its scroll and selection intact 127ms
+     × returns from the library section door with its scroll and selection intact 70ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.encyclopedia.test.ts > voluntary Encyclopedia > returns from the rate section door with its scroll and selection intact
+ FAIL  |ui| src/ui/app.encyclopedia.test.ts > voluntary Encyclopedia > returns from the library section door with its scroll and selection intact
+AssertionError: expected +0 to be 72 // Object.is equality
+
+- Expected
++ Received
+
+- 72
++ 0
+
+ ❯ src/ui/app.encyclopedia.test.ts:178:75
+    176|     expect(app.ui.modal).toBe(modal);
+    177|     expect(app.ui.chordStage).toBe(stage);
+    178|     expect(document.querySelector<HTMLElement>(".modal-face")!.scrollT…
+       |                                                                           ^
+    179|     expect(document.activeElement?.id).toBe("about-chords");
+    180|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 13 skipped (15)
+   Start at  17:52:18
+   Duration  1.95s (transform 977ms, setup 0ms, import 1.17s, tests 199ms, environment 219ms)
+

@@ -164,19 +164,35 @@ describe("voluntary Encyclopedia", () => {
     app.openModal("catalog");
     expect(app.state.encyclopedia).toEqual({ charge: "available", chords: "available", prestige: "available" });
   });
-  it.each(["rate", "library"] as const)("returns from the %s section door with its scroll and selection intact", modal => {
+  it.each([
+    ["rate", 72], ["library", 72], ["rate", 0], ["library", 0],
+  ] as const)("returns from the %s section door with scroll %i and selection intact", (modal, top) => {
     app.openModal(modal);
     const stage = app.ui.chordStage;
-    const content = document.getElementById("modal-content")!;
-    content.scrollTop = 72;
+    const content = document.querySelector<HTMLElement>(".modal-face")!;
+    content.scrollTop = top;
     const help = document.getElementById("about-chords")!;
     expect(help).not.toBeNull();
     help.focus(); help.click();
     app.closeModal();
     expect(app.ui.modal).toBe(modal);
     expect(app.ui.chordStage).toBe(stage);
-    expect(document.getElementById("modal-content")!.scrollTop).toBe(72);
+    expect(document.querySelector<HTMLElement>(".modal-face")!.scrollTop).toBe(top);
     expect(document.activeElement?.id).toBe("about-chords");
+  });
+  it("explains charge phases and distinguishes certified allocation from a budget-limited incumbent", () => {
+    app.openModal("catalog"); app.closeModal();
+    door().click(); button("Charge · Unseen").click();
+    const charge = document.querySelector(".encyclopedia-entry")!.textContent!;
+    expect(charge).toContain("Upgrade mode and paused flow stop charge delivery and reserve drain");
+    expect(charge).toContain("Breathers keep delivery and reserve drain running");
+    expect(charge).not.toContain("Charge pauses between sessions");
+    button("Chords and harmonic capacity").click();
+    const chords = document.querySelector(".encyclopedia-entry")!.textContent!;
+    expect(chords).toContain("proven optimal only when certified");
+    expect(chords).toContain("search budget");
+    expect(chords).toContain("best allocation found so far");
+    expect(chords).toContain("local certification status in Chord facts");
   });
   it("keeps hidden chord routes closed, then encounters an owned voice without opening and never relocks it", () => {
     app.openEncyclopedia("chords");

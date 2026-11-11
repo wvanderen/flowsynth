@@ -1,0 +1,9 @@
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-de769b0b-5f1f9adc92c0d752
+
+
+ Test Files  1 passed (1)
+      Tests  2 passed | 13 skipped (15)
+   Start at  17:52:34
+   Duration  1.98s (transform 995ms, setup 0ms, import 1.19s, tests 181ms, environment 219ms)
+

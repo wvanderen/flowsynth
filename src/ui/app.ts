@@ -2718,13 +2718,13 @@ export class App {
   encyclopediaEntry: EntryId | null = null;
   encyclopediaHistory: EntryId[] = [];
   encyclopediaQuery = "";
-  private encyclopediaOrigin: { modal: ModalKind; focus: HTMLElement | null; id: string; scroll: [string, number][] } | null = null;
+  private encyclopediaOrigin: { modal: ModalKind; focus: HTMLElement | null; id: string; scroll: [string, number][]; faceScroll: number | null } | null = null;
 
   openEncyclopedia(id?: EntryId): void {
     if (id && !availableEntries(this.state).some(entry => entry.id === id)) return;
     if (this.ui.modal !== "encyclopedia") {
       const focus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      this.encyclopediaOrigin = { modal: this.ui.modal, focus, id: focus?.id ?? "", scroll: [...document.querySelectorAll<HTMLElement>("[id]")].filter(el => el.scrollTop > 0).map(el => [el.id, el.scrollTop]) };
+      this.encyclopediaOrigin = { modal: this.ui.modal, focus, id: focus?.id ?? "", scroll: [...document.querySelectorAll<HTMLElement>("[id]")].map(el => [el.id, el.scrollTop]), faceScroll: document.querySelector<HTMLElement>(".modal-face")?.scrollTop ?? null };
       this.encyclopediaQuery = "";
       this.encyclopediaHistory = [];
       this.captureModalInvoker();
@@ -2783,6 +2783,10 @@ export class App {
       this.ui.modal = origin.modal;
       this.render();
       for (const [id, top] of origin.scroll) { const el = document.getElementById(id); if (el) el.scrollTop = top; }
+      // The modal face is recreated by render and has no ID. Restore even zero:
+      // opening the ledger may have scrolled its selected section into view.
+      const face = document.querySelector<HTMLElement>(".modal-face");
+      if (face && origin.faceScroll !== null) face.scrollTop = origin.faceScroll;
       const focus = origin.focus?.isConnected ? origin.focus : document.getElementById(origin.id);
       if (!origin.modal) this.restoreModalInvoker();
       if (focus) focus.focus({ preventScroll: true });
