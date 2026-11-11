@@ -3642,7 +3642,7 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
         <div class="candidate-tile" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" aria-label="Take ${candidate.type === "column" ? "Column" : "Charge Blade"}" aria-describedby="forge-effect-${candidate.id}"></button>
           <span class="module-preview">${worldTileSvg(candidate.type === "column" ? "column" : "weapon")}</span>
           <span class="candidate-readout"><span class="candidate-name">${candidate.type === "column" ? "Column" : "Charge Blade"}</span>
-          <span id="forge-effect-${candidate.id}" class="candidate-effect">${candidate.type === "column" ? "Supply adjacent World weapons" : "Store charge → strike enemies"}</span></span>
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(candidate.type === "column" ? "Supply adjacent World weapons" : "Store charge → strike enemies")}</span></span>
         </div>` : `
         <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name} · ${tierWord(candidate.tier)}" aria-describedby="forge-effect-${candidate.id}"></button>
           <span class="module-preview">${inventoryTileSvg(candidate)}</span>
