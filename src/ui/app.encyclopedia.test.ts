@@ -13,6 +13,43 @@ const door = () => document.querySelector<HTMLButtonElement>('[aria-label="Encyc
 beforeEach(() => { localStorage.clear(); app = fixture.boot(); });
 afterEach(() => fixture.release());
 describe("voluntary Encyclopedia", () => {
+  it("preserves mixed three-topic knowledge across legacy import, repeated loading, real prestige and a full restart", () => {
+    // Approved save seam establishes an existing player's mixed reading state.
+    const legacy = JSON.parse(serialize(app.state));
+    legacy.state.encyclopediaRevision = 2;
+    legacy.state.encyclopedia = { charge: "seen", chords: "available" };
+    legacy.state.eraEarned = 20_000_000;
+    expect(app.importText(JSON.stringify(legacy))).toBe(true);
+    const mixed = { charge: "seen", chords: "available", prestige: "seen" };
+    expect(app.state.encyclopedia).toEqual(mixed);
+    app.closeModal();
+    for (let load = 0; load < 2; load++) {
+      expect(app.importText(serialize(app.state))).toBe(true);
+      expect(app.state.encyclopedia).toEqual(mixed);
+      app.closeModal();
+    }
+    app.openLedger("arete"); document.getElementById("prestige-door")!.click();
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.state.world.unlocked).toBe(true);
+    expect(app.state.encyclopedia).toEqual(mixed);
+    app.closeModal();
+    expect(app.importText(serialize(app.state))).toBe(true);
+    app.closeModal();
+    door().click();
+    expect([...document.querySelectorAll("#encyclopedia-results h2")].map(h => h.textContent)).toEqual(["Board mechanics", "Progression"]);
+    expect(button("Charge")).toBeDefined();
+    expect(button("Prestige")).toBeDefined();
+    button("Chords and harmonic capacity · Unseen").click();
+    app.closeModal();
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).toBeNull();
+    app.hardReset();
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
+    expect(app.state.world.unlocked).toBe(false);
+    expect(app.ui.modal).not.toBe("encyclopedia");
+    app.openModal("catalog");
+    expect(app.state.encyclopedia).toEqual({ charge: "available", chords: "available", prestige: "available" });
+    expect(app.ui.modal).toBe("catalog");
+  });
   it("offers Prestige at the visible but ineligible reset, reads voluntarily, and returns to the ledger without resetting", () => {
     expect(app.state.encyclopedia).toHaveProperty("prestige", "available");
     expect(app.ui.modal).toBeNull();
@@ -155,6 +192,8 @@ describe("voluntary Encyclopedia", () => {
     expect(app.state.encyclopedia.chords).toBe("seen");
   });
   it("reads chords from voice inspection during flow and restores the selected layer and board view", () => {
+    app.ui.zoom = 2;
+    app.ui.pan = { x: 10, y: -20 };
     startSession(app.state, 600);
     const session = app.state.session;
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -174,6 +213,7 @@ describe("voluntary Encyclopedia", () => {
     expect(app.ui.detail).toEqual(detail);
     expect(app.ui.boardLayer).toBe(layer);
     expect(app.ui.zoom).toBe(zoom);
+    expect(app.ui.pan).toEqual({ x: 10, y: -20 });
     expect(document.activeElement?.id).toBe("detail-about-chords");
   });
   it("returns keyboard focus and the selected board task after inspection reading, with static teaching and no exercises", () => {
