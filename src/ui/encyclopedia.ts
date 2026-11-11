@@ -8,11 +8,18 @@ export function chargeHelpHtml(app: App, id = "about-charge"): string {
 export function bindChargeHelp(app: App, host: HTMLElement): void {
   app.listen(host.querySelector("[data-charge-help]"), "click", () => app.openEncyclopedia("charge"));
 }
+export function chordsHelpHtml(app: App, id = "about-chords"): string {
+  return availableEntries(app.state).some(entry => entry.id === "chords")
+    ? `<button id="${id}" data-chords-help class="encyclopedia-context">About chords</button>` : "";
+}
+export function bindChordsHelp(app: App, host: HTMLElement): void {
+  app.listen(host.querySelector("[data-chords-help]"), "click", () => app.openEncyclopedia("chords"));
+}
 export function renderEncyclopedia(app: App, content: HTMLElement): void {
   const entries = availableEntries(app.state);
   const entry = entries.find(item => item.id === app.encyclopediaEntry);
   content.innerHTML = `<div class="modal-top"><span id="modal-title" class="eyebrow">Encyclopedia</span><button id="close-modal" aria-label="Close Encyclopedia">Close <kbd>Esc</kbd></button></div>
-    ${entry ? `<button id="encyclopedia-back">‹ Topics</button><article class="encyclopedia-entry"><h2>${entry.title}</h2>${entry.content}<nav aria-label="Related entries">${entry.related.filter(id => entries.some(e => e.id === id)).map(id => `<button data-entry="${id}">${entries.find(e => e.id === id)!.title}</button>`).join("")}</nav></article>` : `<label class="encyclopedia-search">Search titles and keywords<input id="encyclopedia-search" type="search" autocomplete="off"></label><div id="encyclopedia-results"></div>`}`;
+    ${entry ? `${app.encyclopediaHistory.length ? '<button id="encyclopedia-previous">‹ Back</button>' : ""}<button id="encyclopedia-back">‹ Topics</button><article class="encyclopedia-entry"><h2>${entry.title}</h2>${entry.content}<nav aria-label="Related entries">${entry.related.filter(id => entries.some(e => e.id === id)).map(id => `<button data-entry="${id}">${entries.find(e => e.id === id)!.title}</button>`).join("")}</nav></article>` : `<label class="encyclopedia-search">Search titles and keywords<input id="encyclopedia-search" type="search" autocomplete="off"></label><div id="encyclopedia-results"></div>`}`;
   const navigation = content.querySelector<HTMLElement>("#encyclopedia-results, .encyclopedia-entry")!;
   app.listen(navigation, "click", event => {
     const button = event.target instanceof Element ? event.target.closest<HTMLButtonElement>("[data-entry]") : null;
@@ -29,6 +36,7 @@ export function renderEncyclopedia(app: App, content: HTMLElement): void {
     update();
     app.listen(search, "input", () => { app.encyclopediaQuery = search.value; update(); });
   }
+  app.listen(content.querySelector("#encyclopedia-previous"), "click", () => app.backEncyclopedia());
   app.listen(content.querySelector("#encyclopedia-back"), "click", () => app.openEncyclopedia());
   app.listen(content.querySelector("#close-modal"), "click", () => app.closeModal());
 }

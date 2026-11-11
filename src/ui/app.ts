@@ -858,6 +858,7 @@ export class App {
   private clearTransientUi(): void {
     this.encyclopediaOrigin = null;
     this.encyclopediaEntry = null;
+    this.encyclopediaHistory = [];
     this.encyclopediaQuery = "";
     const inv = this.ui.inventory;
     inv.inspect = null; inv.merge = null; inv.menu = false;
@@ -2715,6 +2716,7 @@ export class App {
   }
 
   encyclopediaEntry: EntryId | null = null;
+  encyclopediaHistory: EntryId[] = [];
   encyclopediaQuery = "";
   private encyclopediaOrigin: { modal: ModalKind; focus: HTMLElement | null; id: string; scroll: [string, number][] } | null = null;
 
@@ -2724,12 +2726,22 @@ export class App {
       const focus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       this.encyclopediaOrigin = { modal: this.ui.modal, focus, id: focus?.id ?? "", scroll: [...document.querySelectorAll<HTMLElement>("[id]")].filter(el => el.scrollTop > 0).map(el => [el.id, el.scrollTop]) };
       this.encyclopediaQuery = "";
+      this.encyclopediaHistory = [];
       this.captureModalInvoker();
+    } else if (id && this.encyclopediaEntry && id !== this.encyclopediaEntry) {
+      this.encyclopediaHistory.push(this.encyclopediaEntry);
     }
+    if (!id) this.encyclopediaHistory = [];
     this.encyclopediaEntry = id ?? null;
     if (id) { this.state.encyclopedia[id] = "seen"; this.save(); }
     this.ui.modal = "encyclopedia";
     this.render();
+  }
+
+  backEncyclopedia(): void {
+    const previous = this.encyclopediaHistory.pop();
+    this.encyclopediaEntry = null;
+    this.openEncyclopedia(previous);
   }
 
   ledgerSection: "nous" | "production" | "arete" | "scrap" | "capacity" = "production";
@@ -4100,7 +4112,7 @@ export class App {
     // Actual visible charge-bearing inspections and the starter shelf count
     // as encounters even when their purchases are unaffordable.
     const inspected = this.state.modules.find(module => module.id === this.ui.inventory.inspect || (this.ui.detail && module.pos && sameHex(module.pos, this.ui.detail.pos)));
-    if (encounterEntries(this.state, { starterShelfVisible: this.ui.modal === "catalog" && this.ui.catalogFace === "nous", chargeMeterVisible: this.ui.modal === "forge", inspectedType: inspected?.type })) this.save();
+    if (encounterEntries(this.state, { capacityVisible: this.ui.modal === "catalog" || this.ui.modal === "rate" || this.ui.modal === "library", starterShelfVisible: this.ui.modal === "catalog" && this.ui.catalogFace === "nous", chargeMeterVisible: this.ui.modal === "forge", inspectedType: inspected?.type })) this.save();
     const dot = document.querySelector<HTMLElement>("#console-encyclopedia .encyclopedia-dot");
     if (dot) dot.hidden = !availableEntries(this.state).some(entry => this.state.encyclopedia[entry.id] === "available");
     render(this);

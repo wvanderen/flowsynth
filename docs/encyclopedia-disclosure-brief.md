@@ -1,6 +1,6 @@
 # Encyclopedia and selective disclosure — confirmed design brief
 
-Status: owner-confirmed design. Issue #533 authorizes and implements the Charge slice; later slices remain planned under #532. Implementation evidence and acceptance limitations live in `docs/evidence/issue-533/README.md`. This document records the completed design interview, not visual acceptance or human comprehension.
+Status: owner-confirmed design. Issue #533 implements Charge; #534 implements Chords and harmonic capacity through the shared seams. Prestige remains planned under #532. Implementation evidence and acceptance limitations live in `docs/evidence/issue-533/README.md` and `docs/evidence/issue-534/README.md`. This document records the completed design interview, not visual acceptance or human comprehension.
 
 ## Intent and priorities
 
