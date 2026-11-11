@@ -1,0 +1,68 @@
+desktop {"size":[1280,900],"title":"Prestige","seen":"seen","reduced":true,"animations":0,"overflow":false,"articleOverflow":false,"text":"Prestige\n\nPrestige starts a new era while keeping your enduring progress. It banks the whole Arete in your pending claim. Arete buys memorized upgrades that survive later resets; repeating an old depth does not earn that claim again.\n\nIllustrative example — not your live claim\n\nIf your pending claim is 3.4 Arete, prestige banks 3. The fraction stays pending. A later era must push beyond the frontier already claimed to build a new claim; merely reaching reset eligibility does not guarantee Arete.\n\nReaching the horizon makes reset eligible between sessions. A zero-yield reset is allowed, but banks no Arete. Nous, module levels, capacity purchases and charge state reset. Owned modules, cells and placement, memorized purchases, earned ordinary drafts and your life record remain.\n\nDecision: compare the actual pending yield with the rebuild you are choosing. Check Reset era’s confirmation for this reset’s losses, preservation and warnings. Reading this page never resets your era or spends anything.","prestiges":0}
+phone {"size":[390,844],"title":"Prestige","seen":"seen","reduced":true,"animations":0,"overflow":false,"articleOverflow":false,"text":"Prestige\n\nPrestige starts a new era while keeping your enduring progress. It banks the whole Arete in your pending claim. Arete buys memorized upgrades that survive later resets; repeating an old depth does not earn that claim again.\n\nIllustrative example — not your live claim\n\nIf your pending claim is 3.4 Arete, prestige banks 3. The fraction stays pending. A later era must push beyond the frontier already claimed to build a new claim; merely reaching reset eligibility does not guarantee Arete.\n\nReaching the horizon makes reset eligible between sessions. A zero-yield reset is allowed, but banks no Arete. Nous, module levels, capacity purchases and charge state reset. Owned modules, cells and placement, memorized purchases, earned ordinary drafts and your life record remain.\n\nDecision: compare the actual pending yield with the rebuild you are choosing. Check Reset era’s confirmation for this reset’s losses, preservation and warnings. Reading this page never resets your era or spends anything.","prestiges":0}
+[
+  {
+    "name": "desktop",
+    "read": {
+      "size": [
+        1280,
+        900
+      ],
+      "title": "Prestige",
+      "seen": "seen",
+      "reduced": true,
+      "animations": 0,
+      "overflow": false,
+      "articleOverflow": false,
+      "text": "Prestige\n\nPrestige starts a new era while keeping your enduring progress. It banks the whole Arete in your pending claim. Arete buys memorized upgrades that survive later resets; repeating an old depth does not earn that claim again.\n\nIllustrative example — not your live claim\n\nIf your pending claim is 3.4 Arete, prestige banks 3. The fraction stays pending. A later era must push beyond the frontier already claimed to build a new claim; merely reaching reset eligibility does not guarantee Arete.\n\nReaching the horizon makes reset eligible between sessions. A zero-yield reset is allowed, but banks no Arete. Nous, module levels, capacity purchases and charge state reset. Owned modules, cells and placement, memorized purchases, earned ordinary drafts and your life record remain.\n\nDecision: compare the actual pending yield with the rebuild you are choosing. Check Reset era’s confirmation for this reset’s losses, preservation and warnings. Reading this page never resets your era or spends anything.",
+      "prestiges": 0
+    },
+    "returned": {
+      "modal": "rate",
+      "focus": "about-prestige",
+      "disabled": true,
+      "prestiges": 0
+    },
+    "flow": {
+      "mode": "flow",
+      "elapsed": 10,
+      "sameSession": true,
+      "disabled": true,
+      "prestiges": 0
+    },
+    "input": "CDP Enter/Escape keyboard",
+    "physicalHuman": false
+  },
+  {
+    "name": "phone",
+    "read": {
+      "size": [
+        390,
+        844
+      ],
+      "title": "Prestige",
+      "seen": "seen",
+      "reduced": true,
+      "animations": 0,
+      "overflow": false,
+      "articleOverflow": false,
+      "text": "Prestige\n\nPrestige starts a new era while keeping your enduring progress. It banks the whole Arete in your pending claim. Arete buys memorized upgrades that survive later resets; repeating an old depth does not earn that claim again.\n\nIllustrative example — not your live claim\n\nIf your pending claim is 3.4 Arete, prestige banks 3. The fraction stays pending. A later era must push beyond the frontier already claimed to build a new claim; merely reaching reset eligibility does not guarantee Arete.\n\nReaching the horizon makes reset eligible between sessions. A zero-yield reset is allowed, but banks no Arete. Nous, module levels, capacity purchases and charge state reset. Owned modules, cells and placement, memorized purchases, earned ordinary drafts and your life record remain.\n\nDecision: compare the actual pending yield with the rebuild you are choosing. Check Reset era’s confirmation for this reset’s losses, preservation and warnings. Reading this page never resets your era or spends anything.",
+      "prestiges": 0
+    },
+    "returned": {
+      "modal": "rate",
+      "focus": "about-prestige",
+      "disabled": true,
+      "prestiges": 0
+    },
+    "flow": {
+      "mode": "flow",
+      "elapsed": 10,
+      "sameSession": true,
+      "disabled": true,
+      "prestiges": 0
+    },
+    "input": "CDP emulated touch open/Close",
+    "physicalHuman": false
+  }
+]

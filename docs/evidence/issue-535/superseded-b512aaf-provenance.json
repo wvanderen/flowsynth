@@ -1,0 +1,39 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T22:26:36.744Z",
+  "url": "http://localhost:5174",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-606348e7-a7db9f4d287248d0",
+  "branch": "t3/prestige-encyclopedia",
+  "commit": "b512aaf18038b20bed5880ebad40e38ca2aa079b",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-535/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/revision-targeted.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/superseded-cd431db-check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/superseded-cd431db-full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/targeted.log",
+        "state": "??"
+      }
+    ]
+  }
+}

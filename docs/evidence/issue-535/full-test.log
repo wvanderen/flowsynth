@@ -1,0 +1,21 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-606348e7-a7db9f4d287248d0
+
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+
+ Test Files  134 passed (134)
+      Tests  2413 passed | 9 skipped (2422)
+   Start at  16:32:32
+   Duration  1015.35s (transform 13.78s, setup 0ms, import 474.94s, tests 1680.26s, environment 8.27s)
+

@@ -1,0 +1,51 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T22:32:24.776Z",
+  "url": "http://localhost:5174",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-606348e7-a7db9f4d287248d0",
+  "branch": "t3/prestige-encyclopedia",
+  "commit": "9a8d6fba33d35d5818c6804ba0dc0d5866531e54",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-535/browser-healthcheck.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/revision-targeted.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/superseded-b512aaf-check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/superseded-b512aaf-interrupted-full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/superseded-b512aaf-provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/superseded-cd431db-check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/superseded-cd431db-full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-535/targeted.log",
+        "state": "??"
+      }
+    ]
+  }
+}
