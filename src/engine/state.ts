@@ -1,5 +1,6 @@
 import { BALANCE, isOscillatorType, WORLD_ENEMIES } from "./constants";
 import { hex } from "./hex";
+import { ENCYCLOPEDIA_REVISION } from "./encyclopedia";
 import type { ChordDiscovery, GameState, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity, WeaponCopy, WeaponType, WorldColumn, WorldState } from "./types";
 
 // The opening board (board-redesign spec §8, ADR-0022): the three-cell
@@ -49,6 +50,7 @@ export function eraStartGrantOf(frontier: number, declared?: number): number {
 export function createInitialState(): GameState {
   const state: GameState = {
     encyclopedia: {},
+    encyclopediaRevision: ENCYCLOPEDIA_REVISION,
     mode: "upgrade",
     sessionIndex: 0,
     sessionsCompleted: 0,

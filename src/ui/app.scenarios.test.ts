@@ -259,9 +259,9 @@ describe("the launch command", () => {
 
       await app.devLaunchScenario(id, t);
       const expected = scenarioOf(id)!.build(t);
-      // Installing an already charge-bearing collection is a meaningful
-      // encounter in the application, unlike the engine-only recipe build.
-      expected.encyclopedia = id === "fresh-start" ? { prestige: "available" } : { charge: "available", prestige: "available" };
+      // Installing an already charge-bearing, multi-voice collection is a
+      // meaningful encounter; the ambient reset is visible in every scenario.
+      expected.encyclopedia = id === "fresh-start" ? { prestige: "available" } : { charge: "available", chords: "available", prestige: "available" };
       expect(app.state).toEqual(expected);
       expect(app.devScenarioNote).toContain("✓");
       expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");

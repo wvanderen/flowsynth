@@ -12,9 +12,6 @@ export interface SaveFile {
   app: "flowsynth";
   version: number;
   savedAt: number;
-  // Additive reference-catalog migration marker, independent of the frozen
-  // economy/save translation version. Absent on Charge-era exports.
-  encyclopediaVersion?: number;
   state: GameState;
 }
 
@@ -95,7 +92,7 @@ function assertSerializable(value: unknown, path: string): void {
 }
 
 export function serialize(state: GameState, savedAt: number = Date.now()): string {
-  const file: SaveFile = { app: "flowsynth", version: SAVE_VERSION, savedAt, encyclopediaVersion: 1, state };
+  const file: SaveFile = { app: "flowsynth", version: SAVE_VERSION, savedAt, state };
   assertSerializable(file, "save");
   return JSON.stringify(file, null, 2);
 }
@@ -567,7 +564,7 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
   merged.catalogEntryOwned = false;
   merged.rollPoolJoined = false;
   merged.modules = merged.modules.filter(module => module.type !== "mutatorForge");
-  normalizeEncyclopedia(merged, raw.encyclopedia, parsed.encyclopediaVersion === undefined);
+  normalizeEncyclopedia(merged, raw.encyclopedia, raw.encyclopediaRevision);
   if (recovered) return { state: merged, recovered };
   return migration ? { state: merged, migration } : { state: merged };
 }
