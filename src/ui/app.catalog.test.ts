@@ -58,7 +58,8 @@ describe("the catalog", () => {
     // The Flywheel's one line names what the purchase does.
     const generator = rows.find((r) => r.textContent!.includes("Flywheel"))!;
     expect(surfaceText(generator)).toContain("Banks focus into a charge reserve — modest note and goal credit");
-    expect(generator.querySelector(".term-trigger")!.textContent).toBe("charge");
+    expect(generator.querySelector(".term-trigger")).toBeNull();
+    expect(modal.querySelector("#about-charge")!.textContent).toBe("About charge");
     // The trailing acquisition paragraph is gone, and no gloss rides the
     // toggle either — the face carries no furniture copy.
     expect(modal.querySelector(".catalog-note")).toBeNull();
@@ -840,7 +841,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // The nous face: generator charge and Harmonic capacity glosses.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();
-    expect(texts).toEqual(["Generator output that powers other modules", "Whole-chord budget per voice", "Re-earned after arete reset", "Whole-chord budget per voice"]);
+    expect(texts).toEqual(["Whole-chord budget per voice", "Re-earned after arete reset", "Whole-chord budget per voice"]);
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {

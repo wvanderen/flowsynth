@@ -57,13 +57,13 @@ Inventory rows are compact open lines; collapse leaves a hypercube symbol and st
 
 ## Writing and disclosure
 
-### Confirmed Encyclopedia and selective-disclosure amendment (not yet implemented)
+### Confirmed Encyclopedia and selective-disclosure amendment (Charge implemented; later slices pending)
 
 The owner-confirmed [Encyclopedia brief](encyclopedia-disclosure-brief.md) replaces blanket domain-term disclosure and tooltip-only conceptual teaching as the target policy. The Encyclopedia teaches concepts through short explanations and illustrative examples; entries become available when relevant but never open automatically. A quiet unseen dot invites voluntary reading. Contextual help supplies a deliberately placed route to the relevant available entry, not a control on every term occurrence.
 
 Live surfaces retain current state, concrete effects, costs, requirements, exceptional conditions and consequential warnings. Short local disclosures remain when useful. The removal test is: **could a player who understands the concept still make a materially mistaken choice because this fact is missing?** If yes, retain it locally. Accessible names and unfamiliar-action labels remain. Reading must preserve the underlying task and must neither pause nor end flow.
 
-Migration is concept-by-concept: deliver its entry, availability trigger, contextual routes and useful example before removing redundant teaching. Unmigrated surfaces retain their existing contracts; this is not a global tooltip purge. The confirmed first slice is Charge, Chords and harmonic capacity, and Prestige. Exact icon placement and reading-surface composition still require layout review. No implementation or visual acceptance is claimed here.
+Migration is concept-by-concept: deliver its entry, availability trigger, contextual routes and useful example before removing redundant teaching. Unmigrated surfaces retain their existing contracts; this is not a global tooltip purge. The confirmed first release covers Charge, Chords and harmonic capacity, and Prestige in coherent slices. Issue #533 implements Charge; its generic charge gloss migrates to plain text with section-level reference routes, while actual effects and local facts remain. Chords/capacity and Prestige are not migrated by that slice. Exact icon placement and reading-surface composition still require layout review; the completion record at `docs/evidence/issue-533/README.md` owns the evidence and limitations, not this policy.
 
 **Precedence:** this amendment supersedes the blanket “wherever it appears” term rule, the requirement that every product effect use hoverable terms, and the unexceptioned tooltip-only doctrine below for migrated conceptual teaching. Historical ADR-0037's corresponding doctrine is superseded on that point only: the rate roster does not gain inline calculations or expansion controls. Retained local tooltips still follow the short-gloss, plain-layer, keyboard/touch-access rules below. This amendment does not authorize expandable Details sections or change unrelated interaction contracts.
 

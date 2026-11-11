@@ -48,6 +48,7 @@ export function eraStartGrantOf(frontier: number, declared?: number): number {
 
 export function createInitialState(): GameState {
   const state: GameState = {
+    encyclopedia: {},
     mode: "upgrade",
     sessionIndex: 0,
     sessionsCompleted: 0,
