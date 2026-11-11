@@ -134,15 +134,15 @@ describe("the allocation solve memo (#349)", () => {
     }, (state) => {
       placed(state, "bend", 2, 1);
     })).toBe(1);
-    // A mutator lands on a module's cell, and a rarity change re-scales it.
+    // Retired copies and rarity changes are not allocation inputs.
     expect(solvesAfter((state) => {
       state.mutators.push({ id: "m1", family: "power", rarity: "common", pos: hex(1, 0) });
-    })).toBe(1);
+    })).toBe(0);
     expect(solvesAfter((state) => {
       state.mutators[0]!.rarity = "rare";
     }, (state) => {
       state.mutators.push({ id: "m1", family: "power", rarity: "common", pos: hex(1, 0) });
-    })).toBe(1);
+    })).toBe(0);
     // A habit selection alone no longer re-solves: the active habit's
     // legacy build left the pass with the build retirement (issue #444) —
     // the selection is not a rate input anymore.

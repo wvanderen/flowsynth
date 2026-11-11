@@ -167,7 +167,8 @@ describe("the World era grant (#466)", () => {
     app.devWorldEra();
     expect(status()).toBe("Dev: World era granted — the second face stands.");
     expect(app.state.prestiges).toBe(1);
-    expect(app.state.catalogEntryOwned).toBe(true);
+    expect(app.state.catalogEntryOwned).toBe(false);
+    expect(app.state.world.unlocked).toBe(true);
     expect(app.state.arete).toBe(20);
     expect(app.state.eraEarned).toBe(BALANCE.world.entryNous * 1.5);
     expect(app.ui.boardLayer).toBe("world");

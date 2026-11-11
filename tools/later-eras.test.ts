@@ -371,15 +371,14 @@ describe("the declared World policies' spending orders", { timeout: 1_800_000 },
       index > firstBank && event.kind === "world" && event.ok && !isPlacement(event.label))?.label ?? null;
   };
 
-  it("neither World policy records a World purchase within the four-day fixture after Column retirement", () => {
+  it("both World policies spend on Hone without a retired entry or Column purchase", () => {
     const support = firstWorldPurchaseAfterFirstBank("support");
     const combat = firstWorldPurchaseAfterFirstBank("combat");
     // The starter kit replaces Column spending. Historical policy names
     // remain readable, but neither policy can buy another Column.
-    // Neither reaches a World purchase within this fixture's budget now
-    // that the Column purchase is gone. Do not invent later Hone evidence.
-    expect(support).toBeNull();
-    expect(combat).toBeNull();
+    // Entry retirement leaves the first bank available for type-wide Hone.
+    expect(support).toBe("Hone rank — chargeBlade");
+    expect(combat).toBe("Hone rank — chargeBlade");
   });
 
   it("ignoring never buys or deploys a World occupant, and still banks its claims", () => {

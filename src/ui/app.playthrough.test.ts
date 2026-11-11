@@ -438,6 +438,7 @@ describe("the pushing policy", () => {
       state.nous = 0;
       state.modules = [];
       state.cells = [{ q: 100, r: 100 }];
+      state.world.unlocked = true;
       state.world.starterWeaponGranted = true;
       state.world.enemies.w0!.discovered = true;
       state.world.columns = [{ id: "column-test", pos: null }];
