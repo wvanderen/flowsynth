@@ -1,0 +1,38 @@
+locator.tap: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator('#ambient-reset')
+    - locator resolved to <button id="ambient-reset" aria-disabled="true" aria-describedby="ambient-reset-reason">Reset era</button>
+  - attempting tap action
+    2 × waiting for element to be visible, enabled and stable
+      - element is not enabled
+    - retrying tap action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is not enabled
+    - retrying tap action
+      - waiting 100ms
+    58 × waiting for element to be visible, enabled and stable
+       - element is not enabled
+     - retrying tap action
+       - waiting 500ms
+
+    at /home/lem/dev/flowsynth/docs/evidence/issue-525-final/supplement.cjs:7:517 {
+  log: [
+    "  - waiting for locator('#ambient-reset')",
+    '    - locator resolved to <button id="ambient-reset" aria-disabled="true" aria-describedby="ambient-reset-reason">Reset era</button>',
+    '  - attempting tap action',
+    '    2 × waiting for element to be visible, enabled and stable',
+    '      - element is not enabled',
+    '    - retrying tap action',
+    '    - waiting 20ms',
+    '    2 × waiting for element to be visible, enabled and stable',
+    '      - element is not enabled',
+    '    - retrying tap action',
+    '      - waiting 100ms',
+    '    58 × waiting for element to be visible, enabled and stable',
+    '       - element is not enabled',
+    '     - retrying tap action',
+    '       - waiting 500ms'
+  ],
+  name: 'TimeoutError'
+}

@@ -1,0 +1,19 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T15:08:22.040Z",
+  "url": "http://localhost:5174",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "integration/525-world-progression",
+  "commit": "4b047ae7d7218147214cf490d65aecb867c6def7",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-525-final/supplement-preflight.log",
+        "state": "??"
+      }
+    ]
+  }
+}

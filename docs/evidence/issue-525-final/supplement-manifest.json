@@ -1,0 +1,370 @@
+[
+  {
+    "file": "supplement-desktop-deepened-pressure.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-pressure-keyboard.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-pressure-touch.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-reset-keyboard.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-reset-touch.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-blade-inventory.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-blade-detail.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-blade-board.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-held-blade-drag.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-hone-keyboard.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-hone-touch.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-hone-purchased.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-later-reload.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-grayscale-world.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-grayscale-catalog.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-no-preference-world.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-no-preference-modules.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-no-preference-catalog.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-no-preference-forge.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-reduce-world.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-reduce-modules.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-reduce-catalog.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-desktop-motion-reduce-forge.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-deepened-pressure.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-pressure-keyboard.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-pressure-touch.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-reset-keyboard.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-reset-touch.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-blade-inventory.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-blade-detail.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-blade-board.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-held-blade-drag.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-hone-keyboard.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-hone-touch.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-hone-purchased.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-later-reload.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-grayscale-world.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-grayscale-catalog.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-no-preference-world.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-no-preference-modules.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-no-preference-catalog.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-no-preference-forge.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-reduce-world.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-reduce-modules.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-reduce-catalog.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  },
+  {
+    "file": "supplement-phone-motion-reduce-forge.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "applicationSource": "fede163",
+    "captureHead": "4b047ae"
+  }
+]

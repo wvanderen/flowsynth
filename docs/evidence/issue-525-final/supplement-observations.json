@@ -1,0 +1,3872 @@
+[
+  {
+    "name": "desktop",
+    "label": "deepened production arithmetic",
+    "value": {
+      "earned": 1000000000000000,
+      "factor": 0.12249999999999998,
+      "sources": [
+        {
+          "key": "w0",
+          "depth": 3,
+          "penalty": 0.65
+        },
+        {
+          "key": "w1",
+          "depth": 3,
+          "penalty": 0.65
+        }
+      ],
+      "text": "Enemy pressureCombined87.8% production reductionEnemy 1−65.0% · ×0.350 remainingEnemy 2−65.0% · ×0.350 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "pressure keyboard access",
+    "value": "Enemy pressureCombined87.8% production reductionEnemy 1−65.0% · ×0.350 remainingEnemy 2−65.0% · ×0.350 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+  },
+  {
+    "name": "desktop",
+    "label": "pressure Escape",
+    "value": 0
+  },
+  {
+    "name": "desktop",
+    "label": "pressure touch access",
+    "value": "Enemy pressureCombined87.8% production reductionEnemy 1−65.0% · ×0.350 remainingEnemy 2−65.0% · ×0.350 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+  },
+  {
+    "name": "desktop",
+    "label": "pressure tap-away",
+    "value": 0
+  },
+  {
+    "name": "desktop",
+    "label": "reset keyboard reason",
+    "value": {
+      "text": "<button id=\"ambient-reset\" aria-describedby=\"ambient-reset-reason\" aria-disabled=\"true\">Reset era</button>",
+      "described": "Requires 7M era nous"
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "reset touch reason",
+    "value": "FlowSynth\nFlowSynth\nUpgrade mode\n--:--\nNONE SELECTED\nopen-ended\nEnter flow\nNOUS\n12\nν\n0.06 ν/s\nARETE\n—\nSCRAP\n0\nHARMONIC CAPACITY\n1 / 3\n+0 Arete pending\nReset era\nRequires 7M era nous\n0/22\n0/11\nRATE\n0.06 ν/s\nFEATS · DISCOVERIES\n+0% · +0% — already included\nSINE\nC4\n+0.06 ν/s\nLv. 0\nSINE I\n+0.06\nC4\n+1\nG4\nC5\nInventory\n0\n−\nActions\nCategory\nAll categories\nOscillator\nGenerator\nBooster\nSilent voice\nSpacer\nForge\nConduit\nRitual\nSort inventory\nCategory / type\nRarity\nLevel\nNewest\n\nNo stored modules.\n\n100%\nReset\nUPGRADE ALL\n+1\n+5\n+10\nMAX\n\nWelcome. Upgrade the synth, then enter flow."
+  },
+  {
+    "name": "desktop",
+    "label": "Blade identity",
+    "value": {
+      "inspect": "m3",
+      "text": "Back to tray\n    \n      \n    \n      Charge Blade\n      Stores charge to ⌁30 · attacks adjacent enemies · ⌁0/30 · ATK 4\n      \n    Target priorityA weapon’s between-sessions ordered preference · roster default\n      \n    \n    \n      1\n      Enemy at F3 · roster default\n      \n        ↑\n        ↓\n      \n    \n      2\n      Enemy at G5 · roster default\n      \n        ↑\n        ↓\n      \n    \n      3\n      Enemy at D4 · roster default\n      \n        ↑\n        ↓\n      \n    \n      4\n      Enemy at C6 · roster default\n      \n        ↑\n        ↓\n      \n    \n      5\n      Enemy at D6 · roster default\n      \n        ↑\n        ↓\n      \n    \n      6\n      Enemy at F5 · roster default\n      \n        ↑\n        ↓\n      \n    \n      7\n      Enemy at A4 · roster default\n      \n        ↑\n        ↓\n      \n    \n      8\n      Enemy at G6 · roster default\n      \n        ↑\n        ↓\n      \n    \n      9\n      Enemy at A3 · roster default\n      \n        ↑\n        ↓\n      \n    \n  \n      \n      Place\n    "
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "held pointer ghost",
+    "value": {
+      "carrying": "m3",
+      "ghost": "<div class=\"drag-ghost world-ghost\" style=\"left: 616.993px; top: 477.588px;\"><svg viewBox=\"-70 -70 140 140\" aria-hidden=\"true\" style=\"color: var(--world)\"><polygon class=\"world-tile-plate\" points=\"-57.5,0 -36.800000000000004,-46 36.800000000000004,-46 57.5,0 36.800000000000004,46 -36.800000000000004,46\"></polygon>\n    <g class=\"world-glyph\" transform=\"scale(1.9)\"><path d=\"M-3-13 5-9 3 9-5 13-3-9Z\"></path><path d=\"M-8 13h10\"></path></g></svg></div>"
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "reload placed collection",
+    "value": {
+      "before": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "after": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "hone keyboard open",
+    "value": [
+      "Persists through arete reset"
+    ]
+  },
+  {
+    "name": "desktop",
+    "label": "hone Escape",
+    "value": 0
+  },
+  {
+    "name": "desktop",
+    "label": "hone touch open",
+    "value": [
+      "Persists through arete reset"
+    ]
+  },
+  {
+    "name": "desktop",
+    "label": "hone tap-away",
+    "value": 0
+  },
+  {
+    "name": "desktop",
+    "label": "Hone before",
+    "value": {
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "power": 4
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "Hone after",
+    "value": {
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          },
+          {
+            "id": "m8",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 1
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "power": 6
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "later positive prestige and reload",
+    "value": {
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          },
+          {
+            "id": "m8",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 1
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "power": 6
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion no-preference world",
+    "value": {
+      "animations": [
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        }
+      ],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion no-preference modules",
+    "value": {
+      "animations": [],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion no-preference catalog",
+    "value": {
+      "animations": [
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        }
+      ],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "catalog-face-tab",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "catalog-face-tab",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "catalog-face-tab",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion no-preference forge",
+    "value": {
+      "animations": [
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"ledger-overview\" id=\"ledger-overview\" aria-label=\"Open ledger\">\n          <span class=\"ledger-resource ledger-nous\" data-ledger=\"nous\"><span class=\"ledger-resource-name\">Nous</span><spa"
+        }
+      ],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion reduce world",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion reduce modules",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion reduce catalog",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "motion reduce forge",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  },
+  {
+    "name": "phone",
+    "label": "deepened production arithmetic",
+    "value": {
+      "earned": 1000000000000000,
+      "factor": 0.12249999999999998,
+      "sources": [
+        {
+          "key": "w0",
+          "depth": 3,
+          "penalty": 0.65
+        },
+        {
+          "key": "w1",
+          "depth": 3,
+          "penalty": 0.65
+        }
+      ],
+      "text": "Enemy pressureCombined87.8% production reductionEnemy 1−65.0% · ×0.350 remainingEnemy 2−65.0% · ×0.350 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+    }
+  },
+  {
+    "name": "phone",
+    "label": "pressure keyboard access",
+    "value": "Enemy pressureCombined87.8% production reductionEnemy 1−65.0% · ×0.350 remainingEnemy 2−65.0% · ×0.350 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+  },
+  {
+    "name": "phone",
+    "label": "pressure Escape",
+    "value": 0
+  },
+  {
+    "name": "phone",
+    "label": "pressure touch access",
+    "value": "Enemy pressureCombined87.8% production reductionEnemy 1−65.0% · ×0.350 remainingEnemy 2−65.0% · ×0.350 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+  },
+  {
+    "name": "phone",
+    "label": "pressure tap-away",
+    "value": 0
+  },
+  {
+    "name": "phone",
+    "label": "reset keyboard reason",
+    "value": {
+      "text": "<button id=\"phone-reset\" aria-describedby=\"phone-reset-reason\" aria-disabled=\"true\">Reset era</button>",
+      "described": "Requires 7M era nous"
+    }
+  },
+  {
+    "name": "phone",
+    "label": "reset touch reason",
+    "value": "FlowSynth\nFlowSynth\nUpgrade mode\n--:--\nNONE SELECTED\nopen-ended\nEnter flow\nLv. 0\nSINE I\n+0.06\nC4\n+1\nG4\nC5\nCatalog\nForge\nAdd\nInventory\nCollection\nNOUS\n12\nν\n0.06\nν/s\nARETE\n—\nSCRAP\n0\n+0 Arete pending\nReset era\nRequires 7M era nous\n100%\nReset\nUPGRADE ALL\n+1\n+5\n+10\nMAX\n\nWelcome. Upgrade the synth, then enter flow."
+  },
+  {
+    "name": "phone",
+    "label": "Blade identity",
+    "value": {
+      "inspect": "m3",
+      "text": "Back to tray\n    \n      \n    \n      Charge Blade\n      Stores charge to ⌁30 · attacks adjacent enemies · ⌁0/30 · ATK 4\n      \n    Target priorityA weapon’s between-sessions ordered preference · roster default\n      \n    \n    \n      1\n      Enemy at F3 · roster default\n      \n        ↑\n        ↓\n      \n    \n      2\n      Enemy at G5 · roster default\n      \n        ↑\n        ↓\n      \n    \n      3\n      Enemy at D4 · roster default\n      \n        ↑\n        ↓\n      \n    \n      4\n      Enemy at C6 · roster default\n      \n        ↑\n        ↓\n      \n    \n      5\n      Enemy at D6 · roster default\n      \n        ↑\n        ↓\n      \n    \n      6\n      Enemy at F5 · roster default\n      \n        ↑\n        ↓\n      \n    \n      7\n      Enemy at A4 · roster default\n      \n        ↑\n        ↓\n      \n    \n      8\n      Enemy at G6 · roster default\n      \n        ↑\n        ↓\n      \n    \n      9\n      Enemy at A3 · roster default\n      \n        ↑\n        ↓\n      \n    \n  \n      \n      Place\n    "
+    }
+  },
+  {
+    "name": "phone",
+    "label": "held pointer ghost",
+    "value": {
+      "carrying": "m3",
+      "ghost": "<div class=\"drag-ghost world-ghost\" style=\"left: 206.39px; top: 465.162px;\"><svg viewBox=\"-70 -70 140 140\" aria-hidden=\"true\" style=\"color: var(--world)\"><polygon class=\"world-tile-plate\" points=\"-57.5,0 -36.800000000000004,-46 36.800000000000004,-46 57.5,0 36.800000000000004,46 -36.800000000000004,46\"></polygon>\n    <g class=\"world-glyph\" transform=\"scale(1.9)\"><path d=\"M-3-13 5-9 3 9-5 13-3-9Z\"></path><path d=\"M-8 13h10\"></path></g></svg></div>"
+    }
+  },
+  {
+    "name": "phone",
+    "label": "reload placed collection",
+    "value": {
+      "before": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "after": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      }
+    }
+  },
+  {
+    "name": "phone",
+    "label": "hone keyboard open",
+    "value": [
+      "Persists through arete reset"
+    ]
+  },
+  {
+    "name": "phone",
+    "label": "hone Escape",
+    "value": 0
+  },
+  {
+    "name": "phone",
+    "label": "hone touch open",
+    "value": [
+      "Persists through arete reset"
+    ]
+  },
+  {
+    "name": "phone",
+    "label": "hone tap-away",
+    "value": 0
+  },
+  {
+    "name": "phone",
+    "label": "Hone before",
+    "value": {
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "power": 4
+    }
+  },
+  {
+    "name": "phone",
+    "label": "Hone after",
+    "value": {
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          },
+          {
+            "id": "m8",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 1
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "power": 6
+    }
+  },
+  {
+    "name": "phone",
+    "label": "later positive prestige and reload",
+    "value": {
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": null
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          },
+          {
+            "id": "m8",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 1
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "power": 6
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion no-preference world",
+    "value": {
+      "animations": [],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "DIV",
+          "cls": "modal catalog-modal",
+          "pseudo": "",
+          "animation": "sheet-up",
+          "duration": "0.18s",
+          "transition": "0s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion no-preference modules",
+    "value": {
+      "animations": [],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "DIV",
+          "cls": "modal catalog-modal",
+          "pseudo": "",
+          "animation": "sheet-up",
+          "duration": "0.18s",
+          "transition": "0s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion no-preference catalog",
+    "value": {
+      "animations": [
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        },
+        {
+          "state": "running",
+          "target": "<button class=\"catalog-face-tab\" data-catalog-face=\"arete\" aria-pressed=\"false\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linejoin=\"round\""
+        }
+      ],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "DIV",
+          "cls": "modal catalog-modal",
+          "pseudo": "",
+          "animation": "sheet-up",
+          "duration": "0.18s",
+          "transition": "0s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "catalog-face-tab",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "catalog-face-tab",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "catalog-face-tab",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger term-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "price",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion no-preference forge",
+    "value": {
+      "animations": [],
+      "computed": [
+        {
+          "tag": "path",
+          "cls": "brand-core",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "session-focus",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "app-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "main-switch idle",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "console-button",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "ledger-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-tip-trigger",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "rd-pick",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "polygon",
+          "cls": "hex empty",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.2s, 0.2s, 0.2s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "tool-icon",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inst-panel-face game-info-face ledger-overview",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "legend-symbol active",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "world-place-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "cell-arm-pill",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "inventory-copy world-tile",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": "sweep-chip",
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "DIV",
+          "cls": "modal",
+          "pseudo": "",
+          "animation": "sheet-up",
+          "duration": "0.18s",
+          "transition": "0s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        },
+        {
+          "tag": "BUTTON",
+          "cls": null,
+          "pseudo": "",
+          "animation": "none",
+          "duration": "0s",
+          "transition": "0.15s, 0.15s"
+        }
+      ]
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion reduce world",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion reduce modules",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion reduce catalog",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  },
+  {
+    "name": "phone",
+    "label": "motion reduce forge",
+    "value": {
+      "animations": [],
+      "computed": []
+    }
+  }
+]
