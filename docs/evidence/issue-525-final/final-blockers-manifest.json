@@ -1,0 +1,3542 @@
+[
+  {
+    "file": "final-desktop-energized-no-preference-modules.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": false,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "no-preference modules",
+      "value": {
+        "mode": "flow",
+        "session": 30.085,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.915,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.085,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [
+          "<line data-key=\"charge-m6-m7\" class=\"charge-line\" x1=\"2.29\" y1=\"97.50\" x2=\"-2.29\" y2=\"97.50\"></line>",
+          "<line data-key=\"charge-m6-m8\" class=\"charge-line\" x1=\"29.29\" y1=\"50.73\" x2=\"27.00\" y2=\"46.77\"></line>"
+        ],
+        "charged": 2,
+        "liveBars": [],
+        "animations": [
+          {
+            "state": "running"
+          },
+          {
+            "state": "running"
+          },
+          {
+            "name": "charge-flow",
+            "state": "running"
+          },
+          {
+            "name": "charge-flow",
+            "state": "running"
+          }
+        ],
+        "computed": [
+          {
+            "tag": "path",
+            "cls": "brand-core",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "session-focus",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "app-tile",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "main-switch live",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "console-button",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-tip-trigger",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "rd-pick",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "charge-flow",
+            "duration": "5s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "charge-flow",
+            "duration": "5s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "polygon",
+            "cls": "hex charged",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.2s, 0.2s, 0.2s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "water-fill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.4s, 0.4s",
+            "opacity": "0.22",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "polygon",
+            "cls": "hex dispensing",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.2s, 0.2s, 0.2s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "polygon",
+            "cls": "hex charged",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.2s, 0.2s, 0.2s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-panel-face game-info-face ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol active",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "world-place-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "cell-arm-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-desktop-energized-no-preference-world.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": false,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "no-preference world",
+      "value": {
+        "mode": "flow",
+        "session": 30.385000000000005,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.61499999998,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.385000000000005,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [],
+        "charged": 0,
+        "liveBars": [
+          "<rect class=\"world-bar-fill live\" x=\"-26\" y=\"0\" width=\"52.00\" height=\"5\"></rect>"
+        ],
+        "animations": [
+          {
+            "name": "world-breath",
+            "state": "running"
+          }
+        ],
+        "computed": [
+          {
+            "tag": "path",
+            "cls": "brand-core",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "session-focus",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "app-tile",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "main-switch live",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "console-button",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-tip-trigger",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "rd-pick",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "",
+            "animation": "world-breath",
+            "duration": "3.2s",
+            "transition": "0s",
+            "opacity": "0.555448",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-panel-face game-info-face ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol active",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "world-place-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "cell-arm-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-desktop-energized-reduce-modules.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "reduce modules",
+      "value": {
+        "mode": "flow",
+        "session": 30.585000000000008,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.41499999996,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.585000000000008,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [
+          "<line data-key=\"charge-m6-m7\" class=\"charge-line\" x1=\"2.29\" y1=\"97.50\" x2=\"-2.29\" y2=\"97.50\"></line>",
+          "<line data-key=\"charge-m6-m8\" class=\"charge-line\" x1=\"29.29\" y1=\"50.73\" x2=\"27.00\" y2=\"46.77\"></line>"
+        ],
+        "charged": 2,
+        "liveBars": [],
+        "animations": [],
+        "computed": [
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-desktop-energized-reduce-world.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "reduce world",
+      "value": {
+        "mode": "flow",
+        "session": 30.78500000000001,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.21499999995,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.78500000000001,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [],
+        "charged": 0,
+        "liveBars": [
+          "<rect class=\"world-bar-fill live\" x=\"-26\" y=\"0\" width=\"52.00\" height=\"5\"></rect>"
+        ],
+        "animations": [],
+        "computed": [
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "0.7",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-desktop-energized-combat-after-attack.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "combat actual advance",
+      "value": {
+        "before": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.885000000000012,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "after": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 34,
+              "cooldown": 0.8850000000000122,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 806
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "file": "final-desktop-grayscale-unavailable.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "accessible unavailable",
+      "value": "- group \"Catalog\":\n  - button \"ν nous\"\n  - button \"Arete\" [pressed]\n  - button \"scrap\"\n- button \"Close dialog\": ✕\n- heading \"World\" [level=2]\n- article:\n  - heading \"Hone — what it means 0/4\" [level=3]:\n    - button \"Hone — what it means\": Hone\n    - text: 0/4\n  - paragraph:\n    - text: +2 attack per rank · every\n    - button \"Charge Blade — what it means\": Charge Blade\n    - text: ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ATK 4 → 6\n  - button \"1 Arete\" [disabled]\n- heading \"Upgrades\" [level=2]\n- article:\n  - heading \"Expansion Bays — what it means 0/2\" [level=3]:\n    - button \"Expansion Bays — what it means\": Expansion Bays\n    - text: 0/2\n  - paragraph:\n    - text: Raises the\n    - button \"Harmonic capacity — what it means\": Harmonic capacity\n    - text: ceiling one rung each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ceiling 3 → 4\n  - button \"6 Arete\" [disabled]\n- article:\n  - heading \"Chord Catalysts — what it means 0/2\" [level=3]:\n    - button \"Chord Catalysts — what it means\": Chord Catalysts\n    - text: 0/2\n  - paragraph:\n    - text: Each takes 20% off every\n    - button \"Poly Expander — what it means\": Poly Expander\n    - text: price ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: prices −0% → −20%\n  - button \"3 Arete\" [disabled]\n- article:\n  - heading \"Warp Beam — what it means 0/3\" [level=3]:\n    - button \"Warp Beam — what it means\": Warp Beam\n    - text: 0/3\n  - paragraph:\n    - text: Raises the\n    - button \"merge tier — what it means\": merge tier\n    - text: cap one tier each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: Tier III → Tier IV\n  - button \"5 Arete\" [disabled]"
+    }
+  },
+  {
+    "file": "final-desktop-grayscale-available.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "accessible available",
+      "value": "- group \"Catalog\":\n  - button \"ν nous\"\n  - button \"Arete\" [pressed]\n  - button \"scrap\"\n- button \"Close dialog\": ✕\n- heading \"World\" [level=2]\n- article:\n  - heading \"Hone — what it means 0/4\" [level=3]:\n    - button \"Hone — what it means\": Hone\n    - text: 0/4\n  - paragraph:\n    - text: +2 attack per rank · every\n    - button \"Charge Blade — what it means\": Charge Blade\n    - text: ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ATK 4 → 6\n  - button \"1 Arete\"\n- heading \"Upgrades\" [level=2]\n- article:\n  - heading \"Expansion Bays — what it means 0/2\" [level=3]:\n    - button \"Expansion Bays — what it means\": Expansion Bays\n    - text: 0/2\n  - paragraph:\n    - text: Raises the\n    - button \"Harmonic capacity — what it means\": Harmonic capacity\n    - text: ceiling one rung each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ceiling 3 → 4\n  - button \"6 Arete\"\n- article:\n  - heading \"Chord Catalysts — what it means 0/2\" [level=3]:\n    - button \"Chord Catalysts — what it means\": Chord Catalysts\n    - text: 0/2\n  - paragraph:\n    - text: Each takes 20% off every\n    - button \"Poly Expander — what it means\": Poly Expander\n    - text: price ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: prices −0% → −20%\n  - button \"3 Arete\"\n- article:\n  - heading \"Warp Beam — what it means 0/3\" [level=3]:\n    - button \"Warp Beam — what it means\": Warp Beam\n    - text: 0/3\n  - paragraph:\n    - text: Raises the\n    - button \"merge tier — what it means\": merge tier\n    - text: cap one tier each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: Tier III → Tier IV\n  - button \"5 Arete\""
+    }
+  },
+  {
+    "file": "final-desktop-grayscale-acquired.png",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "desktop",
+      "label": "accessible acquired",
+      "value": "- group \"Catalog\":\n  - button \"ν nous\"\n  - button \"Arete\" [pressed]\n  - button \"scrap\"\n- button \"Close dialog\": ✕\n- heading \"World\" [level=2]\n- article:\n  - heading \"Hone — what it means 4/4\" [level=3]:\n    - button \"Hone — what it means\": Hone\n    - text: 4/4\n  - paragraph:\n    - text: +2 attack per rank · every\n    - button \"Charge Blade — what it means\": Charge Blade\n    - text: ·\n    - button \"memorized — what it means\": memorized\n  - text: honed\n- heading \"Upgrades\" [level=2]\n- article:\n  - heading \"Expansion Bays — what it means 0/2\" [level=3]:\n    - button \"Expansion Bays — what it means\": Expansion Bays\n    - text: 0/2\n  - paragraph:\n    - text: Raises the\n    - button \"Harmonic capacity — what it means\": Harmonic capacity\n    - text: ceiling one rung each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ceiling 3 → 4\n  - button \"6 Arete\"\n- article:\n  - heading \"Chord Catalysts — what it means 0/2\" [level=3]:\n    - button \"Chord Catalysts — what it means\": Chord Catalysts\n    - text: 0/2\n  - paragraph:\n    - text: Each takes 20% off every\n    - button \"Poly Expander — what it means\": Poly Expander\n    - text: price ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: prices −0% → −20%\n  - button \"3 Arete\"\n- article:\n  - heading \"Warp Beam — what it means 0/3\" [level=3]:\n    - button \"Warp Beam — what it means\": Warp Beam\n    - text: 0/3\n  - paragraph:\n    - text: Raises the\n    - button \"merge tier — what it means\": merge tier\n    - text: cap one tier each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: Tier III → Tier IV\n  - button \"5 Arete\""
+    }
+  },
+  {
+    "file": "final-phone-energized-no-preference-modules.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": false,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "no-preference modules",
+      "value": {
+        "mode": "flow",
+        "session": 30.1,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.9,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.1,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [
+          "<line data-key=\"charge-m6-m7\" class=\"charge-line\" x1=\"2.29\" y1=\"97.50\" x2=\"-2.29\" y2=\"97.50\"></line>",
+          "<line data-key=\"charge-m6-m8\" class=\"charge-line\" x1=\"29.29\" y1=\"50.73\" x2=\"27.00\" y2=\"46.77\"></line>"
+        ],
+        "charged": 2,
+        "liveBars": [],
+        "animations": [
+          {
+            "state": "running"
+          },
+          {
+            "state": "running"
+          },
+          {
+            "name": "charge-flow",
+            "state": "running"
+          },
+          {
+            "name": "charge-flow",
+            "state": "running"
+          }
+        ],
+        "computed": [
+          {
+            "tag": "path",
+            "cls": "brand-core",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "session-focus",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "app-tile",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "main-switch live",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "console-button",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-tip-trigger",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "rd-pick",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "charge-flow",
+            "duration": "5s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "charge-flow",
+            "duration": "5s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "polygon",
+            "cls": "hex charged",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.2s, 0.2s, 0.2s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "water-fill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.4s, 0.4s",
+            "opacity": "0.22",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "polygon",
+            "cls": "hex dispensing",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.2s, 0.2s, 0.2s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "polygon",
+            "cls": "hex charged",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.2s, 0.2s, 0.2s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-panel-face game-info-face ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol active",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "world-place-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "cell-arm-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "DIV",
+            "cls": "modal",
+            "pseudo": "",
+            "animation": "sheet-up",
+            "duration": "0.18s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-phone-energized-no-preference-world.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": false,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "no-preference world",
+      "value": {
+        "mode": "flow",
+        "session": 30.300000000000004,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.69999999998,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.300000000000004,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [],
+        "charged": 0,
+        "liveBars": [
+          "<rect class=\"world-bar-fill live\" x=\"-26\" y=\"0\" width=\"52.00\" height=\"5\"></rect>"
+        ],
+        "animations": [
+          {
+            "name": "world-breath",
+            "state": "running"
+          }
+        ],
+        "computed": [
+          {
+            "tag": "path",
+            "cls": "brand-core",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "session-focus",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "app-tile",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "main-switch live",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "console-button",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "ledger-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-tip-trigger",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "rd-pick",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "",
+            "animation": "world-breath",
+            "duration": "3.2s",
+            "transition": "0s",
+            "opacity": "0.555442",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "tool-icon",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "inst-panel-face game-info-face ledger-overview",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol active",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "legend-symbol",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "world-place-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "cell-arm-pill",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": null,
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "BUTTON",
+            "cls": "sweep-chip",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0.15s, 0.15s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "DIV",
+            "cls": "modal",
+            "pseudo": "",
+            "animation": "sheet-up",
+            "duration": "0.18s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-phone-energized-reduce-modules.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "reduce modules",
+      "value": {
+        "mode": "flow",
+        "session": 30.500000000000007,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.49999999997,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.500000000000007,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [
+          "<line data-key=\"charge-m6-m7\" class=\"charge-line\" x1=\"2.29\" y1=\"97.50\" x2=\"-2.29\" y2=\"97.50\"></line>",
+          "<line data-key=\"charge-m6-m8\" class=\"charge-line\" x1=\"29.29\" y1=\"50.73\" x2=\"27.00\" y2=\"46.77\"></line>"
+        ],
+        "charged": 2,
+        "liveBars": [],
+        "animations": [],
+        "computed": [
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "0.45",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          },
+          {
+            "tag": "line",
+            "cls": "charge-line",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "url(\"#fs-lead-tip\")",
+            "dash": "4px, 5px"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-phone-energized-reduce-world.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "reduce world",
+      "value": {
+        "mode": "flow",
+        "session": 30.701000000000008,
+        "modules": [
+          {
+            "id": "m6",
+            "type": "focusKeyed",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 1,
+              "r": 0
+            },
+            "reserve": 99969.29899999997,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m7",
+            "type": "additive",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 1
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          },
+          {
+            "id": "m8",
+            "type": "forge",
+            "tier": 0,
+            "level": 0,
+            "invested": 0,
+            "pos": {
+              "q": 0,
+              "r": 0
+            },
+            "reserve": 0,
+            "shift": null,
+            "target": null
+          }
+        ],
+        "world": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.701000000000008,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "leads": [],
+        "charged": 0,
+        "liveBars": [
+          "<rect class=\"world-bar-fill live\" x=\"-26\" y=\"0\" width=\"52.00\" height=\"5\"></rect>"
+        ],
+        "animations": [],
+        "computed": [
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "0.7",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::before",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          },
+          {
+            "tag": "rect",
+            "cls": "world-bar-fill live",
+            "pseudo": "::after",
+            "animation": "none",
+            "duration": "0s",
+            "transition": "0s",
+            "opacity": "1",
+            "marker": "none",
+            "dash": "none"
+          }
+        ]
+      }
+    }
+  },
+  {
+    "file": "final-phone-energized-combat-after-attack.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "combat actual advance",
+      "value": {
+        "before": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 35,
+              "cooldown": 30.701000000000008,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 810
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        },
+        "after": {
+          "unlocked": true,
+          "starterColumnGranted": true,
+          "frontier": 0,
+          "starterWeaponGranted": true,
+          "columns": [
+            {
+              "id": "evidence-column",
+              "pos": {
+                "q": 0,
+                "r": 1
+              }
+            }
+          ],
+          "weapons": [
+            {
+              "id": "evidence-blade",
+              "type": "chargeBlade",
+              "pos": {
+                "q": 1,
+                "r": 0
+              },
+              "store": 34,
+              "cooldown": 0.7010000000000076,
+              "targetPriority": []
+            }
+          ],
+          "hone": {
+            "chargeBlade": 0
+          },
+          "enemies": {
+            "w0": {
+              "discovered": true,
+              "hp": 12
+            },
+            "w1": {
+              "discovered": true,
+              "hp": 806
+            },
+            "w2": {
+              "discovered": false,
+              "hp": 27
+            },
+            "w3": {
+              "discovered": false,
+              "hp": 40.5
+            },
+            "w4": {
+              "discovered": false,
+              "hp": 60.75
+            },
+            "w5": {
+              "discovered": false,
+              "hp": 91.125
+            },
+            "w6": {
+              "discovered": false,
+              "hp": 136.6875
+            },
+            "w7": {
+              "discovered": false,
+              "hp": 205.03125
+            },
+            "w8": {
+              "discovered": false,
+              "hp": 307.546875
+            }
+          }
+        }
+      }
+    }
+  },
+  {
+    "file": "final-phone-grayscale-unavailable.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "accessible unavailable",
+      "value": "- group \"Catalog\":\n  - button \"ν nous\"\n  - button \"Arete\" [pressed]\n  - button \"scrap\"\n- button \"Close dialog\": ✕\n- heading \"World\" [level=2]\n- article:\n  - heading \"Hone — what it means 0/4\" [level=3]:\n    - button \"Hone — what it means\": Hone\n    - text: 0/4\n  - paragraph:\n    - text: +2 attack per rank · every\n    - button \"Charge Blade — what it means\": Charge Blade\n    - text: ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ATK 4 → 6\n  - button \"1 Arete\" [disabled]\n- heading \"Upgrades\" [level=2]\n- article:\n  - heading \"Expansion Bays — what it means 0/2\" [level=3]:\n    - button \"Expansion Bays — what it means\": Expansion Bays\n    - text: 0/2\n  - paragraph:\n    - text: Raises the\n    - button \"Harmonic capacity — what it means\": Harmonic capacity\n    - text: ceiling one rung each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ceiling 3 → 4\n  - button \"6 Arete\" [disabled]\n- article:\n  - heading \"Chord Catalysts — what it means 0/2\" [level=3]:\n    - button \"Chord Catalysts — what it means\": Chord Catalysts\n    - text: 0/2\n  - paragraph:\n    - text: Each takes 20% off every\n    - button \"Poly Expander — what it means\": Poly Expander\n    - text: price ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: prices −0% → −20%\n  - button \"3 Arete\" [disabled]\n- article:\n  - heading \"Warp Beam — what it means 0/3\" [level=3]:\n    - button \"Warp Beam — what it means\": Warp Beam\n    - text: 0/3\n  - paragraph:\n    - text: Raises the\n    - button \"merge tier — what it means\": merge tier\n    - text: cap one tier each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: Tier III → Tier IV\n  - button \"5 Arete\" [disabled]"
+    }
+  },
+  {
+    "file": "final-phone-grayscale-available.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "accessible available",
+      "value": "- group \"Catalog\":\n  - button \"ν nous\"\n  - button \"Arete\" [pressed]\n  - button \"scrap\"\n- button \"Close dialog\": ✕\n- heading \"World\" [level=2]\n- article:\n  - heading \"Hone — what it means 0/4\" [level=3]:\n    - button \"Hone — what it means\": Hone\n    - text: 0/4\n  - paragraph:\n    - text: +2 attack per rank · every\n    - button \"Charge Blade — what it means\": Charge Blade\n    - text: ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ATK 4 → 6\n  - button \"1 Arete\"\n- heading \"Upgrades\" [level=2]\n- article:\n  - heading \"Expansion Bays — what it means 0/2\" [level=3]:\n    - button \"Expansion Bays — what it means\": Expansion Bays\n    - text: 0/2\n  - paragraph:\n    - text: Raises the\n    - button \"Harmonic capacity — what it means\": Harmonic capacity\n    - text: ceiling one rung each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ceiling 3 → 4\n  - button \"6 Arete\"\n- article:\n  - heading \"Chord Catalysts — what it means 0/2\" [level=3]:\n    - button \"Chord Catalysts — what it means\": Chord Catalysts\n    - text: 0/2\n  - paragraph:\n    - text: Each takes 20% off every\n    - button \"Poly Expander — what it means\": Poly Expander\n    - text: price ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: prices −0% → −20%\n  - button \"3 Arete\"\n- article:\n  - heading \"Warp Beam — what it means 0/3\" [level=3]:\n    - button \"Warp Beam — what it means\": Warp Beam\n    - text: 0/3\n  - paragraph:\n    - text: Raises the\n    - button \"merge tier — what it means\": merge tier\n    - text: cap one tier each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: Tier III → Tier IV\n  - button \"5 Arete\""
+    }
+  },
+  {
+    "file": "final-phone-grayscale-acquired.png",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduced": true,
+    "source": "fede163",
+    "head": "4c87430",
+    "state": {
+      "name": "phone",
+      "label": "accessible acquired",
+      "value": "- group \"Catalog\":\n  - button \"ν nous\"\n  - button \"Arete\" [pressed]\n  - button \"scrap\"\n- button \"Close dialog\": ✕\n- heading \"World\" [level=2]\n- article:\n  - heading \"Hone — what it means 4/4\" [level=3]:\n    - button \"Hone — what it means\": Hone\n    - text: 4/4\n  - paragraph:\n    - text: +2 attack per rank · every\n    - button \"Charge Blade — what it means\": Charge Blade\n    - text: ·\n    - button \"memorized — what it means\": memorized\n  - text: honed\n- heading \"Upgrades\" [level=2]\n- article:\n  - heading \"Expansion Bays — what it means 0/2\" [level=3]:\n    - button \"Expansion Bays — what it means\": Expansion Bays\n    - text: 0/2\n  - paragraph:\n    - text: Raises the\n    - button \"Harmonic capacity — what it means\": Harmonic capacity\n    - text: ceiling one rung each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: ceiling 3 → 4\n  - button \"6 Arete\"\n- article:\n  - heading \"Chord Catalysts — what it means 0/2\" [level=3]:\n    - button \"Chord Catalysts — what it means\": Chord Catalysts\n    - text: 0/2\n  - paragraph:\n    - text: Each takes 20% off every\n    - button \"Poly Expander — what it means\": Poly Expander\n    - text: price ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: prices −0% → −20%\n  - button \"3 Arete\"\n- article:\n  - heading \"Warp Beam — what it means 0/3\" [level=3]:\n    - button \"Warp Beam — what it means\": Warp Beam\n    - text: 0/3\n  - paragraph:\n    - text: Raises the\n    - button \"merge tier — what it means\": merge tier\n    - text: cap one tier each ·\n    - button \"memorized — what it means\": memorized\n  - paragraph: Tier III → Tier IV\n  - button \"5 Arete\""
+    }
+  }
+]
