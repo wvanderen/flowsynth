@@ -1,0 +1,34 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/ui/app.mixed-draft.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-980acac7-3d87974f3c4a9f24
+
+ ❯ |ui| src/ui/app.mixed-draft.test.ts (2 tests | 2 failed) 137ms
+   × mixed drafts route repeated World choices through inventory inspection and placement at 1280px 95ms
+   × mixed drafts route repeated World choices through inventory inspection and placement at 390px 41ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.mixed-draft.test.ts > mixed drafts route repeated World choices through inventory inspection and placement at 1280px
+ FAIL  |ui| src/ui/app.mixed-draft.test.ts > mixed drafts route repeated World choices through inventory inspection and placement at 390px
+TypeError: Cannot read properties of undefined (reading 'name')
+ ❯ src/ui/render.ts:3683:361
+
+ ❯ renderForgeModal src/ui/render.ts:3682:56
+ ❯ renderModal src/ui/render.ts:2735:30
+ ❯ render src/ui/render.ts:166:5
+ ❯ App.render src/ui/app.ts:4075:5
+ ❯ App.openModalDirect src/ui/app.ts:2750:10
+ ❯ App.openModal src/ui/app.ts:2729:10
+ ❯ src/ui/app.mixed-draft.test.ts:22:9
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  18:27:21
+   Duration  1.96s (transform 1.05s, setup 0ms, import 1.24s, tests 137ms, environment 218ms)
+

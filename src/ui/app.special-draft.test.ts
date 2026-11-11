@@ -2,6 +2,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import type { App } from "./app";
+import { isModuleCandidate } from "../engine/types";
 import { BALANCE, CATEGORY_OF } from "../engine/constants";
 import { startSession } from "../engine/actions";
 import { createAppFixture, setAppWidth } from "./testing/app-fixture";
@@ -120,7 +121,7 @@ describe("the special drafts' rows (issue #379)", () => {
     expect(pick.disabled).toBe(false);
     pick.click();
     expect(app.state.specialDrafts.category).toBe(0);
-    expect(app.state.bankedRolls[0]!.candidates.every((c) => CATEGORY_OF[c.type] === "spacer")).toBe(true);
+    expect(app.state.bankedRolls[0]!.candidates.every((c) => isModuleCandidate(c) && CATEGORY_OF[c.type] === "spacer")).toBe(true);
     // The spent entitlement mutes the strip again.
     for (const p of rollPicks()) expect(p.disabled).toBe(true);
     app.closeModal();
@@ -135,7 +136,7 @@ describe("the special drafts' rows (issue #379)", () => {
     chip.click();
     expect(app.state.specialDrafts.category).toBe(0);
     expect(app.state.bankedRolls).toHaveLength(1);
-    expect(app.state.bankedRolls[0]!.candidates.every((c) => CATEGORY_OF[c.type] === "spacer")).toBe(true);
+    expect(app.state.bankedRolls[0]!.candidates.every((c) => isModuleCandidate(c) && CATEGORY_OF[c.type] === "spacer")).toBe(true);
     expect(status()).toContain("Jacquard Card rolled · Spacer draft banked.");
     // The rolled offer stands in the Forge under the product's own name
     // and guarantee; the same choose and skip resolve it there.
@@ -164,10 +165,10 @@ describe("the special drafts' rows (issue #379)", () => {
     expect(status()).toContain("Silk Warp rolled · rare draft banked.");
     buyOf("Plied Weft").click();
     rowRollOf("Plied Weft").click();
-    expect(app.state.bankedRolls.at(-1)!.candidates.every((c) => c.tier >= 1)).toBe(true);
+    expect(app.state.bankedRolls.at(-1)!.candidates.every((c) => isModuleCandidate(c) && c.tier >= 1)).toBe(true);
     expect(status()).toContain("Plied Weft rolled · tiered draft banked.");
     // The Silk Warp's rolled offer still banks its rares.
-    expect(app.state.bankedRolls[0]!.candidates.every((c) => c.tier >= 0)).toBe(true);
+    expect(app.state.bankedRolls[0]!.candidates.every((c) => isModuleCandidate(c) && c.tier >= 0)).toBe(true);
     app.closeModal();
   });
 
@@ -233,7 +234,7 @@ describe("the special drafts' rows (issue #379)", () => {
     const chip = document.querySelector<HTMLButtonElement>('#modal-content [data-special-category="generator"]')!;
     chip.click();
     expect(app.state.specialDrafts.category).toBe(0);
-    expect(app.state.bankedRolls[0]!.candidates.every((c) => CATEGORY_OF[c.type] === "generator")).toBe(true);
+    expect(app.state.bankedRolls[0]!.candidates.every((c) => isModuleCandidate(c) && CATEGORY_OF[c.type] === "generator")).toBe(true);
     app.closeModal();
   });
 });

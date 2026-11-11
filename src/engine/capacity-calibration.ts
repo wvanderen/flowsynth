@@ -24,7 +24,7 @@ import { neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
 import { writeNote } from "./notes";
 import { createInitialState } from "./state";
-import type { GameState, Hex } from "./types";
+import { isModuleCandidate, type GameState, type Hex } from "./types";
 
 // The harmonic-capacity calibration harness (issue #262): the authoritative
 // progression run — real purchases, rolls, charge, practice advancement and
@@ -172,8 +172,8 @@ function manage(state: GameState, policy: CalibrationPolicy, minute: number): Ca
   // otherwise keep the first candidate.
   for (const offer of [...state.bankedRolls]) {
     const candidate =
-      offer.candidates.find((c) => isOscillatorType(c.type)) ??
-      offer.candidates.find((c) => CATEGORY_OF[c.type] === "generator") ??
+      offer.candidates.find((c) => isModuleCandidate(c) && isOscillatorType(c.type)) ??
+      offer.candidates.find((c) => isModuleCandidate(c) && CATEGORY_OF[c.type] === "generator") ??
       offer.candidates[0];
     if (candidate) chooseRoll(state, offer.id, candidate.id);
   }

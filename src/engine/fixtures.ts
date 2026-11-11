@@ -5,6 +5,18 @@ import { investment } from "./economy";
 import { isOscillatorType } from "./constants";
 import type { ClassPairState, GameState, Habit, Hex, ModuleInstance, ModuleType, RateSnapshot } from "./types";
 
+import { generateOffer, type Rng } from "./rolls";
+import { isModuleCandidate, type Candidate, type RollOffer } from "./types";
+
+// Legacy module-only scenarios assert that premise while exercising the
+// real generator. Never casts a World reward into a module.
+export function generateModuleOffer(state: GameState, rng: Rng, extraTierChance = 0): RollOffer<Candidate> {
+  const offer = generateOffer(state, rng, extraTierChance);
+  const [a, b, c] = offer.candidates;
+  if (!isModuleCandidate(a) || !isModuleCandidate(b) || !isModuleCandidate(c)) throw new Error("Expected a module-only offer");
+  return { ...offer, candidates: [a, b, c] };
+}
+
 export function fresh(): GameState {
   return createInitialState();
 }

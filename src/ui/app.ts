@@ -2585,7 +2585,8 @@ export class App {
       return;
     }
     const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
-    this.announceUnlocks(result.unlocked, `${META[candidate.type].name} added to inventory.${more}`);
+    const name = candidate.type === "column" ? "Column" : candidate.type === "chargeBlade" ? "Charge Blade" : META[candidate.type].name;
+    this.announceUnlocks(result.unlocked, `${name} added to ${candidate.type === "column" || candidate.type === "chargeBlade" ? "World collection" : "inventory"}.${more}`);
     this.forgeAfterConsume();
     this.save();
     this.render();

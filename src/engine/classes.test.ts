@@ -203,7 +203,7 @@ describe("the tree (issue #423)", () => {
     const draws = [0.0001, 0.0, 0.0, 0.0, 0.0001, 0.0, 0.0, 0.0, 0.0001, 0.0, 0.0, 0.0];
     accrueClassDevelopment(s, BALANCE.flowOpeningSeconds, stubRng(draws));
     const offer = s.bankedRolls.at(-1)!;
-    expect(offer.candidates.map((c) => c.tier)).toEqual([1, 1, 1]);
+    expect(offer.candidates.map((c) => "tier" in c ? c.tier : undefined)).toEqual([1, 1, 1]);
   });
 
   it("the Punch card weaves every nth practice mint as a guaranteed-rare draft", () => {

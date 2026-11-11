@@ -24,7 +24,7 @@ import { TILE_APPS, type FocusApp } from "../engine/apps";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { Category, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, NamedChordTerm, RateSnapshot, ResponseCurveId, SpecialDraftKind, WeaponType } from "../engine/types";
+import { isModuleCandidate, type Category, type DeployedModule, type GameState, type Hex, type ModuleInstance, type ModuleType, type NamedChordTerm, type RateSnapshot, type ResponseCurveId, type SpecialDraftKind, type WeaponType } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
@@ -3673,13 +3673,18 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
       </div>
       <button id="close-modal" aria-label="Close Forge">Close <kbd>Esc</kbd></button>
     </div>
-    ${hasOffer ? `<p class="forge-choice-cue">Choose a new ${face === "modules" ? "module" : "mutator"}</p>${
+    ${hasOffer ? `<p class="forge-choice-cue">Choose a new ${face === "modules" ? (offer?.candidates.some(c => !isModuleCandidate(c)) ? "item" : "module") : "mutator"}</p>${
       face === "modules" && offer?.special
         ? `<p class="forge-offer-note"><span class="t-condensed">${SPECIAL_DRAFT_NAME[offer.special.kind]}</span> · ${specialDraftEffect(offer.special.kind, offer.special.category)}</p>`
         : ""
     }
     <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
-      ${face === "modules" && offer ? offer.candidates.map(candidate => `
+      ${face === "modules" && offer ? offer.candidates.map(candidate => !isModuleCandidate(candidate) ? `
+        <div class="candidate-tile" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" aria-label="Take ${candidate.type === "column" ? "Column" : "Charge Blade"}" aria-describedby="forge-effect-${candidate.id}"></button>
+          <span class="module-preview">${worldTileSvg(candidate.type === "column" ? "column" : "weapon")}</span>
+          <span class="candidate-readout"><span class="candidate-name">${candidate.type === "column" ? "Column" : "Charge Blade"}</span>
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${candidate.type === "column" ? "Supply adjacent World weapons" : "Store charge → strike enemies"}</span></span>
+        </div>` : `
         <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name} · ${tierWord(candidate.tier)}" aria-describedby="forge-effect-${candidate.id}"></button>
           <span class="module-preview">${inventoryTileSvg(candidate)}</span>
           <span class="candidate-readout"><span class="candidate-name">${rarityMark(typeRarityOf(candidate.type))} ${META[candidate.type].name} <span class="mono">${tierNumeral(candidate.tier)}</span></span>

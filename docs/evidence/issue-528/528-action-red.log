@@ -1,0 +1,86 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/engine/mixed-draft.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-980acac7-3d87974f3c4a9f24
+
+ ❯ |engine| src/engine/mixed-draft.test.ts (2 tests | 1 failed) 17ms
+   × World selection grants repeated unplaced copies once and preserves pending offers on reload 13ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| src/engine/mixed-draft.test.ts > World selection grants repeated unplaced copies once and preserves pending offers on reload
+AssertionError: expected [ { id: 'm1', …(8) }, …(4) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+@@ -11,6 +11,50 @@
+      "shift": null,
+      "target": null,
+      "tier": 0,
+      "type": "additive",
+    },
++   {
++     "id": "m6",
++     "invested": 0,
++     "level": 0,
++     "pos": null,
++     "reserve": 0,
++     "shift": null,
++     "target": null,
++     "tier": 0,
++     "type": "column",
++   },
++   {
++     "id": "m11",
++     "invested": 0,
++     "level": 0,
++     "pos": null,
++     "reserve": 0,
++     "shift": null,
++     "target": null,
++     "tier": 0,
++     "type": "column",
++   },
++   {
++     "id": "m16",
++     "invested": 0,
++     "level": 0,
++     "pos": null,
++     "reserve": 0,
++     "shift": null,
++     "target": null,
++     "tier": 0,
++     "type": "chargeBlade",
++   },
++   {
++     "id": "m21",
++     "invested": 0,
++     "level": 0,
++     "pos": null,
++     "reserve": 0,
++     "shift": null,
++     "target": null,
++     "tier": 0,
++     "type": "chargeBlade",
++   },
+  ]
+
+ ❯ src/engine/mixed-draft.test.ts:35:21
+     33|     expect(chooseRoll(s, offer.id, choice.id).ok).toBe(false);
+     34|   }
+     35|   expect(s.modules).toEqual(modules);
+       |                     ^
+     36|   expect(s.world.columns).toHaveLength(2);
+     37|   expect(s.world.weapons).toHaveLength(2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  18:25:50
+   Duration  694ms (transform 252ms, setup 0ms, import 314ms, tests 17ms, environment 0ms)
+

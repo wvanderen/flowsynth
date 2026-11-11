@@ -1,0 +1,42 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/engine/mixed-draft.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-980acac7-3d87974f3c4a9f24
+
+ ❯ |engine| src/engine/mixed-draft.test.ts (5 tests | 1 failed) 26ms
+   × mixed replacement preserves the opening roll's oscillator guarantee 7ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| src/engine/mixed-draft.test.ts > mixed replacement preserves the opening roll's oscillator guarantee
+AssertionError: expected [ 'field', 'spotlight', 'column' ] to deeply equal [ 'column', 'spotlight', 'additive' ]
+
+- Expected
++ Received
+
+  [
+-   "column",
++   "field",
+    "spotlight",
+-   "additive",
++   "column",
+  ]
+
+ ❯ src/engine/mixed-draft.test.ts:28:45
+     26|   s.forge.earned = 1;
+     27|   const offer = generateOffer(s, stubRng([...Array(9).fill(0.5), 0, 0]…
+     28|   expect(offer.candidates.map(c => c.type)).toEqual(["column", "spotli…
+       |                                             ^
+     29| });
+     30|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  18:30:49
+   Duration  697ms (transform 250ms, setup 0ms, import 311ms, tests 26ms, environment 0ms)
+
