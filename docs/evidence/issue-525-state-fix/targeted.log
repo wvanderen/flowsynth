@@ -1,0 +1,9 @@
+
+ RUN  v4.1.12 /home/lem/dev/flowsynth
+
+
+ Test Files  1 passed (1)
+      Tests  43 passed (43)
+   Start at  09:40:51
+   Duration  4.35s (transform 1.06s, setup 0ms, import 1.26s, tests 2.52s, environment 214ms)
+
