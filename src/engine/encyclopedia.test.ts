@@ -10,7 +10,7 @@ describe("Encyclopedia save lifecycle", () => {
       const state = createInitialState();
       state[evidence] = 1;
       state.encyclopedia.charge = "seen";
-      const oldSave = JSON.parse(serialize(state)); oldSave.version = 13;
+      const oldSave = JSON.parse(serialize(state)); delete oldSave.encyclopediaVersion;
       const loaded = deserialize(JSON.stringify(oldSave)).state!;
       expect(loaded.encyclopedia).toHaveProperty("prestige", "seen");
       expect(deserialize(serialize(loaded)).state!.encyclopedia).toHaveProperty("prestige", "seen");

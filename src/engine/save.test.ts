@@ -69,7 +69,7 @@ describe("persistence", () => {
   it("saves carry the current version", () => {
     const parsed = JSON.parse(serialize(fresh()));
     expect(parsed.version).toBe(SAVE_VERSION);
-    expect(parsed.version).toBe(14);
+    expect(parsed.version).toBe(13);
   });
 
   it("the load boundary strips a run-candidates key — an ordinary save never reads a comparison curve (issue #487)", () => {
@@ -316,7 +316,7 @@ describe("the version gate (ADR-0017's pattern)", () => {
     expect(deserialize('{"app":"flowsynth","version":99,"state":{}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9,"state":{"mode":"weird"}}').error).toBeDefined();
     expect(deserialize('{"app":"flowsynth","version":9}').error).toBeDefined();
-    expect(deserialize('{"app":"flowsynth","version":15,"state":{}}').error).toMatch(/newer than this build/i);
+    expect(deserialize('{"app":"flowsynth","version":14,"state":{}}').error).toMatch(/newer than this build/i);
   });
 
   it("exported saves load unchanged", () => {
