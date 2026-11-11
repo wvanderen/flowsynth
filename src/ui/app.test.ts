@@ -169,7 +169,9 @@ describe("the console header around Enter/Exit Flow (#148)", () => {
     expect(header.querySelector("#console-logo svg")).not.toBeNull();
     expect(document.querySelector(".clock-anchor #app-tile-notes")).not.toBeNull();
     expect(document.getElementById("clock-plan")!.contains(document.getElementById("app-tile-notes"))).toBe(false);
-    expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.getElementById("console-settings")!));
+    expect(order(document.getElementById("console-session")!)).toBeLessThan(order(document.querySelector(".console-reference-doors")!));
+    expect(document.querySelector(".console-reference-doors")!.contains(document.getElementById("console-settings"))).toBe(true);
+    expect(document.querySelector(".console-reference-doors [aria-label='Encyclopedia']")).not.toBeNull();
     // The session cluster owns the header's primary text action.
     expect(document.querySelector("#console-session #flow-switch")).not.toBeNull();
   });

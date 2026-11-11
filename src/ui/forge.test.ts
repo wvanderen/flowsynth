@@ -103,23 +103,18 @@ describe("Forge drafts (#335)", () => {
     expect(app.ui.placing).toBeNull();
   });
 
-  it("opens effect definitions without choosing and dismisses them before the draft", () => {
+  it("opens the section Charge reference without choosing and returns to the same draft", () => {
     app.openModal("forge");
-    const trigger = panel().querySelector<HTMLButtonElement>('.candidate-effect .term-trigger')!;
+    expect(panel().querySelector('[aria-label="charge — what it means"]')).toBeNull();
+    const trigger = panel().querySelector<HTMLButtonElement>('#forge-about-charge')!;
     expect(trigger.closest("[data-choice], [data-mut-choice]")).toBeNull();
-    trigger.focus();
-    const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
-    expect(body.classList.contains("inst-show")).toBe(true);
-    expect(body.textContent).toBe("Generator output that powers other modules");
+    trigger.focus(); trigger.click();
+    expect(panel().textContent).toContain("Illustrative example");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-    expect(body.classList.contains("inst-show")).toBe(false);
     expect(app.ui.modal).toBe("forge");
-    trigger.click();
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+    expect(document.activeElement?.id).toBe("forge-about-charge");
     expect(app.state.bankedRolls).toHaveLength(1);
     expect(app.state.bankedMutatorRolls).toHaveLength(1);
-    panel().querySelector<HTMLElement>(".forge-choice-cue")!.click();
-    expect(body.classList.contains("inst-show")).toBe(false);
     panel().querySelector<HTMLButtonElement>('[data-choice="m1"]')!.click();
     expect(app.state.bankedRolls).toHaveLength(0);
     // Retained legacy rolls do not keep the visit open.
@@ -136,7 +131,8 @@ describe("Forge drafts (#335)", () => {
     ];
     app.openModal("forge");
     const terms = [...panel().querySelectorAll(".candidate-effect .term-trigger")].map(t => t.textContent);
-    expect(terms).toEqual(["pitch", "chords", "charge", "module rolls"]);
+    expect(terms).toEqual(["pitch", "chords", "module rolls"]);
+    expect(panel().querySelector("#forge-about-charge")).not.toBeNull();
     expect(panel().querySelector('[data-choice="mutator"]')).toBeNull();
     expect(panel().querySelectorAll("button button")).toHaveLength(0);
   });
