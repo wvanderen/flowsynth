@@ -1,0 +1,35 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T22:25:58.780Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-793820e3-4cea5962f384d836",
+  "branch": "t3/chords-harmonic-capacity",
+  "commit": "a3caf9b107a9466d8171875613917c9c4da3549f",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-534/browser-healthcheck.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-534/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-534/full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-534/phone-healthcheck.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-534/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

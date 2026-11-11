@@ -564,7 +564,7 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
   merged.catalogEntryOwned = false;
   merged.rollPoolJoined = false;
   merged.modules = merged.modules.filter(module => module.type !== "mutatorForge");
-  normalizeEncyclopedia(merged, raw.encyclopedia);
+  normalizeEncyclopedia(merged, raw.encyclopedia, raw.encyclopediaRevision);
   if (recovered) return { state: merged, recovered };
   return migration ? { state: merged, migration } : { state: merged };
 }

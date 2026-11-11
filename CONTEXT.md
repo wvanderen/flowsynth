@@ -10,9 +10,9 @@ The [World feedback brief](docs/world-layer-feedback-brief.md) and [ADR-0087](do
 
 ## Language
 
-### Learning and reference (Charge implemented; later slices planned)
+### Learning and reference (Charge and Chords/capacity implemented; Prestige planned)
 
-Issue #533 implements the Charge entry, its save-owned introduction/seen state and voluntary reader routes. Chords/capacity and Prestige teaching remain planned under #532. Implementation does not establish human comprehension or visual acceptance; see `docs/evidence/issue-533/README.md`.
+Issue #533 implements the Charge entry, its save-owned introduction/seen state and voluntary reader routes. Issue #534 extends those seams with Chords and harmonic capacity, one-time new-entry backfill and related-entry Back navigation. Prestige teaching remains planned under #532. Implementation does not establish human comprehension or visual acceptance; see `docs/evidence/issue-533/README.md` and `docs/evidence/issue-534/README.md`.
 
 **Encyclopedia**:
 The browsable reference that teaches reusable concepts and exceptional behavior through short explanations and illustrative examples. Reading is voluntary; it does not replace the live facts needed to make a decision. See the [confirmed brief](docs/encyclopedia-disclosure-brief.md).

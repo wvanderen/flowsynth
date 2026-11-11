@@ -256,9 +256,9 @@ describe("the launch command", () => {
 
       await app.devLaunchScenario(id, t);
       const expected = scenarioOf(id)!.build(t);
-      // Installing an already charge-bearing collection is a meaningful
-      // encounter in the application, unlike the engine-only recipe build.
-      expected.encyclopedia = id === "fresh-start" ? {} : { charge: "available" };
+      // Installing an already charge-bearing, multi-voice collection is a
+      // meaningful encounter in the app, unlike the engine-only recipe build.
+      expected.encyclopedia = id === "fresh-start" ? {} : { charge: "available", chords: "available" };
       expect(app.state).toEqual(expected);
       expect(app.devScenarioNote).toContain("✓");
       expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");

@@ -838,10 +838,12 @@ describe("the harmonic-capacity ladder (#259)", () => {
     expect(texts).toContain("Re-earned after arete reset");
     expect(texts).not.toContain("Lifts its module cell’s received charge to adjacent weapons");
     expect(texts).toContain("Arete’s persistent attack-power ranks for a weapon type");
-    // The nous face: generator charge and Harmonic capacity glosses.
+    // General capacity teaching moved to the section reference; the product's
+    // consequential reset condition stays local.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();
     texts = read();
-    expect(texts).toEqual(["Whole-chord budget per voice", "Re-earned after arete reset", "Whole-chord budget per voice"]);
+    expect(texts).toEqual(["Re-earned after arete reset"]);
+    expect(document.querySelector(".capacity-catalog #about-chords")).not.toBeNull();
   });
 
   it("the sheet's capacity offerings stand inert outside upgrade mode", () => {

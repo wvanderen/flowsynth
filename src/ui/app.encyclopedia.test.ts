@@ -13,24 +13,102 @@ const door = () => document.querySelector<HTMLButtonElement>('[aria-label="Encyc
 beforeEach(() => { localStorage.clear(); app = fixture.boot(); });
 afterEach(() => fixture.release());
 describe("voluntary Encyclopedia", () => {
+  it("encounters visible unaffordable capacity, searches idle chords, and returns through related entries to the same Catalog", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.state.encyclopedia).toHaveProperty("chords", "available");
+    const help = document.getElementById("about-chords")!;
+    help.focus(); help.click();
+    expect(app.state.encyclopedia.chords).toBe("seen");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");
+    button("Charge").click();
+    button("‹ Back").click();
+    expect(document.querySelector(".encyclopedia-entry h2")!.textContent).toBe("Chords and harmonic capacity");
+    button("Charge").click();
+    button("Chords and harmonic capacity").click();
+    button("‹ Topics").click();
+    const search = document.getElementById("encyclopedia-search") as HTMLInputElement;
+    for (const query of ["harmonic capacity", "idle", "budget", "recognition"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(button("Chords and harmonic capacity")).toBeDefined();
+    }
+    app.closeModal();
+    expect(app.ui.modal).toBe("catalog");
+    expect(document.activeElement?.id).toBe("about-chords");
+    expect(app.state.capacityBought).toBe(0);
+    expect(app.state.nous).toBe(0);
+    expect(document.querySelector('.capacity-catalog [aria-label="Harmonic capacity — what it means"]')).toBeNull();
+    expect(document.querySelector(".capacity-catalog")!.textContent).toContain("Raises Harmonic capacity by one for all voices");
+    expect(document.querySelector("[data-buy-capacity]")).not.toBeNull();
+  });
   it("imports and exports save-owned marks, clears them on full reset, and gives later encounters normal unseen marks after legacy migration", () => {
     app.openModal("catalog"); app.closeModal();
     const exported = serialize(app.state);
     app.hardReset();
     expect(app.state.encyclopedia).toEqual({});
     expect(app.importText(exported)).toBe(true);
-    expect(app.state.encyclopedia).toEqual({ charge: "available" });
+    expect(app.state.encyclopedia).toEqual({ charge: "available", chords: "available" });
     door().click(); button("Charge · Unseen").click(); app.closeModal();
     const readExport = serialize(app.state);
     app.hardReset();
     app.importText(readExport);
-    expect(app.state.encyclopedia).toEqual({ charge: "seen" });
+    expect(app.state.encyclopedia).toEqual({ charge: "seen", chords: "available" });
     app.hardReset();
     const legacy = JSON.parse(serialize(app.state)); delete legacy.state.encyclopedia;
     expect(app.importText(JSON.stringify(legacy))).toBe(true);
     expect(app.state.encyclopedia).toEqual({});
     app.openModal("catalog");
-    expect(app.state.encyclopedia).toEqual({ charge: "available" });
+    expect(app.state.encyclopedia).toEqual({ charge: "available", chords: "available" });
+  });
+  it.each(["rate", "library"] as const)("returns from the %s section door with its scroll and selection intact", modal => {
+    app.openModal(modal);
+    const stage = app.ui.chordStage;
+    const content = document.getElementById("modal-content")!;
+    content.scrollTop = 72;
+    const help = document.getElementById("about-chords")!;
+    expect(help).not.toBeNull();
+    help.focus(); help.click();
+    app.closeModal();
+    expect(app.ui.modal).toBe(modal);
+    expect(app.ui.chordStage).toBe(stage);
+    expect(document.getElementById("modal-content")!.scrollTop).toBe(72);
+    expect(document.activeElement?.id).toBe("about-chords");
+  });
+  it("keeps hidden chord routes closed, then encounters an owned voice without opening and never relocks it", () => {
+    app.openEncyclopedia("chords");
+    expect(app.ui.modal).toBeNull();
+    door().click();
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Chords and harmonic capacity");
+    app.closeModal();
+    app.state.modules = [createModule(app.state, "blaster")]; app.render();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.encyclopedia.chords).toBe("available");
+    app.state.modules = []; app.render();
+    door().click(); button("Chords and harmonic capacity · Unseen").click();
+    expect(app.state.encyclopedia.chords).toBe("seen");
+  });
+  it("reads chords from voice inspection during flow and restores the selected layer and board view", () => {
+    startSession(app.state, 600);
+    const session = app.state.session;
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const detail = structuredClone(app.ui.detail);
+    const layer = app.ui.boardLayer;
+    const zoom = app.ui.zoom;
+    const help = document.getElementById("detail-about-chords")!;
+    expect(help).not.toBeNull();
+    help.focus(); help.click();
+    expect(app.state.encyclopedia.chords).toBe("seen");
+    expect(document.getElementById("modal-content")!.textContent).toContain("No partial chord earns a bonus");
+    expect(document.getElementById("modal-content")!.querySelector("input, canvas, animate")).toBeNull();
+    advance(app.state, 10); app.render();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.state.session).toBe(session);
+    expect(session!.elapsed).toBe(10);
+    expect(app.ui.detail).toEqual(detail);
+    expect(app.ui.boardLayer).toBe(layer);
+    expect(app.ui.zoom).toBe(zoom);
+    expect(document.activeElement?.id).toBe("detail-about-chords");
   });
   it("returns keyboard focus and the selected board task after inspection reading, with static teaching and no exercises", () => {
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -79,6 +157,8 @@ describe("voluntary Encyclopedia", () => {
     expect(app.ui.modal).toBeNull();
     expect(app.state).toHaveProperty("encyclopedia.charge", "available");
     door().click(); button("Charge · Unseen").click();
+    expect(document.querySelector('[data-entry="chords"]')).toBeNull();
+    expect(document.getElementById("modal-content")!.textContent).not.toMatch(/World|Prestige/);
     advance(app.state, 10);
     app.render();
     expect(app.state.session).toBe(session);
@@ -110,6 +190,8 @@ describe("voluntary Encyclopedia", () => {
     expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
     expect(document.activeElement).toBe(door());
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).not.toBeNull();
+    door().click(); button("Chords and harmonic capacity · Unseen").click(); app.closeModal();
     expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).toBeNull();
     const settings = document.getElementById("console-settings")!;
     settings.focus(); settings.click(); app.closeModal();
