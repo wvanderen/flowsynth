@@ -4,7 +4,7 @@
 
 Branch `t3/retire-legacy-mutators`. Prepared clean HEAD was `e7ba47da9f5e552794922405fae218e818677316`, the required `integration/525-world-progression` tip; ancestry check returned 0 before editing. #526–#529 implementation is integrated. Their open issues reflect unavailable visual acceptance, not missing implementation. Read #530/#525 bodies and empty comment lists with `gh`, AGENTS, CONTEXT, ADR-0043/0074/0079/0081/0086/0087, instrument standards and pinned `eb232c4` prototype source, checks/review/verification/visual-evidence/domain guides, and the four prior slice records. No subagents, issue closure or PR changes.
 
-Implementation is not unconditional acceptance. Final visual checks are **owed at freeze**; unavailable checks remain blockers without an authorized scope decision. Historical calibration is not current economy validation. The coordinator's independent final code review is separate and has not been claimed here.
+Implementation is not unconditional acceptance. Final visual checks were attempted at the revised freeze and are **unavailable**; they remain blockers without an authorized scope decision. Historical calibration is not current economy validation. The coordinator's independent final code review is separate and has not been claimed here.
 
 ## Legacy disposition audit
 
@@ -52,7 +52,7 @@ Verification abbreviations below identify exact named cases, not suite counts. P
 | C | `src/ui/app.catalog.test.ts`: **the Accelerator placeholder is absent even for legacy owners**; **the retired pool join and empty Module Types section are absent**; **the legacy pool offer cannot spend Arete for existing owners**; existing capacity/term/flow cases. |
 | E | `src/engine/exciter.test.ts`, `chorus-sideband.test.ts`, `roster.test.ts`, `temporal.test.ts`: named **retired** power/charge/resonance cases verify unchanged support, chord, relay and temporal output. `achievements.test.ts`: **retired resonance cannot grant Power chord in progress, action or tick checks** and **live milestones commemorate their beats but retired ownership flags grant nothing**. |
 | Q | `src/ui/app.playthrough.test.ts`: **pushes past the first eligibility, banks, spends, deploys the starter rig, recovers, and advances the frontier**; `src/engine/progression-presets.test.ts`: **stops the pushing walk at the living fight with the placement unplayed**. Current declared workflow, not a new calibration matrix or replacement for visual acceptance. |
-| V | Final desktop/phone captures and keyboard/touch, non-color and reduced-motion judgment: **owed at freeze**, status recorded below after attempts. Automated shape/accessibility checks do not satisfy V. |
+| V | Final desktop/phone captures and keyboard/touch, non-color and reduced-motion judgment: **unavailable**, bounded attempts recorded below and in `browser-attempts.json`. Automated shape/accessibility checks do not satisfy V. |
 
 ## #530 criterion mapping
 
@@ -65,7 +65,7 @@ Verification abbreviations below identify exact named cases, not suite counts. P
 | Integrated hidden-pressure → zero reset → positive bank/kit → mixed draft → unplaced grant → deploy → later prestige → reload | J; P precise pressure/ambient boundaries; M/A draft probability and routing; Q earned declared journey. Automated, not pacing/visual proof. |
 | Reconcile domain including pending #527, retired contracts, deferred weapons, Columns, ledger, calibration limits | CONTEXT, ADR-0087 status, supersession notes on ADR-0043/0074/0079, instrument amendment, feedback brief and save-migration amendment. Source verification. |
 | Parent-wide mapping and honest provenance/invalidation | Tables below plus prior provenance table. Source/manual record. |
-| Preliminary review/fixes → freeze → final suites and desktop/phone evidence | Source gate below; final runs/captures **owed at freeze**. Missing visual evidence remains a blocker, not substituted by scripted workflows. |
+| Preliminary review/fixes → freeze → final suites and desktop/phone evidence | Source gate below; final runs/captures recorded below. Missing visual evidence remains a blocker, not substituted by scripted workflows. |
 
 ## #525 stories — complete parent mapping
 
@@ -103,8 +103,8 @@ Each row is automated unless it explicitly names V; V remains the separate visua
 | 28 | Preserve unrelated save progress and placed World | D translation, R, L. |
 | 29 | Translate unlock/free Column once | D parameterized old-eligibility case; application **loading an eligible old save discovers World and adds exactly one free Column without rewriting progression** in `app.world-progression.test.ts`. |
 | 30 | Retire Mutator gates/offers/mechanics/placeholder | R/L/F/C/E and audit. |
-| 31 | Keyboard/touch accessible disclosure/confirm/reasons | P accessible states and Catalog term-handler regressions; **V physical input and appearance remain owed**, automation is partial only. |
-| 32 | Reduced motion and non-color identity/action states | H state/artwork cases and existing static reduce CSS source review; **V visual judgment remains owed**, automation is partial only. |
+| 31 | Keyboard/touch accessible disclosure/confirm/reasons | P accessible states and Catalog term-handler regressions; **V physical input and appearance remain unavailable**, automation is partial only. |
+| 32 | Reduced motion and non-color identity/action states | H state/artwork cases and existing static reduce CSS source review; **V visual judgment remains unavailable**, automation is partial only. |
 
 ## #525 implementation decisions — one row per requirement
 
@@ -161,4 +161,27 @@ Second source/spec read checked these fixes, the parent/ticket mapping and named
 
 ## Final checks and browser evidence
 
-Pending revised freeze: current integration merge, clean committed source freeze, `npm run check`, one `npm test`, dev-server provenance preflight, desktop 1280×900 and phone 390×844 capture passes, keyboard/touch/non-color/reduced-motion judgment. The prior failed full run is not a green or a waiver. Final results will be appended after execution.
+Revised source freeze: **`20c86cdd99e49e8d0d3e4ac323a7ad8088668a43`**. Merging `integration/525-world-progression` again reported already up to date at `e7ba47d`. All subsequent edits are evidence-only under this directory. The prior failed full run is not a green or a waiver.
+
+| Final check | Result / artifact |
+| --- | --- |
+| Runtime/calendar/storage | PASS — `runtime-preflight-final.log`: declared/effective Node 22.23.4, America/Chicago UTC−06:00, happy-dom localStorage round-trip. Initial bare-host Node 26 rejection was corrected with `mise exec node@22.23.4`; supported check scripts select the pinned runtime. |
+| `npm run check` | PASS — `check.log`, `check.exit`: strict tsc and recorder static gate, 5 scripts/no static defects. |
+| `npm test` | PASS — `test.log`, `test.exit`: 132 files passed, 2381 cases passed, 9 reported skips (2390 total), 1018.33s, exit 0. No skipped case is used as acceptance evidence. Raw no-repository diagnostic stderr is retained verbatim in the log; there is no final failing case. |
+| Capture preflight | PASS — exact URL `http://localhost:5174/`, verified worktree, branch, source commit above and clean source; `provenance.json`, `capture-preflight.log`, `server.log`. |
+| Capture health server side | PASS — `capture-health.log`, using the standing `node tools/evidence-healthcheck.mjs --url ... --viewport 1280x900` command. This is not a browser pass. |
+| Browser snapshot readiness | UNAVAILABLE — same verified, available, loaded, dialog-free tab; three `preview_snapshot(includeImage:true, save:true)` attempts each timed out after 15000ms, with `preview_status` between attempts. No further snapshots after the shared budget was exhausted. No image produced. |
+| Visibility | UNAVAILABLE — activation and status kept reporting `visible:false`; loaded URL was confirmed, but the required successful same-tab confirmation snapshot was unavailable. |
+| Phone 390×844 | The page size read reported 390×844 after resize, despite the resize response echoing 1280×800. Capture still UNAVAILABLE because the snapshot pipeline had exhausted its shared budget. Size alone is not visual evidence. |
+| Desktop 1280×900 | UNAVAILABLE — three resize attempts echoed the requested setting but page reads remained 390×844 after each; status recovery between attempts confirmed the stale/mismatched viewport. No stale echo was treated as confirmation. |
+| Keyboard/touch/focus, non-color, reduced motion, four-surface visual identity and prototype composition | UNAVAILABLE browser judgment. P/A/H/J/L provide named automated partial coverage, not visual acceptance. |
+
+Full tool-result transcription is `browser-attempts.json`; the owned tab was closed after the bounded pass. No screenshot, capture, video, browser interaction judgment or visual approval is fabricated. Both desktop and phone visual acceptance remain open **blockers** for #530/#525 and inherited #526–#529; no issue is closed and no scope waiver is asserted.
+
+No new balance calibration was run or claimed. The current declared policy cases are workflow verification only; historical matrices remain invalid as proof of today's economy. `npm run build` is not a separate local per-revision obligation under `docs/agents/checks.md`; no calendar boundary/schedule arithmetic changed, so no new `test:calendar` obligation was introduced. Install reported three existing high-severity dependency audit findings (`install.log`); dependency upgrades are outside this slice.
+
+## Handoff disposition
+
+Implementation and the revised final required automated checks are complete at source `20c86cd`. This completion record, its parent-wide mapping and raw evidence are committed in an evidence-only follow-up; those additions do not change tested/capture-attempted source. Final integration-tip confirmation still resolves to `e7ba47da9f5e552794922405fae218e818677316`; merging that tip into this branch reports already up to date. The branch descends from it.
+
+**Acceptance remains blocked on unavailable desktop/phone visual evidence**, including keyboard/touch/focus, non-color, reduced-motion and instrument/prototype visual judgment. Scripted workflows, literal probability/pressure tests, live-size reads and historical recordings do not waive those blockers. Coordinator independent final review after integration is a separate pending gate. No subagents were used; no issue was closed and no PR was edited.
