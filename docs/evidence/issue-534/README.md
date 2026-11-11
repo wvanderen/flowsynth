@@ -63,4 +63,15 @@ All findings resolved before freeze: introduction revision is catalog metadata w
 
 Fix review (same-context, sequential): source matches the entry identity/availability/seen contract, preserves every decision fact listed above, and changes no engine allocation or plain transient-readout code. Predicate/migration evidence covers the nonstarter lone voice as well as multiple voices, historical discoveries and receipts. Shared reader navigation keeps its original origin across related Back and Topics. No further source finding remains. `git diff --check` passed. Eight-file affected-area rerun passed (254 cases); scenario rerun passed separately. The local integration merge reported Already up to date and its tip is an ancestor. Source freezes in the implementation commit containing this record; final standing checks and browser evidence follow, not precede, that commit.
 
-Final acceptance remains blocked wherever required evidence is unavailable.
+## Final evidence / acceptance gate
+
+Frozen implementation: **`a3caf9b107a9466d8171875613917c9c4da3549f`**. Only evidence files changed afterward.
+
+- `npm run check` passed (`check.log`): strict typecheck and recorder static gate.
+- `npm test` passed (`full-test.log`):134 files;2409 passed,9 skipped, exit0. The log includes git-not-a-repository diagnostics emitted during tests; these are not failures. No duplicate full UI run was performed.
+- Capture preflight accepted the clean exact worktree/commit (`provenance.json`). Desktop actual1280×900 was confirmed and browser Enter/Escape returned focus to the Catalog door without buying. Screenshot capture failed three times; phone390×844 resizing also failed three times (actual dimensions remained desktop). Full raw failures, recovery order and honest unavailable judgments: **`final-browser-walkthrough.md`**, `browser-healthcheck.log`, `phone-healthcheck.log`.
+- Mapping rows5,7,9’s final-evidence obligations therefore resolve to **partial scripted browser keyboard/DOM evidence**, **unavailable screenshots/perceptual/phone/touch/reduced-motion judgments**, not a visual pass. Human comprehension in rows2/9 remains **unavailable**, not inferred from successful tests. These declared gaps block final acceptance, not implementation/source verification, and are not waived by this record.
+- Source gate preceded freeze; standing suites and browser attempt followed it. No source recovery or recapture relabeling occurred.
+- Final local integration tip remained`f2ce3b92bcfb0e899cf5857a430925369c70756b`. Actual `git merge integration/532-encyclopedia` again reported **Already up to date**; ancestry check returned0 before handoff. No slice work was overwritten; no issues were closed or edited.
+
+**Final disposition: implementation and automated/source checks complete; final acceptance blocked on the unavailable judgments above.**
