@@ -38,14 +38,9 @@ function affordable(state: GameState): void {
   state.nous = BALANCE.capacityPrices.reduce((sum, price) => sum + price, 0) * 2;
 }
 
-// The offerings' playable path: the Catalog entry is their mandatory
-// prerequisite, so every offering purchase in these tests pays it first —
-// the harness and the UI buy through the same door.
+// The former entry setup now verifies there is no purchase prerequisite.
 function enterCatalog(state: GameState): void {
-  if (!state.catalogEntryOwned) {
-    state.arete = Math.max(state.arete, BALANCE.catalogEntryCost);
-    expect(buyCatalogEntry(state).ok).toBe(true);
-  }
+  expect(state.catalogEntryOwned).toBe(false);
 }
 
 function allocationCapacityOf(state: GameState): number {
@@ -153,7 +148,7 @@ describe("the Arete offerings (#259)", () => {
     const result = buyCapacityCeiling(state);
     expect(result.ok).toBe(false);
     expect(nextCeilingPrice(state)).toBeNull();
-    expect(state.arete).toBe(100 - BALANCE.capacityCeilingCosts[0]! - BALANCE.capacityCeilingCosts[1]! - BALANCE.catalogEntryCost);
+    expect(state.arete).toBe(100 - BALANCE.capacityCeilingCosts[0]! - BALANCE.capacityCeilingCosts[1]!);
   });
 
   it("discounts take 20%, then 40% off the original prices, and cost less than their ceilings", () => {
@@ -189,11 +184,11 @@ describe("the Arete offerings (#259)", () => {
   it("the offerings are Arete-paid and refuse in flow mode", () => {
     const state = fresh();
     state.arete = 1;
-    expect(buyCatalogEntry(state).ok).toBe(true);
+    expect(buyCatalogEntry(state).ok).toBe(false);
     expect(startSession(state, null).ok).toBe(true);
     expect(buyCapacityCeiling(state).ok).toBe(false);
     expect(buyCapacityDiscount(state).ok).toBe(false);
-    expect(state.arete).toBe(0);
+    expect(state.arete).toBe(1);
     endSession(state);
     state.arete = BALANCE.capacityDiscountCosts[0]!;
     expect(buyCapacityDiscount(state).ok).toBe(true);

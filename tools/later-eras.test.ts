@@ -105,13 +105,12 @@ describe("the declared evaluation matrix", () => {
     // read off the authored ladders, never restated; a deeper bank's
     // ladders price their own enumeration.
     const firstRungs = { catalogEntryOwned: false, arete: 2, world: { columns: [], hone: { chargeBlade: 0 } } } as unknown as GameState;
-    for (const piece of ["entry", "hone"] as const) {
-      expect(routePiecePriceAt(firstRungs, piece)).toBe(1);
-    }
+    expect(routePiecePriceAt(firstRungs, "entry")).toBeNull();
+    expect(routePiecePriceAt(firstRungs, "hone")).toBe(1);
     expect(routePiecePriceAt(firstRungs, "column")).toBeNull();
     const orders = affordableOrdersAt(firstRungs);
-    // Empty, two singles, both orders of the remaining entry/Hone pair.
-    expect(orders).toHaveLength(5);
+    // Historical entry/Column identities are not live purchase routes.
+    expect(orders).toEqual([[], ["hone"]]);
     expect(orders.every((order) => !order.includes("column"))).toBe(true);
     expect(orders[0]).toEqual([]);
     for (const order of orders) {

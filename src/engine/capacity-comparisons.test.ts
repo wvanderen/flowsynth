@@ -346,7 +346,7 @@ describe("the complete-board comparisons (#262)", () => {
     }
   });
 
-  it("reads mutators on the same board — power and resonance both land", () => {
+  it("historical mutator fixtures cannot change the live board economy", () => {
     const level = levelForBoardBudget((l) => doubledTriad(l), BUDGET);
     const boards = [
       named(doubledTriad(level), "no mutator"),
@@ -365,8 +365,8 @@ describe("the complete-board comparisons (#262)", () => {
     expect(rows.find((row) => row.board === "no mutator")!.mutatorArete).toBe(0);
     expect(rows.find((row) => row.board === "power mutator")!.mutatorArete).toBe(1);
     for (const capacity of CAPACITIES) {
-      expect(rate(rows, "power mutator", capacity)).toBeGreaterThan(rate(rows, "no mutator", capacity));
-      expect(rate(rows, "resonance mutator", capacity)).toBeGreaterThan(rate(rows, "no mutator", capacity));
+      expect(rate(rows, "power mutator", capacity)).toBe(rate(rows, "no mutator", capacity));
+      expect(rate(rows, "resonance mutator", capacity)).toBe(rate(rows, "no mutator", capacity));
     }
   });
 

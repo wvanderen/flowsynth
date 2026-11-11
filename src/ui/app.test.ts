@@ -320,7 +320,7 @@ describe("the feats page's milestone group (issue #268)", () => {
     expect(rows).toHaveLength(5);
     const entry = rows[0]!;
     expect(entry.querySelector(".ach-name")!.textContent).toBe("Mutator entry");
-    expect(entry.querySelector(".ach-unlock")!.textContent).toBe("Mutator Grid on");
+    expect(entry.querySelector(".ach-unlock")!.textContent).toBe("Retired");
     expect(entry.querySelector(".ach-effect")!.textContent).toBe("+2% ν");
     expect(entry.querySelector(".ach-icon svg")).not.toBeNull();
     // The engraved done-mark is the crossed row's state.
@@ -338,11 +338,11 @@ describe("the feats page's milestone group (issue #268)", () => {
     app.openModal("achievements");
     const row = document.querySelector(".ach-milestone:not(.crossed)")!;
     expect(row.querySelector(".ach-name")!.textContent).toBe("Mutator entry");
-    expect(row.querySelector(".ach-unlock")!.textContent).toBe("Mutator Grid on");
+    expect(row.querySelector(".ach-unlock")!.textContent).toBe("Retired");
     expect(row.querySelector(".ach-effect")!.textContent).toBe("+2% ν");
     expect(row.querySelector(".ach-mark")).toBeNull();
     const tip = row.querySelector(".inst-tip-body")!;
-    expect(tip.textContent).toContain("Arete Catalog");
+    expect(tip.textContent).toContain("retired");
     // The gate tooltip rides the instrument layer: focus opens it.
     const trigger = row.querySelector<HTMLElement>(".inst-tip-trigger")!;
     trigger.focus();
@@ -364,17 +364,17 @@ describe("the feats page's milestone group (issue #268)", () => {
     // first-light rides along: the save's completed session satisfies it
     // unstamped — the eager sync is achievement-wide, and silent throughout.
     expect([...Object.keys(booted.state.achievements)].sort()).toEqual(
-      ["first-light", "first-prestige", "first-row", "mutator-entry", "roll-pool-join", "shelf-complete"].sort(),
+      ["first-light", "first-prestige", "first-row", "shelf-complete"].sort(),
     );
     // No toast announced the retro-grant.
     expect(document.getElementById("status")!.textContent).not.toContain("Feat unlocked");
     // The chip reads the full count — the five milestones plus first-light.
     booted.render();
-    expect(document.getElementById("feats-chip")!.textContent).toContain("6/22");
+    expect(document.getElementById("feats-chip")!.textContent).toContain("4/22");
     booted.openModal("achievements");
-    expect(document.getElementById("modal-content")!.querySelector("#modal-title")!.textContent).toBe("6 of 22 feats.");
+    expect(document.getElementById("modal-content")!.querySelector("#modal-title")!.textContent).toBe("4 of 22 feats.");
     const crossed = document.querySelectorAll(".ach-milestone.crossed");
-    expect(crossed).toHaveLength(5);
+    expect(crossed).toHaveLength(3);
   });
 });
 

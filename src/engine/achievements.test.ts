@@ -150,16 +150,16 @@ describe("the achievement registry", () => {
 });
 
 describe("the milestone feats (ADR-0015 amended)", () => {
-  it("each commemorates its beat: entry, pool join, prestige, first row, shelf", () => {
+  it("live milestones commemorate their beats but retired ownership flags grant nothing", () => {
     const s = fresh();
     completeSession(s);
     s.purchased.generator = true;
     s.purchased.infusor = true;
     expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
     s.catalogEntryOwned = true;
-    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual(["mutator-entry"]);
+    expect(syncAchievements(s, { now: NOW }).map((d) => d.id)).toEqual([]);
     s.rollPoolJoined = true;
-    expect(syncAchievements(s, { now: NOW + 1 }).map((d) => d.id)).toEqual(["roll-pool-join"]);
+    expect(syncAchievements(s, { now: NOW + 1 }).map((d) => d.id)).toEqual([]);
     s.prestiges = 1;
     expect(syncAchievements(s, { now: NOW + 2 }).map((d) => d.id)).toEqual(["first-prestige"]);
     s.unlockedRows.push(2);
@@ -180,8 +180,6 @@ describe("the milestone feats (ADR-0015 amended)", () => {
     // The load's silent grant lands before anything else reads the ledger.
     const granted = syncAchievements(s, { silent: true });
     expect(granted.map((d) => d.id)).toEqual([
-      "mutator-entry",
-      "roll-pool-join",
       "first-prestige",
       "first-row",
       "shelf-complete",
@@ -203,9 +201,9 @@ describe("the milestone feats (ADR-0015 amended)", () => {
     // first two Arete (issue #425); the entry purchase spends one.
     s.eraEarned = BALANCE.world.entryNous;
     expect(prestige(s).unlocked).toEqual(["first-prestige"]);
-    expect(buyCatalogEntry(s).unlocked).toEqual(["mutator-entry"]);
+    expect(buyCatalogEntry(s).ok).toBe(false);
     s.arete = BALANCE.rollPoolJoinCost;
-    expect(joinRollPool(s).unlocked).toEqual(["roll-pool-join"]);
+    expect(joinRollPool(s).ok).toBe(false);
     s.cells.push(hex(0, BALANCE.launchRowsAbove));
     s.arete = 1;
     expect(buyRowUnlock(s, BALANCE.launchRowsAbove + 1).unlocked).toEqual(["first-row"]);
@@ -354,7 +352,7 @@ describe("the 17-feat launch set", () => {
     expect(s.achievements["power-chord"]).toBeDefined();
   });
 
-  it("Power chord includes earned resonance in progress, action and tick checks", () => {
+  it("retired resonance cannot grant Power chord in progress, action or tick checks", () => {
     const setup = () => {
       const s = fresh();
       s.sessionsCompleted = 1;
@@ -365,21 +363,20 @@ describe("the 17-feat launch set", () => {
     const s = setup();
     give(s, "additive", hex(1, 0));
     const earned = displayedRates(s, true).contributions.get(s.modules[0]!.id)!.chordFactor!;
-    expect(earned / 1.5).toBeLessThan(2);
-    expect(earned).toBeGreaterThan(2);
+    expect(earned).toBeLessThan(2);
     const def = ACHIEVEMENTS.find((a) => a.id === "power-chord")!;
-    expect(def.progress(s, { chargeDelivered: false }).current).toBe(2);
-    expect(syncAchievements(s).map((d) => d.id)).toContain("power-chord");
+    expect(def.progress(s, { chargeDelivered: false }).current).toBeLessThan(2);
+    expect(syncAchievements(s).map((d) => d.id)).not.toContain("power-chord");
 
     const action = setup();
     const g = give(action, "additive", null);
-    expect(placeModule(action, g.id, hex(1, 0)).unlocked).toContain("power-chord");
+    expect(placeModule(action, g.id, hex(1, 0)).unlocked).not.toContain("power-chord");
 
     const tick = setup();
     startSession(tick, null);
     give(tick, "additive", hex(1, 0));
     advance(tick, 1);
-    expect(tick.achievements["power-chord"]).toBeDefined();
+    expect(tick.achievements["power-chord"]).toBeUndefined();
   });
 
   it("Power chord refuses the old board-wide read: disjoint stacks are not one voice's ×2", () => {

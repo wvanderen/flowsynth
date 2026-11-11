@@ -1,4 +1,4 @@
-import { BALANCE, CATEGORY_OF, isOscillatorType, MUTATOR_FAMILIES, POOL_JOIN_TYPE, ROLL_POOL, TYPE_RARITY } from "./constants";
+import { BALANCE, CATEGORY_OF, isOscillatorType, MUTATOR_FAMILIES, ROLL_POOL, TYPE_RARITY } from "./constants";
 import { requireFinite } from "./numeric";
 import { unlockedMergeCap } from "./catalog";
 import { newModuleId } from "./state";
@@ -101,7 +101,7 @@ function drawSpecialTier(state: GameState, rng: Rng, base: number): number {
 // The first-roll rig never applies (it reads the module meters, and a
 // special draft needs scrap no opening state can carry).
 export function generateSpecialOffer(state: GameState, kind: SpecialDraftKind, category: Category, rng: Rng): RollOffer<Candidate> {
-  const pool: ModuleType[] = state.rollPoolJoined ? [...ROLL_POOL, POOL_JOIN_TYPE] : [...ROLL_POOL];
+  const pool: ModuleType[] = [...ROLL_POOL];
   const rarePool = pool.filter((type) => TYPE_RARITY[type] === "rare");
   const candidates: Candidate[] = [];
   for (let i = 0; i < 3; i++) {
@@ -159,11 +159,8 @@ export function totalPracticeRollsEarned(state: GameState): number {
 }
 
 export function generateOffer(state: GameState, rng: Rng, extraTierChance = 0): RollOffer {
-  // The Mutator Forge type joins as one uniform, unweighted entry once the
-  // roll-pool purchase owns membership (ADR-0043) — the purchase buys
-  // membership, nothing else. Its draws ride its category's authored
-  // weight like every type's.
-  const pool: ModuleType[] = state.rollPoolJoined ? [...ROLL_POOL, POOL_JOIN_TYPE] : [...ROLL_POOL];
+  // Retired ownership flags cannot add Mutator Forge to any fresh draft.
+  const pool: ModuleType[] = [...ROLL_POOL];
   const candidates: Candidate[] = [];
   for (let i = 0; i < 3; i++) {
     // Fixed type rarity drives the band draw (ADR-0058): the slot draws
@@ -264,6 +261,6 @@ export function addForgeProgress(state: GameState, amount: number, rng: Rng = Ma
 
 // The Mutator Forge branch's crossings (ADR-0043, issue #198): charge-only
 // — practice never feeds this branch (ADR-0041).
-export function addMutatorForgeProgress(state: GameState, amount: number, rng: Rng = Math.random): number {
-  return bankRolls(state.mutatorForge, "mutator", amount, mutatorForgeThreshold, state, rng, state.bankedMutatorRolls, generateMutatorOffer);
+export function addMutatorForgeProgress(_state: GameState, _amount: number, _rng: Rng = Math.random): number {
+  return 0;
 }

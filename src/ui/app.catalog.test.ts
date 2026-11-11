@@ -330,46 +330,34 @@ describe("the catalog door (issue #271)", () => {
     const headings = [...sheet.querySelectorAll(".catalog-sections h2")].map((h) => h.textContent);
     expect(headings[0]).toBe("World");
     expect(headings[1]).toBe("Upgrades");
-    expect(headings[2]).toContain("Module Types");
+    expect(headings).toEqual(["World", "Upgrades"]);
     expect(sheet.textContent).not.toContain("Mutator layer");
     expect(document.getElementById("buy-world-column")).toBeNull();
     expect(sheet.textContent).toContain("Hone");
     app.closeModal();
   });
 
-  it("the Accelerator stands as an inert placeholder — priced, never buyable, no tooltip", () => {
+  it("the Accelerator placeholder is absent even for legacy owners", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
     app.state.arete = 100;
     app.openModal("catalog");
     switchFace("arete");
     const sheet = document.getElementById("modal-content")!;
-    const accel = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Accelerator"))!;
-    expect(accel.textContent).toContain("placeholder");
-    const button = accel.querySelector<HTMLButtonElement>("button.price")!;
-    expect(button.disabled).toBe(true);
-    button.click();
+    expect(sheet.textContent).not.toContain("Accelerator");
     expect(app.state.arete).toBe(100);
-    // The visible kind carries the placeholder state; the disclosure
-    // doctrine cuts the tooltip that would restate it (issue #310).
-    expect(accel.querySelector(".inst-tip")).toBeNull();
   });
 
-  it("the roll-pool join carries the future-rolls tooltip; joining empties the section", () => {
+  it("the retired pool join and empty Module Types section are absent", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
     app.state.arete = BALANCE.rollPoolJoinCost;
     app.openModal("catalog");
     switchFace("arete");
     const sheet = document.getElementById("modal-content")!;
-    // The pool join's tooltip holds the gloss standard; joining empties
-    // the section.
-    const tip = [...sheet.querySelectorAll(".inst-tip-body")].find((t) => t.textContent!.includes("unweighted"))!;
-    expect(tip).not.toBeNull();
-    document.getElementById("buy-arete-pool")!.click();
-    expect(app.state.rollPoolJoined).toBe(true);
-    expect(sheet.textContent).toContain("future objects appear in future rolls");
+    expect(sheet.textContent).not.toMatch(/Mutator|Module Types|unweighted/);
     expect(document.getElementById("buy-arete-pool")).toBeNull();
+    expect(app.state.rollPoolJoined).toBe(false);
   });
 
   it("prices mute when unaffordable: an Arete row's price and a shelf offer stand inert without the resource", () => {
@@ -491,21 +479,16 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(sheet.querySelector('[data-catalog-face="arete"]')).not.toBeNull();
   });
 
-  it("the remaining legacy pool offer still debits its price for existing owners", () => {
+  it("the legacy pool offer cannot spend Arete for existing owners", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
     app.state.arete = BALANCE.catalogEntryCost + BALANCE.rollPoolJoinCost;
     app.openModal("catalog");
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     expect(document.getElementById("buy-arete-entry")).toBeNull();
-    const join = document.getElementById("buy-arete-pool") as HTMLButtonElement;
-    expect(join).not.toBeNull();
-    expect(join.disabled).toBe(false);
-    join.click();
-    expect(app.state.rollPoolJoined).toBe(true);
-    expect(app.state.arete).toBe(BALANCE.catalogEntryCost);
-    const sheet = document.getElementById("modal-content")!;
-    expect(sheet.textContent).toContain("future objects appear in future rolls");
+    expect(document.getElementById("buy-arete-pool")).toBeNull();
+    expect(app.state.rollPoolJoined).toBe(false);
+    expect(app.state.arete).toBe(BALANCE.catalogEntryCost + BALANCE.rollPoolJoinCost);
   });
 
   it("the face's buttons stand inert outside upgrade mode", () => {
@@ -517,7 +500,8 @@ describe("the Arete Catalog (issue #197)", () => {
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
-    expect((document.getElementById("buy-arete-pool") as HTMLButtonElement).disabled).toBe(true);
+    expect(document.getElementById("buy-arete-pool")).toBeNull();
+    expect((document.getElementById("buy-world-hone") as HTMLButtonElement).disabled).toBe(true);
     expect(app.state.rollPoolJoined).toBe(false);
   });
 
@@ -694,8 +678,8 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.state.eraEarned = BALANCE.world.entryNous * 1.5;
     app.ui.boardLayer = "world";
     app.openModal("catalog");
-    // The one disclosure is the Module Types section's own gloss.
-    const trigger = document.querySelector<HTMLButtonElement>(".catalog-sections h2 .inst-tip-trigger")!;
+    // Live product terms retain keyboard/touch disclosure after retirement.
+    const trigger = document.querySelector<HTMLButtonElement>(".catalog-row h3 .term-trigger")!;
     trigger.focus();
     const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
@@ -779,7 +763,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // second rungs. Headroom retired with the frontier claim (issue #425).
     // The World section's two products (issue #426) join the set: the
     // Column's ladder and the Hone entry.
-    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(6);
+    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(4);
     // The ceiling purchase lands and the same entry walks its ladder:
     // owned figure, delta, then the rising next price.
     rowOf("Expansion Bays").querySelector<HTMLButtonElement>("button.price")!.click();
@@ -844,12 +828,12 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // included, issue #380), the World section's terms (issue #426), and
     // the Module Types section's gloss.
     let texts = read();
-    expect(texts.length).toBe(14);
+    expect(texts.length).toBe(12);
     for (const text of texts) {
       expect(text.length).toBeLessThanOrEqual(60);
       expect(text).not.toMatch(/[—;:]/);
     }
-    expect(texts).toContain("Rolled module types appear here unweighted");
+    expect(texts).not.toContain("Rolled module types appear here unweighted");
     expect(texts).toContain("Re-earned after arete reset");
     expect(texts).not.toContain("Lifts its module cell’s received charge to adjacent weapons");
     expect(texts).toContain("Arete’s persistent attack-power ranks for a weapon type");

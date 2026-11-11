@@ -714,12 +714,8 @@ export interface GameState {
   // gatedRows — so cells inside buy with nous as usual. Persists through
   // prestige; lenient-defaults to [] at load.
   unlockedRows: number[];
-  // The Arete Catalog's Mutator tree purchases (ADR-0040 as amended by
-  // ADR-0044, issue #197): the entry — the Mutator Grid's activation, the
-  // Mutator Forge module itself, and the first slot's unlock (#198) — and
-  // the pricier join that admits the Mutator Forge type to the module roll
-  // pool. One-time, Arete-paid, and persisting through prestige;
-  // lenient-default to false.
+  // Historical schema compatibility only (ADR-0087/#530): cleared on
+  // load after version-gated historical refunds; never live purchase gates.
   catalogEntryOwned: boolean;
   rollPoolJoined: boolean;
   // The World layer (issue #425, ADR-0074): the two-layer World's whole
@@ -738,22 +734,13 @@ export interface GameState {
   capacityBought: number;
   capacityCeilings: number;
   capacityDiscounts: number;
-  // The Mutator Grid's unlocked slots (ADR-0043, issue #198): the cells
-  // whose second face holds a mutator. The entry's first unlock may sit on
-  // any owned cell; every later unlock attaches adjacent to the
-  // already-unlocked patch. Unbounded, per-item priced on the tree's
-  // escalating ladder; persists through prestige; lenient-defaults to [].
+  // Historical slots and copies: cleared on load, never live effects,
+  // placement destinations or reshape constraints (ADR-0087/#530).
   mutatorSlots: Hex[];
-  // Every owned mutator — placed (pos = its slot cell) or waiting in the
-  // Mutator tray (pos = null). Placed mutators and the tray persist
-  // through prestige; lenient-defaults to [].
   mutators: MutatorInstance[];
   forge: Meter;
-  // The Mutator Forge branch's own meter (ADR-0043, issue #198): ADR-0009's
-  // shared-meter pattern with its own constants — growth ≈×2, charge-only
-  // (no practice leg, ADR-0041). Each crossing banks a mutator roll into
-  // the Mutator tray's queue. Fill and earned count persist through
-  // prestige; lenient-defaults to an empty meter.
+  // Historical meter: cleared at load; its compatibility progress API
+  // banks nothing and lost fill cannot force money recovery.
   mutatorForge: Meter;
   // The opening arc's one pop-up (board-redesign spec §8): the dismissal
   // sets this once, so the card fires exactly once, ever. Lenient-defaults
@@ -761,10 +748,7 @@ export interface GameState {
   // owed its one hint.
   arcCardSeen: boolean;
   bankedRolls: RollOffer[];
-  // The Mutator tray's own pending-roll queue (ADR-0043, issue #198): the
-  // Mutator Forge branch's crossings bank here — two candidates each,
-  // unchosen candidates vanish. Persists through prestige; lenient-defaults
-  // to [].
+  // Historical queue: cleared at load; compatibility choice refuses.
   bankedMutatorRolls: MutatorRollOffer[];
   purchased: Record<ShelfType, boolean>;
   // Console long goals (ADR-0012): goal capacity is the first named beat —

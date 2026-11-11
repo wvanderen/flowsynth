@@ -2,6 +2,8 @@
 
 Accepted, 2026-11-03 (issue #492, parent #484's rebalance).
 
+> Current-scope amendment: ADR-0087 (#526–#530) retires Column purchasing and the open-ended Column-sink premise. This baseline remains frozen historical save-translation arithmetic; its recordings do not validate the replacement draft-acquisition economy. ADR-0086 separately records the later slope/grant re-freeze.
+
 ## Context
 
 ADR-0078 accepted the rebalance direction and left the exact curves to implementation. The shipped economy's frontier claim curve carried two authored figures — the entry depth (`BALANCE.world.entryNous`, #490's calibration) and the depth slope (findings.md's flagged hypothesis, 2) whose recoverability re-derivation had never landed. The recorded 100-credited-hour walks priced that hypothesis against the board it governs: a mature board's production compounds roughly ×3–4 per productive era, while a slope of 2 demanded ×10 of era-earned depth per banked advance. Later eras lengthened past the 5–10 credited-hour window, bankless tails stretched to tens of hours, and the walks' frontier reach sat well under the roster's authored span.

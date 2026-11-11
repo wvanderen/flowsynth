@@ -1,6 +1,6 @@
 # World layer feedback — confirmed design
 
-Status: owner-confirmed design; not implemented or visually verified by this document.
+Status: owner-confirmed design, implemented by #526–#530. Required visual acceptance remains outstanding; the completion mapping is `docs/evidence/issue-530/README.md`. This design brief alone is not implementation or visual evidence.
 
 ## Intent and priorities
 

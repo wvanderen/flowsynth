@@ -4,13 +4,11 @@ import {
   buyCapacity,
   buyCapacityCeiling,
   buyCapacityDiscount,
-  buyCatalogEntry,
   buyCell,
   buyChargeColumn,
   buyHoneRank,
   buyRowUnlock,
   buyShelfModule,
-  chooseMutatorRoll,
   chooseRoll,
   dismissSummary,
   endBreather,
@@ -116,12 +114,12 @@ export const PROMPT_POLICY: PlaythroughPolicy = {
   id: "prompt",
   name: "Prompt prestige",
   rules: [
-    "Accept the first oscillator a roll offers, else a generator, else the first candidate; mutator rolls take their first candidate.",
+    "Accept the first oscillator a roll offers, else a generator, else the first live candidate.",
     "Buy every unowned shelf module it can afford — generator, infusor, then forge.",
     "Buy board cells while affordable, nearest first along the compact frontier; after the World's entry, a locked octave row the board reaches opens through the Catalog's Rack Extenders before the expansion continues (issue #492).",
     "Place every tray module on the vacancy the authoritative preview scores highest.",
     "Buy every affordable Poly Expander, then sweep five-level upgrades over the deployed voices, cheapest first, while the bank covers the next gesture.",
-    "Bank the Catalog entry when affordable, then the discount and ceiling offerings.",
+    "Buy the discount and ceiling offerings when affordable; no entry purchase exists.",
     "Attempt World Columns and Hone ranks only once an enemy is discovered, and only while affordable.",
     "Prestige at the first between-sessions moment the horizon is reached.",
     "End every session at its planned target and write a practice note.",
@@ -134,7 +132,7 @@ export const PUSHING_POLICY: PlaythroughPolicy = {
   rules: [
     "Buys exactly what the prompt policy buys, by the same rules, on the same schedule.",
     "Never prestiges at the first eligibility: it pushes until the pending claim reaches its configured target, then banks that claim.",
-    "Once the World is entered — a starter weapon granted, a claimed frontier, or a discovered enemy — it pays the Catalog entry first, then Charge Columns while affordable, then Hone ranks cheapest-first while affordable.",
+    "After permanent World discovery, deploy granted or drafted occupants and buy Hone ranks cheapest-first while affordable; Columns are not sold.",
     "Each weapon deploys beside the fight: an owned cell next to a living discovered enemy, preferring a cell that also touches a placed Column, nearest the enemy first; while no enemy lives, the weapon waits in the tray. A weapon whose fight is won relocates to the next living discovered enemy, and a Column the fight left behind follows the charge line — relocation is free between sessions.",
     "Each Column deploys on the charge line: an owned cell next to a deployed generator, preferring a cell that also touches a placed weapon.",
     "Ends every session at its planned target and writes a practice note.",
@@ -153,7 +151,7 @@ export const SUPPORT_POLICY: PlaythroughPolicy = {
   name: "Support-seeking",
   rules: [
     "Buys exactly what the prompt policy buys, by the same rules, on the same schedule, and pushes claims like the pushing policy.",
-    "Once the World is entered it pays the Catalog entry first, then Charge Columns while affordable, then Hone ranks cheapest-first — the charge line before the blade; the discount and ceiling offerings wait for what remains.",
+    "After World discovery, buy Hone before capacity offerings and deploy the available charge line before the blade; Columns are acquired through drafts.",
     "The weapon takes the fight-adjacent seat that also touches a placed Column when one exists; the Column takes a charge line — a cell whose module receives charge — preferring one that touches the placed weapon. A weapon whose fight is won relocates to the next living discovered enemy, and a Column the fight left behind follows it when a charge line touches the new fight.",
     "Ends every session at its planned target and writes a practice note.",
   ],
@@ -164,7 +162,7 @@ export const COMBAT_POLICY: PlaythroughPolicy = {
   name: "Combat-engaging",
   rules: [
     "Buys exactly what the prompt policy buys, by the same rules, on the same schedule, and pushes claims like the pushing policy.",
-    "Once the World is entered it pays the Catalog entry first, then Hone ranks cheapest-first while affordable, then Charge Columns while affordable — the blade before the charge line; the discount and ceiling offerings wait for what remains.",
+    "After World discovery, buy Hone cheapest-first before capacity offerings; deploy available occupants, with no entry or Column purchase.",
     "Each weapon deploys beside the fight immediately; each Column deploys on the charge line. A weapon whose fight is won relocates to the next living discovered enemy, and a Column the fight left behind follows the charge line — relocation is free between sessions.",
     "Ends every session at its planned target and writes a practice note.",
   ],
@@ -176,7 +174,7 @@ export const IGNORING_POLICY: PlaythroughPolicy = {
   rules: [
     "Buys exactly what the prompt policy buys, by the same rules, on the same schedule, and pushes claims like the pushing policy.",
     "Never buys or deploys a World occupant: the starter weapon stays in the tray, and every discovered enemy's pressure stands for the whole era — the postponed-combat trade-off, paid in production.",
-    "Pays the Catalog entry, then the discount and ceiling offerings, while affordable.",
+    "Pays the discount and ceiling offerings while affordable, without a retired entry purchase.",
     "Ends every session at its planned target and writes a practice note.",
   ],
 };
@@ -1246,25 +1244,15 @@ function manage(ctx: RunContext, state: GameState): void {
   }
 
   // Rolls: accept an oscillator when offered, else a generator, else the
-  // first candidate; mutator rolls take their first candidate.
+  // first live candidate.
   for (const offer of [...state.bankedRolls]) {
     const candidate =
       offer.candidates.find((c) => isModuleCandidate(c) && isOscillatorType(c.type)) ??
       offer.candidates.find((c) => isModuleCandidate(c) && CATEGORY_OF[c.type] === "generator") ??
-      offer.candidates[0];
+      offer.candidates.find(c => c.type !== "mutatorForge");
     if (!candidate) continue;
     const result = chooseRoll(state, offer.id, candidate.id);
     record(ctx, { kind: "roll", label: `Accepted a ${candidate.type} from the roll`, ...outcome(result) });
-  }
-  for (const offer of [...state.bankedMutatorRolls]) {
-    const candidate = offer.candidates[0];
-    if (!candidate) continue;
-    const result = chooseMutatorRoll(state, offer.id, candidate.id);
-    record(ctx, {
-      kind: "roll",
-      label: `Accepted a ${candidate.family} mutator from the roll`,
-      ...outcome(result),
-    });
   }
 
   // Shelf purchases, generator → infusor → forge.
@@ -1288,7 +1276,7 @@ function manage(ctx: RunContext, state: GameState): void {
   // board space, and no row unlock ever spends the claim that would
   // first bank the World's entry.
   for (;;) {
-    const unlockRow = state.catalogEntryOwned
+    const unlockRow = state.world.unlocked
       ? unlockableRows(state).find((row) =>
         state.cells.some((cell) => neighbors(cell).some((n) => octaveRowOf(n) === row)))
       : undefined;
@@ -1301,6 +1289,7 @@ function manage(ctx: RunContext, state: GameState): void {
         break;
       }
       ctx.areteSpent.rowUnlocks++;
+      noteLastingPurchase(ctx, "Rack Extenders");
       continue;
     }
     const pos = frontier(state, "compact")[0];
@@ -1453,23 +1442,14 @@ function manage(ctx: RunContext, state: GameState): void {
   // undiscovered, so a discovered-only gate would idle the whole next
   // era's spending while the claim's Arete sits in the bank; the door,
   // once entered, stays entered. The policy's spending order reads it.
-  const worldEntered = state.world.starterWeaponGranted || state.world.frontier > 0 ||
-    Object.values(state.world.enemies).some((enemy) => enemy.discovered);
+  const worldEntered = state.world.unlocked;
 
-  // The Arete offerings behind the Catalog entry (#262's playable path).
+  // Live Arete offerings have no retired Catalog-entry prerequisite.
   // "When affordable" is the authored rule, read literally: a broke board
   // attempts nothing, so a long claim-less push records no wall of
   // declined nickels — the leg's first real refusal still lands with the
   // engine's own reason.
-  if (!state.catalogEntryOwned && state.arete >= BALANCE.catalogEntryCost) {
-    const result = buyCatalogEntry(state, ctx.rng);
-    if (result.ok) {
-      ctx.areteSpent.entry++;
-      noteLastingPurchase(ctx, "Catalog entry");
-    }
-    record(ctx, { kind: "arete", label: "Catalog entry", ...outcome(result) });
-    if (!result.ok) decline(ctx, "catalog entry", result.reason ?? "declined");
-  } else if (state.catalogEntryOwned) {
+  if (state.arete > 0) {
     // The policy's own World spending order (issue #491): the comparison
     // policies buy their World line before the capacity offerings —
     // support the charge line before the blade, combat the blade before

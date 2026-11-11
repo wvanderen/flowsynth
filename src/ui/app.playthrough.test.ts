@@ -488,9 +488,8 @@ describe("the pushing policy", () => {
     expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
-    // The legacy entry still spends pending the remaining retirement slice.
-    // The Column now comes from the positive bank, never an Arete purchase.
-    expect(record.areteSpent.entry).toBe(1);
+    // Retirement leaves no entry purchase; the Column is a positive-bank grant.
+    expect(record.areteSpent.entry).toBe(0);
     expect(record.areteSpent.columns).toBe(0);
     expect(record.state.world.starterColumnGranted).toBe(true);
     expect(record.state.world.starterWeaponGranted).toBe(true);
@@ -546,7 +545,7 @@ describe("the pushing policy", () => {
     const recovery = record.recovery!;
     expect(recovery.claim).toBe(record.claims[0]!);
     expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0 });
-    expect(recovery.lastingPurchaseLabel).toBe("Catalog entry");
+    expect(recovery.lastingPurchaseLabel).toBe("Rack Extenders");
     // The Column lands the moment it is bought: the opening board already
     // carries a charge line — a receiving module beside the generator —
     // so the purchase functions from its first between-sessions read.
@@ -564,7 +563,7 @@ describe("the pushing policy", () => {
     expect(recovery.frontierAdvanced!.elapsed).toBeGreaterThan(recovery.eligibilityReached!.elapsed);
     expect(record.events.some((event) => event.milestone && event.label.includes("next prestige eligibility reached"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label.includes("pre-reset production regained"))).toBe(true);
-    expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Catalog entry)")).toBe(true);
+    expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Rack Extenders)")).toBe(true);
     expect(record.events.some((event) => event.milestone && /Recovery — frontier advanced to \d+ Arete/.test(event.label))).toBe(true);
     // The eligibility settle read the era measure past the horizon — the
     // door's own gate (ARETE_HORIZON, engine-pinned in

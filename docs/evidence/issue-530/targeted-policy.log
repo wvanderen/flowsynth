@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/ui/app.playthrough.test.ts src/engine/progression-presets.test.ts -t pushes past the first eligibility|stops the pushing walk at the living fight
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+
+ Test Files  2 passed (2)
+      Tests  2 passed | 68 skipped (70)
+   Start at  19:32:11
+   Duration  353.65s (transform 1.64s, setup 0ms, import 1.98s, tests 350.97s, environment 211ms)
+
