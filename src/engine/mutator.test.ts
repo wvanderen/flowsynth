@@ -22,7 +22,8 @@ import { createMutator } from "./state";
 import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { hex } from "./hex";
 import type { Hex } from "./types";
-import { addMutatorForgeProgress, generateMutatorOffer, generateOffer, mutatorForgeThreshold, totalPracticeRollsEarned } from "./rolls";
+import { addMutatorForgeProgress, generateMutatorOffer, mutatorForgeThreshold, totalPracticeRollsEarned } from "./rolls";
+import { generateModuleOffer as generateOffer } from "./fixtures";
 import { deserialize, serialize } from "./save";
 import type { GameState, MutatorFamily, MutatorInstance, Rarity } from "./types";
 

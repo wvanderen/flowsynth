@@ -427,7 +427,7 @@ describe("the v10 boundary (issue #423)", () => {
     expect(loaded.error).toBeUndefined();
     expect(loaded.state!.mutators[0]).toMatchObject({ family: "power", rarity: "uncommon" });
     expect(loaded.state!.modules.find((m) => m.id === merged.id)!.tier).toBe(2);
-    expect(loaded.state!.bankedRolls[0]!.candidates[1]!.tier).toBe(2);
+    expect(loaded.state!.bankedRolls[0]!.candidates[1]).toMatchObject({ tier: 2 });
   });
 });
 
@@ -652,7 +652,7 @@ describe("the v10 → v11 migration (issue #427)", () => {
     expect(state.mergeCapPurchases).toBe(1);
     expect(state.scrap).toBe(25);
     expect(state.draftTierBonus).toBe(1);
-    expect(state.bankedRolls[0]!.candidates[1]!.tier).toBe(2);
+    expect(state.bankedRolls[0]!.candidates[1]).toMatchObject({ tier: 2 });
     // Already-earned feats stay earned — the retired horizon-break stamp
     // included.
     expect(state.achievements["breaking-the-horizon"]).toBe(1_700_000_000_001);

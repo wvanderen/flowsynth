@@ -26,6 +26,7 @@ import {
 import type { ActionResult } from "./actions";
 import { frontier, seededRng } from "./capacity-calibration";
 import { BALANCE, CATEGORY_OF, isOscillatorType, RESPONSE_CURVES, responseCurveCandidateOf, SAVE_VERSION, SHELF_TYPES, WORLD_ENEMIES } from "./constants";
+import { isModuleCandidate } from "./types";
 import type { WorldEnemyDef } from "./constants";
 import { chargeLineCells } from "./playthrough-placement";
 import { affordableLevels, syncRates, wholeNous, levelsCost } from "./economy";
@@ -1248,8 +1249,8 @@ function manage(ctx: RunContext, state: GameState): void {
   // first candidate; mutator rolls take their first candidate.
   for (const offer of [...state.bankedRolls]) {
     const candidate =
-      offer.candidates.find((c) => isOscillatorType(c.type)) ??
-      offer.candidates.find((c) => CATEGORY_OF[c.type] === "generator") ??
+      offer.candidates.find((c) => isModuleCandidate(c) && isOscillatorType(c.type)) ??
+      offer.candidates.find((c) => isModuleCandidate(c) && CATEGORY_OF[c.type] === "generator") ??
       offer.candidates[0];
     if (!candidate) continue;
     const result = chooseRoll(state, offer.id, candidate.id);

@@ -19,7 +19,7 @@ import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
 import { generateMutatorOffer, generateSpecialOffer, nextDraftUpgradePrice, type Rng } from "./rolls";
-import type { Category, GameState, Hex, ModuleInstance, MutatorInstance, Rarity, SessionReflection, ShelfType, SpecialDraftKind, WeaponType } from "./types";
+import { isModuleCandidate, type Category, type GameState, type Hex, type ModuleInstance, type MutatorInstance, type Rarity, type SessionReflection, type ShelfType, type SpecialDraftKind, type WeaponType } from "./types";
 
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
 // Arete acts outside upgrade mode (ADR-0044).
@@ -830,9 +830,11 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   const candidate = offer.candidates.find((c) => c.id === candidateId);
   if (!candidate) return fail("That candidate is not part of this roll.");
   state.bankedRolls.splice(index, 1);
-  // The candidate's carried tier mints (ADR-0058): 0 from every fresh
-  // draw, the converted legacy band from an old save.
-  state.modules.push(createModule(state, candidate.type, candidate.tier));
+  // Dispatch by item kind; only module rewards carry a mint tier. World
+  // constructors grant fresh unplaced copies regardless of prior ownership.
+  if (candidate.type === "column") state.world.columns.push(createWorldColumn(state));
+  else if (candidate.type === "chargeBlade") state.world.weapons.push(createWeapon(state, "chargeBlade"));
+  else if (isModuleCandidate(candidate)) state.modules.push(createModule(state, candidate.type, candidate.tier));
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 

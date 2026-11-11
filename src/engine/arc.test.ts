@@ -101,7 +101,7 @@ describe("the first roll yields a synthesizer candidate (§8)", () => {
     const s = fresh();
     addForgeProgress(s, forgeThreshold(0), stubRng(SYNTHLESS));
     const offer = s.bankedRolls[0]!;
-    expect(offer.candidates.some((c) => CATEGORY_OF[c.type] === "oscillator")).toBe(true);
+    expect(offer.candidates.some((c) => ("tier" in c ? CATEGORY_OF[c.type] : undefined) === "oscillator")).toBe(true);
     expect(offer.candidates.some((c) => c.type === "additive")).toBe(true);
     // The rig keeps three distinct candidates.
     expect(new Set(offer.candidates.map((c) => c.type)).size).toBe(3);

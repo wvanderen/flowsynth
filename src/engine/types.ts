@@ -166,9 +166,22 @@ export interface Candidate {
   tier: number;
 }
 
-export interface RollOffer {
+// World rewards have no module tier, rarity, or level. The distinct type
+// dispatches acquisition without adding them to the module roster.
+export interface WorldCandidate {
   id: string;
-  candidates: [Candidate, Candidate, Candidate];
+  type: "column" | "chargeBlade";
+}
+
+export type DraftCandidate = Candidate | WorldCandidate;
+
+export function isModuleCandidate(candidate: DraftCandidate): candidate is Candidate {
+  return candidate.type !== "column" && candidate.type !== "chargeBlade";
+}
+
+export interface RollOffer<C = DraftCandidate> {
+  id: string;
+  candidates: [C, C, C];
   // The special draft a rolled offer came from (issue #379): the Forge
   // names the product and its guarantee above the candidates that resolve
   // it. Ordinary offers carry no marker.

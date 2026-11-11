@@ -15,7 +15,7 @@ import {
 } from "./actions";
 import { cellCost, computeRates, wholeNous } from "./economy";
 import { fresh, give, stubRng } from "./fixtures";
-import { generateOffer } from "./rolls";
+import { generateModuleOffer as generateOffer } from "./fixtures";
 import { hex, isConnected, sameHex } from "./hex";
 import { BALANCE, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, SHELF_TYPES } from "./constants";
 import { applyGap, flushPendingAway, resolveHonestyReport } from "./trust";
