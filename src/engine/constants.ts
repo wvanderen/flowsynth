@@ -972,4 +972,6 @@ export const REFLECTION_SLIDER_NEUTRAL = 3;
 // half standing — docs/save-migration.md) each run for their own version
 // alone, and a retired step is gone with its version: nothing below v10
 // loads, so nothing can still need the dead ones.
-export const SAVE_VERSION = 13;
+// v14 backfills the Prestige reference only for pre-existing relevant saves.
+// Current saves preserve explicit knowledge, including an empty engine-only map.
+export const SAVE_VERSION = 14;

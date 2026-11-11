@@ -58,9 +58,9 @@ const CATALOG_TERMS: Record<CatalogTerm, string> = {
 };
 let catalogTermSeq = 0;
 export function termTipHtml(term: CatalogTerm, label: string = term): string {
-  // Charge's reusable definition now lives in the Encyclopedia. Actual
-  // strength, profile responses, costs and conditions remain local.
-  if (term === "charge") return label;
+  // Migrated reusable definitions live in the Encyclopedia. Actual
+  // effects, reset consequences, costs and conditions remain local.
+  if (term === "charge" || term === "Prestige") return label;
   const id = `catalog-term-${catalogTermSeq++}`;
   return `<span class="inst-tip term-tip"><button class="inst-tip-trigger term-trigger" type="button" aria-expanded="false" aria-describedby="${id}" aria-label="${term} — what it means">${label}</button><span class="inst-tip-body" id="${id}" role="tooltip">${CATALOG_TERMS[term]}</span></span>`;
 }

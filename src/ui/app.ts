@@ -4100,7 +4100,7 @@ export class App {
     // Actual visible charge-bearing inspections and the starter shelf count
     // as encounters even when their purchases are unaffordable.
     const inspected = this.state.modules.find(module => module.id === this.ui.inventory.inspect || (this.ui.detail && module.pos && sameHex(module.pos, this.ui.detail.pos)));
-    if (encounterEntries(this.state, { starterShelfVisible: this.ui.modal === "catalog" && this.ui.catalogFace === "nous", chargeMeterVisible: this.ui.modal === "forge", inspectedType: inspected?.type })) this.save();
+    if (encounterEntries(this.state, { prestigeVisible: true, starterShelfVisible: this.ui.modal === "catalog" && this.ui.catalogFace === "nous", chargeMeterVisible: this.ui.modal === "forge", inspectedType: inspected?.type })) this.save();
     const dot = document.querySelector<HTMLElement>("#console-encyclopedia .encyclopedia-dot");
     if (dot) dot.hidden = !availableEntries(this.state).some(entry => this.state.encyclopedia[entry.id] === "available");
     render(this);

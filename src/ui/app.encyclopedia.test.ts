@@ -13,24 +13,96 @@ const door = () => document.querySelector<HTMLButtonElement>('[aria-label="Encyc
 beforeEach(() => { localStorage.clear(); app = fixture.boot(); });
 afterEach(() => fixture.release());
 describe("voluntary Encyclopedia", () => {
+  it("offers Prestige at the visible but ineligible reset, reads voluntarily, and returns to the ledger without resetting", () => {
+    expect(app.state.encyclopedia).toHaveProperty("prestige", "available");
+    expect(app.ui.modal).toBeNull();
+    app.openLedger("arete");
+    const help = document.getElementById("about-prestige")!;
+    help.focus(); help.click();
+    expect(app.state.encyclopedia).toHaveProperty("prestige", "seen");
+    const text = document.getElementById("modal-content")!.textContent!;
+    expect(text).toContain("Illustrative example");
+    expect(text).not.toMatch(/World|combat|map|Blade|Column/);
+    button("‹ Topics").click(); button("Prestige").click();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.modal).toBe("rate");
+    expect(document.activeElement?.id).toBe("about-prestige");
+    expect(app.state.prestiges).toBe(0);
+    expect(document.querySelector<HTMLButtonElement>("#prestige-door")!.disabled).toBe(true);
+  });
+  it("filters browse search related and contextual routes, and returns through related reading during live flow", () => {
+    door().click(); button("Prestige · Unseen").click();
+    const related = () => document.querySelector('nav[aria-label="Related entries"]')!;
+    expect(related().textContent).not.toContain("Charge");
+    expect(document.getElementById("modal-content")!.textContent).not.toMatch(/World|combat|map|Column|Blade/);
+    button("‹ Topics").click();
+    const search = document.getElementById("encyclopedia-search") as HTMLInputElement;
+    for (const query of ["Prestige", "start over", "reset", "Arete"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(button("Prestige")).toBeDefined();
+    }
+    for (const query of ["World", "combat", "Column", "Blade"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(document.getElementById("encyclopedia-results")!.textContent).toBe("No matching entries");
+    }
+    app.closeModal();
+    app.openModal("catalog"); app.closeModal();
+    startSession(app.state, 600); app.render();
+    app.openLedger("arete");
+    const help = document.getElementById("about-prestige")!; help.focus(); help.click();
+    button("Charge").click();
+    expect(button("Prestige")).toBeDefined();
+    button("Prestige").click();
+    advance(app.state, 10); app.render();
+    app.closeModal();
+    expect(app.state.session!.elapsed).toBe(10);
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.prestiges).toBe(0);
+    expect(document.activeElement?.id).toBe("about-prestige");
+    expect(document.querySelector<HTMLButtonElement>("#prestige-door")!.disabled).toBe(true);
+  });
+  it("reads from confirmation without choosing, retains seen knowledge through zero and positive claims, export/import and full reset", () => {
+    for (const earned of [7_000_000, 20_000_000]) {
+      app.state.eraEarned = earned; app.render();
+      app.openLedger("arete"); document.getElementById("prestige-door")!.click();
+      const before = app.state.prestiges;
+      const help = document.getElementById("confirm-about-prestige")!;
+      help.focus(); help.click();
+      app.closeModal();
+      expect(app.ui.modal).toBe("prestige");
+      expect(document.activeElement?.id).toBe("confirm-about-prestige");
+      expect(app.state.prestiges).toBe(before);
+      expect(document.getElementById("modal-content")!.textContent).toContain("purchased capacity returns to one");
+      document.getElementById("prestige-confirm")!.click();
+      expect(app.state.prestiges).toBe(before + 1);
+      expect(app.state.world.unlocked).toBe(earned === 20_000_000);
+      expect(app.state.encyclopedia.prestige).toBe("seen");
+      app.closeModal();
+    }
+    const exported = serialize(app.state);
+    app.hardReset();
+    expect(app.state.encyclopedia.prestige).toBe("available");
+    expect(app.importText(exported)).toBe(true);
+    expect(app.state.encyclopedia.prestige).toBe("seen");
+  });
   it("imports and exports save-owned marks, clears them on full reset, and gives later encounters normal unseen marks after legacy migration", () => {
     app.openModal("catalog"); app.closeModal();
     const exported = serialize(app.state);
     app.hardReset();
-    expect(app.state.encyclopedia).toEqual({});
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
     expect(app.importText(exported)).toBe(true);
-    expect(app.state.encyclopedia).toEqual({ charge: "available" });
+    expect(app.state.encyclopedia).toEqual({ charge: "available", prestige: "available" });
     door().click(); button("Charge · Unseen").click(); app.closeModal();
     const readExport = serialize(app.state);
     app.hardReset();
     app.importText(readExport);
-    expect(app.state.encyclopedia).toEqual({ charge: "seen" });
+    expect(app.state.encyclopedia).toEqual({ charge: "seen", prestige: "available" });
     app.hardReset();
     const legacy = JSON.parse(serialize(app.state)); delete legacy.state.encyclopedia;
     expect(app.importText(JSON.stringify(legacy))).toBe(true);
-    expect(app.state.encyclopedia).toEqual({});
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
     app.openModal("catalog");
-    expect(app.state.encyclopedia).toEqual({ charge: "available" });
+    expect(app.state.encyclopedia).toEqual({ charge: "available", prestige: "available" });
   });
   it("returns keyboard focus and the selected board task after inspection reading, with static teaching and no exercises", () => {
     document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -48,7 +120,7 @@ describe("voluntary Encyclopedia", () => {
   it("does not infer a Charge encounter from inspecting an empty cell", () => {
     const cell = app.state.cells.find(pos => pos.q !== 0 || pos.r !== 0)!;
     document.querySelector(`[data-cell="${cell.q},${cell.r}"]`)!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    expect(app.state.encyclopedia).toEqual({});
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
   });
   it("searches canonical and familiar words without hidden previews and returns from a contextual catalog detour", () => {
     app.state.nous = 0;
@@ -92,9 +164,9 @@ describe("voluntary Encyclopedia", () => {
     door().click();
     expect(button("Charge")).toBeDefined();
   });
-  it("starts empty, encounters the unaffordable visible shelf without opening, and clears the quiet mark only on reading", () => {
+  it("starts with visible Prestige, encounters the unaffordable visible shelf without opening, and clears the quiet mark only on reading", () => {
     door().click();
-    expect(document.getElementById("modal-content")!.textContent).toContain("No entries available yet");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Prestige · Unseen");
     app.closeModal();
     app.state.nous = 0;
     app.openModal("catalog");
@@ -105,6 +177,7 @@ describe("voluntary Encyclopedia", () => {
     expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).not.toBeNull();
     door().focus(); door().click();
     expect(document.getElementById("modal-content")!.textContent).toContain("Board mechanics");
+    button("Prestige · Unseen").click(); button("‹ Topics").click();
     button("Charge · Unseen").click();
     expect(app.state).toHaveProperty("encyclopedia.charge", "seen");
     expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");

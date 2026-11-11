@@ -2796,12 +2796,13 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
     ${modalTop("LEDGER", "modal-title")}
     <section id="ledger-nous" class="ledger-section" tabindex="-1"><h3>Nous</h3><div class="ledger-detail-row"><span>Balance</span><b class="mono" data-live="ledger-nous"></b></div><div id="ledger-production" class="rate-details-sheet" tabindex="-1">${rateDetailsHtml(app.state, snapshot, true, "sheet")}</div></section>
     <section id="ledger-pressure" class="ledger-section"></section>
-    <section id="ledger-arete" class="ledger-section" tabindex="-1"><h3>Arete</h3><div class="ledger-detail-row"><span>Banked</span><b class="mono" data-live="ledger-arete"></b></div><button id="prestige-door" class="prestige-door"></button><small class="prestige-availability" data-live="prestige-availability"></small></section>
+    <section id="ledger-arete" class="ledger-section" tabindex="-1"><h3>Arete</h3><button id="about-prestige" class="encyclopedia-context">About prestige</button><div class="ledger-detail-row"><span>Banked</span><b class="mono" data-live="ledger-arete"></b></div><button id="prestige-door" class="prestige-door"></button><small class="prestige-availability" data-live="prestige-availability"></small></section>
     <section id="ledger-scrap" class="ledger-section" tabindex="-1"><h3>Scrap</h3><div class="ledger-detail-row"><span>Recovered from modules and skipped drafts</span><b class="mono" data-live="ledger-scrap"></b></div></section>
     <section id="ledger-capacity" class="ledger-section" tabindex="-1"><h3>Harmonic capacity</h3><div class="ledger-detail-row"><span>Whole-chord budget per standard voice</span><b class="mono" data-live="ledger-capacity"></b></div></section>
     <nav class="ledger-destinations"><button id="ledger-feats">${FEATS_SVG}<span>Feats</span><span class="mono">${unlockedCount(app.state)}/${ACHIEVEMENTS.length}</span></button><button id="ledger-chords">${LIBRARY_SVG}<span>Chords</span><span class="mono">${discoveryCount(app.state)}/${NAMED_CHORDS.length}</span></button></nav>`;
   updateRateDetailsLive(content, app.state, snapshot);
   updateLedgerModal(app, content);
+  app.listen(byId("about-prestige"), "click", () => app.openEncyclopedia("prestige"));
   app.listen(byId("prestige-door"), "click", () => app.openPrestigeConfirm());
   app.listen(byId("ledger-feats"), "click", () => app.openModal("achievements"));
   app.listen(byId("ledger-chords"), "click", () => app.openModal("library"));
@@ -3881,6 +3882,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
+    <button id="confirm-about-prestige" class="encyclopedia-context">About prestige</button>
     <p class="lead">${zero
       ? `This prestige banks no Arete (<strong>0 Arete</strong>)`
       : `Prestige banks <strong class="mono">${claim} Arete</strong>`} and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
@@ -3889,6 +3891,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
       <button id="prestige-cancel">Not yet</button>
       <button id="prestige-confirm" class="primary">${zero ? "Prestige anyway" : `Prestige and claim ${claim} Arete`}</button>
     </div>`;
+  app.listen(byId("confirm-about-prestige"), "click", () => app.openEncyclopedia("prestige"));
   app.listen(byId("prestige-cancel"), "click", () => app.closeModal());
   wireTooltips(content, app.signal);
   app.listen(byId("prestige-confirm"), "click", () => app.confirmPrestige());

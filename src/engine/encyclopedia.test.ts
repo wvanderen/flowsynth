@@ -5,13 +5,26 @@ import { prestige } from "./actions";
 import { ARETE_HORIZON } from "./accumulator";
 
 describe("Encyclopedia save lifecycle", () => {
+  it("backfills Prestige from earned-era or prior-reset evidence, including Charge-era saves, and never rebadges on reload", () => {
+    for (const evidence of ["eraEarned", "prestiges", "arete"] as const) {
+      const state = createInitialState();
+      state[evidence] = 1;
+      state.encyclopedia.charge = "seen";
+      const oldSave = JSON.parse(serialize(state)); oldSave.version = 13;
+      const loaded = deserialize(JSON.stringify(oldSave)).state!;
+      expect(loaded.encyclopedia).toHaveProperty("prestige", "seen");
+      expect(deserialize(serialize(loaded)).state!.encyclopedia).toHaveProperty("prestige", "seen");
+    }
+    expect(deserialize(serialize(createInitialState())).state!.encyclopedia).not.toHaveProperty("prestige");
+  });
   it("round trips available and seen identity through reload and prestige, without copy-based rebadging", () => {
     for (const mark of ["available", "seen"] as const) {
       const state = createInitialState();
       state.encyclopedia.charge = mark;
+      state.encyclopedia.prestige = mark;
       state.eraEarned = ARETE_HORIZON;
       expect(prestige(state).ok).toBe(true);
-      expect(deserialize(serialize(state)).state!.encyclopedia).toEqual({ charge: mark });
+      expect(deserialize(serialize(state)).state!.encyclopedia).toEqual({ charge: mark, prestige: mark });
     }
     expect(createInitialState().encyclopedia).toEqual({});
   });
