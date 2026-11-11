@@ -1,14 +1,14 @@
-import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, NEXT_RARITY, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, POOL_JOIN_TYPE, SHELF_MODULE, SHELF_TYPES, typeRarityOf, WORLD_ENEMIES } from "./constants";
+import { BALANCE, BREATHER, CATEGORY_OF, EPS, isOscillatorType, REFLECTION_SLIDER_MIN, REFLECTION_SLIDER_NEUTRAL, REFLECTION_SLIDER_POSITIONS, ROLL_POOL, SHELF_MODULE, SHELF_TYPES, typeRarityOf, WORLD_ENEMIES } from "./constants";
 import { bankableClaimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
-import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, isPriceableLevel, isResponseSupport, levelCost, levelsCost, modulePower, mutatorSlotCost, responseSupportPowerOf, rowGateOwed, syncRates, wholeNous } from "./economy";
+import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, isPriceableLevel, isResponseSupport, levelCost, levelsCost, modulePower, responseSupportPowerOf, rowGateOwed, syncRates, wholeNous } from "./economy";
 import { enemyDefAt, honeCostOf, worldOccupantAt } from "./world";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
-import { adjacent, hex, hexKey, isConnected, neighbors, sameHex } from "./hex";
+import { adjacent, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
-import { createModule, createMutator, createWeapon, createWorldColumn, eraStartGrantOf, freshEnemyStates, openingGrant } from "./state";
+import { createModule, createWeapon, createWorldColumn, eraStartGrantOf, freshEnemyStates, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
 import { plannedTargetHit } from "./records";
 import { rollGoalOccurrences } from "./goals";
@@ -18,8 +18,8 @@ import { moduleScrapValue, skipPayoutOf } from "./scrap";
 import { syncAchievements } from "./achievements";
 import { syncChordDiscoveries } from "./library";
 import { freshAccounting } from "./trust";
-import { generateMutatorOffer, generateSpecialOffer, nextDraftUpgradePrice, type Rng } from "./rolls";
-import { isModuleCandidate, type Category, type GameState, type Hex, type ModuleInstance, type MutatorInstance, type Rarity, type SessionReflection, type ShelfType, type SpecialDraftKind, type WeaponType } from "./types";
+import { generateSpecialOffer, nextDraftUpgradePrice, type Rng } from "./rolls";
+import { isModuleCandidate, type Category, type GameState, type Hex, type ModuleInstance, type Rarity, type SessionReflection, type ShelfType, type SpecialDraftKind, type WeaponType } from "./types";
 
 // The Arete purchases' shared refusal, one wording everywhere: nothing of
 // Arete acts outside upgrade mode (ADR-0044).
@@ -444,7 +444,7 @@ function validLadderRequest(want: number | "max"): boolean {
 
 // The spacer is silent wire (#193): its level buys nothing, so every bulk
 // surface excludes it — the one eligibility rule, read in one place.
-export const levelable = (module: ModuleInstance): boolean => module.type !== "spacer";
+export const levelable = (module: ModuleInstance): boolean => module.type !== "spacer" && module.type !== "mutatorForge";
 
 // The board-wide sweep's plan: per-module level counts whose summed price
 // never exceeds the bank. +N walks the modules cheapest-next-level first,
@@ -806,15 +806,12 @@ export function reshapeCells(state: GameState, next: Hex[]): ActionResult {
   const keys = new Set(next.map(hexKey));
   if (keys.size !== next.length) return fail("Duplicate cells in the proposed shape.");
   for (const module of state.modules) {
-    if (module.pos !== null && !keys.has(hexKey(module.pos))) {
+    if (module.type !== "mutatorForge" && module.pos !== null && !keys.has(hexKey(module.pos))) {
       return fail("Every deployed module needs a cell.");
     }
   }
   if ([...state.world.columns, ...state.world.weapons].some((occupant) => occupant.pos !== null && !keys.has(hexKey(occupant.pos)))) {
     return fail("Every deployed World occupant needs a cell.");
-  }
-  if (state.mutatorSlots.some((slot) => !keys.has(hexKey(slot)))) {
-    return fail("Every unlocked Mutator slot needs its cell.");
   }
   if (next.some((cell) => !positionInRange(state, cell))) return fail("The board must stay inside the board's lattice.");
   if (!isConnected(next)) return fail("The board must stay connected.");
@@ -829,6 +826,7 @@ export function chooseRoll(state: GameState, offerId: string, candidateId: strin
   const offer = state.bankedRolls[index]!;
   const candidate = offer.candidates.find((c) => c.id === candidateId);
   if (!candidate) return fail("That candidate is not part of this roll.");
+  if (candidate.type === "mutatorForge") return fail("Mutators are retired.");
   state.bankedRolls.splice(index, 1);
   // Dispatch by item kind; only module rewards carry a mint tier. World
   // constructors grant fresh unplaced copies regardless of prior ownership.
@@ -908,14 +906,15 @@ export function buySpecialDraft(state: GameState, kind: SpecialDraftKind): Actio
 export function useSpecialDraft(state: GameState, kind: SpecialDraftKind, category: Category, rng: Rng = Math.random): ActionResult {
   if (state.mode !== "upgrade") return fail("Forge choices belong to upgrade mode.");
   if ((state.specialDrafts[kind] ?? 0) < 1) return fail("That special draft is not held.");
-  const pool = state.rollPoolJoined ? [...ROLL_POOL, POOL_JOIN_TYPE] : [...ROLL_POOL];
+  const pool = ROLL_POOL;
   if (!pool.some((type) => CATEGORY_OF[type] === category)) return fail("That category is not in the draft pool.");
   state.specialDrafts[kind]--;
   state.bankedRolls.push(generateSpecialOffer(state, kind, category, rng));
   return ok;
 }
 
-// The Arete Catalog's sheet purchases (ADR-0040 as amended by ADR-0044,
+// Historical Mutator purchases (retired by ADR-0087; the contracts below
+// explain compatibility names, not live behavior). ADR-0040 amended by ADR-0044,
 // issue #197): upgrade-mode-only, Arete-paid, one-time, and surviving
 // prestige. The entry's engine effects landed with the mutator contracts
 // (issue #198): the Mutator Forge module joins the Tray, and the first
@@ -926,25 +925,13 @@ export function useSpecialDraft(state: GameState, kind: SpecialDraftKind, catego
 // rarity table, banked into the Mutator tray's own queue where every
 // Mutator roll waits. A resonance- or charge-family first mutator is an
 // accepted dud (ADR-0043's no-rig stands).
-export function buyCatalogEntry(state: GameState, rng: Rng = Math.random): ActionResult {
-  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  if (state.catalogEntryOwned) return fail("The Mutator tree is already entered.");
-  if (state.arete < BALANCE.catalogEntryCost) return fail("Not enough Arete.");
-  state.arete -= BALANCE.catalogEntryCost;
-  state.catalogEntryOwned = true;
-  state.modules.push(createModule(state, "mutatorForge"));
-  state.bankedMutatorRolls.push(generateMutatorOffer(state, rng));
-  return { ok: true, unlocked: checkUnlocks(state) };
+// Compatibility entry points refuse even when a caller retains legacy state.
+export function buyCatalogEntry(_state: GameState, _rng: Rng = Math.random): ActionResult {
+  return fail("Mutators are retired.");
 }
 
-export function joinRollPool(state: GameState): ActionResult {
-  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  if (!state.catalogEntryOwned) return fail("Enter the Mutator tree first.");
-  if (state.rollPoolJoined) return fail("The Mutator Forge already rolls with the pool.");
-  if (state.arete < BALANCE.rollPoolJoinCost) return fail("Not enough Arete.");
-  state.arete -= BALANCE.rollPoolJoinCost;
-  state.rollPoolJoined = true;
-  return { ok: true, unlocked: checkUnlocks(state) };
+export function joinRollPool(_state: GameState): ActionResult {
+  return fail("Mutators are retired.");
 }
 
 // The board-side Row unlock (ADR-0044, #174's approved surface): one Arete
@@ -971,7 +958,8 @@ export function buyRowUnlock(state: GameState, row: number): ActionResult {
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
-// ── The Mutator layer's engine (ADR-0043, issue #198) ───────────────────
+// ── Refusing Mutator compatibility API (ADR-0087 retires ADR-0043) ─────
+// Historical descriptions below identify old commands only; every entry refuses.
 
 // The slot ladder's unlock (ADR-0043): the entry's first slot sits free on
 // any owned cell — the empty-patch case, its price already inside the
@@ -979,63 +967,28 @@ export function buyRowUnlock(state: GameState, row: number): ActionResult {
 // patch, the growth-constrained gesture, paying the ladder's rung for the
 // count already unlocked. Slots stay put forever; modules move freely
 // across them.
-export function unlockMutatorSlot(state: GameState, pos: Hex): ActionResult {
-  if (state.mode !== "upgrade") return fail(ARETE_MODE_LOCK);
-  if (!state.catalogEntryOwned) return fail("Enter the Mutator tree first.");
-  if (!state.cells.some((c) => sameHex(c, pos))) return fail("That cell is not part of the board.");
-  if (state.mutatorSlots.some((s) => sameHex(s, pos))) return fail("That cell already holds a Mutator slot.");
-  const first = state.mutatorSlots.length === 0;
-  if (!first) {
-    if (!state.mutatorSlots.some((slot) => adjacent(slot, pos))) {
-      return fail("A new Mutator slot must attach to the unlocked patch.");
-    }
-    const price = mutatorSlotCost(state.mutatorSlots.length);
-    if (state.arete < price) return fail("Not enough Arete.");
-    state.arete -= price;
-  }
-  state.mutatorSlots.push(hex(pos.q, pos.r));
-  return ok;
+export function unlockMutatorSlot(_state: GameState, _pos: Hex): ActionResult {
+  return fail("Mutators are retired.");
 }
 
 // Placing a mutator (the Mutator tray's gesture): a tray mutator placed
 // into an unlocked slot. An occupied slot swaps, mirroring the board's
 // free-swap rule; a mutator needs no host — a slot on a vacant cell holds
 // it inert.
-export function placeMutator(state: GameState, id: string, pos: Hex): ActionResult {
-  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
-  const mutator = state.mutators.find((m) => m.id === id);
-  if (!mutator) return fail("Mutator not found.");
-  if (!state.mutatorSlots.some((s) => sameHex(s, pos))) return fail("That cell holds no Mutator slot.");
-  if (mutator.pos !== null && sameHex(mutator.pos, pos)) return ok;
-  const occupant = state.mutators.find((m) => m.pos !== null && sameHex(m.pos, pos));
-  if (occupant) occupant.pos = mutator.pos;
-  mutator.pos = hex(pos.q, pos.r);
-  return ok;
+export function placeMutator(_state: GameState, _id: string, _pos: Hex): ActionResult {
+  return fail("Mutators are retired.");
 }
 
 // Retrieving a mutator (the drag or right-click gesture): back to the
 // Mutator tray, its slot left vacant and inert.
-export function returnMutator(state: GameState, id: string): ActionResult {
-  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
-  const mutator = state.mutators.find((m) => m.id === id);
-  if (!mutator) return fail("Mutator not found.");
-  if (mutator.pos === null) return fail("This mutator is already in the Mutator tray.");
-  mutator.pos = null;
-  return ok;
+export function returnMutator(_state: GameState, _id: string): ActionResult {
+  return fail("Mutators are retired.");
 }
 
 // The mutator roll's choice (ADR-0043): two candidates, the chosen one
 // minted into the Mutator tray, the unchosen vanished without consolation.
-export function chooseMutatorRoll(state: GameState, offerId: string, candidateId: string): ActionResult {
-  if (state.mode !== "upgrade") return fail("Forge choices belong to upgrade mode.");
-  const index = state.bankedMutatorRolls.findIndex((o) => o.id === offerId);
-  if (index === -1) return fail("That roll is not banked.");
-  const offer = state.bankedMutatorRolls[index]!;
-  const candidate = offer.candidates.find((c) => c.id === candidateId);
-  if (!candidate) return fail("That candidate is not part of this roll.");
-  state.bankedMutatorRolls.splice(index, 1);
-  state.mutators.push(createMutator(state, candidate.family, candidate.rarity));
-  return ok;
+export function chooseMutatorRoll(_state: GameState, _offerId: string, _candidateId: string): ActionResult {
+  return fail("Mutators are retired.");
 }
 
 // The mutator combination's terms (ADR-0043): two of the same family and
@@ -1049,42 +1002,12 @@ export interface MutatorCombinePreview {
   nextRarity: Rarity;
 }
 
-export function combineMutatorsPreview(state: GameState, id: string, partnerId: string): MutatorCombinePreview | null {
-  if (state.mode !== "upgrade") return null;
-  const selected = state.mutators.find((m) => m.id === id);
-  const partner = state.mutators.find((m) => m.id === partnerId);
-  if (!selected || !partner || selected.id === partner.id) return null;
-  if (selected.family !== partner.family || selected.rarity !== partner.rarity) return null;
-  const nextRarity = NEXT_RARITY[selected.rarity];
-  if (nextRarity === null) return null;
-  return { keepId: partner.id, meltId: selected.id, nextRarity };
+export function combineMutatorsPreview(_state: GameState, _id: string, _partnerId: string): MutatorCombinePreview | null {
+  return null;
 }
 
-export function combineMutators(state: GameState, id: string, partnerId?: string): ActionResult {
-  if (state.mode !== "upgrade") return fail("Combining happens between sessions.");
-  const selected = state.mutators.find((m) => m.id === id);
-  if (!selected) return fail("Mutator not found.");
-  let partner: MutatorInstance | undefined;
-  if (partnerId !== undefined) {
-    partner = state.mutators.find((m) => m.id === partnerId);
-    if (!partner || partner.id === selected.id || partner.family !== selected.family || partner.rarity !== selected.rarity) {
-      return fail("Those mutators cannot be combined.");
-    }
-  } else {
-    partner = state.mutators.find((m) => m.id !== id && m.family === selected.family && m.rarity === selected.rarity);
-  }
-  if (!partner) return fail("No second copy of this family and rarity.");
-  const preview = combineMutatorsPreview(state, id, partner.id);
-  if (!preview) return fail("The highest rarity does not combine further.");
-
-  const melt = state.mutators.find((m) => m.id === preview.meltId)!;
-  const keep = state.mutators.find((m) => m.id === preview.keepId)!;
-  keep.rarity = preview.nextRarity;
-  // The result lands where the drop target was (ADR-0035's gesture) — the
-  // kept copy is the target, so it never moves; a tray target combines in
-  // the tray.
-  state.mutators = state.mutators.filter((m) => m.id !== melt.id);
-  return ok;
+export function combineMutators(_state: GameState, _id: string, _partnerId?: string): ActionResult {
+  return fail("Mutators are retired.");
 }
 
 // The harmonic-capacity purchase (issue #259, the confirmed design beside

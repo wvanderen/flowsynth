@@ -110,14 +110,13 @@ describe("the scrap controls (issue #377)", () => {
       expect(app.ui.modal).toBeNull();
     });
 
-    it("stands on the Modules face only: mutator drafts keep the no-consolation contract", () => {
+    it("remains available with legacy ownership but never exposes the retired Mutator face", () => {
       app.state.catalogEntryOwned = true;
       app.render();
       app.openModal("forge");
       // The queue holds a module roll, so the default face is Modules.
       expect(document.querySelector("#modal-content [data-skip-offer]")).not.toBeNull();
-      document.querySelector<HTMLButtonElement>('#modal-content [data-forge-face="mutators"]')!.click();
-      expect(document.querySelector("#modal-content [data-skip-offer]")).toBeNull();
+      expect(document.querySelector('#modal-content [data-forge-face="mutators"]')).toBeNull();
       app.closeModal();
     });
   });

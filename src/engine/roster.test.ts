@@ -151,13 +151,13 @@ describe("harmony quality (ADR-0049)", () => {
     expect(snapshot.contributions.get("m1")?.formationQ).toBe(1);
   });
 
-  it("resonance mutators multiply the whole chord factor including Q", () => {
+  it("retired resonance cannot multiply the chord factor or Q", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0)); // G4 — a Fifth with the opening C4
     s.mutators.push({ id: "mu1", family: "resonance", rarity: "common", pos: hex(0, 0) });
     const snapshot = computeRates(s, true);
     const c4 = snapshot.contributions.get("m1")!;
-    expect(c4.chordFactor).toBeCloseTo(1.3 * c4.formationQ * 1.5, 9);
+    expect(c4.chordFactor).toBeCloseTo(1.3 * c4.formationQ, 9);
   });
 });
 
@@ -348,7 +348,7 @@ describe("the Amplifier (ADR-0048)", () => {
     expect(computeRates(s, false).chargeStrength.get(far.id)).toBe(0);
   });
 
-  it("charge mutators strengthen every relay hop exactly once", () => {
+  it("retired charge mutators cannot strengthen relay hops", () => {
     const s = fresh();
     const gen = give(s, "focusKeyed", hex(2, -2));
     gen.reserve = 60;
@@ -361,9 +361,9 @@ describe("the Amplifier (ADR-0048)", () => {
       s.mutators.push(mutator);
     }
     const snapshot = computeRates(s, true);
-    expect(snapshot.chargeStrength.get(first.id)).toBeCloseTo(1.5, 9);
-    expect(snapshot.chargeStrength.get(second.id)).toBeCloseTo(2.4 * 1.5, 9);
-    expect(snapshot.chargeStrength.get(far.id)).toBeCloseTo(2.4 * 1.5, 9);
+    expect(snapshot.chargeStrength.get(first.id)).toBeCloseTo(1, 9);
+    expect(snapshot.chargeStrength.get(second.id)).toBeCloseTo(1.6, 9);
+    expect(snapshot.chargeStrength.get(far.id)).toBeCloseTo(1.6, 9);
   });
 
   it("the hop-depth cap guards cycles: an amplifier beyond it receives nothing", () => {

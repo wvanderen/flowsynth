@@ -262,17 +262,17 @@ describe("progression and mutators", () => {
     expect(computeRates(quiet, false).contributions.get("m1")!.chargeFactor).toBe(1);
   });
 
-  it("a power mutator scales the Exciter's grant with its host power", () => {
+  it("a retired power mutator cannot scale the Exciter's grant", () => {
     const s = fresh();
     give(s, "additive", FED_SEAT);
     give(s, "exciter", EXCITER_SEAT);
     s.mutators.push({ id: "mu-p", family: "power", rarity: "common", pos: EXCITER_SEAT });
     charged(s, GEN_SEAT);
     const snapshot = computeRates(s, true);
-    expect(snapshot.contributions.get("m2")!.chargeFactor).toBeCloseTo(1 + (1 + BALANCE.exciterBonus * 1.5) * 0.5, 9);
+    expect(snapshot.contributions.get("m2")!.chargeFactor).toBeCloseTo(1 + (1 + BALANCE.exciterBonus) * 0.5, 9);
   });
 
-  it("a charge mutator feeds the deepened curve through the strength the recipient receives", () => {
+  it("a retired charge mutator cannot deepen received strength or empowerment", () => {
     const s = fresh();
     give(s, "additive", FED_SEAT);
     give(s, "exciter", EXCITER_SEAT);
@@ -280,8 +280,8 @@ describe("progression and mutators", () => {
     s.mutators.push({ id: "mu-c", family: "charge", rarity: "common", pos: FED_SEAT });
     const snapshot = computeRates(s, true);
     const voice = snapshot.contributions.get("m2")!;
-    expect(voice.chargeStrength).toBeCloseTo(1.5, 9);
-    expect(voice.chargeFactor).toBeCloseTo(1 + (1 + BALANCE.exciterBonus) * (1.5 / 2.5), 9);
+    expect(voice.chargeStrength).toBeCloseTo(1, 9);
+    expect(voice.chargeFactor).toBeCloseTo(1 + (1 + BALANCE.exciterBonus) * 0.5, 9);
     // Uncharged, the same mutator is inert — the condition outlives it.
     const idle = fresh();
     give(idle, "additive", FED_SEAT);

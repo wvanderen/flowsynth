@@ -2,7 +2,9 @@
 
 ADR-0040 opened the Mutator tree with the launch families named but their exact terms deferred. Grilling the contracts (issue #183, 2026-09-30) pinned what the launch mutators do, how the Mutator Forge mints, and how the slot ladder sells.
 
-## Decision
+> Historical contract, retired by accepted ADR-0087 and #530. None of the mechanics below are live. Saved remnants clear without new compensation; compatibility actions refuse. The original arithmetic remains for historical translation/provenance, not a promise to restore Mutators.
+
+## Historical decision
 
 - **Power modifies the host's power term.** A power mutator multiplies its host module's power (`× (1 + magnitude)`), so it rides everywhere power already appears: the synthesizer's final ν/s, the uplift an infusor grants, a generator's output strength, and Forge progress (`strength × power`). A Mutator Forge boosting its own branch's progress is intended, not a bug.
 - **Resonance modifies the host's chord factor.** A resonance mutator multiplies the product of the chord instances its host sings (`× (1 + magnitude)`), scaling with chord investment; it is inert on a chordless host and on spacers. The Conditional's per-instance bonus (ADR-0022) is untouched. Resonance needs no new chord vocabulary — chord depth stays parked.

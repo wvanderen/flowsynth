@@ -1,4 +1,4 @@
-import { createInitialState, createModule, createWorldColumn, createWeapon, freshEnemyStates, normalizeChordDiscovery, normalizeModules, normalizeWorld, openingGrant } from "./state";
+import { createInitialState, createWorldColumn, createWeapon, freshEnemyStates, normalizeChordDiscovery, normalizeModules, normalizeWorld, openingGrant } from "./state";
 import { classDefOf, freshClassPair, normalizeHabitClasses } from "./classes";
 import { activeGoals, normalizeGoals } from "./goals";
 import { DEFAULT_HABIT_COLOR, normalizeHabitColor } from "./habits";
@@ -141,6 +141,7 @@ function lostMonetaryFigures(
     repairInto!.capacityBought = 0;
   });
   raw.modules?.forEach((module, index) => {
+    if (module?.type === "mutatorForge") return; // retired, not recoverable money
     check(module?.invested, `modules[${index}].invested`, true, () => {
       if (module) module.invested = 0;
     });
@@ -170,7 +171,7 @@ function lostMonetaryFigures(
       },
     );
   }
-  for (const field of ["forge", "mutatorForge"] as const) {
+  for (const field of ["forge"] as const) {
     const meter = raw[field];
     if (!isRecord(meter)) continue;
     check(meter.progress, `${field}.progress`, true, () => {
@@ -372,9 +373,7 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
   // flag without the Mutator Forge module it grants — the purchase refuses
   // as owned, so loading grants what the entry owed. The first slot needs
   // no backfill: its free placement rides unlockMutatorSlot's empty patch.
-  if (merged.catalogEntryOwned && !merged.modules.some((module) => module.type === "mutatorForge")) {
-    merged.modules.push(createModule(merged, "mutatorForge"));
-  }
+  // Do not backfill the retired Forge from its old ownership flag.
   // The arc card's seen flag (§8) lenient-defaults the same way: absent or
   // corrupt means never dismissed — the save is still owed its one hint.
   if (typeof raw.arcCardSeen !== "boolean") {
@@ -553,6 +552,17 @@ function readSave(text: string, rng: Rng, recovery: boolean): LoadResult {
       world.starterWeaponGranted = true;
     }
   }
+  // ADR-0087: terminal retirement after the historical migration chain.
+  // Historical refunds remain in their original version gate; no new payout
+  // or era reset. Ordinary offers are preserved, including retired candidates
+  // which the action boundary refuses and the Forge no longer displays.
+  merged.mutators = [];
+  merged.mutatorSlots = [];
+  merged.bankedMutatorRolls = [];
+  merged.mutatorForge = { progress: 0, earned: 0 };
+  merged.catalogEntryOwned = false;
+  merged.rollPoolJoined = false;
+  merged.modules = merged.modules.filter(module => module.type !== "mutatorForge");
   if (recovered) return { state: merged, recovered };
   return migration ? { state: merged, migration } : { state: merged };
 }

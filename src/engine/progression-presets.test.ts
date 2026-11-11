@@ -120,17 +120,17 @@ describe("the walked presets", () => {
     // discovered enemy's threshold crosses a day earlier than the
     // pre-grant walk's day 4 — the fixture pins the grant-funded day.
     expect(preset.record.stop.reason).toContain("World enemy reached at day 3");
-    // The free Column leaves one of the earned three Arete unspent after
-    // the recipe's legacy entry and its first Hone rank.
-    expect(playthroughNote(preset.record)).toContain("spent Catalog entry + 1× Hone");
+    // No retired entry gate; the declared expansion rule spends three
+    // Arete on the two Rack Extenders before other lasting purchases.
+    expect(playthroughNote(preset.record)).toContain("spent 2× Rack Extenders");
     expect(preset.record.areteSpent.columns).toBe(0);
     const state = preset.state;
     const living = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp > 0);
     expect(living.length).toBeGreaterThanOrEqual(1);
     expect(state.world.weapons.some((weapon) => weapon.pos === null)).toBe(true);
-    expect(state.catalogEntryOwned).toBe(true);
+    expect(state.catalogEntryOwned).toBe(false);
     expect(state.world.columns.some((column) => column.pos !== null)).toBe(true);
-    expect(state.arete).toBe(1);
+    expect(state.arete).toBe(0);
     scenarioOf("world-enemy")!.assert(state, 0);
   });
 

@@ -71,9 +71,8 @@ describe("the lost-money recovery's recoverability (issue #494)", () => {
     // every enemy restored with the era.
     // The retention half stands: the tier spread and the board's mix —
     // the full supplied collection beside the opening starter — and
-    // every enemy restored with the era. The catalog entry's Mutator
-    // Forge backfill rides every load, recovery included.
-    expect(state.modules).toHaveLength(SUPPLIED_BOARD_MODULE_COUNT + 2);
+    // every enemy restored with the era. No retired Forge is backfilled.
+    expect(state.modules).toHaveLength(SUPPLIED_BOARD_MODULE_COUNT + 1);
     expect(state.modules.some((m) => m.tier === 3)).toBe(true);
     expect(state.world.frontier).toBe(0);
     expect(bankableClaimOf(state)).toBe(0);

@@ -1,0 +1,31 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T01:39:19.409Z",
+  "url": "http://localhost:5174/",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3",
+  "branch": "t3/retire-legacy-mutators",
+  "commit": "c49171bbceb99d3a66c34c1e27aefb1f19b7ca33",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-530/capture-preflight.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-530/check.exit",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-530/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-530/test.log",
+        "state": "??"
+      }
+    ]
+  }
+}

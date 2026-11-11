@@ -62,33 +62,22 @@ describe("Forge drafts (#335)", () => {
     expect(panel().querySelector('[data-choice="g3"]')!.getAttribute("aria-label")).toBe("Take common Milestone · Tier I");
   });
 
-  it("opens on the board layer and switches without consuming either offer", () => {
+  it("legacy queues and flags cannot expose a Mutator branch or inflate the Forge badge", () => {
     app.ui.boardLayer = "modules";
     app.openModal("forge");
     expect(panel().querySelectorAll("[data-choice]")).toHaveLength(3);
     expect(panel().querySelectorAll("[data-mut-choice]")).toHaveLength(0);
-    expect([...panel().querySelectorAll("[data-forge-face]")].map(b => b.getAttribute("data-forge-face"))).toEqual(["mutators", "modules"]);
-    switchTo("mutators");
-    expect(panel().querySelectorAll("[data-choice]")).toHaveLength(0);
-    expect(panel().querySelectorAll("[data-mut-choice]")).toHaveLength(2);
-    expect(document.activeElement?.getAttribute("data-forge-face")).toBe("mutators");
-    expect(app.state.bankedRolls).toHaveLength(1);
-    expect(app.state.bankedMutatorRolls).toHaveLength(1);
-    expect(panel().querySelector('[data-live="modal-flow-line"]')).toBeNull();
-    expect(panel().querySelector('[data-live="modal-mutator-line"]')).not.toBeNull();
-    expect(document.querySelector('[data-op="forge"] .tool-badge')?.textContent).toBe("2");
+    expect([...panel().querySelectorAll("[data-forge-face]")].map(b => b.getAttribute("data-forge-face"))).toEqual(["modules"]);
+    expect(panel().querySelector('[data-live="modal-mutator-line"]')).toBeNull();
+    expect(document.querySelector('[data-op="forge"] .tool-badge')?.textContent).toBe("1");
   });
 
-  it("falls back only when opening, then preserves an intentionally empty branch", () => {
+  it("an empty ordinary queue never falls back to pending legacy rolls", () => {
     app.state.bankedRolls = [];
     app.openModal("forge");
-    expect(app.ui.forgeFace).toBe("mutators");
-    switchTo("modules");
-    app.render();
+    expect(app.ui.forgeFace).toBe("modules");
     expect(panel().textContent).toContain("No module rolls banked.");
-    app.closeModal();
-    app.openModal("forge");
-    expect(app.ui.forgeFace).toBe("mutators");
+    expect(panel().textContent).not.toMatch(/Mutator|mutator/);
   });
 
   it("keeps horizontal meters live without replacing focused choices", () => {
@@ -103,23 +92,13 @@ describe("Forge drafts (#335)", () => {
     expect(panel().querySelector(".gbar")).toBeNull();
   });
 
-  it("mints only the active draft; the batch walks both queues and closes when dry", () => {
+  it("ordinary picks close when dry despite retained legacy queues", () => {
     app.openModal("forge");
-    switchTo("mutators");
-    panel().querySelector<HTMLButtonElement>('[data-mut-choice="u2"]')!.click();
-    expect(app.state.bankedMutatorRolls).toHaveLength(0);
-    expect(app.state.bankedRolls).toHaveLength(1);
-    expect(app.state.mutators.at(-1)?.family).toBe("charge");
-    // The mint lands unplaced — pick-and-place is retired — and the
-    // emptied branch hands the visit to the one with rolls left.
-    expect(app.state.mutators.at(-1)?.pos ?? null).toBeNull();
-    expect(app.ui.modal).toBe("forge");
-    expect(app.ui.forgeFace).toBe("modules");
-    expect(app.ui.placing).toBeNull();
     panel().querySelector<HTMLButtonElement>('[data-choice="m1"]')!.click();
     expect(app.state.bankedRolls).toHaveLength(0);
     expect(app.state.modules.at(-1)?.pos ?? null).toBeNull();
-    // Both queues dry: the batch visit ends and the Forge dismisses itself.
+    expect(app.state.mutators).toHaveLength(0);
+    expect(app.state.bankedMutatorRolls).toHaveLength(1);
     expect(app.ui.modal).toBeNull();
     expect(app.ui.placing).toBeNull();
   });
@@ -143,14 +122,13 @@ describe("Forge drafts (#335)", () => {
     expect(body.classList.contains("inst-show")).toBe(false);
     panel().querySelector<HTMLButtonElement>('[data-choice="m1"]')!.click();
     expect(app.state.bankedRolls).toHaveLength(0);
-    // The standing landing: the mutator roll still waits, so the visit
-    // walks to its face and keeps the peek.
+    // Retained legacy rolls do not keep the visit open.
     expect(app.state.bankedMutatorRolls).toHaveLength(1);
-    expect(app.ui.modal).toBe("forge");
-    expect(app.ui.forgeFace).toBe("mutators");
+    expect(app.ui.modal).toBeNull();
+    expect(app.ui.forgeFace).toBe("modules");
   });
 
-  it("discloses pitch, chords, and both roll types in their effects", () => {
+  it("discloses live effects without presenting a retained Mutator Forge candidate", () => {
     app.state.bankedRolls[0].candidates = [
       { id: "pitch", type: "harmonizer", tier: 0 },
       { id: "module", type: "forge", tier: 0 },
@@ -158,7 +136,8 @@ describe("Forge drafts (#335)", () => {
     ];
     app.openModal("forge");
     const terms = [...panel().querySelectorAll(".candidate-effect .term-trigger")].map(t => t.textContent);
-    expect(terms).toEqual(["pitch", "chords", "charge", "module rolls", "charge", "mutator rolls"]);
+    expect(terms).toEqual(["pitch", "chords", "charge", "module rolls"]);
+    expect(panel().querySelector('[data-choice="mutator"]')).toBeNull();
     expect(panel().querySelectorAll("button button")).toHaveLength(0);
   });
 

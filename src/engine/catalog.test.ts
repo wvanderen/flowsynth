@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buyCatalogEntry, buyCell, buyRowUnlock, chooseMutatorRoll, joinRollPool, prestige } from "./actions";
+import { buyCell, buyRowUnlock, prestige } from "./actions";
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE } from "./constants";
 import { catalogOpen, rowUnlockCost, unlockableRows } from "./catalog";
 import { cellCost, cellPurchasePrice, rowGateOwed } from "./economy";
-import { fresh, stubRng } from "./fixtures";
-import { generateMutatorOffer } from "./rolls";
+import { fresh } from "./fixtures";
 import { hex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
 
@@ -50,88 +49,8 @@ describe("the catalog's lock", () => {
   });
 });
 
-describe("the Mutator tree's sheet purchases", () => {
-  it("the entry debits one Arete and reads as owned", () => {
-    const s = banked();
-    expect(buyCatalogEntry(s).ok).toBe(true);
-    expect(s.catalogEntryOwned).toBe(true);
-    // The first claim banked two (issue #425); the entry spends one.
-    expect(s.arete).toBe(1);
-  });
-
-  it("the purchase performs one normal, unrigged Mutator roll into the banked queue (issue #274)", () => {
-    const s = banked();
-    // Draws: family 0.9→charge, rarity 0.5→common; family 0.1→power,
-    // rarity 0.5→common. Both candidates keep their draws — a charge- or
-    // resonance-family first mutator is an accepted dud, never re-rolled.
-    expect(buyCatalogEntry(s, stubRng([0.9, 0.5, 0.1, 0.5])).ok).toBe(true);
-    expect(s.bankedMutatorRolls).toHaveLength(1);
-    const offer = s.bankedMutatorRolls[0]!;
-    expect(offer.candidates[0]).toMatchObject({ family: "charge", rarity: "common" });
-    expect(offer.candidates[1]).toMatchObject({ family: "power", rarity: "common" });
-    // The shared generator: the same draws through the Mutator Forge's own
-    // minting path read identically, and the Forge branch's meter — the
-    // charge-funded path — stays untouched.
-    const twin = banked();
-    const expected = generateMutatorOffer(twin, stubRng([0.9, 0.5, 0.1, 0.5]));
-    expect(offer.candidates.map((c) => ({ family: c.family, rarity: c.rarity }))).toEqual(
-      expected.candidates.map((c) => ({ family: c.family, rarity: c.rarity })),
-    );
-    expect(s.mutatorForge).toEqual({ progress: 0, earned: 0 });
-    expect(s.bankedRolls).toHaveLength(0);
-    // And the choice spends the banked roll exactly as any minted one.
-    expect(chooseMutatorRoll(s, offer.id, offer.candidates[1]!.id).ok).toBe(true);
-    expect(s.bankedMutatorRolls).toHaveLength(0);
-    expect(s.mutators).toHaveLength(1);
-    expect(s.mutators[0]!.pos).toBeNull();
-  });
-
-  it("the entry refuses twice, and refuses short balances", () => {
-    const s = banked();
-    expect(buyCatalogEntry(s).ok).toBe(true);
-    expect(buyCatalogEntry(s).ok).toBe(false);
-    const spent = banked();
-    spent.arete = 0;
-    expect(buyCatalogEntry(spent).ok).toBe(false);
-    expect(spent.catalogEntryOwned).toBe(false);
-  });
-
-  it("the roll-pool join prices five and follows the entry", () => {
-    const s = banked();
-    // The join without the entry refuses — the tree escalates within.
-    expect(joinRollPool(s).ok).toBe(false);
-    expect(s.rollPoolJoined).toBe(false);
-    expect(buyCatalogEntry(s).ok).toBe(true);
-    s.arete = BALANCE.rollPoolJoinCost;
-    expect(joinRollPool(s).ok).toBe(true);
-    expect(s.rollPoolJoined).toBe(true);
-    expect(s.arete).toBe(0);
-    expect(joinRollPool(s).ok).toBe(false);
-  });
-
-  it("both purchases are inert outside upgrade mode", () => {
-    const s = banked();
-    s.mode = "flow";
-    expect(buyCatalogEntry(s).ok).toBe(false);
-    expect(joinRollPool(s).ok).toBe(false);
-    expect(s.catalogEntryOwned).toBe(false);
-    expect(s.rollPoolJoined).toBe(false);
-    s.mode = "paused";
-    expect(buyCatalogEntry(s).ok).toBe(false);
-    expect(joinRollPool(s).ok).toBe(false);
-  });
-
-  it("both purchases persist through prestige", () => {
-    const s = banked();
-    s.arete = BALANCE.catalogEntryCost + BALANCE.rollPoolJoinCost;
-    buyCatalogEntry(s);
-    joinRollPool(s);
-    s.eraEarned = ARETE_HORIZON;
-    prestige(s);
-    expect(s.catalogEntryOwned).toBe(true);
-    expect(s.rollPoolJoined).toBe(true);
-  });
-});
+// Retired Mutator purchase/action contracts are replaced by the refusal
+// and no-side-effect cases in retirement.test.ts (#530).
 
 // The Horizon break's purchase retired with the frontier claim curve
 // (issue #425) — its World-side successor's purchases carry their own

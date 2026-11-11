@@ -1,0 +1,178 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |engine| src/engine/allocation-memo.test.ts (13 tests | 1 failed) 132ms
+     × every board input invalidates exactly once 20ms
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+ ❯ |engine| tools/response-adoption.test.ts (7 tests | 1 failed) 3087ms
+     × rides the merge ladder's top: a tier-5 Chorus grants the adopted term × the ladder's end strength 5ms
+ ❯ |engine| tools/save-recovery.test.ts (3 tests | 1 failed | 1 skipped) 4555ms
+     × the supplied position recovers once: the lost figures named, the collection reset onto the calibrated economy 759ms
+ ❯ |engine| tools/later-eras.test.ts (16 tests | 1 failed | 1 skipped) 354537ms
+     × neither World policy records a World purchase within the four-day fixture after Column retirement 223116ms
+ ❯ |ui| src/ui/app.playthrough.test.ts (61 tests | 1 failed) 157342ms
+     × keeps World occupants in the tray when no cell satisfies their adjacency rule 35ms
+ ❯ |ui| src/ui/app.scenarios.test.ts (22 tests | 1 failed) 159447ms
+     × launching the progression presets installs each walked situation in an isolated save 111808ms
+ ❯ |ui| src/ui/app.dev.test.ts (10 tests | 1 failed) 509ms
+     × in upgrade mode it grants the era and saves it: a reload returns the same era 45ms
+ ❯ |ui| src/ui/app.scrap.test.ts (8 tests | 1 failed) 727ms
+       × stands on the Modules face only: mutator drafts keep the no-consolation contract 40ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 8 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.dev.test.ts > the World era grant (#466) > in upgrade mode it grants the era and saves it: a reload returns the same era
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/ui/app.dev.test.ts:170:41
+    168|     expect(status()).toBe("Dev: World era granted — the second face st…
+    169|     expect(app.state.prestiges).toBe(1);
+    170|     expect(app.state.catalogEntryOwned).toBe(true);
+       |                                         ^
+    171|     expect(app.state.arete).toBe(20);
+    172|     expect(app.state.eraEarned).toBe(BALANCE.world.entryNous * 1.5);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/8]⎯
+
+ FAIL  |ui| src/ui/app.playthrough.test.ts > the pushing policy > keeps World occupants in the tray when no cell satisfies their adjacency rule
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/ui/app.playthrough.test.ts:452:115
+    450|     expect(record.state.world.weapons[0]!.pos).toBeNull();
+    451|     expect(record.state.world.columns[0]!.pos).toBeNull();
+    452|     expect(record.events.some((event) => event.reason === "no free Wor…
+       |                                                                                                                   ^
+    453|     // The charge line's seat reads the authoritative preview: the own…
+    454|     // cell carries no module, so no line exists and the Column waits.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/8]⎯
+
+ FAIL  |ui| src/ui/app.scenarios.test.ts > the launch command > launching the progression presets installs each walked situation in an isolated save
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/ui/app.scenarios.test.ts:225:29
+    223|     expect(living.length).toBeGreaterThanOrEqual(1);
+    224|     expect(app.state.world.weapons.some((weapon) => weapon.pos === nul…
+    225|     expect(app.state.arete).toBe(1);
+       |                             ^
+    226|     expect(app.devScenarioNote).toContain("World enemy ✓");
+    227|     expect(app.devScenarioNote).toContain("placement decision unplayed…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/8]⎯
+
+ FAIL  |ui| src/ui/app.scrap.test.ts > the scrap controls (issue #377) > the Forge draft's skip control > stands on the Modules face only: mutator drafts keep the no-consolation contract
+TypeError: Cannot read properties of null (reading 'click')
+ ❯ src/ui/app.scrap.test.ts:119:94
+    117|       // The queue holds a module roll, so the default face is Modules.
+    118|       expect(document.querySelector("#modal-content [data-skip-offer]"…
+    119|       document.querySelector<HTMLButtonElement>('#modal-content [data-…
+       |                                                                                              ^
+    120|       expect(document.querySelector("#modal-content [data-skip-offer]"…
+    121|       app.closeModal();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/8]⎯
+
+ FAIL  |engine| tools/later-eras.test.ts > the declared World policies' spending orders > neither World policy records a World purchase within the four-day fixture after Column retirement
+AssertionError: expected 'Hone rank — chargeBlade' to be null
+
+- Expected:
+null
+
++ Received:
+"Hone rank — chargeBlade"
+
+ ❯ tools/later-eras.test.ts:381:21
+    379|     // Neither reaches a World purchase within this fixture's budget n…
+    380|     // that the Column purchase is gone. Do not invent later Hone evid…
+    381|     expect(support).toBeNull();
+       |                     ^
+    382|     expect(combat).toBeNull();
+    383|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/8]⎯
+
+ FAIL  |engine| tools/response-adoption.test.ts > the adopted response progression on real boards > rides the merge ladder's top: a tier-5 Chorus grants the adopted term × the ladder's end strength
+AssertionError: expected 26.578125 to be close to 39.8671875, received difference is 13.2890625, but expected 5e-10
+ ❯ tools/response-adoption.test.ts:119:47
+    117|     // rate pass composes.
+    118|     s.mutators.push({ id: "mu-p", family: "power", rarity: "common", p…
+    119|     expect(responseSupportPowerOf(s, chorus)).toBeCloseTo(term * BALAN…
+       |                                               ^
+    120|   });
+    121|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/8]⎯
+
+ FAIL  |engine| tools/save-recovery.test.ts > the lost-money recovery's recoverability (issue #494) > the supplied position recovers once: the lost figures named, the collection reset onto the calibrated economy
+AssertionError: expected [ { id: 'm1', …(8) }, …(35) ] to have a length of 37 but got 36
+
+- Expected
++ Received
+
+- 37
++ 36
+
+ ❯ tools/save-recovery.test.ts:76:27
+     74|     // every enemy restored with the era. The catalog entry's Mutator
+     75|     // Forge backfill rides every load, recovery included.
+     76|     expect(state.modules).toHaveLength(SUPPLIED_BOARD_MODULE_COUNT + 2…
+       |                           ^
+     77|     expect(state.modules.some((m) => m.tier === 3)).toBe(true);
+     78|     expect(state.world.frontier).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/8]⎯
+
+ FAIL  |engine| src/engine/allocation-memo.test.ts > the allocation solve memo (#349) > every board input invalidates exactly once
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/engine/allocation-memo.test.ts:140:9
+    138|     expect(solvesAfter((state) => {
+    139|       state.mutators.push({ id: "m1", family: "power", rarity: "common…
+    140|     })).toBe(1);
+       |         ^
+    141|     expect(solvesAfter((state) => {
+    142|       state.mutators[0]!.rarity = "rare";
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/8]⎯
+
+
+ Test Files  8 failed | 124 passed (132)
+      Tests  8 failed | 2373 passed | 9 skipped (2390)
+   Start at  19:39:14
+   Duration  1017.17s (transform 16.24s, setup 0ms, import 469.23s, tests 1683.81s, environment 8.16s)
+

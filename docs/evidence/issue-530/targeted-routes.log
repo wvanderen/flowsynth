@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run tools/later-eras.test.ts -t enumerates every affordable route
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 15 skipped (16)
+   Start at  19:34:29
+   Duration  193.64s (transform 624ms, setup 0ms, import 193.28s, tests 5ms, environment 0ms)
+

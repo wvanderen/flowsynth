@@ -112,8 +112,8 @@ describe("the lost-money recovery (issue #494)", () => {
     expect(state.practiceLog).toHaveLength(1);
     expect(state.notes).toHaveLength(1);
     expect(state.bankedRolls).toHaveLength(1);
-    expect(state.catalogEntryOwned).toBe(true);
-    expect(state.rollPoolJoined).toBe(true);
+    expect(state.catalogEntryOwned).toBe(false);
+    expect(state.rollPoolJoined).toBe(false);
     expect(state.prestiges).toBe(1);
     expect(state.world.starterWeaponGranted).toBe(true);
     expect(state.world.columns).toHaveLength(1);

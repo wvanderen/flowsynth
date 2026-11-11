@@ -1,0 +1,37 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/engine/retirement.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |engine| src/engine/retirement.test.ts (3 tests | 1 failed) 18ms
+   × retained in-memory Mutators cannot affect production, forge progress, draft pools or reshape gates 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| src/engine/retirement.test.ts > retained in-memory Mutators cannot affect production, forge progress, draft pools or reshape gates
+AssertionError: expected 0.30000000000000004 to be 0.1 // Object.is equality
+
+- Expected
++ Received
+
+- 0.1
++ 0.30000000000000004
+
+ ❯ src/engine/retirement.test.ts:58:35
+     56|   for (const family of ["power", "charge", "resonance"] as const) {
+     57|     state.mutators = [{ id: "legacy", family, rarity: "rare", pos: sta…
+     58|     expect(syncRates(state).rate).toBe(baseline);
+       |                                   ^
+     59|   }
+     60|   state.mutatorSlots = [hex(99, 99)];
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 2 passed (3)
+   Start at  18:58:14
+   Duration  692ms (transform 251ms, setup 0ms, import 312ms, tests 18ms, environment 0ms)
+

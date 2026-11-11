@@ -1,6 +1,6 @@
 # World unlocks through prestige and collection growth uses drafts
 
-Accepted design; implementation pending. See the [confirmed feedback brief](../world-layer-feedback-brief.md).
+Accepted design; implemented by #526–#530. Final desktop/phone visual acceptance remains outstanding; implementation is not a visual-acceptance claim. See the [confirmed feedback brief](../world-layer-feedback-brief.md).
 
 World unlocks permanently on the first prestige that banks positive Arete, granting one Column alongside the once-only starter Blade. A current-era nous gate re-hides a persistent collection after reset; a Catalog entry purchase obscures the discovery behind another transaction. Enemy pressure remains before unlock but must be explained outside the hidden map.
 

@@ -1,6 +1,8 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { createAppFixture } from "./testing/app-fixture";
+import { generateOffer } from "../engine/rolls";
+import { stubRng } from "../engine/fixtures";
 import { createInitialState } from "../engine/state";
 import { deserialize, serialize, STORAGE_KEY } from "../engine/save";
 
@@ -16,6 +18,12 @@ it("hides World until a confirmed positive prestige, then retains the usable kit
     document.getElementById("prestige-door")!.click();
     document.getElementById("prestige-confirm")!.click();
   };
+  app.state.world.enemies.w0!.discovered = true;
+  app.openLedger("nous");
+  expect(document.getElementById("ledger-pressure")!.textContent).toContain("20.0% production reduction");
+  expect(document.getElementById("ledger-pressure")!.textContent).toContain("positive Arete unlocks World");
+  expect(worldDoor()).toBeNull();
+  app.closeModal();
   app.state.arete = 20; // Catalog spending is not discovery.
   app.openModal("catalog");
   document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
@@ -52,6 +60,19 @@ it("hides World until a confirmed positive prestige, then retains the usable kit
   app.worldPickCell(app.state.cells[1]!);
   expect(column.pos).toEqual(app.state.cells[0]);
   expect(blade.pos).toEqual(app.state.cells[1]);
+  // A real ordinary mixed offer routes to World, never module inventory.
+  const mixed = generateOffer(app.state, stubRng([...Array(9).fill(0.5), 0, 0]));
+  expect(mixed.candidates[2].type).toBe("column");
+  app.state.bankedRolls.push(mixed);
+  const moduleCount = app.state.modules.length;
+  app.openModal("forge");
+  document.querySelector<HTMLButtonElement>(`[data-choice="${mixed.candidates[2].id}"]`)!.click();
+  expect(app.state.world.columns).toHaveLength(2);
+  expect(app.state.world.columns[1]!.pos).toBeNull();
+  expect(app.state.modules).toHaveLength(moduleCount);
+  app.worldArmTray(app.state.world.columns[1]!.id);
+  app.worldPickCell(app.state.cells[2]!);
+  expect(app.state.world.columns[1]!.pos).toEqual(app.state.cells[2]);
   app.state.eraEarned = 7_000_000;
   confirmReset();
   expect(worldDoor()).not.toBeNull();

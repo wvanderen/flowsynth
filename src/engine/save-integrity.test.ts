@@ -180,7 +180,7 @@ describe("the commit points refuse at their own seams (issue #486)", () => {
     expect(s.forge.progress).toBe(0.5);
     expect(s.bankedRolls).toHaveLength(0);
     s.mutatorForge.progress = 0.5;
-    expect(() => addMutatorForgeProgress(s, Infinity)).toThrow(NumericFault);
+    expect(addMutatorForgeProgress(s, Infinity)).toBe(0);
     expect(s.mutatorForge.progress).toBe(0.5);
     expect(s.bankedMutatorRolls).toHaveLength(0);
   });

@@ -13,6 +13,7 @@ import { isModuleCandidate, type ModuleInstance, type ModuleType, type RollOffer
 // One copy's recovery value, read from the named type's fixed rarity and
 // the copy's own merge tier.
 export function scrapValueOf(type: ModuleType, tier: number): number {
+  if (type === "mutatorForge") return 0; // retirement creates no refund path
   return BALANCE.scrapValue[typeRarityOf(type)] * BALANCE.scrapTierFactor ** tier;
 }
 

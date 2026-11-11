@@ -231,8 +231,8 @@ describe("fixed aptitude grades (#370)", () => {
     const leveledValue = contributionOf(s, square.id).value;
     s.mutators.push({ ...createMutator(s, "resonance", "rare"), pos: hex(2, 0) });
     const mutatedValue = contributionOf(s, square.id).value;
-    // Output moved; the grades did not.
-    expect(mutatedValue).toBeGreaterThan(leveledValue);
+    // Retirement changes neither live output nor authored grades.
+    expect(mutatedValue).toBe(leveledValue);
     expect(profileAxesOf("square")).toEqual(before);
   });
 

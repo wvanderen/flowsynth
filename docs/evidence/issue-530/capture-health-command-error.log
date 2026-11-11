@@ -1,0 +1,5 @@
+npm error Missing script: "evidence:health"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+npm error A complete log of this run can be found in: /home/lem/.npm/_logs/2026-11-11T01_39_19_568Z-debug-0.log

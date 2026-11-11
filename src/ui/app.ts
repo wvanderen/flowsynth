@@ -2562,16 +2562,8 @@ export class App {
   // dialog. A manual open on empty queues still shows the standing empty
   // state — only a consuming action can close the sheet.
   private forgeAfterConsume(): void {
-    const face = this.ui.forgeFace;
-    const faceEmpty = face === "modules" ? this.state.bankedRolls.length === 0 : this.state.bankedMutatorRolls.length === 0;
-    if (!faceEmpty) return;
-    const other = face === "modules" ? "mutators" : "modules";
-    const otherPending = other === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
-    if (this.state.catalogEntryOwned && otherPending > 0) {
-      this.ui.forgeFace = other;
-      return;
-    }
-    this.ui.modal = null;
+    this.ui.forgeFace = "modules";
+    if (this.state.bankedRolls.length === 0) this.ui.modal = null;
   }
 
   chooseCandidate(offerId: string, candidateId: string): void {
@@ -2740,11 +2732,7 @@ export class App {
   private openModalDirect(kind: ModalKind): void {
     this.captureModalInvoker();
     if (kind === "forge") {
-      const preferred = this.state.catalogEntryOwned && this.ui.boardLayer === "world" ? "mutators" : "modules";
-      const pending = preferred === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
-      const otherPending = preferred === "modules" ? this.state.bankedMutatorRolls.length : this.state.bankedRolls.length;
-      this.ui.forgeFace = !pending && otherPending && this.state.catalogEntryOwned
-        ? (preferred === "modules" ? "mutators" : "modules") : preferred;
+      this.ui.forgeFace = "modules";
     }
     this.ui.modal = kind;
     if (kind === "import") this.ui.importText = "";
@@ -3012,7 +3000,7 @@ export class App {
     }
     const s = this.state;
     s.prestiges = Math.max(s.prestiges, 1);
-    s.catalogEntryOwned = true;
+    s.catalogEntryOwned = false;
     s.arete = Math.max(s.arete, 20);
     s.eraEarned = Math.max(s.eraEarned, BALANCE.world.entryNous * 1.5);
     s.world.unlocked = true;
