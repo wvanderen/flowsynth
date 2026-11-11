@@ -13,7 +13,7 @@ import type { GameState } from "../engine/types";
 
 // The World layer's UI (issue #426): the board's second face at the
 // design round's approved language — the layer legend (World leading,
-// locked-but-visible pre-reveal), one square-cut plate per coordinate
+// locked-but-visible pre-reveal), one World hex plate per coordinate
 // (reserved, discovered, cleared, occupant, open), the module layer
 // suppressed while it stands, the free placement gestures with the
 // engine-sourced lift preview, the World tray, and the flow locks. Every
@@ -44,6 +44,7 @@ function seedEra(): void {
   s.catalogEntryOwned = true;
   s.arete = 20;
   s.eraEarned = BALANCE.world.entryNous * 1.5;
+  s.world.unlocked = true;
   s.world.weapons.push(
     { id: "wp1", type: "chargeBlade", pos: hex(1, 0), store: 0, cooldown: 0, targetPriority: [] },
     { id: "wp2", type: "chargeBlade", pos: null, store: 0, cooldown: 0, targetPriority: [] },
@@ -66,25 +67,20 @@ describe("the layer legend (issue #426)", () => {
     expect(layers).toEqual(["world", "modules"]);
   });
 
-  it("pre-reveal the World face stands locked-but-visible; the click previews the reveal and flips nothing", () => {
-    const legend = document.getElementById("layer-legend")!;
-    const world = legend.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!;
-    expect(world.classList.contains("locked")).toBe(true);
-    expect(world.querySelector(".world-tab-lock")).not.toBeNull();
-    world.click();
+  it("before discovery World has no navigation or map preview", () => {
+    expect(document.querySelector('[data-legend-layer="world"]')).toBeNull();
+    app.setBoardLayer("world");
     expect(app.ui.boardLayer).toBe("modules");
-    expect(status()).toContain("era-earned");
-    expect(status()).not.toContain("era-earned era-earned");
     expect(grid().querySelector("[data-world-cell]")).toBeNull();
   });
 
-  it("pre-reveal in flow the preview stands too — the reveal is no spending surface", () => {
+  it("before discovery flow has no World preview either", () => {
     app.state.sessionsCompleted = 1;
     startSession(app.state, 600);
     app.render();
-    document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="world"]')!.click();
+    expect(document.querySelector('#layer-legend [data-legend-layer="world"]')).toBeNull();
+    app.setBoardLayer("world");
     expect(app.ui.boardLayer).toBe("modules");
-    expect(status()).toContain("era-earned");
     endSession(app.state);
   });
 
@@ -169,6 +165,37 @@ describe("the enemy plates (issue #426, priority 2)", () => {
     expect(face("world-w1")!.querySelector(".world-plate.firm")).not.toBeNull();
     expect(face("world-w2")!.querySelector(".world-plate.reserved")).not.toBeNull();
     expect(openFace(0, 0).closest("g")!.querySelector(".world-plate.open")).not.toBeNull();
+  });
+});
+
+describe("World hex identity (issue #529)", () => {
+  it("carries a six-sided steel silhouette from board to inventory, drag artwork and detail without changing cell hits", async () => {
+    seedEra();
+    app.setBoardLayer("world");
+    const { worldTileSvg } = await import("./world");
+    // Silhouette is the explicit presentation contract, not the paths of
+    // glyphs, bars, or other incidental SVG internals.
+    const sixSides = (outline: Element | null) => {
+      expect(outline?.tagName.toLowerCase()).toBe("polygon");
+      expect(outline?.getAttribute("points")?.trim().split(/\s+/)).toHaveLength(6);
+    };
+    sixSides(face("world-occ-1,0").querySelector(".world-plate"));
+    const hits = [...grid().querySelectorAll("[data-world-cell]")].map(el => [el.getAttribute("data-world-cell"), el.getAttribute("points")]);
+    const before = JSON.stringify(app.state);
+    const tray = document.getElementById("world-tray")!;
+    sixSides(tray.querySelector('[data-world-tray="wp2"] .world-tile-plate'));
+    // The real pointer ghost consumes this same public face builder.
+    const ghost = document.createElement("div");
+    ghost.innerHTML = worldTileSvg("column");
+    sixSides(ghost.querySelector(".world-tile-plate"));
+    tray.querySelector<HTMLButtonElement>('[data-world-tray="wp2"]')!.click();
+    sixSides(tray.querySelector(".inventory-detail-face .world-tile-plate"));
+    app.openDetail(hex(1, 0), "world");
+    sixSides(document.querySelector(".world-stack .world-plate"));
+    expect(document.querySelector(".world-stack")?.textContent).toContain("UNFED");
+    expect(document.querySelector(".world-stack")?.textContent).not.toMatch(/Lv\.|Tier/);
+    expect(JSON.stringify(app.state)).toBe(before);
+    expect([...grid().querySelectorAll("[data-world-cell]")].map(el => [el.getAttribute("data-world-cell"), el.getAttribute("points")])).toEqual(hits);
   });
 });
 

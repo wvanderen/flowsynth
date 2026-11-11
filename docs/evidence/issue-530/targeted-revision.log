@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/engine/allocation-memo.test.ts src/ui/app.dev.test.ts src/ui/app.playthrough.test.ts src/ui/app.scenarios.test.ts src/ui/app.scrap.test.ts tools/later-eras.test.ts tools/response-adoption.test.ts tools/save-recovery.test.ts -t every board input|in upgrade mode it grants|keeps World occupants|launching the progression presets|remains available with legacy|both World policies|rides the merge ladder|the supplied position recovers once
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+
+ Test Files  8 passed (8)
+      Tests  8 passed | 132 skipped (140)
+   Start at  07:20:57
+   Duration  601.52s (transform 2.99s, setup 0ms, import 266.01s, tests 336.34s, environment 841ms)
+

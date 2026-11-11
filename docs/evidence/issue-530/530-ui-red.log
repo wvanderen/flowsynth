@@ -1,0 +1,98 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/ui/app.retirement.test.ts src/ui/app.world-progression.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |ui| src/ui/app.retirement.test.ts (1 test | 1 failed) 106ms
+   × loading legacy pending mechanics exposes only live Catalog and Forge choices and preserves progression on reload 105ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.retirement.test.ts > loading legacy pending mechanics exposes only live Catalog and Forge choices and preserves progression on reload
+AssertionError: expected '\n    \n      νnous\n  \n  \nArete\n …' not to match /Mutator|Accelerator|Module Types/
+
+- Expected:
+/Mutator|Accelerator|Module Types/
+
++ Received:
+"
+    
+      νnous
+  
+  
+Arete
+  
+  
+  
+scrap
+      
+  
+  
+
+      ✕
+    
+    
+    
+      World
+      
+        
+    HoneArete’s persistent attack-power ranks for a weapon type 0/4+2 attack per rank · every Charge BladeGranted weapon with stored charge and capped cadence · memorizedPersists through arete resetATK 4 → 6
+    1 Arete
+  
+      
+    
+    
+      Upgrades
+      
+        
+    Expansion BaysCeiling purchases persist through arete reset 0/2Raises the Harmonic capacityWhole-chord budget per voice ceiling one rung each · memorizedPersists through arete resetceiling 3 → 4
+    6 Arete
+  
+        
+    Chord CatalystsDiscount purchases persist through arete reset 0/2Each takes 20% off every Poly ExpanderRe-earned after arete reset price · memorizedPersists through arete resetprices −0% → −20%
+    3 Arete
+  
+        
+    Warp BeamCap purchases persist through arete reset 0/3Raises the merge tierMatching copies combine to raise authored strengths cap one tier each · memorizedPersists through arete resetTier III → Tier IV
+    5 Arete
+  
+        
+          Arete Accelerator (placeholder)
+          3 Arete
+        
+      
+    
+    
+      Module Types ⓘRolled module types appear here unweighted
+      
+        
+                
+    
+    
+  Mutator ForgeFill with chargeGenerator output that powers other modules → Mutator draft
+                5 Arete
+              
+      
+    
+  
+  
+  "
+
+ ❯ src/ui/app.retirement.test.ts:25:69
+     23|   app.openModal("catalog");
+     24|   document.querySelector<HTMLButtonElement>('[data-catalog-face="arete…
+     25|   expect(document.getElementById("modal-content")!.textContent).not.to…
+       |                                                                     ^
+     26|   app.closeModal();
+     27|   app.openModal("forge");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 2 passed (3)
+   Start at  19:00:20
+   Duration  2.86s (transform 1.07s, setup 0ms, import 1.40s, tests 552ms, environment 420ms)
+

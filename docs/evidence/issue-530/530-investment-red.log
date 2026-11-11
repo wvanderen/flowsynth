@@ -1,0 +1,37 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/engine/retirement.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |engine| src/engine/retirement.test.ts (5 tests | 1 failed) 33ms
+   × lost retired Forge fill and investment do not force monetary recovery 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| src/engine/retirement.test.ts > lost retired Forge fill and investment do not force monetary recovery
+AssertionError: expected 'This save needs explicit recovery: un…' to be undefined
+
+- Expected:
+undefined
+
++ Received:
+"This save needs explicit recovery: unreadable monetary state (modules[1].invested, modules[1].reserve). The original save is unchanged; loading repairs nothing — recovery is its own explained choice."
+
+ ❯ src/engine/retirement.test.ts:56:24
+     54|   raw.state.modules.push({ id: "retired", type: "mutatorForge", pos: n…
+     55|   const result = deserialize(JSON.stringify(raw));
+     56|   expect(result.error).toBeUndefined();
+       |                        ^
+     57|   expect(result.state!.mutatorForge).toEqual({ progress: 0, earned: 0 …
+     58| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 4 passed (5)
+   Start at  19:15:05
+   Duration  721ms (transform 256ms, setup 0ms, import 316ms, tests 33ms, environment 0ms)
+

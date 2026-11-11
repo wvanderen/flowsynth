@@ -1,0 +1,83 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T15:42:50.778Z",
+  "url": "http://localhost:5174",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "integration/525-world-progression",
+  "commit": "a386851062fc0a010d7d193a6160dc216c9e9f2d",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-blockers-manifest.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-blockers-observations.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-blockers.cjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-blockers.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-color-budget-0.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-color-budget-1000.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-energized-combat-after-attack.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-energized-no-preference-modules.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-energized-no-preference-world.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-energized-reduce-modules.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-energized-reduce-world.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-grayscale-acquired.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-grayscale-available.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-desktop-grayscale-unavailable.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-preflight.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/revalidated-superseded-wrapper-selector.log",
+        "state": "??"
+      }
+    ]
+  }
+}

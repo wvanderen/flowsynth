@@ -3,7 +3,8 @@ import { buyDraftUpgrade, chooseRoll, endSession, prestige, scrapModule, skipRol
 import { ARETE_HORIZON } from "./accumulator";
 import { BALANCE, CATEGORY_OF, TYPE_RARITY } from "./constants";
 import { fresh, giveHabit, stubRng } from "./fixtures";
-import { draftTierChanceOf, generateOffer, nextDraftUpgradePrice } from "./rolls";
+import { draftTierChanceOf, nextDraftUpgradePrice } from "./rolls";
+import { generateModuleOffer as generateOffer } from "./fixtures";
 import { deserialize, serialize } from "./save";
 import type { Category, GameState, ModuleType } from "./types";
 

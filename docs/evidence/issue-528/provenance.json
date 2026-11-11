@@ -1,0 +1,39 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T00:35:38.077Z",
+  "url": "http://localhost:5174/",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-980acac7-3d87974f3c4a9f24",
+  "branch": "t3/mixed-world-drafts",
+  "commit": "b143fa4e2aa2da1befad7ed7d809fc7956ce26e7",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-528/browser-healthcheck.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-528/check.exit",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-528/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-528/preflight.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-528/provenance.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-528/test.log",
+        "state": "??"
+      }
+    ]
+  }
+}

@@ -1,0 +1,59 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/ui/app.playthrough.test.ts src/engine/progression-presets.test.ts -t pushes past the first eligibility|stops the pushing walk at the living fight
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |engine| src/engine/progression-presets.test.ts (9 tests | 1 failed | 8 skipped) 194324ms
+     × stops the pushing walk at the living fight with the placement unplayed 13ms
+ ❯ |ui| src/ui/app.playthrough.test.ts (61 tests | 1 failed | 60 skipped) 175476ms
+     × pushes past the first eligibility, banks, spends, deploys the starter rig, recovers, and advances the frontier 175474ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.playthrough.test.ts > the pushing policy > pushes past the first eligibility, banks, spends, deploys the starter rig, recovers, and advances the frontier
+AssertionError: expected { elapsed: 172800, credited: 72000 } to deeply equal { elapsed: +0, credited: +0 }
+
+- Expected
++ Received
+
+  {
+-   "credited": 0,
+-   "elapsed": 0,
++   "credited": 72000,
++   "elapsed": 172800,
+  }
+
+ ❯ src/ui/app.playthrough.test.ts:547:38
+    545|     const recovery = record.recovery!;
+    546|     expect(recovery.claim).toBe(record.claims[0]!);
+    547|     expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0…
+       |                                      ^
+    548|     expect(recovery.lastingPurchaseLabel).toBe("a Hone rank (chargeBla…
+    549|     // The Column lands the moment it is bought: the opening board alr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  |engine| src/engine/progression-presets.test.ts > the walked presets > stops the pushing walk at the living fight with the placement unplayed
+AssertionError: expected 'Pushing ◆ 3d · 3600m credited of 4090…' to contain 'spent 2× Hone'
+
+Expected: "spent 2× Hone"
+Received: "Pushing ◆ 3d · 3600m credited of 4090m elapsed · claim 3/2 Arete · seed 468 · fresh-start · fresh-start-s468-d788b0bd · spent 2× Rack Extenders · recovery — bank 3, purchase unreached, blade unreached, column 0.0d/0m, rate 0.0d/0m, door 0.4d/600m, frontier unreached (1862.58ν/s pre-reset) · World enemy reached at day 3 — a living discovered enemy with the placement decision unplayed."
+
+ ❯ src/engine/progression-presets.test.ts:124:44
+    122|     expect(preset.record.stop.reason).toContain("World enemy reached a…
+    123|     // No retired entry purchase; the earned three Arete buy two Hone …
+    124|     expect(playthroughNote(preset.record)).toContain("spent 2× Hone");
+       |                                            ^
+    125|     expect(preset.record.areteSpent.columns).toBe(0);
+    126|     const state = preset.state;
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  2 failed | 68 skipped (70)
+   Start at  19:24:16
+   Duration  372.53s (transform 1.65s, setup 0ms, import 2.00s, tests 369.80s, environment 219ms)
+

@@ -40,7 +40,7 @@ import type { App, DetailFace } from "./app";
 import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead, spotlightInactiveVerdict } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
-import { bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
+import { worldEntered, bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
 import { COLUMN_WORD, META, RARITY_LABEL, WORLD_META, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
@@ -208,6 +208,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     pos.q,
     pos.r,
     detail.face,
+    worldEntered(state),
     module ? `${module.id}:${module.type}:${module.level}:${module.tier}:${module.shift}:${module.target}` : "empty",
     module ? forgeBranchOf(state, module.type) : null,
     module ? hostPower(state, module) : 0,
@@ -277,7 +278,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       </div>
       <div class="hex-detail-grid">
         <div class="hex-detail-stack">
-          ${worldLayerHtml(app, pos, snapshot)}
+          ${worldEntered(state) ? worldLayerHtml(app, pos, snapshot) : ""}
           ${moduleLayerHtml(app, pos, module, snapshot)}
           ${actionRailHtml(app, pos, module)}
         </div>
@@ -437,7 +438,7 @@ function detailColumnHtml(app: App, pos: Hex, module: ModuleInstance | undefined
   // The World line (issue #426): the enemy threat or the cleared bonus —
   // the same read the plate's tooltip carries, stated once in the column.
   const enemyDef = enemyDefAt(pos);
-  if (enemyDef) {
+  if (enemyDef && worldEntered(state)) {
     const live = state.world.enemies[enemyDef.key];
     const line = !live?.discovered
       ? "Reserved cell — the World holds this position"

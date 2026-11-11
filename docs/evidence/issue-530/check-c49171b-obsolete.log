@@ -1,0 +1,5 @@
+
+> flowsynth@0.1.0 check
+> node tools/run-supported.mjs node_modules/typescript/bin/tsc --noEmit && node tools/run-supported.mjs tools/dev/recorder-static-check.mjs
+
+recorder static gate ok: 5 scripts, no static defects

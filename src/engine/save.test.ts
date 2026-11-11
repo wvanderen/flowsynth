@@ -144,8 +144,8 @@ describe("persistence", () => {
     const loaded = deserialize(serialize(s, 5_000));
     expect(loaded.error).toBeUndefined();
     expect(loaded.state!.unlockedRows).toEqual([3, -2]);
-    expect(loaded.state!.catalogEntryOwned).toBe(true);
-    expect(loaded.state!.rollPoolJoined).toBe(true);
+    expect(loaded.state!.catalogEntryOwned).toBe(false);
+    expect(loaded.state!.rollPoolJoined).toBe(false);
     expect(loaded.state!.arete).toBe(3);
   });
 
@@ -176,7 +176,7 @@ describe("persistence", () => {
     expect(corrupt.state!.bankedMutatorRolls).toEqual([]);
   });
 
-  it("the Mutator layer round-trips through the save (issue #198)", () => {
+  it("the retired Mutator layer is removed on load (#530)", () => {
     const s = fresh();
     s.mutatorSlots = [hex(0, 1), hex(1, 0)];
     s.mutators = [
@@ -195,37 +195,28 @@ describe("persistence", () => {
     ];
     const loaded = deserialize(serialize(s, 6_000));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.mutatorSlots).toEqual([hex(0, 1), hex(1, 0)]);
-    expect(loaded.state!.mutators).toEqual(s.mutators);
-    expect(loaded.state!.mutatorForge).toEqual({ progress: 33, earned: 2 });
-    expect(loaded.state!.bankedMutatorRolls).toEqual(s.bankedMutatorRolls);
+    expect(loaded.state!.mutatorSlots).toEqual([]);
+    expect(loaded.state!.mutators).toEqual([]);
+    expect(loaded.state!.mutatorForge).toEqual({ progress: 0, earned: 0 });
+    expect(loaded.state!.bankedMutatorRolls).toEqual([]);
   });
 
-  it("a pre-mutator entry owner loads owing its grant, exactly once (issue #198)", () => {
-    // The sheet purchase (#197) predates the entry's engine effects: a
-    // save holding the owned flag without the Mutator Forge module loads
-    // with the grant backfilled — the purchase itself refuses as owned.
+  it("legacy entry ownership never backfills or preserves a retired Forge (#530)", () => {
+    // The historical flag cannot backfill the retired grant.
     const file = JSON.parse(serialize(fresh()));
     file.state.catalogEntryOwned = true;
     const loaded = deserialize(JSON.stringify(file));
     expect(loaded.error).toBeUndefined();
     const forge = loaded.state!.modules.filter((m) => m.type === "mutatorForge");
-    expect(forge).toHaveLength(1);
-    expect(forge[0]!.tier).toBe(0);
-    expect(forge[0]!.pos).toBeNull();
-    // Idempotent: reloading the backfilled save grants nothing further.
+    expect(forge).toHaveLength(0);
+    // Idempotent: reloading retirement grants nothing.
     const reloaded = deserialize(serialize(loaded.state!, 6_000));
-    expect(reloaded.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(1);
-    // An entry owner who already rolled a second Mutator Forge from the
-    // joined pool (a lost module forge to combination is impossible, so
-    // any mutatorForge at all means the grant landed) is left alone.
+    expect(reloaded.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(0);
+    // Already-owned retired modules are removed too, never refunded.
     file.state.modules.push({ id: "m9", type: "mutatorForge", tier: 1, level: 0, invested: 0, pos: null });
     const owning = deserialize(JSON.stringify(file));
-    expect(owning.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(1);
-    expect(owning.state!.modules.at(-1)!.tier).toBe(1);
-    // No retro-sequence, no retro roll (issue #274): the entry's performed
-    // roll belongs to purchases from now on — the backfill banks nothing
-    // into the Mutator tray's queue.
+    expect(owning.state!.modules.filter((m) => m.type === "mutatorForge")).toHaveLength(0);
+    // No retro-sequence, no retro roll, no restored slots.
     expect(loaded.state!.bankedMutatorRolls).toEqual([]);
     expect(loaded.state!.mutatorSlots).toEqual([]);
   });
@@ -410,7 +401,7 @@ describe("the v10 boundary (issue #423)", () => {
     expect(serialize(second.state!, 1_000)).toBe(text);
   });
 
-  it("mutators, tiers, and banked rolls are untouched at the boundary", () => {
+  it("retires mutators while tiers and banked module rolls are untouched at the boundary", () => {
     const s = fresh();
     s.mutators.push({ id: "mu1", family: "power", rarity: "uncommon", pos: null });
     const merged = give(s, "harmonizer", hex(0, 1));
@@ -425,9 +416,9 @@ describe("the v10 boundary (issue #423)", () => {
     });
     const loaded = deserialize(asV10(s));
     expect(loaded.error).toBeUndefined();
-    expect(loaded.state!.mutators[0]).toMatchObject({ family: "power", rarity: "uncommon" });
+    expect(loaded.state!.mutators).toEqual([]);
     expect(loaded.state!.modules.find((m) => m.id === merged.id)!.tier).toBe(2);
-    expect(loaded.state!.bankedRolls[0]!.candidates[1]!.tier).toBe(2);
+    expect(loaded.state!.bankedRolls[0]!.candidates[1]).toMatchObject({ tier: 2 });
   });
 });
 
@@ -469,10 +460,9 @@ describe("the v10 → v11 migration (issue #427)", () => {
       BALANCE.rollPoolJoinCost +
       BALANCE.horizonBreakCost;
     expect(state.arete).toBe(expected);
-    // The flags rest as the Mutator layer's inert data — ownership itself
-    // is not rewritten by the refund.
-    expect(state.catalogEntryOwned).toBe(true);
-    expect(state.rollPoolJoined).toBe(true);
+    // Historical refund arithmetic stands; terminal retirement clears flags.
+    expect(state.catalogEntryOwned).toBe(false);
+    expect(state.rollPoolJoined).toBe(false);
   });
 
   it("refunds the retired goal-slot economy exactly through the long-goal ladder, one whole-nous refund", () => {
@@ -625,15 +615,13 @@ describe("the v10 → v11 migration (issue #427)", () => {
     expect(state.goals.find((g) => g.id === "g1")).toEqual({ ...expected, liveSeconds: 0, retired: true });
   });
 
-  it("keeps the Mutator layer resting intact: slots, tray, placed mutators, banked rolls, and meter survive inert", () => {
+  it("terminal retirement removes Mutator remnants after historical conversion without a second grant", () => {
     const state = loadFixture();
-    expect(state.mutatorSlots).toEqual([hex(0, 1), hex(1, 0), hex(2, 0)]);
-    expect(state.mutators).toEqual(v10MigrationFixture.state.mutators);
-    expect(state.mutatorForge).toEqual({ progress: 33, earned: 2 });
-    expect(state.bankedMutatorRolls).toEqual(v10MigrationFixture.state.bankedMutatorRolls);
-    // The entry's Mutator Forge module was carried, so the load backfills
-    // no second grant.
-    expect(state.modules.filter((module) => module.type === "mutatorForge")).toHaveLength(1);
+    expect(state.mutatorSlots).toEqual([]);
+    expect(state.mutators).toEqual([]);
+    expect(state.mutatorForge).toEqual({ progress: 0, earned: 0 });
+    expect(state.bankedMutatorRolls).toEqual([]);
+    expect(state.modules.filter((module) => module.type === "mutatorForge")).toHaveLength(0);
   });
 
   it("keeps everything the prestige boundary kept: the life record, the collection, and the earned feats", () => {
@@ -652,7 +640,7 @@ describe("the v10 → v11 migration (issue #427)", () => {
     expect(state.mergeCapPurchases).toBe(1);
     expect(state.scrap).toBe(25);
     expect(state.draftTierBonus).toBe(1);
-    expect(state.bankedRolls[0]!.candidates[1]!.tier).toBe(2);
+    expect(state.bankedRolls[0]!.candidates[1]).toMatchObject({ tier: 2 });
     // Already-earned feats stay earned — the retired horizon-break stamp
     // included.
     expect(state.achievements["breaking-the-horizon"]).toBe(1_700_000_000_001);
@@ -907,10 +895,10 @@ describe("the v12 → v13 migration (issue #493)", () => {
     expect(state.achievements).toEqual(before.achievements);
     expect(state.chordDiscovery["octave"]).toEqual({ formed: true, firstFormedAt: 800, rootsHeard: 2, roots: [0, 7] });
     expect(state.forge).toEqual({ progress: 41, earned: 2 });
-    expect(state.mutatorForge).toEqual({ progress: 33, earned: 2 });
-    expect(state.mutatorSlots).toEqual(before.mutatorSlots);
-    expect(state.mutators).toEqual(before.mutators);
-    expect(state.bankedMutatorRolls).toEqual(before.bankedMutatorRolls);
+    expect(state.mutatorForge).toEqual({ progress: 0, earned: 0 });
+    expect(state.mutatorSlots).toEqual([]);
+    expect(state.mutators).toEqual([]);
+    expect(state.bankedMutatorRolls).toEqual([]);
     expect(state.scrap).toBe(15);
     expect(state.draftTierBonus).toBe(1);
     expect(state.specialDrafts).toMatchObject({ rare: 1 });
@@ -919,8 +907,8 @@ describe("the v12 → v13 migration (issue #493)", () => {
     expect(state.gatedRows).toEqual(before.gatedRows);
     expect(state.capacityCeilings).toBe(1);
     expect(state.capacityDiscounts).toBe(2);
-    expect(state.catalogEntryOwned).toBe(true);
-    expect(state.rollPoolJoined).toBe(true);
+    expect(state.catalogEntryOwned).toBe(false);
+    expect(state.rollPoolJoined).toBe(false);
   });
 
   it("the conversion grants no entitlement: no Arete mints, no instant claim waits, no roll banks", () => {

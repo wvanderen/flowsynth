@@ -1,0 +1,37 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/engine/retirement.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |engine| src/engine/retirement.test.ts (6 tests | 1 failed) 32ms
+   × retained Forge copies cannot place, upgrade, or join a bulk purchase 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| src/engine/retirement.test.ts > retained Forge copies cannot place, upgrade, or join a bulk purchase
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/engine/retirement.test.ts:72:60
+     70|   state.modules = [forge]; state.nous = 100;
+     71|   const before = structuredClone(state);
+     72|   expect(placeModule(state, forge.id, state.cells[0]!).ok).toBe(false);
+       |                                                            ^
+     73|   expect(upgradeModuleLevels(state, forge.id, 1).ok).toBe(false);
+     74|   expect(upgradeAll(state, 1).ok).toBe(false);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 5 passed (6)
+   Start at  19:33:31
+   Duration  707ms (transform 251ms, setup 0ms, import 316ms, tests 32ms, environment 0ms)
+

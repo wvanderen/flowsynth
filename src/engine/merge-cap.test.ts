@@ -56,15 +56,14 @@ describe("the Warp Beam's purchase", () => {
     expect(unlockedMergeCap(s)).toBe(BALANCE.mergeCap + BALANCE.mergeCapCosts.length);
   });
 
-  it("stands behind the Arete lock: no entry and no flow", () => {
+  it("needs no obsolete entry but remains unavailable in flow", () => {
     const s = fresh();
     s.arete = WHOLE_LADDER;
-    expect(buyMergeCapIncrease(s).ok).toBe(false);
-    s.catalogEntryOwned = true;
+    expect(buyMergeCapIncrease(s).ok).toBe(true);
     startSession(s, 600);
     expect(buyMergeCapIncrease(s).ok).toBe(false);
-    expect(s.mergeCapPurchases).toBe(0);
-    expect(s.arete).toBe(WHOLE_LADDER);
+    expect(s.mergeCapPurchases).toBe(1);
+    expect(s.arete).toBe(WHOLE_LADDER - BALANCE.mergeCapCosts[0]!);
   });
 });
 

@@ -1,0 +1,15 @@
+{
+  "sourceCommit": "b143fa4e2aa2da1befad7ed7d809fc7956ce26e7",
+  "url": "http://localhost:5174/?dev=1",
+  "origin": "constructed fixture in existing isolated fresh-start scenario; assertion passed before fixture grants",
+  "script": "browser-checks.js",
+  "passes": [
+    {"viewport": {"width": 1280, "height": 900}, "labels": ["Take Column", "Take Column", "Take Charge Blade", "Take Charge Blade"], "eachPickFocused": true, "eachGrantUnplaced": true, "eachInspectOpened": true, "eachPlacedAtOwnedCell": true, "eachRetrieved": true, "moduleCountUnchanged": 1, "finalColumns": 2, "finalBlades": 2, "draftBounds": {"x": 230, "y": 353, "width": 820, "height": 463}, "pass": true},
+    {"viewport": {"width": 390, "height": 844}, "labels": ["Take Column", "Take Column", "Take Charge Blade", "Take Charge Blade"], "eachPickFocused": true, "eachGrantUnplaced": true, "eachInspectOpened": true, "eachPlacedAtOwnedCell": true, "eachRetrieved": true, "moduleCountUnchanged": 1, "finalColumns": 2, "finalBlades": 2, "draftBounds": {"x": 8, "y": 319.65625, "width": 374, "height": 448.34375}, "pass": true}
+  ],
+  "inspectionReads": {"column": "Charge Column; Lifts its module cell's received charge to adjacent weapons; Place", "blade": "Charge Blade; Stores charge to ⌁30; attacks adjacent enemies; ⌁0/30; ATK 4; Target priority; Place"},
+  "screenshots": {"class": "browser-snapshot", "attempts": 3, "rawError": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms.", "desktop": "unavailable", "phone": "unavailable; shared snapshot recovery budget exhausted"},
+  "recovery": ["Server/provenance healthcheck passed after attempt 1", "Same-tab status available, loaded, dialog-free, verified URL, visible false", "Activated same tab; status still ready but visible false", "Identical snapshot attempt 2 timed out", "Same-tab status ready; identical snapshot attempt 3 timed out; stopped", "Capture preflight accepted again before workflow observations", "Phone resize succeeded; live dimensions confirmed by in-page read"],
+  "limitations": ["No screenshots exist", "No visual acceptance of composition, non-color distinctions, reduced motion or focus appearance", "DOM focus and click handlers exercised; physical keyboard activation and touch not verified", "Fixture is not evidence of progression pacing"],
+  "tabClosed": true
+}

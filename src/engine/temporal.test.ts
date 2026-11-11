@@ -331,7 +331,7 @@ describe("progression and mutators preserve the temporal conditions (#372)", () 
     expect(sustained / opening).toBeCloseTo(1.25 / 0.3, 9);
   });
 
-  it("a power mutator scales the term around the condition", () => {
+  it("a retired power mutator cannot scale a temporal term", () => {
     const s = fresh();
     const module = give(s, "afterglow", hex(2, 0));
     s.mutators.push({ ...createMutator(s, "power", "common"), pos: hex(2, 0) });
@@ -339,7 +339,7 @@ describe("progression and mutators preserve the temporal conditions (#372)", () 
     advance(s, 60);
     const mutated = computeRates(s, true).contributions.get(module.id)!.value;
     endSession(s);
-    expect(mutated).toBeCloseTo(afterglowValueAt(60) * 1.5, 9);
+    expect(mutated).toBeCloseTo(afterglowValueAt(60), 9);
   });
 
   it("the Pulsewell's earning scales by power; the cycle's shape does not", () => {

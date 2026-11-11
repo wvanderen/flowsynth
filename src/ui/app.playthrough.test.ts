@@ -438,6 +438,7 @@ describe("the pushing policy", () => {
       state.nous = 0;
       state.modules = [];
       state.cells = [{ q: 100, r: 100 }];
+      state.world.unlocked = true;
       state.world.starterWeaponGranted = true;
       state.world.enemies.w0!.discovered = true;
       state.world.columns = [{ id: "column-test", pos: null }];
@@ -488,12 +489,10 @@ describe("the pushing policy", () => {
     expect(record.state.prestiges).toBe(2);
     expect(record.policy.name).toBe("Pushing");
 
-    // The earned spending: the Catalog entry with the first claim and at
-    // least the first Charge Column — nothing granted, nothing minted.
-    // The starter Charge Blade is the first World-eligible claim's own
-    // grant; the exact rung count the bank funds rides the balance.
-    expect(record.areteSpent.entry).toBe(1);
-    expect(record.areteSpent.columns).toBeGreaterThanOrEqual(1);
+    // Retirement leaves no entry purchase; the Column is a positive-bank grant.
+    expect(record.areteSpent.entry).toBe(0);
+    expect(record.areteSpent.columns).toBe(0);
+    expect(record.state.world.starterColumnGranted).toBe(true);
     expect(record.state.world.starterWeaponGranted).toBe(true);
     expect(record.state.arete).toBeLessThan(record.claims[0]! + record.claims[1]!);
     // No fabricated production: every ν the state ever earned is what the
@@ -533,7 +532,7 @@ describe("the pushing policy", () => {
     // placement rule too.
     expect(column.pos !== null && record.state.modules.some((m) => m.pos !== null && sameHex(m.pos, column.pos!))).toBe(true);
     const worldEvents = record.events.filter((event) => event.kind === "world" && event.ok);
-    expect(worldEvents.map((event) => event.label)).toContain("World Column");
+    expect(worldEvents.map((event) => event.label)).not.toContain("World Column");
     expect(worldEvents.some((event) => event.label.startsWith("Placed the chargeBlade at"))).toBe(true);
     expect(worldEvents.some((event) => event.label.startsWith("Placed a Charge Column at"))).toBe(true);
 
@@ -547,7 +546,7 @@ describe("the pushing policy", () => {
     const recovery = record.recovery!;
     expect(recovery.claim).toBe(record.claims[0]!);
     expect(recovery.lastingPurchase).toEqual({ elapsed: 0, credited: 0 });
-    expect(recovery.lastingPurchaseLabel).toBe("Catalog entry");
+    expect(recovery.lastingPurchaseLabel).toBe("Rack Extenders");
     // The Column lands the moment it is bought: the opening board already
     // carries a charge line — a receiving module beside the generator —
     // so the purchase functions from its first between-sessions read.
@@ -565,7 +564,7 @@ describe("the pushing policy", () => {
     expect(recovery.frontierAdvanced!.elapsed).toBeGreaterThan(recovery.eligibilityReached!.elapsed);
     expect(record.events.some((event) => event.milestone && event.label.includes("next prestige eligibility reached"))).toBe(true);
     expect(record.events.some((event) => event.milestone && event.label.includes("pre-reset production regained"))).toBe(true);
-    expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Catalog entry)")).toBe(true);
+    expect(record.events.some((event) => event.milestone && event.label === "Recovery — lasting purchase (Rack Extenders)")).toBe(true);
     expect(record.events.some((event) => event.milestone && /Recovery — frontier advanced to \d+ Arete/.test(event.label))).toBe(true);
     // The eligibility settle read the era measure past the horizon — the
     // door's own gate (ARETE_HORIZON, engine-pinned in

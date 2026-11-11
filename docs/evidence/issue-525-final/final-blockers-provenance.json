@@ -1,0 +1,19 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T15:18:30.743Z",
+  "url": "http://localhost:5174",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "integration/525-world-progression",
+  "commit": "4c874303b58564cc8777df78401b0196cc529213",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-525-final/final-blockers-preflight.log",
+        "state": "??"
+      }
+    ]
+  }
+}

@@ -1,0 +1,10 @@
+locator.click: Error: strict mode violation: locator('[data-world-tray="m3"]') resolved to 2 elements:
+    1) <button data-world-tray="m3" class="inventory-copy world-tile" data-world-focus="data-world-tray:m3" aria-label="Inspect Charge Blade · ⌁0/30 · ATK 4">…</button> aka locator('#world-tray').getByRole('button', { name: 'Inspect Charge Blade · ⌁0/30' })
+    2) <button data-world-tray="m3" class="inventory-copy world-tile" data-world-focus="data-world-tray:m3" aria-label="Inspect Charge Blade · ⌁0/30 · ATK 4">…</button> aka getByRole('dialog', { name: 'INVENTORY' }).getByLabel('Inspect Charge Blade · ⌁0/30 · ATK')
+
+Call log:
+  - waiting for locator('[data-world-tray="m3"]')
+
+    at /home/lem/dev/flowsynth/docs/evidence/issue-525-final/supplement.cjs:8:524 {
+  log: [ `  - waiting for locator('[data-world-tray="m3"]')` ]
+}

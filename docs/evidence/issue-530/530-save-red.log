@@ -1,0 +1,53 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/engine/retirement.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |engine| src/engine/retirement.test.ts (2 tests | 1 failed) 14ms
+   × legacy load retires copies, slots, rolls, Forge and flags without resetting the era or refunding 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| src/engine/retirement.test.ts > legacy load retires copies, slots, rolls, Forge and flags without resetting the era or refunding
+AssertionError: expected [ { id: 'm1', …(8) }, …(1) ] to deeply equal [ Array(1) ]
+
+- Expected
++ Received
+
+@@ -11,6 +11,17 @@
+      "shift": null,
+      "target": null,
+      "tier": 0,
+      "type": "additive",
+    },
++   {
++     "id": "m2",
++     "invested": 0,
++     "level": 0,
++     "pos": null,
++     "reserve": 0,
++     "shift": null,
++     "target": null,
++     "tier": 0,
++     "type": "mutatorForge",
++   },
+  ]
+
+ ❯ src/engine/retirement.test.ts:39:26
+     37|   const loaded = deserialize(serialize(state, 1000)).state!;
+     38|   expect(loaded.nous).toBe(12345); expect(loaded.arete).toBe(17); expe…
+     39|   expect(loaded.modules).toEqual(state.modules.filter(m => m.type !== …
+       |                          ^
+     40|   expect(loaded.world).toEqual(state.world);
+     41|   expect(loaded.mutators).toEqual([]); expect(loaded.mutatorSlots).toE…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 1 passed (2)
+   Start at  18:56:37
+   Duration  680ms (transform 247ms, setup 0ms, import 311ms, tests 14ms, environment 0ms)
+

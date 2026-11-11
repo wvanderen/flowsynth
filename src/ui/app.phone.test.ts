@@ -134,6 +134,7 @@ describe("the thumb bar (§7, portrait phone)", () => {
     s.mode = "upgrade";
     s.catalogEntryOwned = true;
     s.eraEarned = BALANCE.world.entryNous * 1.5;
+    s.world.unlocked = true;
     s.world.weapons.push({ id: "wp2", type: "chargeBlade", pos: null, store: 0, cooldown: 0, targetPriority: [] });
     app.returnToInventory("m1");
     app.openModal("inventory");
@@ -597,6 +598,7 @@ describe("the small-screen composition (issue #389)", () => {
     s.mode = "upgrade";
     s.catalogEntryOwned = true;
     s.eraEarned = BALANCE.world.entryNous * 1.5;
+    s.world.unlocked = true;
     s.mutatorSlots = [hex(0, 0)];
     s.mutators = [{ id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) }];
     app.render();

@@ -113,10 +113,9 @@ describe("the adopted response progression on real boards", () => {
     chorus.tier = 5;
     const term = 1 + (BALANCE.responseShare * 100) / (100 + BALANCE.responseSaturation);
     expect(responseSupportPowerOf(s, chorus)).toBeCloseTo(term * BALANCE.tierPower[5]!, 9);
-    // And the power mutator's plane multiplies on top, the one read the
-    // rate pass composes.
+    // Retained legacy power copies cannot multiply the adopted response.
     s.mutators.push({ id: "mu-p", family: "power", rarity: "common", pos: hex(1, -1) });
-    expect(responseSupportPowerOf(s, chorus)).toBeCloseTo(term * BALANCE.tierPower[5]! * 1.5, 9);
+    expect(responseSupportPowerOf(s, chorus)).toBeCloseTo(term * BALANCE.tierPower[5]!, 9);
   });
 
   it("keeps the chord effects member-local: a silent voice sings its own response, the granted oscillator earns the grant in production", () => {

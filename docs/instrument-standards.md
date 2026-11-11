@@ -25,6 +25,12 @@ The standing ledger groups resources before production/capacity, holds numeric l
 
 Square controls, clipped outer panels with a continuous corner hairline, and open internal divisions remain the governing presentation. These amendments supersede the earlier physical-axis, horizon placement, picker, and zoom-rise contracts only; the historical pins retain their remaining authority.
 
+## Confirmed World feedback amendment (implemented; visual acceptance outstanding)
+
+The [confirmed World feedback brief](world-layer-feedback-brief.md) extends hex faces to World board occupants, inventory, drag previews, and details. This supersedes the module-exclusive interpretation of hex silhouettes; World must remain visually distinguishable from Modules without changing map geometry. Other pinned presentation rules remain authoritative.
+
+The ambient desktop and phone resource strips gain pending Arete yield and one clearly labeled reset entry point, preserving confirmation and unavailable-state explanations. This explicitly amends the earlier single Ledger-button/no-independent-resource-action contract for that reset affordance only; it does not turn every resource figure into an action. The ledger also exposes combined and per-source enemy pressure before World unlocks, without revealing the hidden map. The #526–#530 slices implement these changes, including #527's ambient reset and pressure disclosure. Required desktop/phone captures and visual/accessibility judgment remain outstanding; see the parent mapping in `docs/evidence/issue-530/README.md`.
+
 ## Visual language
 
 **2026-10-18 module-grid amendment:** Idle chords have no board geometry, even under hover, keyboard focus, or touch inspection; their readout counts and Hex detail disclosures remain. Active chords are clearer at rest; inspecting a module emphasizes its active chords and dims unrelated active chords, behind the module faces. Continuous received charge uses a restrained green chassis outline alone: category rails retain their hue, rarity plates retain their finish, and the general green face wash and glow are removed. Chargeable threshold-progress fill and directional charge leads remain. This supersedes ADR-0057's idle-path reveal and ADR-0016's green category-rail override.

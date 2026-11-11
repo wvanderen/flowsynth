@@ -158,7 +158,7 @@ describe("the catalog door (issue #271)", () => {
     expect(body).toContain("overflow-y: auto");
   });
 
-  it("the arete tab stands open from the start: pre-prestige its face is the entry purchase screen (#292 review)", () => {
+  it("the arete tab stands open from the start without an entry purchase", () => {
     // The door itself still follows the mode — module mode lands on ν.
     app.state.prestiges = 0;
     app.ui.catalogFace = "arete";
@@ -171,37 +171,27 @@ describe("the catalog door (issue #271)", () => {
     expect(areteTab.disabled).toBe(false);
     areteTab.click();
     expect(app.ui.catalogFace).toBe("arete");
-    expect(document.querySelector(".entry-screen")).not.toBeNull();
-    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    expect(document.querySelector(".entry-screen")).toBeNull();
+    expect(document.getElementById("buy-arete-entry")).toBeNull();
+    expect(document.getElementById("buy-world-hone")).not.toBeNull();
     // And back — both faces answer at every progression state.
     switchFace("nous");
     expect(app.ui.catalogFace).toBe("nous");
     expect(document.querySelector('[data-buy="generator"]')).not.toBeNull();
   });
 
-  it("pre-reveal the locked World face previews in figures; the entry screen stays on the arete face (#273)", () => {
+  it("before discovery neither board nor inventory previews World", () => {
     app.state.prestiges = 1;
     app.state.arete = 1;
     app.render();
-    // The board legend's locked face previews, never flipping, never opening a sheet.
-    const tab = document.querySelector<HTMLButtonElement>('#layer-legend [data-legend-layer="world"]')!;
-    expect(tab.classList.contains("locked")).toBe(true);
-    expect(tab.querySelector(".world-tab-lock")).not.toBeNull();
-    tab.click();
-    expect(app.ui.boardLayer).toBe("modules");
-    expect(app.ui.modal).toBeNull();
-    expect(document.getElementById("status")!.textContent).toContain("era-earned");
-    // The tray sheet's switch wears the same locked face.
+    expect(document.querySelector('[data-legend-layer="world"]')).toBeNull();
     app.openModal("inventory");
-    const sheetTab = document.querySelector<HTMLButtonElement>('#modal-content [data-legend-layer="world"]')!;
-    expect(sheetTab.classList.contains("locked")).toBe(true);
-    expect(sheetTab.querySelector(".world-tab-lock")).not.toBeNull();
+    expect(document.querySelector('#modal-content [data-legend-layer="world"]')).toBeNull();
     app.closeModal();
-    // The entry purchase screen itself stands on the arete face, reachable
-    // through the door's face switch.
     app.openModal("catalog");
-    document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
-    expect(document.querySelector(".entry-screen")).not.toBeNull();
+    switchFace("arete");
+    expect(document.querySelector(".entry-screen")).toBeNull();
+    expect(document.getElementById("buy-world-hone")).not.toBeNull();
   });
 
   it("a layer change cancels the armed actions with a toast; the Esc walk stays Esc (issue #426)", () => {
@@ -210,6 +200,7 @@ describe("the catalog door (issue #271)", () => {
     s.catalogEntryOwned = true;
     s.arete = 20;
     s.eraEarned = BALANCE.world.entryNous * 1.5;
+    s.world.unlocked = true;
     s.world.weapons.push({ id: "wp1", type: "chargeBlade", pos: null, store: 0, cooldown: 0, targetPriority: [] });
     app.render();
     // The cell arm dies at the layer change, named by the toast.
@@ -259,6 +250,7 @@ describe("the catalog door (issue #271)", () => {
       const s = app.state;
       s.catalogEntryOwned = true;
       s.eraEarned = BALANCE.world.entryNous * 1.5;
+      s.world.unlocked = true;
       s.world.weapons.push({ id: "wp1", type: "chargeBlade", pos: null, store: 0, cooldown: 0, targetPriority: [] });
       app.armCellPurchase();
       app.setBoardLayer("world");
@@ -296,6 +288,7 @@ describe("the catalog door (issue #271)", () => {
     app.state.catalogEntryOwned = true;
     app.state.arete = 5;
     app.state.eraEarned = BALANCE.world.entryNous * 1.5;
+    app.state.world.unlocked = true;
     app.render();
     app.setBoardLayer("world");
     app.ui.catalogFace = "nous";
@@ -324,84 +317,47 @@ describe("the catalog door (issue #271)", () => {
     app.closeModal();
   });
 
-  it("pre-entry the arete face is the single centered lock screen; the purchase lands the sequence and reveals the shop", () => {
+  it("the shop is reachable without buying the obsolete Mutator entry", () => {
     app.state.prestiges = 1;
     app.state.arete = BALANCE.catalogEntryCost;
     app.openModal("catalog");
     switchFace("arete");
-    let sheet = document.getElementById("modal-content")!;
-    const lock = sheet.querySelector(".entry-screen")!;
-    expect(lock.textContent).toContain("Unlock Mutator Layer");
-    expect(lock.textContent).toContain(`${BALANCE.catalogEntryCost} Arete`);
-    expect(sheet.textContent).not.toContain("Upgrades");
-    expect(sheet.textContent).not.toContain("Unlocks");
-    // The lock screen's price mutes when the Arete is spent elsewhere — the
-    // board's Row unlock can spend the bank before the entry is bought.
-    app.state.arete = 0;
-    app.render();
-    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
-    app.state.arete = BALANCE.catalogEntryCost;
-    app.render();
-    document.getElementById("buy-arete-entry")!.click();
-    expect(app.state.catalogEntryOwned).toBe(true);
-    // The purchase's landing is the entry sequence (issue #274): the sheet
-    // closes, the board flips to the Mutators layer, and the performed
-    // roll waits banked in the Forge.
-    expect(app.ui.modal).toBeNull();
-    expect(app.ui.boardLayer).toBe("modules");
-    expect(app.ui.entryRollPending).toBe(true);
-    expect(app.state.bankedMutatorRolls).toHaveLength(1);
-    // Reopened — layer wins, so the door lands on ν — and the arete face
-    // restructures around the World section without the retired entry row
-    // (issue #426): World leads, then Upgrades, then Module Types.
-    app.openModal("catalog");
-    expect(app.ui.catalogFace).toBe("nous");
-    document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
-    sheet = document.getElementById("modal-content")!;
+    const sheet = document.getElementById("modal-content")!;
+    expect(document.getElementById("buy-arete-entry")).toBeNull();
+    expect(app.state.catalogEntryOwned).toBe(false);
+    expect(app.state.bankedMutatorRolls).toHaveLength(0);
     expect(sheet.querySelector(".entry-screen")).toBeNull();
     const headings = [...sheet.querySelectorAll(".catalog-sections h2")].map((h) => h.textContent);
     expect(headings[0]).toBe("World");
     expect(headings[1]).toBe("Upgrades");
-    expect(headings[2]).toContain("Module Types");
+    expect(headings).toEqual(["World", "Upgrades"]);
     expect(sheet.textContent).not.toContain("Mutator layer");
-    expect(sheet.textContent).toContain("Charge Column");
+    expect(document.getElementById("buy-world-column")).toBeNull();
     expect(sheet.textContent).toContain("Hone");
     app.closeModal();
   });
 
-  it("the Accelerator stands as an inert placeholder — priced, never buyable, no tooltip", () => {
+  it("the Accelerator placeholder is absent even for legacy owners", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
     app.state.arete = 100;
     app.openModal("catalog");
     switchFace("arete");
     const sheet = document.getElementById("modal-content")!;
-    const accel = [...sheet.querySelectorAll(".catalog-row")].find((r) => r.textContent!.includes("Accelerator"))!;
-    expect(accel.textContent).toContain("placeholder");
-    const button = accel.querySelector<HTMLButtonElement>("button.price")!;
-    expect(button.disabled).toBe(true);
-    button.click();
+    expect(sheet.textContent).not.toContain("Accelerator");
     expect(app.state.arete).toBe(100);
-    // The visible kind carries the placeholder state; the disclosure
-    // doctrine cuts the tooltip that would restate it (issue #310).
-    expect(accel.querySelector(".inst-tip")).toBeNull();
   });
 
-  it("the roll-pool join carries the future-rolls tooltip; joining empties the section", () => {
+  it("the retired pool join and empty Module Types section are absent", () => {
     app.state.prestiges = 1;
     app.state.catalogEntryOwned = true;
     app.state.arete = BALANCE.rollPoolJoinCost;
     app.openModal("catalog");
     switchFace("arete");
     const sheet = document.getElementById("modal-content")!;
-    // The pool join's tooltip holds the gloss standard; joining empties
-    // the section.
-    const tip = [...sheet.querySelectorAll(".inst-tip-body")].find((t) => t.textContent!.includes("unweighted"))!;
-    expect(tip).not.toBeNull();
-    document.getElementById("buy-arete-pool")!.click();
-    expect(app.state.rollPoolJoined).toBe(true);
-    expect(sheet.textContent).toContain("future objects appear in future rolls");
+    expect(sheet.textContent).not.toMatch(/Mutator|Module Types|unweighted/);
     expect(document.getElementById("buy-arete-pool")).toBeNull();
+    expect(app.state.rollPoolJoined).toBe(false);
   });
 
   it("prices mute when unaffordable: an Arete row's price and a shelf offer stand inert without the resource", () => {
@@ -425,7 +381,8 @@ describe("the catalog door (issue #271)", () => {
     switchFace("arete");
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
-    expect((document.getElementById("buy-arete-entry") as HTMLButtonElement).disabled).toBe(true);
+    expect((document.getElementById("buy-world-hone") as HTMLButtonElement).disabled).toBe(true);
+    expect(document.getElementById("buy-arete-entry")).toBeNull();
     expect(app.state.catalogEntryOwned).toBe(false);
   });
 
@@ -522,31 +479,16 @@ describe("the Arete Catalog (issue #197)", () => {
     expect(sheet.querySelector('[data-catalog-face="arete"]')).not.toBeNull();
   });
 
-  it("the arete face's purchases debit Arete: the lock screen's entry, then the pool join behind it", () => {
+  it("the legacy pool offer cannot spend Arete for existing owners", () => {
     app.state.prestiges = 1;
+    app.state.catalogEntryOwned = true;
     app.state.arete = BALANCE.catalogEntryCost + BALANCE.rollPoolJoinCost;
     app.openModal("catalog");
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
-    // The join sits behind the entry: pre-entry the face is the lock screen.
+    expect(document.getElementById("buy-arete-entry")).toBeNull();
     expect(document.getElementById("buy-arete-pool")).toBeNull();
-    document.getElementById("buy-arete-entry")!.click();
-    expect(app.state.catalogEntryOwned).toBe(true);
-    expect(app.state.arete).toBe(BALANCE.rollPoolJoinCost);
-    // The entry's landing closes the sheet (issue #274); the reopened door
-    // lands on the layer's face — the arete face one switch away — with
-    // the join live.
-    expect(app.ui.modal).toBeNull();
-    app.openModal("catalog");
-    expect(app.ui.catalogFace).toBe("nous");
-    document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
-    const join = document.getElementById("buy-arete-pool") as HTMLButtonElement;
-    expect(join).not.toBeNull();
-    expect(join.disabled).toBe(false);
-    join.click();
-    expect(app.state.rollPoolJoined).toBe(true);
-    expect(app.state.arete).toBe(0);
-    const sheet = document.getElementById("modal-content")!;
-    expect(sheet.textContent).toContain("future objects appear in future rolls");
+    expect(app.state.rollPoolJoined).toBe(false);
+    expect(app.state.arete).toBe(BALANCE.catalogEntryCost + BALANCE.rollPoolJoinCost);
   });
 
   it("the face's buttons stand inert outside upgrade mode", () => {
@@ -558,7 +500,8 @@ describe("the Arete Catalog (issue #197)", () => {
     document.querySelector<HTMLButtonElement>('[data-catalog-face="arete"]')!.click();
     const sheet = document.getElementById("modal-content")!;
     expect(sheet.querySelector(".modal-note")!.textContent).toContain("between sessions");
-    expect((document.getElementById("buy-arete-pool") as HTMLButtonElement).disabled).toBe(true);
+    expect(document.getElementById("buy-arete-pool")).toBeNull();
+    expect((document.getElementById("buy-world-hone") as HTMLButtonElement).disabled).toBe(true);
     expect(app.state.rollPoolJoined).toBe(false);
   });
 
@@ -735,8 +678,8 @@ describe("the harmonic-capacity ladder (#259)", () => {
     app.state.eraEarned = BALANCE.world.entryNous * 1.5;
     app.ui.boardLayer = "world";
     app.openModal("catalog");
-    // The one disclosure is the Module Types section's own gloss.
-    const trigger = document.querySelector<HTMLButtonElement>(".catalog-sections h2 .inst-tip-trigger")!;
+    // Live product terms retain keyboard/touch disclosure after retirement.
+    const trigger = document.querySelector<HTMLButtonElement>(".catalog-row h3 .term-trigger")!;
     trigger.focus();
     const body = document.getElementById(trigger.getAttribute("aria-describedby")!)!;
     expect(body.classList.contains("inst-show")).toBe(true);
@@ -820,7 +763,7 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // second rungs. Headroom retired with the frontier claim (issue #425).
     // The World section's two products (issue #426) join the set: the
     // Column's ladder and the Hone entry.
-    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(7);
+    expect(sheet().querySelectorAll(".catalog-row")).toHaveLength(4);
     // The ceiling purchase lands and the same entry walks its ladder:
     // owned figure, delta, then the rising next price.
     rowOf("Expansion Bays").querySelector<HTMLButtonElement>("button.price")!.click();
@@ -885,14 +828,14 @@ describe("the harmonic-capacity ladder (#259)", () => {
     // included, issue #380), the World section's terms (issue #426), and
     // the Module Types section's gloss.
     let texts = read();
-    expect(texts.length).toBe(16);
+    expect(texts.length).toBe(12);
     for (const text of texts) {
       expect(text.length).toBeLessThanOrEqual(60);
       expect(text).not.toMatch(/[—;:]/);
     }
-    expect(texts).toContain("Rolled module types appear here unweighted");
+    expect(texts).not.toContain("Rolled module types appear here unweighted");
     expect(texts).toContain("Re-earned after arete reset");
-    expect(texts).toContain("Lifts its module cell’s received charge to adjacent weapons");
+    expect(texts).not.toContain("Lifts its module cell’s received charge to adjacent weapons");
     expect(texts).toContain("Arete’s persistent attack-power ranks for a weapon type");
     // The nous face: generator charge and Harmonic capacity glosses.
     document.querySelector<HTMLButtonElement>('[data-catalog-face="nous"]')!.click();

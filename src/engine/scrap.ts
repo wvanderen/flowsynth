@@ -8,11 +8,12 @@
 // worth its constituent copies. Levels and invested nous price no scrap:
 // the schedule values the collection, never the upgrade spend.
 import { BALANCE, typeRarityOf } from "./constants";
-import type { ModuleInstance, ModuleType, RollOffer } from "./types";
+import { isModuleCandidate, type ModuleInstance, type ModuleType, type RollOffer } from "./types";
 
 // One copy's recovery value, read from the named type's fixed rarity and
 // the copy's own merge tier.
 export function scrapValueOf(type: ModuleType, tier: number): number {
+  if (type === "mutatorForge") return 0; // retirement creates no refund path
   return BALANCE.scrapValue[typeRarityOf(type)] * BALANCE.scrapTierFactor ** tier;
 }
 
@@ -25,5 +26,7 @@ export function moduleScrapValue(module: ModuleInstance): number {
 // scrapping it mints the same type at the same tier, so the two paths
 // pay identically by construction — the equivalence the tests read.
 export function skipPayoutOf(offer: RollOffer): number {
-  return Math.max(...offer.candidates.map((candidate) => scrapValueOf(candidate.type, candidate.tier)));
+  // World copies have no scrap/merge valuation; the two retained module
+  // choices own the ordinary skip payout.
+  return Math.max(0, ...offer.candidates.filter(isModuleCandidate).map((candidate) => scrapValueOf(candidate.type, candidate.tier)));
 }

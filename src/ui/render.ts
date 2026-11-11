@@ -24,7 +24,7 @@ import { TILE_APPS, type FocusApp } from "../engine/apps";
 import { poolOutstanding } from "../engine/trust";
 import { arcCardDue } from "../engine/arc";
 import { ACHIEVEMENTS, achievementName, type AchievementCategory, type AchievementContext, type AchievementDef } from "../engine/achievements";
-import type { Category, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, NamedChordTerm, RateSnapshot, ResponseCurveId, SpecialDraftKind, WeaponType } from "../engine/types";
+import { isModuleCandidate, type Category, type DeployedModule, type GameState, type Hex, type ModuleInstance, type ModuleType, type NamedChordTerm, type RateSnapshot, type ResponseCurveId, type SpecialDraftKind, type WeaponType } from "../engine/types";
 import { DEV_BOARD_CAPACITIES, type App, type ChordHover, type ModalKind } from "./app";
 import {
   bindFocusSheet,
@@ -54,10 +54,10 @@ import { chargeGlow, chargeLeads } from "./leads";
 import { chordOverlay, chordMarkCovers, chipWidth, CHORD_HUES, type ChordMark } from "./chordlayer";
 import { updateSvg } from "./svg";
 import { APP_LABELS, CATEGORY_WORD, META, RARITY_LABEL, SHELF_DESCRIPTIONS, SPECIAL_DRAFT_NAME, WORLD_META, rarityMark, tierNumeral, tierWord } from "./meta";
-import { columnCost, honeCostOf } from "../engine/world";
+import { honeCostOf } from "../engine/world";
 import { typeRarityOf } from "../engine/constants";
 import { formatBalance, formatInt, formatNumber, formatPracticeMinutes, chordTermLabel, practiceCountdown } from "./format";
-import { renderBoardLedger, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
+import { enemyPressureHtml, renderBoardLedger, renderGameInfoStrip, rateDetailsHtml, updateRateDetailsLive, deployedRosterKey, unlockedCount, wireSynthPicks, FEATS_SVG, LIBRARY_SVG, ARETE_SVG, CAPACITY_SVG, SCRAP_SVG } from "./ledger";
 import { closeTooltips, wireTooltips } from "./instrument";
 import { instancesByClass, instancesKeyOf, libraryHeaderHtml, libraryIndexRowHtml, libraryStageHtml } from "./library";
 import { profileGradesHtml } from "./profile";
@@ -65,11 +65,6 @@ import { discoveryCount, discoveryBoostOf, rootsHeardOf } from "../engine/librar
 import { boardBounds, bindBoardNavigation, lensFrame, renderZoomCluster, syncGlowLens } from "./zoom";
 import { beginLayoutPass, containerWidth, endLayoutPass, RATE_DETAILS_BREAKPOINT_PX, isPhoneWidth, PHONE_MAX_PX, viewportWidth, scrollTopOf } from "./container";
 import { liveAttr, liveSet } from "./live";
-import {
-  mutatorTileInner,
-  mutatorEffectText,
-  FAMILY_WORD,
-} from "./mutators";
 import { hexFromAttr } from "./world";
 import {
   bindWorldLayer,
@@ -857,22 +852,11 @@ function forgeMeterLine(state: GameState, forgeRate: number): string {
   }`;
 }
 
-// The Mutator Forge branch's line (ADR-0043): its own meter, its own
-// figures — one line each, the same shape the other branches wear.
-function mutatorForgeMeterLine(state: GameState, mutatorRate: number): string {
-  return `Mutator Forge ${formatNumber(Math.max(0, state.mutatorForge.progress))} / ${formatNumber(mutatorForgeThreshold(state.mutatorForge.earned))}${
-    mutatorRate > 0 ? ` — ${formatNumber(mutatorRate)}/s from charge` : " — charged by deployed Mutator Forges"
-  }`;
-}
-
-function meterDetail(app: App, forgeRate: number, mutatorRate: number): string {
+function meterDetail(app: App, forgeRate: number, _mutatorRate: number): string {
   const { state } = app;
   const banked = state.bankedRolls.length;
   const bankedNote = banked > 0 ? ` · ${banked} banked module roll${banked === 1 ? "" : "s"}` : "";
-  const mutBanked = state.bankedMutatorRolls.length;
-  const mutNote = mutBanked > 0 ? ` · ${mutBanked} banked mutator roll${mutBanked === 1 ? "" : "s"}` : "";
-  const mutLine = state.catalogEntryOwned ? ` · ${mutatorForgeMeterLine(state, mutatorRate)}${mutNote}` : "";
-  return `${forgeMeterLine(state, forgeRate)}${bankedNote}${mutLine}`;
+  return `${forgeMeterLine(state, forgeRate)}${bankedNote}`;
 }
 
 // Every meter bar's fill: the clamped progress share, one build for the
@@ -898,7 +882,7 @@ function toolActions(): ToolAction[] {
       label: "Forge",
       run: (app) => app.openModal("forge"),
       badge: (app) =>
-        app.state.bankedRolls.length + app.state.bankedMutatorRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length + app.state.bankedMutatorRolls.length}</b>` : "",
+        app.state.bankedRolls.length > 0 ? `<b class="tool-badge mono">${app.state.bankedRolls.length}</b>` : "",
       // The pip retired with the player-wide flow meter (issue #423): the
       // practice-roll meter is pair-owned and renders only on the Focus
       // sheet's habit/class face; the switch keeps the shared queue's
@@ -1029,7 +1013,7 @@ function renderTools(app: App, projected: RateSnapshot): void {
   // never collapses, so the dock needs no toggle), and Collection is the
   // feats/chords launcher where the ledger dissolves (issue #270).
   const dockActions = actions.filter((action) => action.op !== "collection" && action.op !== "inventory");
-  const forgeCount = state.bankedRolls.length + state.bankedMutatorRolls.length;
+  const forgeCount = state.bankedRolls.length;
   const trayCount = state.modules.filter((m) => m.pos === null).length;
   const key = JSON.stringify(["dock", state.mode, ui.boardLayer, ui.worldArmed, forgeCount, ui.buyingCell, trayCount, worldCountBadge(app)]);
 
@@ -2808,6 +2792,7 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
   content.innerHTML = `
     ${modalTop("LEDGER", "modal-title")}
     <section id="ledger-nous" class="ledger-section" tabindex="-1"><h3>Nous</h3><div class="ledger-detail-row"><span>Balance</span><b class="mono" data-live="ledger-nous"></b></div><div id="ledger-production" class="rate-details-sheet" tabindex="-1">${rateDetailsHtml(app.state, snapshot, true, "sheet")}</div></section>
+    <section id="ledger-pressure" class="ledger-section"></section>
     <section id="ledger-arete" class="ledger-section" tabindex="-1"><h3>Arete</h3><div class="ledger-detail-row"><span>Banked</span><b class="mono" data-live="ledger-arete"></b></div><button id="prestige-door" class="prestige-door"></button><small class="prestige-availability" data-live="prestige-availability"></small></section>
     <section id="ledger-scrap" class="ledger-section" tabindex="-1"><h3>Scrap</h3><div class="ledger-detail-row"><span>Recovered from modules and skipped drafts</span><b class="mono" data-live="ledger-scrap"></b></div></section>
     <section id="ledger-capacity" class="ledger-section" tabindex="-1"><h3>Harmonic capacity</h3><div class="ledger-detail-row"><span>Whole-chord budget per standard voice</span><b class="mono" data-live="ledger-capacity"></b></div></section>
@@ -2829,6 +2814,9 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
 }
 
 function updateLedgerModal(app: App, content: HTMLElement): void {
+  const pressure = content.querySelector("#ledger-pressure");
+  const pressureHtml = enemyPressureHtml(app.state);
+  if (pressure && pressure.innerHTML !== pressureHtml) pressure.innerHTML = pressureHtml;
   liveSet(content, "ledger-nous", `${formatBalance(app.state.nous)} ν`);
   liveSet(content, "ledger-arete", `${formatInt(app.state.arete)} Arete`);
   liveSet(content, "ledger-scrap", formatInt(app.state.scrap));
@@ -2953,10 +2941,9 @@ function wireClose(app: App): void {
 function renderGrantModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("GRANTED")}
-    <h2 id="modal-title">The Charge Blade is yours</h2>
+    <h2 id="modal-title">World discovered</h2>
     <div class="grant-face" aria-hidden="true">${worldTileSvg("weapon")}</div>
-    <p class="lead">A ${termTipHtml("Charge Blade")} waits in the ${termTipHtml("World tray")} — place it over an owned cell, feed it from a ${termTipHtml("Charge Column")}, and it engages the adjacent enemies on its own cadence.</p>
-    <p class="lead muted">The World face stands with the era: it reopens at ${formatNumber(BALANCE.world.entryNous)} era-earned.</p>
+    <p class="lead">One ${termTipHtml("Charge Column")} and one ${termTipHtml("Charge Blade")} wait in the ${termTipHtml("World tray")}.</p>
     <div class="modal-actions">
       <button id="grant-close" class="primary">Continue</button>
     </div>`;
@@ -3208,9 +3195,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   app.listen(byId("buy-capacity-ceiling"), "click", () => app.buyCapacityCeilingAction());
   app.listen(byId("buy-capacity-discount"), "click", () => app.buyCapacityDiscountAction());
   app.listen(byId("buy-arete-beam"), "click", () => app.buyMergeCapAction());
-  app.listen(byId("buy-arete-entry"), "click", () => app.buyCatalogEntryAction());
   app.listen(byId("buy-arete-pool"), "click", () => app.joinRollPoolAction());
-  app.listen(byId("buy-world-column"), "click", () => app.buyChargeColumnAction());
   app.listen(byId("buy-world-hone"), "click", () => app.buyHoneRankAction("chargeBlade"));
   // The scrap face's purchases and rolls (issues #378, #379): the same
   // handlers the rows carried on the Forge, one sheet home now.
@@ -3464,35 +3449,17 @@ function catalogOwnedHtml(word: string): string {
   return `<span class="shop-buy"><span class="st-acquired">${word}</span></span>`;
 }
 
-// The Accelerator row's provisional figure (the prototype's): the row is
-// an inert placeholder — the price never charges, the button never arms —
-// so the number lives here alone, named for what it is.
-const ACCELERATOR_PLACEHOLDER_PRICE = 3;
-
-// The arete face: the single centered lock screen until the Mutator entry
-// is bought, then its sections (issue #310 steering) — World first (the
-// co-listing order: World leads, issue #426), then Upgrades (the capacity
-// products, the inert Accelerator placeholder) and Module Types (the roll
-// pool join, previewed by the module's own face). The Mutator tree's own
-// entry retired with the Mutator Grid's surfaces (issue #426); the face
-// restructures around what remains without orphaned placeholders. Prices
-// mute when unaffordable or in flow ("spent between sessions").
+// ADR-0087 (#526): no entry screen and no Column sale. Hone leads the
+// Arete face, followed by existing upgrades. ADR-0087 (#530) removes
+// Mutator offers, Module Types and the inert Accelerator.
+// Prices mute when unaffordable or in flow ("spent between sessions").
 function catalogAreteFaceHtml(app: App): string {
   const { state } = app;
   const upgrade = state.mode === "upgrade";
-  if (!state.catalogEntryOwned) {
-    const affordable = state.arete >= BALANCE.catalogEntryCost;
-    return `<div class="entry-screen">
-      <button class="entry-buy" id="buy-arete-entry"${upgrade && affordable ? "" : " disabled"}><span>Unlock Mutator Layer</span><span class="mono">${BALANCE.catalogEntryCost} Arete</span></button>
-    </div>
-    ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
-  }
-  const joined = state.rollPoolJoined;
   return `<div class="catalog-sections">
     <section>
       <h2 class="t-condensed">World</h2>
       <div class="catalog-rows">
-        ${catalogColumnRowHtml(app)}
         ${catalogHoneRowHtml(app, "chargeBlade")}
       </div>
     </section>
@@ -3502,42 +3469,10 @@ function catalogAreteFaceHtml(app: App): string {
         ${areteLadderRowHtml(app, "extenders")}
         ${areteLadderRowHtml(app, "catalysts")}
         ${areteLadderRowHtml(app, "beam")}
-        <article class="catalog-row">
-          <div><h3 class="t-condensed">Arete Accelerator <span class="kind">(placeholder)</span></h3></div>
-          ${catalogPriceHtml({ attrs: 'disabled', price: ACCELERATOR_PLACEHOLDER_PRICE, affordable: false, arete: true })}
-        </article>
-      </div>
-    </section>
-    <section>
-      <h2 class="t-condensed">Module Types ${infoTipHtml("module-types-tip", "About module types", "Rolled module types appear here unweighted")}</h2>
-      <div class="catalog-rows">
-        ${
-          joined
-            ? `<p class="empty-copy">Nothing waits — future objects appear in future rolls.</p>`
-            : `<article class="catalog-row">
-                <div class="with-preview">${modulePreviewSvg("mutatorForge")}<div><h3 class="t-condensed">Mutator Forge</h3><p class="t-note">Fill with ${termTipHtml("charge")} → Mutator draft</p></div></div>
-                ${areteBuyButtonHtml(app, "buy-arete-pool", BALANCE.rollPoolJoinCost)}
-              </article>`
-        }
       </div>
     </section>
   </div>
   ${upgrade ? "" : `<p class="modal-note">Arete is spent between sessions — enter upgrade mode to buy.</p>`}`;
-}
-
-// The Charge Column's ladder row (issue #426, priority 6): the entry is
-// the Column itself — never a per-copy upsell and never `memorized`
-// (persistence rides the reset contract, not the memorized family). The
-// owned count reads beside the name; the price rides the authored
-// escalation.
-function catalogColumnRowHtml(app: App): string {
-  const { state } = app;
-  const owned = state.world.columns.length;
-  const price = columnCost(owned);
-  return `<article class="catalog-row">
-    <div class="with-preview"><span class="module-preview world-preview">${worldTileSvg("column")}</span><div><h3 class="t-condensed">${termTipHtml("Charge Column")} <span class="mono">${owned}</span></h3><p class="t-note">Copies its cell's received ${termTipHtml("charge")} to adjacent weapons · placed free</p></div></div>
-    ${areteBuyButtonHtml(app, "buy-world-column", price)}
-  </article>`;
 }
 
 // The Hone row (issue #426, priority 6): one entry per weapon type, each
@@ -3681,10 +3616,9 @@ function updateForgeMetersLive(scope: ParentNode, state: GameState, forgeRate: n
 
 function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapshot): void {
   const { state, ui } = app;
-  const face = ui.forgeFace;
+  const face = "modules" as typeof ui.forgeFace;
   const offer = state.bankedRolls.at(-1);
-  const mutOffer = state.bankedMutatorRolls.at(-1);
-  const hasOffer = face === "modules" ? !!offer : !!mutOffer;
+  const hasOffer = !!offer;
   // The skip stands centered beneath the draft (2026-10-18 feedback) —
   // the whole offer resolves before the payout question asks itself.
   const skip = face === "modules" && offer
@@ -3694,29 +3628,28 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
     <h2 id="modal-title" class="sr-only">Forge choice</h2>
     <div class="forge-top">
       <div class="forge-switch" role="group" aria-label="Forge drafts">
-        ${state.catalogEntryOwned ? `<button data-forge-face="mutators" aria-pressed="${face === "mutators"}" aria-label="Mutators, ${state.bankedMutatorRolls.length} banked ${state.bankedMutatorRolls.length === 1 ? "roll" : "rolls"}">Mutators <span class="mono">${state.bankedMutatorRolls.length}</span></button>` : ""}
         <button data-forge-face="modules" aria-pressed="${face === "modules"}" aria-label="Modules, ${state.bankedRolls.length} banked ${state.bankedRolls.length === 1 ? "roll" : "rolls"}">Modules <span class="mono">${state.bankedRolls.length}</span></button>
       </div>
       <button id="close-modal" aria-label="Close Forge">Close <kbd>Esc</kbd></button>
     </div>
-    ${hasOffer ? `<p class="forge-choice-cue">Choose a new ${face === "modules" ? "module" : "mutator"}</p>${
+    ${hasOffer ? `<p class="forge-choice-cue">Choose a new ${face === "modules" ? (offer?.candidates.some(c => !isModuleCandidate(c)) ? "item" : "module") : "mutator"}</p>${
       face === "modules" && offer?.special
         ? `<p class="forge-offer-note"><span class="t-condensed">${SPECIAL_DRAFT_NAME[offer.special.kind]}</span> · ${specialDraftEffect(offer.special.kind, offer.special.category)}</p>`
         : ""
     }
     <div class="candidates ${face === "mutators" ? "mut-candidates" : ""}">
-      ${face === "modules" && offer ? offer.candidates.map(candidate => `
+      ${face === "modules" && offer ? offer.candidates.filter(candidate => candidate.type !== "mutatorForge").map(candidate => !isModuleCandidate(candidate) ? `
+        <div class="candidate-tile" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" aria-label="Take ${candidate.type === "column" ? "Column" : "Charge Blade"}" aria-describedby="forge-effect-${candidate.id}"></button>
+          <span class="module-preview">${worldTileSvg(candidate.type === "column" ? "column" : "weapon")}</span>
+          <span class="candidate-readout"><span class="candidate-name">${candidate.type === "column" ? "Column" : "Charge Blade"}</span>
+          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(candidate.type === "column" ? "Supply adjacent World weapons" : "Store charge → strike enemies")}</span></span>
+        </div>` : `
         <div class="candidate-tile" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}"><button class="candidate-pick" data-choice="${candidate.id}" data-offer="${offer.id}" data-rarity="${typeRarityOf(candidate.type)}" data-type="${candidate.type}" aria-label="Take ${RARITY_LABEL[typeRarityOf(candidate.type)]} ${META[candidate.type].name} · ${tierWord(candidate.tier)}" aria-describedby="forge-effect-${candidate.id}"></button>
           <span class="module-preview">${inventoryTileSvg(candidate)}</span>
           <span class="candidate-readout"><span class="candidate-name">${rarityMark(typeRarityOf(candidate.type))} ${META[candidate.type].name} <span class="mono">${tierNumeral(candidate.tier)}</span></span>
           <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(forgeEffect(candidate.type, candidate.tier))}</span>
           ${profileGradesHtml(candidate.type, { breatherDisclosed: true })}
           ${candidateScalingHtml(candidate.type)}</span>
-        </div>`).join("") : mutOffer ? mutOffer.candidates.map(candidate => `
-        <div class="candidate-tile mut-candidate" data-rarity="${candidate.rarity}"><button class="candidate-pick" data-mut-choice="${candidate.id}" data-mut-offer="${mutOffer.id}" data-rarity="${candidate.rarity}" aria-label="Take ${RARITY_LABEL[candidate.rarity]} ${FAMILY_WORD[candidate.family]} mutator" aria-describedby="forge-effect-${candidate.id}"></button>
-          <span class="module-preview"><svg viewBox="-70 -70 140 140" aria-hidden="true" style="color:var(--arete)">${mutatorTileInner(candidate)}</svg></span>
-          <span class="candidate-readout"><span class="candidate-name">${rarityMark(candidate.rarity)} ${FAMILY_WORD[candidate.family]}</span>
-          <span id="forge-effect-${candidate.id}" class="candidate-effect">${forgeEffectHtml(mutatorEffectText(candidate.family, candidate.rarity))}</span></span>
         </div>`).join("") : ""}
     </div>${skip}` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
     ${forgeMeterHtml(face)}</div>`;
@@ -3737,12 +3670,6 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
   });
   content.querySelectorAll<HTMLButtonElement>("[data-skip-offer]").forEach(button => {
     app.listen(button, "click", () => app.skipDraftAction(button.dataset.skipOffer!));
-  });
-  content.querySelectorAll<HTMLButtonElement>("[data-mut-choice]").forEach(button => {
-    app.listen(button.parentElement!, "click", (event) => {
-      if (event.target instanceof Element && event.target.closest(".inst-tip")) return;
-      app.chooseMutatorCandidate(button.dataset.mutOffer!, button.dataset.mutChoice!);
-    });
   });
   wireClose(app);
 }
@@ -3950,7 +3877,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
     <p class="lead">${zero
-      ? `This prestige banks <strong>no Arete</strong> — the frontier already covers how far this era climbed.`
+      ? `This prestige banks no Arete (<strong>0 Arete</strong>)`
       : `Prestige banks <strong class="mono">${claim} Arete</strong>`} and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
     <p class="lead muted">Your board and its placement, the tray, banked Forge rolls and progress, feats, your whole life record, your Arete, your scrap, and lifetime nous all stay — as do your World columns, weapons, and ${termTipHtml("Hone")} ranks.</p>
     <div class="modal-actions">

@@ -46,13 +46,13 @@ import {
   type ActionResult,
   type BulkPurchase,
 } from "../engine/actions";
-import { ARETE_HORIZON, bankableClaimOf, frontierEntitlement, horizonReached } from "../engine/accumulator";
-import { columnCost, worldOccupantAt } from "../engine/world";
+import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumulator";
+import { worldOccupantAt } from "../engine/world";
 import type { WeaponType, ResponseCurveId } from "../engine/types";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
 import { displayedRates, flowLive, deployedAt, syncRates, wholeNous } from "../engine/economy";
-import { worldEntered, refreshWorldPreview, worldRevealPreview, worldBoardLive } from "./world";
+import { worldEntered, refreshWorldPreview, worldBoardLive } from "./world";
 import { WORLD_ENEMIES, RESPONSE_CURVES } from "../engine/constants";
 import { newlyActiveTermsOf, type AllocatedInstance } from "../engine/allocation";
 import { serialize, STORAGE_KEY, type MigrationReport } from "../engine/save";
@@ -965,7 +965,7 @@ export class App {
   // later claim silent.
   confirmPrestige(): void {
     const claim = bankableClaimOf(this.state);
-    const grantsStarter = !this.state.world.starterWeaponGranted && frontierEntitlement(this.state.eraEarned) >= columnCost(0);
+    const grantsStarter = !this.state.world.unlocked && claim > 0;
     const result = this.gameAction("prestige", () => prestige(this.state));
     if (!result.ok) {
       this.say(result.reason ?? "The door is not open.");
@@ -1618,7 +1618,6 @@ export class App {
   setBoardLayer(layer: "modules" | "world"): void {
     if (this.ui.boardLayer === layer) return;
     if (layer === "world" && !worldEntered(this.state)) {
-      this.say(`The World layer reveals at ${worldRevealPreview()}.`);
       return;
     }
     const cancelled: string[] = [];
@@ -2563,16 +2562,8 @@ export class App {
   // dialog. A manual open on empty queues still shows the standing empty
   // state — only a consuming action can close the sheet.
   private forgeAfterConsume(): void {
-    const face = this.ui.forgeFace;
-    const faceEmpty = face === "modules" ? this.state.bankedRolls.length === 0 : this.state.bankedMutatorRolls.length === 0;
-    if (!faceEmpty) return;
-    const other = face === "modules" ? "mutators" : "modules";
-    const otherPending = other === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
-    if (this.state.catalogEntryOwned && otherPending > 0) {
-      this.ui.forgeFace = other;
-      return;
-    }
-    this.ui.modal = null;
+    this.ui.forgeFace = "modules";
+    if (this.state.bankedRolls.length === 0) this.ui.modal = null;
   }
 
   chooseCandidate(offerId: string, candidateId: string): void {
@@ -2586,7 +2577,8 @@ export class App {
       return;
     }
     const more = this.state.bankedRolls.length > 0 ? ` ${this.state.bankedRolls.length} more choice${this.state.bankedRolls.length === 1 ? "" : "s"} wait in the Forge.` : "";
-    this.announceUnlocks(result.unlocked, `${META[candidate.type].name} added to inventory.${more}`);
+    const name = candidate.type === "column" ? "Column" : candidate.type === "chargeBlade" ? "Charge Blade" : META[candidate.type].name;
+    this.announceUnlocks(result.unlocked, `${name} added to ${candidate.type === "column" || candidate.type === "chargeBlade" ? "World collection" : "inventory"}.${more}`);
     this.forgeAfterConsume();
     this.save();
     this.render();
@@ -2740,11 +2732,7 @@ export class App {
   private openModalDirect(kind: ModalKind): void {
     this.captureModalInvoker();
     if (kind === "forge") {
-      const preferred = this.state.catalogEntryOwned && this.ui.boardLayer === "world" ? "mutators" : "modules";
-      const pending = preferred === "modules" ? this.state.bankedRolls.length : this.state.bankedMutatorRolls.length;
-      const otherPending = preferred === "modules" ? this.state.bankedMutatorRolls.length : this.state.bankedRolls.length;
-      this.ui.forgeFace = !pending && otherPending && this.state.catalogEntryOwned
-        ? (preferred === "modules" ? "mutators" : "modules") : preferred;
+      this.ui.forgeFace = "modules";
     }
     this.ui.modal = kind;
     if (kind === "import") this.ui.importText = "";
@@ -3012,9 +3000,12 @@ export class App {
     }
     const s = this.state;
     s.prestiges = Math.max(s.prestiges, 1);
-    s.catalogEntryOwned = true;
+    s.catalogEntryOwned = false;
     s.arete = Math.max(s.arete, 20);
     s.eraEarned = Math.max(s.eraEarned, BALANCE.world.entryNous * 1.5);
+    s.world.unlocked = true;
+    s.world.starterWeaponGranted = true;
+    s.world.starterColumnGranted = true;
     if (!s.world.weapons.some((w) => w.pos !== null)) {
       const weapon = createWeapon(s, "chargeBlade");
       weapon.pos = hex(1, 0);

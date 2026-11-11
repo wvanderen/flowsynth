@@ -8,7 +8,7 @@ import { achievementBoostOf, syncAchievements } from "./achievements";
 import { discoveryBoostOf, discoveryCount, syncChordDiscoveries } from "./library";
 import { summaryTermsOf } from "./allocation";
 import { worldFactorOf, enemyDepthOf } from "./world";
-import { adjacent, sameHex } from "./hex";
+import { adjacent } from "./hex";
 import { octaveRowOf } from "./lattice";
 import type { Contribution, DeployedModule, GameState, Hex, ModuleInstance, ModuleType, MutatorFamily, MutatorInstance, Rarity, RateSnapshot } from "./types";
 
@@ -69,9 +69,9 @@ export function mutatorMagnitude(family: MutatorFamily, rarity: Rarity): number 
 
 // The cell's placed mutator, if any — the Mutator Grid mirrors the board
 // cell for cell, and a slot modifies whatever module occupies the cell.
-export function mutatorAt(state: GameState, pos: Hex | null): MutatorInstance | undefined {
-  if (pos === null) return undefined;
-  return state.mutators.find((m) => m.pos !== null && sameHex(m.pos, pos));
+// Historical copies are never live hosts (ADR-0087).
+export function mutatorAt(_state: GameState, _pos: Hex | null): MutatorInstance | undefined {
+  return undefined;
 }
 
 function familyMagnitudeAt(state: GameState, pos: Hex | null, family: MutatorFamily): number {
@@ -259,7 +259,7 @@ export function responseSupportPowerOf(state: GameState, module: ModuleInstance)
 }
 
 export function deployed(state: GameState): ModuleInstance[] {
-  return state.modules.filter((m) => m.pos !== null);
+  return state.modules.filter((m) => m.pos !== null && m.type !== "mutatorForge");
 }
 
 export function deployedGenerators(state: GameState): ModuleInstance[] {
@@ -267,11 +267,11 @@ export function deployedGenerators(state: GameState): ModuleInstance[] {
 }
 
 export function findModule(state: GameState, id: string): ModuleInstance | undefined {
-  return state.modules.find((m) => m.id === id);
+  return state.modules.find((m) => m.id === id && m.type !== "mutatorForge");
 }
 
 export function deployedAt(state: GameState, pos: { q: number; r: number }): ModuleInstance | undefined {
-  return state.modules.find((m) => m.pos !== null && m.pos.q === pos.q && m.pos.r === pos.r);
+  return state.modules.find((m) => m.type !== "mutatorForge" && m.pos !== null && m.pos.q === pos.q && m.pos.r === pos.r);
 }
 
 // The deployed voices and conducting spacers — the formation's two parts
@@ -965,10 +965,6 @@ function allocationFingerprint(state: GameState): string {
   for (const module of state.modules) {
     if (module.pos === null) continue;
     parts.push(`${module.id}:${module.type}:${module.pos.q},${module.pos.r}:${module.level}:${module.tier}:${module.shift}:${module.target}:${module.reserve > EPS ? 1 : 0}`);
-  }
-  for (const mutator of state.mutators) {
-    if (mutator.pos === null) continue;
-    parts.push(`${mutator.id}:${mutator.family}:${mutator.rarity}:${mutator.pos.q},${mutator.pos.r}`);
   }
   parts.push(`f:${Object.keys(state.achievements).length}`);
   parts.push(`d:${discoveryCount(state)}`);

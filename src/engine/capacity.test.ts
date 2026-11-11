@@ -38,14 +38,9 @@ function affordable(state: GameState): void {
   state.nous = BALANCE.capacityPrices.reduce((sum, price) => sum + price, 0) * 2;
 }
 
-// The offerings' playable path: the Catalog entry is their mandatory
-// prerequisite, so every offering purchase in these tests pays it first —
-// the harness and the UI buy through the same door.
+// The former entry setup now verifies there is no purchase prerequisite.
 function enterCatalog(state: GameState): void {
-  if (!state.catalogEntryOwned) {
-    state.arete = Math.max(state.arete, BALANCE.catalogEntryCost);
-    expect(buyCatalogEntry(state).ok).toBe(true);
-  }
+  expect(state.catalogEntryOwned).toBe(false);
 }
 
 function allocationCapacityOf(state: GameState): number {
@@ -153,7 +148,7 @@ describe("the Arete offerings (#259)", () => {
     const result = buyCapacityCeiling(state);
     expect(result.ok).toBe(false);
     expect(nextCeilingPrice(state)).toBeNull();
-    expect(state.arete).toBe(100 - BALANCE.capacityCeilingCosts[0]! - BALANCE.capacityCeilingCosts[1]! - BALANCE.catalogEntryCost);
+    expect(state.arete).toBe(100 - BALANCE.capacityCeilingCosts[0]! - BALANCE.capacityCeilingCosts[1]!);
   });
 
   it("discounts take 20%, then 40% off the original prices, and cost less than their ceilings", () => {
@@ -175,35 +170,25 @@ describe("the Arete offerings (#259)", () => {
     expect(nextCapacityPrice(state)).toBe(Math.ceil(BALANCE.capacityPrices[0]! * 0.6));
   });
 
-  it("the offerings stand behind the Catalog entry (issue #262 rerun gate)", () => {
-    // The Arete face is a lock screen until the entry is bought: the
-    // capacity offerings render only past it, so the engine refuses them
-    // on the same terms. The reviewed harness bought discounts without
-    // entry — claims 1+2 (three Arete) cannot pay entry (1) plus the
-    // first discount (3); this pins the playable order.
+  it("the offerings need no obsolete Catalog entry payment", () => {
     const state = fresh();
     state.arete = BALANCE.capacityDiscountCosts[0]!;
-    const refused = buyCapacityDiscount(state);
-    expect(refused.ok).toBe(false);
-    expect(state.arete).toBe(BALANCE.capacityDiscountCosts[0]!);
-    expect(state.capacityDiscounts).toBe(0);
-    expect(buyCapacityCeiling(state).ok).toBe(false);
-    // Entry first, then the discount still waits for its full price.
-    expect(buyCatalogEntry(state).ok).toBe(true);
-    expect(state.arete).toBe(BALANCE.capacityDiscountCosts[0]! - BALANCE.catalogEntryCost);
-    expect(buyCapacityDiscount(state).ok).toBe(false);
-    state.arete += 1; // the next claim arrives
     expect(buyCapacityDiscount(state).ok).toBe(true);
+    expect(state.arete).toBe(0);
+    expect(state.catalogEntryOwned).toBe(false);
+    state.arete = BALANCE.capacityCeilingCosts[0]!;
+    expect(buyCapacityCeiling(state).ok).toBe(true);
+    expect(state.arete).toBe(0);
   });
 
   it("the offerings are Arete-paid and refuse in flow mode", () => {
     const state = fresh();
     state.arete = 1;
-    expect(buyCatalogEntry(state).ok).toBe(true);
+    expect(buyCatalogEntry(state).ok).toBe(false);
     expect(startSession(state, null).ok).toBe(true);
     expect(buyCapacityCeiling(state).ok).toBe(false);
     expect(buyCapacityDiscount(state).ok).toBe(false);
-    expect(state.arete).toBe(0);
+    expect(state.arete).toBe(1);
     endSession(state);
     state.arete = BALANCE.capacityDiscountCosts[0]!;
     expect(buyCapacityDiscount(state).ok).toBe(true);

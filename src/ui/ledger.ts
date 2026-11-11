@@ -1,9 +1,11 @@
 // Shared resource and production ledger. One resource-area button opens the
 // ledger; Arete owns prestige, while Catalog owns spending.
+import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumulator";
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { capacityCeiling } from "../engine/capacity";
 import { catalogOpen } from "../engine/catalog";
-import { isOscillatorType, NAMED_CHORDS } from "../engine/constants";
+import { enemyDefeated, enemyPenaltyOf } from "../engine/world";
+import { isOscillatorType, NAMED_CHORDS, WORLD_ENEMIES } from "../engine/constants";
 import { deployedAt, voiceCapacityOf } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
 import { noteNameOf } from "../engine/lattice";
@@ -13,6 +15,34 @@ import { formatBalance, formatFixed, formatInt, formatNumber } from "./format";
 import { tooltipBodies, wireTooltips } from "./instrument";
 import { liveAttr, liveSet } from "./live";
 import { META } from "./meta";
+
+export function enemyPressureHtml(state: GameState): string {
+  const active = WORLD_ENEMIES.filter((def) => state.world.enemies[def.key]?.discovered && !enemyDefeated(state, def.key));
+  const remaining = active.reduce((factor, def) => factor * (1 - enemyPenaltyOf(state, def.key)), 1);
+  return `<h3>Enemy pressure</h3><div class="ledger-detail-row"><span>Combined</span><b class="mono">${((1 - remaining) * 100).toFixed(1)}% production reduction</b></div>` +
+    active.map((def) => `<div class="ledger-detail-row"><span>Enemy ${WORLD_ENEMIES.indexOf(def) + 1}</span><span class="mono">−${(enemyPenaltyOf(state, def.key) * 100).toFixed(1)}% · ×${(1 - enemyPenaltyOf(state, def.key)).toFixed(3)} remaining</span></div>`).join("") +
+    `<small>Remaining-production factors multiply. Pressure deepens with era progress.</small><p>Prestige banking positive Arete unlocks World and the means to confront enemies.</p>`;
+}
+
+function resetHtml(id: string): string {
+  return `<div class="ambient-reset"><span class="mono" data-live="ambient-yield"></span><button id="${id}" aria-describedby="${id}-reason">Reset era</button><small id="${id}-reason"></small></div>`;
+}
+
+function wireReset(app: App, id: string): void {
+  app.listen(document.getElementById(id), "click", () => {
+    if (app.state.mode === "upgrade" && horizonReached(app.state)) app.openPrestigeConfirm();
+  });
+}
+
+function updateReset(scope: ParentNode, state: GameState): void {
+  liveSet(scope, "ambient-yield", `+${bankableClaimOf(state)} Arete pending`);
+  const reason = state.mode !== "upgrade" ? "Available between sessions" : !horizonReached(state) ? `Requires ${formatBalance(ARETE_HORIZON)} era nous` : "";
+  for (const button of scope.querySelectorAll<HTMLButtonElement>(".ambient-reset button")) {
+    button.setAttribute("aria-disabled", String(!!reason));
+    const note = scope.querySelector(`#${button.id}-reason`)!;
+    if (note.textContent !== reason) note.textContent = reason;
+  }
+}
 
 export function unlockedCount(state: GameState): number {
   return Object.keys(state.achievements).length;
@@ -264,8 +294,10 @@ export function renderBoardLedger(app: App, snapshot: RateSnapshot): void {
           <span class="ledger-resource ledger-scrap" data-ledger="scrap"><span class="ledger-resource-name">Scrap</span><span class="ledger-resource-value"><b class="mono" data-live="scrap"></b><small class="scrap-mark">${SCRAP_SVG}</small></span></span>
           <span class="ledger-resource ledger-capacity" data-ledger="capacity"><span class="ledger-resource-name">Harmonic capacity</span><span class="ledger-resource-value"><b class="mono" data-live="capacity"${capacityMeterAttrs(state)}></b><small class="capacity-mark">${CAPACITY_SVG}</small></span></span>
         </button>
+        ${resetHtml("ambient-reset")}
         <span class="ledger-chips">${featsChipHtml(feats)}${libraryChipHtml(state)}</span>
       </div></div><div class="rate-breakdown" role="group" aria-label="Module-linked rate details"><span class="inst-panel"><span class="inst-panel-face">${rateDetailsHtml(state, snapshot, true, "pop")}</span></span></div>`;
+    wireReset(app, "ambient-reset");
     app.listen(document.getElementById("feats-chip"), "click", () => app.openModal("achievements"));
     app.listen(document.getElementById("ledger-overview"), "click", () => app.openLedger("nous"));
     app.listen(document.getElementById("library-chip"), "click", () => app.openModal("library"));
@@ -286,6 +318,7 @@ export function updateLedgerLive(
   snapshot: RateSnapshot,
   selectedId: string | null = null,
 ): void {
+  updateReset(scope, state);
   const set = (live: string, text: string) => liveSet(scope, live, text);
   // The balance compresses past the exact range (issue #187); the exact
   // comma-grouped value rides the read as its native tooltip, kept fresh
@@ -331,10 +364,12 @@ export function renderGameInfoStrip(app: App, snapshot: RateSnapshot): void {
       <span class="phone-nous"><span class="ledger-resource-name">Nous</span><span><b class="mono" data-live="i-nous"></b><small>ν</small></span><span class="ledger-production" id="info-rate"><b class="mono" data-live="i-rate"></b> ν/s</span></span>
       <span class="info-arete${catalogOpen(state) ? "" : " arete-dim"}"><span class="ledger-resource-name">Arete</span><span><b class="mono"${catalogOpen(state) ? ' data-live="i-arete"' : ""}>—</b><small class="arete-mark">${ARETE_SVG}</small></span></span>
       <span class="info-scrap"><span class="ledger-resource-name">Scrap</span><span><b class="mono" data-live="i-scrap"></b><small class="scrap-mark">${SCRAP_SVG}</small></span></span>
-      </button>`;
+      </button>${resetHtml("phone-reset")}`;
+    wireReset(app, "phone-reset");
     app.listen(document.getElementById("phone-ledger-overview"), "click", () => app.openLedger("nous"));
     wireTooltips(host, app.signal);
   }
+  updateReset(host, state);
   const set = (live: string, text: string) => liveSet(host, live, text);
   // Same compression as the ledger's read, same exact tooltip (issue #187).
   set("i-nous", formatBalance(state.nous));

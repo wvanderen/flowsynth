@@ -1,0 +1,26 @@
+
+ RUN  v4.1.12 /home/lem/dev/flowsynth
+
+ ❯ |ui| src/ui/app.mixed-draft.test.ts (4 tests | 1 failed | 3 skipped) 100ms
+   × Blade draft charge disclosure opens by focus and touch and dismisses without consuming the offer 98ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.mixed-draft.test.ts > Blade draft charge disclosure opens by focus and touch and dismisses without consuming the offer
+AssertionError: expected null not to be null
+ ❯ src/ui/app.mixed-draft.test.ts:64:20
+     62|   app.openModal("forge");
+     63|   const term = document.querySelector<HTMLButtonElement>(`#forge-effec…
+     64|   expect(term).not.toBeNull();
+       |                    ^
+     65|   term.focus();
+     66|   expect(term.getAttribute("aria-expanded")).toBe("true");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 skipped (4)
+   Start at  07:53:41
+   Duration  1.94s (transform 1.06s, setup 0ms, import 1.25s, tests 100ms, environment 217ms)
+

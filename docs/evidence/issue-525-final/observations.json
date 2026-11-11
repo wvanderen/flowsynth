@@ -1,0 +1,306 @@
+[
+  {
+    "name": "desktop",
+    "label": "hidden World",
+    "value": true
+  },
+  {
+    "name": "desktop",
+    "label": "pressure",
+    "value": "Enemy pressureCombined36.0% production reductionEnemy 1−20.0% · ×0.800 remainingEnemy 2−20.0% · ×0.800 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+  },
+  {
+    "name": "desktop",
+    "label": "zero stays hidden",
+    "value": true
+  },
+  {
+    "name": "desktop",
+    "label": "starter kit",
+    "value": {
+      "unlocked": true,
+      "columns": [
+        {
+          "id": "m2",
+          "pos": null
+        }
+      ],
+      "weapons": [
+        {
+          "id": "m3",
+          "type": "chargeBlade",
+          "pos": null,
+          "store": 0,
+          "cooldown": 0,
+          "targetPriority": []
+        }
+      ],
+      "arete": 2
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "retired rows absent",
+    "value": {
+      "entry": false,
+      "column": false,
+      "forge": false,
+      "hone": true
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "Escape hides glossary",
+    "value": 0
+  },
+  {
+    "name": "desktop",
+    "label": "later reset retains exact collection",
+    "value": {
+      "columns": 2,
+      "weapons": 2,
+      "unlocked": true
+    }
+  },
+  {
+    "name": "desktop",
+    "label": "final reduced motion and World state",
+    "value": {
+      "reduce": true,
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": {
+              "q": 1,
+              "r": 0
+            }
+          },
+          {
+            "id": "m8",
+            "pos": {
+              "q": 0,
+              "r": 0
+            }
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          },
+          {
+            "id": "m13",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "animations": 0
+    }
+  },
+  {
+    "name": "phone",
+    "label": "hidden World",
+    "value": true
+  },
+  {
+    "name": "phone",
+    "label": "pressure",
+    "value": "Enemy pressureCombined36.0% production reductionEnemy 1−20.0% · ×0.800 remainingEnemy 2−20.0% · ×0.800 remainingRemaining-production factors multiply. Pressure deepens with era progress.Prestige banking positive Arete unlocks World and the means to confront enemies."
+  },
+  {
+    "name": "phone",
+    "label": "zero stays hidden",
+    "value": true
+  },
+  {
+    "name": "phone",
+    "label": "starter kit",
+    "value": {
+      "unlocked": true,
+      "columns": [
+        {
+          "id": "m2",
+          "pos": null
+        }
+      ],
+      "weapons": [
+        {
+          "id": "m3",
+          "type": "chargeBlade",
+          "pos": null,
+          "store": 0,
+          "cooldown": 0,
+          "targetPriority": []
+        }
+      ],
+      "arete": 2
+    }
+  },
+  {
+    "name": "phone",
+    "label": "retired rows absent",
+    "value": {
+      "entry": false,
+      "column": false,
+      "forge": false,
+      "hone": true
+    }
+  },
+  {
+    "name": "phone",
+    "label": "Escape hides glossary",
+    "value": 0
+  },
+  {
+    "name": "phone",
+    "label": "later reset retains exact collection",
+    "value": {
+      "columns": 2,
+      "weapons": 2,
+      "unlocked": true
+    }
+  },
+  {
+    "name": "phone",
+    "label": "final reduced motion and World state",
+    "value": {
+      "reduce": true,
+      "world": {
+        "unlocked": true,
+        "starterColumnGranted": true,
+        "frontier": 2,
+        "starterWeaponGranted": true,
+        "columns": [
+          {
+            "id": "m2",
+            "pos": {
+              "q": 1,
+              "r": 0
+            }
+          },
+          {
+            "id": "m8",
+            "pos": {
+              "q": 0,
+              "r": 0
+            }
+          }
+        ],
+        "weapons": [
+          {
+            "id": "m3",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          },
+          {
+            "id": "m13",
+            "type": "chargeBlade",
+            "pos": null,
+            "store": 0,
+            "cooldown": 0,
+            "targetPriority": []
+          }
+        ],
+        "hone": {
+          "chargeBlade": 0
+        },
+        "enemies": {
+          "w0": {
+            "discovered": false,
+            "hp": 12
+          },
+          "w1": {
+            "discovered": false,
+            "hp": 18
+          },
+          "w2": {
+            "discovered": false,
+            "hp": 27
+          },
+          "w3": {
+            "discovered": false,
+            "hp": 40.5
+          },
+          "w4": {
+            "discovered": false,
+            "hp": 60.75
+          },
+          "w5": {
+            "discovered": false,
+            "hp": 91.125
+          },
+          "w6": {
+            "discovered": false,
+            "hp": 136.6875
+          },
+          "w7": {
+            "discovered": false,
+            "hp": 205.03125
+          },
+          "w8": {
+            "discovered": false,
+            "hp": 307.546875
+          }
+        }
+      },
+      "animations": 0
+    }
+  }
+]

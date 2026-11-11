@@ -1,0 +1,41 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run --run src/engine/retirement.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-404f32a3-9f291d513571dad3
+
+ ❯ |engine| src/engine/retirement.test.ts (4 tests | 1 failed) 32ms
+   × retired Forge candidates cannot inflate a preserved offer's skip payout 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| src/engine/retirement.test.ts > retired Forge candidates cannot inflate a preserved offer's skip payout
+AssertionError: expected { ok: true, scrap: 5242880, …(1) } to match object { ok: true, scrap: 5 }
+(1 matching property omitted from actual)
+
+- Expected
++ Received
+
+  {
+    "ok": true,
+-   "scrap": 5,
++   "scrap": 5242880,
+  }
+
+ ❯ src/engine/retirement.test.ts:53:40
+     51|   const state = createInitialState();
+     52|   state.bankedRolls = [{ id: "old-offer", candidates: [{ id: "legacy",…
+     53|   expect(skipRoll(state, "old-offer")).toMatchObject({ ok: true, scrap…
+       |                                        ^
+     54|   expect(state.scrap).toBe(5);
+     55| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  19:12:19
+   Duration  690ms (transform 245ms, setup 0ms, import 300ms, tests 32ms, environment 0ms)
+

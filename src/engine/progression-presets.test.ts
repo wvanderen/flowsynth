@@ -120,16 +120,15 @@ describe("the walked presets", () => {
     // discovered enemy's threshold crosses a day earlier than the
     // pre-grant walk's day 4 — the fixture pins the grant-funded day.
     expect(preset.record.stop.reason).toContain("World enemy reached at day 3");
-    // The bank's honest 3 pays the entry, the first Column rung, and the
-    // first Hone rank (1 + 1 + 1 — the pushing order: entry first, then
-    // Columns while affordable, then Hone) before the checkpoint halts
-    // the walk.
-    expect(playthroughNote(preset.record)).toContain("spent Catalog entry + 1× Charge Column + 1× Hone");
+    // No retired entry gate; the declared expansion rule spends three
+    // Arete on the two Rack Extenders before other lasting purchases.
+    expect(playthroughNote(preset.record)).toContain("spent 2× Rack Extenders");
+    expect(preset.record.areteSpent.columns).toBe(0);
     const state = preset.state;
     const living = Object.entries(state.world.enemies).filter(([, enemy]) => enemy.discovered && enemy.hp > 0);
     expect(living.length).toBeGreaterThanOrEqual(1);
     expect(state.world.weapons.some((weapon) => weapon.pos === null)).toBe(true);
-    expect(state.catalogEntryOwned).toBe(true);
+    expect(state.catalogEntryOwned).toBe(false);
     expect(state.world.columns.some((column) => column.pos !== null)).toBe(true);
     expect(state.arete).toBe(0);
     scenarioOf("world-enemy")!.assert(state, 0);

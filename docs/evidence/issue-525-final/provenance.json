@@ -1,0 +1,207 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T15:05:14.424Z",
+  "url": "http://localhost:5174/?dev=1",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "integration/525-world-progression",
+  "commit": "fede163836c3e3a2f3207fb469c6b1d734be8329",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-525-final/capture.cjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/capture.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-armed-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-armed-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-blade-keyboard-disclosure.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-board-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-board-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-catalog.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-detail-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-detail-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-inventory-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-inventory-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-mixed-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-mixed-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-outside-upgrade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-positive-pending.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-pre-unlock.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-pressure.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-starter-grant.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-unavailable-focus.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/desktop-zero-confirm.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/failure.txt",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/healthcheck.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/manifest.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/observations.json",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-armed-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-armed-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-blade-keyboard-disclosure.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-blade-touch-disclosure.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-blade-touch-dismissed.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-board-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-board-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-catalog.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-detail-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-detail-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-inventory-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-inventory-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-mixed-chargeBlade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-mixed-column.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-outside-upgrade.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-positive-pending.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-pre-unlock.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-pressure.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-starter-grant.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-unavailable-focus.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/phone-zero-confirm.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/preflight.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-525-final/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

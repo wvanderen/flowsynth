@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/engine/mixed-draft.test.ts src/engine/draft.test.ts src/engine/rolls.test.ts src/engine/special-draft.test.ts src/engine/actions.test.ts src/engine/save.test.ts src/engine/arc.test.ts src/engine/classes.test.ts src/engine/mutator.test.ts src/ui/app.mixed-draft.test.ts src/ui/app.special-draft.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-980acac7-3d87974f3c4a9f24
+
+
+ Test Files  11 passed (11)
+      Tests  217 passed (217)
+   Start at  18:32:16
+   Duration  4.61s (transform 3.05s, setup 0ms, import 4.94s, tests 2.17s, environment 428ms)
+

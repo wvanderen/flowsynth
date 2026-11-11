@@ -1,0 +1,8 @@
+locator.click: Timeout 30000ms exceeded.
+Call log:
+  - waiting for locator('#buy-world-hone')
+
+    at /home/lem/dev/flowsynth/docs/evidence/issue-525-final/supplement.cjs:11:758 {
+  log: [ "  - waiting for locator('#buy-world-hone')" ],
+  name: 'TimeoutError'
+}

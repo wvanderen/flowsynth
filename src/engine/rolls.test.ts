@@ -3,7 +3,8 @@ import { advance } from "./advance";
 import { chooseRoll as chooseRollAction, startSession } from "./actions";
 import { fresh, give, giveHabit, stubRng } from "./fixtures";
 import { ROLL_POOL, TYPE_RARITY } from "./constants";
-import { addForgeProgress, generateOffer } from "./rolls";
+import { addForgeProgress } from "./rolls";
+import { generateModuleOffer as generateOffer } from "./fixtures";
 import { accrueClassDevelopment } from "./classes";
 import { hex } from "./hex";
 

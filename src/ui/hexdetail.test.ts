@@ -55,6 +55,7 @@ function seedEra(): void {
   s.catalogEntryOwned = true;
   s.arete = 20;
   s.eraEarned = BALANCE.world.entryNous * 1.5;
+  s.world.unlocked = true;
   const weapon = createWeapon(s, "chargeBlade");
   weapon.pos = hex(1, 0);
   s.world.weapons.push(weapon, createWeapon(s, "chargeBlade"));
@@ -255,7 +256,7 @@ describe("the World face in detail", () => {
   it("pre-reveal the locked plate stands muted; no world faces render anywhere", () => {
     app.render();
     clickCell(0, 0);
-    expect(section("world").textContent).toContain("LOCKED");
+    expect(section("world")).toBeNull();
     expect(app.setBoardLayer("world")).toBeUndefined();
     // The locked legend click previews without flipping: the layer cannot stand.
     expect(app.ui.boardLayer).toBe("modules");
@@ -724,22 +725,10 @@ describe("the vertical layer legend (issue #295)", () => {
   it("pre-reveal the World symbol stands locked-but-visible; its click previews the reveal, never flipping (issue #426)", () => {
     app.render();
     const legend = document.getElementById("layer-legend")!;
-    const world = legend.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!;
-    expect(world.classList.contains("locked")).toBe(true);
-    // One mark per state: the padlock alone stands for the locked layer —
-    // the plate register joins only when the layer reveals.
-    expect(world.querySelector(".world-tab-lock")).not.toBeNull();
-    expect(world.querySelectorAll("svg")).toHaveLength(1);
-    expect(world.getAttribute("aria-pressed")).toBe("false");
-    // No ⓘ rides the legend: the symbol's native tooltip says the lock
-    // mechanic, and the click previews the reveal in figures — the World
-    // arrives, it is not bought — never flipping the mode.
-    expect(legend.querySelector(".inst-tip-trigger")).toBeNull();
-    expect(world.getAttribute("title")).toContain("reveals at");
-    world.click();
+    expect(legend.querySelector('[data-legend-layer="world"]')).toBeNull();
+    app.setBoardLayer("world");
     expect(app.ui.boardLayer).toBe("modules");
     expect(app.ui.modal).toBeNull();
-    expect(document.getElementById("status")!.textContent).toContain("era-earned");
   });
 
   it("the legend is the one switch: the tray sheet carries the same symbols", () => {

@@ -186,7 +186,7 @@ describe("the chord bonus wave (issue #297)", () => {
     expect(body.textContent).not.toContain("ν/s");
   });
 
-  it("a charge mutator's fold reads beside the incoming charge it scales", () => {
+  it("a retired charge mutator cannot appear in live charge disclosure", () => {
     seedEra();
     app.state.mutators[0]!.family = "charge";
     give(app.state, "focusKeyed", hex(1, 0)).reserve = 100;
@@ -195,11 +195,9 @@ describe("the chord bonus wave (issue #297)", () => {
     app.render();
     clickCell(0, 0);
     const body = breakdownOf(trigger("charge"));
-    expect(body.textContent).toContain("Charge mutator folded in");
-    expect(body.textContent).toContain(`×${formatNumber(1.5)}`);
-    // The mutator stays folded: the strength arrives already multiplied.
+    expect(body.textContent).not.toContain("mutator");
     const snap = displayedRates(app.state, true);
-    expect(snap.chargeStrength.get("m1")).toBeCloseTo(1.5, 5);
+    expect(snap.chargeStrength.get("m1")).toBeCloseTo(1, 5);
     endSession(app.state);
   });
 });
@@ -367,7 +365,7 @@ describe("PR #304 review regressions", () => {
     endSession(app.state);
   });
 
-  it.each(["forge", "mutatorForge", "amplifier"] as const)("%s explains its actual charge formula", (type) => {
+  it.each(["forge", "amplifier"] as const)("%s explains its actual charge formula", (type) => {
     const module = give(app.state, type, hex(0, 1));
     module.level = 2;
     give(app.state, "focusKeyed", hex(1, 1)).reserve = 100;

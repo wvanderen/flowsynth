@@ -245,8 +245,8 @@ function assertAfterFirstBank(state: GameState, claimTarget: number): void {
 
 // The living fight's assertion (issue #471): one prestige behind it, a
 // discovered enemy still alive, the starter blade's placement unplayed,
-// and the earned claim spent into the purchases the walk's rules name —
-// Catalog entry owned, a Charge Column standing, the bank honestly empty.
+// and the recipe's remaining legacy entry purchased. ADR-0087 grants the
+// Column free, leaving one of the first claim's two Arete unspent.
 function assertWorldEnemy(state: GameState): void {
   const fail = failFor("World enemy");
   if (state.mode !== "upgrade") fail(`expected upgrade mode — found ${state.mode}.`);
@@ -255,9 +255,10 @@ function assertWorldEnemy(state: GameState): void {
   if (!state.world.weapons.some((weapon) => weapon.pos === null)) {
     fail("expected a weapon waiting in the tray — the placement decision is unplayed.");
   }
-  if (!state.catalogEntryOwned) fail("expected the earned spending played — the Catalog entry is unowned.");
+  if (state.catalogEntryOwned) fail("retired Catalog entry must remain unowned.");
+  if (state.unlockedRows.length !== 2) fail("expected earned spending on two Rack Extenders.");
   if (!state.world.columns.some((column) => column.pos !== null)) {
-    fail("expected a placed Charge Column from the earned spending.");
+    fail("expected the free starter Charge Column placed.");
   }
-  if (state.arete !== 0) fail(`expected the earned claim fully spent — ${state.arete} Arete remain.`);
+  if (state.arete !== 0) fail(`expected the three earned Arete spent on Rack Extenders — ${state.arete} Arete remain.`);
 }

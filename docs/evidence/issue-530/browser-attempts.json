@@ -1,0 +1,52 @@
+{
+  "sourceCommit": "20c86cdd99e49e8d0d3e4ac323a7ad8088668a43",
+  "url": "http://localhost:5174/",
+  "tabId": "tab_7_6836ed9e-3f72-42d1-8ea5-4990fc3c4865",
+  "recordKind": "manual transcription of preview tool responses; not screenshot evidence",
+  "serverProvenance": "capture-preflight.log ACCEPT; capture-health.log server OK, clean source",
+  "status": {
+    "available": true,
+    "loading": false,
+    "dialog": null,
+    "urlMatched": true,
+    "visible": false,
+    "initialViewport": {"width": 1280, "height": 800},
+    "activation": "preview_open(open:true) repeated once, then preview_status confirmed same loaded URL but visible:false; visibility confirmation unavailable"
+  },
+  "snapshotReadiness": {
+    "operation": "preview_snapshot(includeImage:true, save:true), same tab and URL",
+    "attempts": [
+      {"attempt": 1, "result": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms."},
+      {"attempt": 2, "recovery": "preview_status: available, loaded, no dialog, matching URL, visible:false", "result": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms."},
+      {"attempt": 3, "recovery": "preview_status: available, loaded, no dialog, matching URL, visible:false", "result": "Preview snapshot failed: Preview automation snapshot timed out after 15000ms."}
+    ],
+    "budgetExhausted": true,
+    "noFurtherSnapshots": true,
+    "outputImages": []
+  },
+  "phoneViewportDiagnostic": {
+    "target": {"width": 390, "height": 844},
+    "resizeResponseViewport": {"width": 1280, "height": 800},
+    "pageEvaluate": {"expression": "({width: window.innerWidth, height: window.innerHeight})", "value": {"height": 844, "width": 390}},
+    "result": "page read reported requested phone size; no capture possible because shared snapshot budget was exhausted; appearance/input acceptance unavailable"
+  },
+  "desktopViewportDiagnostic": {
+    "target": {"width": 1280, "height": 900},
+    "attempts": [
+      {"attempt": 1, "resizeResponseViewport": {"width": 1280, "height": 800}, "pageEvaluate": {"height": 844, "width": 390}, "result": "requested setting echoed but page read mismatched target"},
+      {"attempt": 2, "recovery": "preview_status showed requested setting 1280x900 but viewport 390x844", "resizeResponseViewport": {"width": 1280, "height": 800}, "pageEvaluate": {"height": 844, "width": 390}, "result": "page read still mismatched target"},
+      {"attempt": 3, "recovery": "preview_status showed requested setting 1280x900 but viewport 390x844", "resizeResponseViewport": {"width": 1280, "height": 800}, "pageEvaluate": {"height": 844, "width": 390}, "result": "page read still mismatched target"}
+    ],
+    "budgetExhausted": true,
+    "result": "desktop viewport and capture unavailable; no resize echo was treated as confirmation"
+  },
+  "acceptance": {
+    "desktopScreenshots": "unavailable",
+    "phoneScreenshots": "unavailable",
+    "keyboardTouchFocus": "unavailable in browser; automated application cases are partial only",
+    "nonColorReducedMotion": "unavailable visual judgment",
+    "instrumentPrototypeComparison": "source comparison only; visual acceptance unavailable",
+    "parentStatus": "visual blockers remain; no scope waiver or closure claimed"
+  },
+  "tabClosed": true
+}

@@ -262,7 +262,7 @@ describe("the Sideband's charge conversion", () => {
 });
 
 describe("mutators on the chord-centered wave", () => {
-  it("resonance multiplies the converted-and-granted chord factor, inert chordless", () => {
+  it("retired resonance cannot multiply the converted-and-granted chord factor", () => {
     const s = fresh();
     give(s, "sideband", hex(1, 0));
     give(s, "chorus", CHORUS_SEAT);
@@ -270,7 +270,7 @@ describe("mutators on the chord-centered wave", () => {
     s.mutators.push({ id: "mu-r", family: "resonance", rarity: "common", pos: hex(1, 0) });
     const snapshot = computeRates(s, true);
     const response = OSCILLATOR_PROFILES.sideband.chord * (1 + blasterConversion(1)) + BALANCE.chorusBonus;
-    expect(snapshot.contributions.get("m2")!.chordFactor).toBeCloseTo((1 + response * 0.3) * 1.06 * 1.5, 9);
+    expect(snapshot.contributions.get("m2")!.chordFactor).toBeCloseTo((1 + response * 0.3) * 1.06, 9);
     // Chordless, the mutator is inert — the ×1.00 contract holds.
     const bare = fresh();
     give(bare, "sideband", SOLO_SEAT);
@@ -281,26 +281,26 @@ describe("mutators on the chord-centered wave", () => {
     )!.chordFactor).toBe(1);
   });
 
-  it("a power mutator scales the Chorus's grant with its host power", () => {
+  it("a retired power mutator cannot scale the Chorus grant", () => {
     const s = fresh();
     give(s, "additive", hex(1, 0));
     give(s, "chorus", CHORUS_SEAT);
     s.mutators.push({ id: "mu-p", family: "power", rarity: "common", pos: CHORUS_SEAT });
     const snapshot = computeRates(s, false);
-    const factor = (1 + (1 + BALANCE.chorusBonus * 1.5) * 0.3) * 1.06;
+    const factor = (1 + (1 + BALANCE.chorusBonus) * 0.3) * 1.06;
     expect(snapshot.contributions.get("m1")!.chordFactor).toBeCloseTo(factor, 9);
   });
 
-  it("a charge mutator feeds the Sideband's conversion through the strength it receives", () => {
+  it("a retired charge mutator cannot feed Sideband conversion", () => {
     const s = fresh();
     give(s, "sideband", hex(1, 0));
     charged(s, GEN_SEAT);
     s.mutators.push({ id: "mu-c", family: "charge", rarity: "common", pos: hex(1, 0) });
     const snapshot = computeRates(s, true);
     const side = snapshot.contributions.get("m2")!;
-    expect(side.chargeStrength).toBeCloseTo(1.5, 9);
+    expect(side.chargeStrength).toBeCloseTo(1, 9);
     expect(side.chargeFactor).toBe(1); // still no empowerment
-    const response = OSCILLATOR_PROFILES.sideband.chord * (1 + blasterConversion(1.5));
+    const response = OSCILLATOR_PROFILES.sideband.chord * (1 + blasterConversion(1));
     expect(side.chordFactor).toBeCloseTo((1 + response * 0.3) * 1.06, 9);
   });
 });

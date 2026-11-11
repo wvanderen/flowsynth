@@ -1,4 +1,4 @@
-import { BALANCE, WORLD_ENEMIES } from "../src/engine/constants";
+import { WORLD_ENEMIES } from "../src/engine/constants";
 import { DEFAULT_ALLOCATION_BUDGET } from "../src/engine/allocation";
 import assert from "node:assert/strict";
 import {
@@ -15,8 +15,8 @@ import {
   type PlaythroughRecord,
   type PlaythroughSource,
 } from "../src/engine/playthrough";
-import { buyCatalogEntry, buyChargeColumn, buyHoneRank, placeWorldOccupant } from "../src/engine/actions";
-import { columnCost, enemyDefAt, honeCostOf, worldOccupantAt } from "../src/engine/world";
+import { buyChargeColumn, buyHoneRank, placeWorldOccupant } from "../src/engine/actions";
+import { enemyDefAt, honeCostOf, worldOccupantAt } from "../src/engine/world";
 import { adjacent } from "../src/engine/hex";
 import { chargeLineCells } from "../src/engine/playthrough-placement";
 import { seededRng } from "../src/engine/capacity-calibration";
@@ -426,8 +426,10 @@ export type RoutePiece = "entry" | "column" | "hone";
 // Column and Hone prices grow with what the walk already owns, so a
 // later frontier enumerates its own prices, never the first rungs.
 export function routePiecePriceAt(state: GameState, piece: RoutePiece): number | null {
-  if (piece === "entry") return state.catalogEntryOwned ? null : BALANCE.catalogEntryCost;
-  if (piece === "column") return columnCost(state.world.columns.length);
+  if (piece === "entry") return null; // retired identity, never a live route
+  // Keep the historical piece identity readable in stored reports, but
+  // never enumerate a retired purchase against the current engine (#526).
+  if (piece === "column") return null;
   return honeCostOf(state, "chargeBlade");
 }
 
@@ -503,8 +505,8 @@ function cloneState(state: GameState): GameState {
   return structuredClone(state);
 }
 
-function probeBuy(state: GameState, piece: RoutePiece, rng: () => number): boolean {
-  if (piece === "entry") return buyCatalogEntry(state, rng).ok;
+function probeBuy(state: GameState, piece: RoutePiece, _rng: () => number): boolean {
+  if (piece === "entry") return false;
   if (piece === "column") return buyChargeColumn(state).ok;
   return buyHoneRank(state, "chargeBlade").ok;
 }
@@ -678,8 +680,7 @@ export function walkRouteForward(
     noGrant: drift < Math.max(1, state.totalEarned, continuation.earnedNous) * 1e-12,
     noRefund: continuation.state.arete <= state.arete + continuation.claims.reduce((sum, claim) => sum + claim, 0) &&
       continuation.state.world.columns.length >= state.world.columns.length &&
-      continuation.state.world.hone.chargeBlade >= state.world.hone.chargeBlade &&
-      (!state.catalogEntryOwned || continuation.state.catalogEntryOwned),
+      continuation.state.world.hone.chargeBlade >= state.world.hone.chargeBlade,
     finite: continuation.snapshots.every((snapshot) => stateNumbersFinite(snapshot.state) && Number.isFinite(snapshot.rate)),
   };
 }

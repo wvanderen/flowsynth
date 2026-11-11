@@ -1,0 +1,322 @@
+[
+  {
+    "file": "desktop-pre-unlock.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-unavailable-focus.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-pressure.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-outside-upgrade.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-zero-confirm.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-positive-pending.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-starter-grant.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-catalog.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-mixed-column.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-inventory-column.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-detail-column.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-armed-column.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-board-column.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-mixed-chargeBlade.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-blade-keyboard-disclosure.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-inventory-chargeBlade.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-detail-chargeBlade.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-armed-chargeBlade.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "desktop-board-chargeBlade.png",
+    "source": "fede163",
+    "width": 1280,
+    "height": 900,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-pre-unlock.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-unavailable-focus.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-pressure.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-outside-upgrade.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-zero-confirm.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-positive-pending.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-starter-grant.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-catalog.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-mixed-column.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-inventory-column.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-detail-column.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-armed-column.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-board-column.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-mixed-chargeBlade.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-blade-keyboard-disclosure.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-blade-touch-disclosure.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-blade-touch-dismissed.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-inventory-chargeBlade.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-detail-chargeBlade.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-armed-chargeBlade.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  },
+  {
+    "file": "phone-board-chargeBlade.png",
+    "source": "fede163",
+    "width": 390,
+    "height": 844,
+    "url": "http://localhost:5174/?dev=1",
+    "reduce": true
+  }
+]
