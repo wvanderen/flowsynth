@@ -1,0 +1,37 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/engine/progression-presets.test.ts tools/later-eras.test.ts -t stops the pushing walk at the living|enumerates every affordable|demonstrates the combat route|enumerates orders without|neither World policy
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74
+
+ ❯ |engine| tools/later-eras.test.ts (16 tests | 1 failed | 12 skipped) 224322ms
+     × neither World policy buys a retired Column; combat still reaches Hone 223843ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |engine| tools/later-eras.test.ts > the declared World policies' spending orders > neither World policy buys a retired Column; combat still reaches Hone
+AssertionError: expected null to be 'Hone rank — chargeBlade' // Object.is equality
+
+- Expected:
+"Hone rank — chargeBlade"
+
++ Received:
+null
+
+ ❯ tools/later-eras.test.ts:383:20
+    381|     // that its former Column purchase is gone. Do not invent a Hone e…
+    382|     expect(support).toBeNull();
+    383|     expect(combat).toBe("Hone rank — chargeBlade");
+       |                    ^
+    384|   });
+    385|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 4 passed | 20 skipped (25)
+   Start at  16:46:06
+   Duration  416.99s (transform 1.13s, setup 0ms, import 193.03s, tests 431.32s, environment 0ms)
+

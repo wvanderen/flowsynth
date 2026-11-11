@@ -1,0 +1,79 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74
+
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+ ❯ |ui| src/ui/app.terminal.test.ts (17 tests | 1 failed) 1374ms
+     × records successful visual and terminal World actions with equivalent state 92ms
+ ❯ |ui| src/ui/app.lifecycle.test.ts (15 tests | 2 failed) 642ms
+     × release cancels mode feedback 52ms
+     × cancels a carried World occupant without committing its later release 30ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.lifecycle.test.ts > App lifetime > release cancels mode feedback
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/ui/app.lifecycle.test.ts:55:26
+     53|     current.setBoardLayer("world");
+     54|     const toast = document.getElementById("mode-toast")!;
+     55|     expect(toast.hidden).toBe(false);
+       |                          ^
+     56|     current.dispose();
+     57|     expect(vi.getTimerCount()).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  |ui| src/ui/app.lifecycle.test.ts > App lifetime > cancels a carried World occupant without committing its later release
+TypeError: Cannot read properties of null (reading 'dispatchEvent')
+ ❯ src/ui/app.lifecycle.test.ts:156:10
+    154|     const node = document.querySelector('[data-world-cell="1,0"]')!;
+    155|     Object.defineProperty(document, "elementFromPoint", { configurable…
+    156|     node.dispatchEvent(pointer("pointerdown"));
+       |          ^
+    157|     document.dispatchEvent(pointer("pointermove", 20, 20));
+    158|     expect(document.querySelector(".world-ghost")).not.toBeNull();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  |ui| src/ui/app.terminal.test.ts > declared game-action catalog > records successful visual and terminal World actions with equivalent state
+AssertionError: expected '✗ Charge Columns are no longer sold.' to match /^✓/
+
+- Expected:
+/^✓/
+
++ Received:
+"✗ Charge Columns are no longer sold."
+
+ ❯ src/ui/app.terminal.test.ts:370:45
+    368|     expect(app.devInterventions.at(-1)).toMatchObject({ ok: true, labe…
+    369|     expect(app.state.world.columns.find((c) => c.id === id)!.pos).toBe…
+    370|     expect(app.devTerminalRun("world-buy")).toMatch(/^✓/);
+       |                                             ^
+    371|     expect(app.devTerminalRun("world-hone chargeBlade")).toMatch(/^✓/);
+    372|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed | 127 passed (129)
+      Tests  3 failed | 2403 passed | 9 skipped (2415)
+   Start at  17:02:26
+   Duration  1020.56s (transform 15.39s, setup 0ms, import 469.67s, tests 1692.72s, environment 7.71s)
+

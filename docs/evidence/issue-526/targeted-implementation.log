@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/engine/world-progression.test.ts src/engine/world.test.ts src/engine/capacity.test.ts src/engine/merge-cap.test.ts src/ui/app.world-progression.test.ts src/ui/world.test.ts src/ui/hexdetail.test.ts src/ui/app.catalog.test.ts src/ui/app.dev.test.ts src/ui/app.board.test.ts tools/save-migration.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74
+
+
+ Test Files  11 passed (11)
+      Tests  385 passed | 1 skipped (386)
+   Start at  16:19:17
+   Duration  23.89s (transform 2.65s, setup 0ms, import 4.34s, tests 18.54s, environment 1.28s)
+

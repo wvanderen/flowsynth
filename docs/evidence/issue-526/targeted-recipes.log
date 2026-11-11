@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/ui/app.scenarios.test.ts src/ui/app.playthrough.test.ts -t launching the progression|repeating a progression|pushes past
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74
+
+
+ Test Files  2 passed (2)
+      Tests  3 passed | 80 skipped (83)
+   Start at  16:11:50
+   Duration  365.45s (transform 1.12s, setup 0ms, import 85.37s, tests 279.10s, environment 505ms)
+

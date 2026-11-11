@@ -1,0 +1,27 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-10T22:20:37.863Z",
+  "url": "http://localhost:5176/",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-79a38ba8-752039c5b6796b74",
+  "branch": "t3/world-progression-526",
+  "commit": "9f5f514d3054168fd2d8f08cfa0a268448388775",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-526/check.exit",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-526/test.log",
+        "state": "??"
+      }
+    ]
+  }
+}
