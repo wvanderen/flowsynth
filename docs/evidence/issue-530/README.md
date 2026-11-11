@@ -1,5 +1,12 @@
 # #530 completion record and #525 parent acceptance map
 
+## Latest parent evidence disposition — source a386851
+
+Authoritative browser acceptance is now [#525 final revalidation](../issue-525-final/README.md#authoritative-revalidation--source-freeze-a386851062fc0a010d7d193a6160dc216c9e9f2d), with [new clean provenance](../issue-525-final/revalidated-provenance.json), [24-frame exact desktop/phone manifest](../issue-525-final/revalidated-blockers-manifest.json) and [asserted observations](../issue-525-final/revalidated-blockers-observations.json). **PASS for all previously identified browser gaps**, including final disabled/available Hone grayscale distinction, selected/acquired grammar and energized reduced motion. Latest source is `a386851062fc0a010d7d193a6160dc216c9e9f2d`; final README maps each obligation and dependency-scoped retention explicitly. Arete Catalog price frames regenerated; former failed frames/provenance preserved as superseded, never relabeled current. Unchanged Blade/drag, reload/permanence, pressure/reset and mixed-offer surfaces retain their named evidence. Physical phone and human assistive/motion assessments were not run; touch is browser emulation, pointer drag is not physical finger testing.
+
+Latest source checks: [check](../issue-525-state-fix/check.log), [targeted Catalog](../issue-525-state-fix/targeted.log), [full suite](../issue-525-state-fix/test.log), 2382 passed + 9 skipped. Evidence-only revalidation did not rerun suites or change source, issue status or PR readiness. Historical unavailable/blocker statements below describe earlier gates and are superseded by this linked final disposition, not erased.
+
+
 ## Scope, provenance and status
 
 Branch `t3/retire-legacy-mutators`. Prepared clean HEAD was `e7ba47da9f5e552794922405fae218e818677316`, the required `integration/525-world-progression` tip; ancestry check returned 0 before editing. #526–#529 implementation is integrated. Their open issues reflect unavailable visual acceptance, not missing implementation. Read #530/#525 bodies and empty comment lists with `gh`, AGENTS, CONTEXT, ADR-0043/0074/0079/0081/0086/0087, instrument standards and pinned `eb232c4` prototype source, checks/review/verification/visual-evidence/domain guides, and the four prior slice records. No subagents, issue closure or PR changes.
