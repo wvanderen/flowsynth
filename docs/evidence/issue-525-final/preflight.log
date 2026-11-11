@@ -1,0 +1,14 @@
+
+FlowSynth capture preflight
+
+  url       http://localhost:5174/?dev=1
+  worktree  /home/lem/dev/flowsynth
+  commit    fede1638
+
+  Verified: http://localhost:5174/?dev=1 serves `/home/lem/dev/flowsynth` at commit fede1638 with clean source.
+
+  record    /home/lem/dev/flowsynth/docs/evidence/issue-525-final/provenance.json
+  ACCEPT — evidence may be captured from this URL.
+
+  Evidence rules: docs/agents/visual-evidence.md
+
