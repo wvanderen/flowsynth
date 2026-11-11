@@ -1,3 +1,4 @@
+import { renderEncyclopedia, chargeHelpHtml, bindChargeHelp } from "./encyclopedia";
 import { playthroughStatusMark } from "../engine/playthrough";
 import { SaveRefusedError } from "../engine/save";
 import { historicalBoardHtml } from "./historical-board";
@@ -2600,7 +2601,8 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   backdrop.setAttribute("aria-modal", kind === "forge" || kind === "inventory" ? "false" : "true");
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
-    kind === "forge"
+    kind === "encyclopedia" ? [app.encyclopediaEntry, app.state.encyclopedia]
+    : kind === "forge"
       ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
@@ -2714,7 +2716,8 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // sheet is a docked panel, never a blocking dialog. The backdrop keeps
   // its class fresh so another kind's scrim returns.
   backdrop.classList.toggle("peek-tray", kind === "inventory");
-  if (kind === "settings") renderSettingsModal(app, content);
+  if (kind === "encyclopedia") renderEncyclopedia(app, content);
+  else if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
@@ -3178,7 +3181,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
       ${identity}
       <button id="close-modal" aria-label="Close dialog">✕</button>
     </div>
-    <div class="catalog-body">${body}</div>
+    <div class="catalog-body" id="catalog-body">${body}</div>
   </div>`;
   content.querySelectorAll<HTMLButtonElement>("[data-catalog-face]").forEach((button) => {
     app.listen(button, "click", () => {
@@ -3214,6 +3217,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   });
   // A face rebuild replaces this root, so disclosure listeners cannot
   // accumulate on the stable modal content and toggle a tap twice.
+  bindChargeHelp(app, content);
   wireTooltips(content.querySelector(".catalog-frame")!, app.signal);
   wireClose(app);
 }
@@ -3407,6 +3411,7 @@ function catalogNousFaceHtml(app: App): string {
     })
     .join("");
   return `<div class="catalog-sections">
+    ${chargeHelpHtml(app)}
     ${
       openShelf.length > 0
         ? `<section>
@@ -3432,8 +3437,7 @@ function catalogNousFaceHtml(app: App): string {
 }
 
 function shelfDescriptionHtml(type: keyof typeof SHELF_DESCRIPTIONS): string {
-  return (SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role)
-    .replace(/\bcharge\b/gi, () => termTipHtml("charge"));
+  return SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role;
 }
 
 // The simplified module mark (the tray tile's own): the category-hued hex
@@ -3652,7 +3656,8 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           ${candidateScalingHtml(candidate.type)}</span>
         </div>`).join("") : ""}
     </div>${skip}` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
-    ${forgeMeterHtml(face)}</div>`;
+    ${forgeMeterHtml(face)}${chargeHelpHtml(app, "forge-about-charge")}</div>`;
+  bindChargeHelp(app, content);
   wireTooltips(content, app.signal);
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-forge-face]").forEach(button => {

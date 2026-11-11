@@ -44,6 +44,7 @@ import { worldEntered, bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, wo
 import { COLUMN_WORD, META, RARITY_LABEL, WORLD_META, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
+import { chargeHelpHtml, bindChargeHelp } from "./encyclopedia";
 import { profileGradesHtml } from "./profile";
 import { moduleFlowsHtml } from "./hexflows";
 import { contextMapSvg, openContextMap } from "./contextmap";
@@ -316,6 +317,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   const freshGrid = host.querySelector<HTMLElement>(".hex-detail-grid");
   if (freshGrid && scrollTop > 0) freshGrid.scrollTo(0, scrollTop);
   host.hidden = false;
+  bindChargeHelp(app, host);
   wireTooltips(host, app.signal);
   if (focusAttribute && focusValue !== null) {
     [...host.querySelectorAll<HTMLElement | SVGElement>(`[${focusAttribute}]`)]
@@ -432,7 +434,7 @@ function detailColumnHtml(app: App, pos: Hex, module: ModuleInstance | undefined
   if (map) sections.push(`<section class="hex-detail-section hex-detail-ctx">${map}</section>`);
   if (module) {
     const grades = profileGradesHtml(module.type);
-    if (grades) sections.push(`<section class="hex-detail-section"><span class="hex-detail-section-head">Profile</span>${grades}</section>`);
+    if (grades) sections.push(`<section class="hex-detail-section"><span class="hex-detail-section-head">Profile</span>${grades}${chargeHelpHtml(app, "detail-about-charge")}</section>`);
     if (chordRow.html) sections.push(`<section class="hex-detail-section"><span class="hex-detail-section-head">Chord facts</span>${chordRow.html}</section>`);
   }
   // The World line (issue #426): the enemy threat or the cleared bonus —

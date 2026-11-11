@@ -255,7 +255,11 @@ describe("the launch command", () => {
       expect(app.state.habits).toHaveLength(lived + 1);
 
       await app.devLaunchScenario(id, t);
-      expect(app.state).toEqual(scenarioOf(id)!.build(t));
+      const expected = scenarioOf(id)!.build(t);
+      // Installing an already charge-bearing collection is a meaningful
+      // encounter in the application, unlike the engine-only recipe build.
+      expected.encyclopedia = id === "fresh-start" ? {} : { charge: "available" };
+      expect(app.state).toEqual(expected);
       expect(app.devScenarioNote).toContain("✓");
       expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");
     }

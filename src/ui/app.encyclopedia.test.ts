@@ -1,0 +1,118 @@
+// @vitest-environment happy-dom
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { serialize } from "../engine/save";
+import { createModule } from "../engine/state";
+import { startSession } from "../engine/actions";
+import { advance } from "../engine/advance";
+import type { App } from "./app";
+import { createAppFixture } from "./testing/app-fixture";
+const fixture = createAppFixture();
+let app: App;
+const button = (name: string) => [...document.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent?.trim() === name)!;
+const door = () => document.querySelector<HTMLButtonElement>('[aria-label="Encyclopedia"]')!;
+beforeEach(() => { localStorage.clear(); app = fixture.boot(); });
+afterEach(() => fixture.release());
+describe("voluntary Encyclopedia", () => {
+  it("imports and exports save-owned marks, clears them on full reset, and gives later encounters normal unseen marks after legacy migration", () => {
+    app.openModal("catalog"); app.closeModal();
+    const exported = serialize(app.state);
+    app.hardReset();
+    expect(app.state.encyclopedia).toEqual({});
+    expect(app.importText(exported)).toBe(true);
+    expect(app.state.encyclopedia).toEqual({ charge: "available" });
+    door().click(); button("Charge · Unseen").click(); app.closeModal();
+    const readExport = serialize(app.state);
+    app.hardReset();
+    app.importText(readExport);
+    expect(app.state.encyclopedia).toEqual({ charge: "seen" });
+    app.hardReset();
+    const legacy = JSON.parse(serialize(app.state)); delete legacy.state.encyclopedia;
+    expect(app.importText(JSON.stringify(legacy))).toBe(true);
+    expect(app.state.encyclopedia).toEqual({});
+    app.openModal("catalog");
+    expect(app.state.encyclopedia).toEqual({ charge: "available" });
+  });
+  it("returns keyboard focus and the selected board task after inspection reading, with static teaching and no exercises", () => {
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const detail = structuredClone(app.ui.detail);
+    const zoom = app.ui.zoom;
+    const help = document.getElementById("detail-about-charge")!;
+    help.focus(); help.click();
+    expect(document.getElementById("modal-content")!.querySelector("svg animate, canvas, input")).toBeNull();
+    button("‹ Topics").click(); button("Charge").click();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.detail).toEqual(detail);
+    expect(app.ui.zoom).toBe(zoom);
+    expect(document.activeElement?.id).toBe("detail-about-charge");
+  });
+  it("does not infer a Charge encounter from inspecting an empty cell", () => {
+    const cell = app.state.cells.find(pos => pos.q !== 0 || pos.r !== 0)!;
+    document.querySelector(`[data-cell="${cell.q},${cell.r}"]`)!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.encyclopedia).toEqual({});
+  });
+  it("searches canonical and familiar words without hidden previews and returns from a contextual catalog detour", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    const scroll = document.querySelector<HTMLElement>(".catalog-body")!;
+    scroll.scrollTop = 85;
+    const help = document.getElementById("about-charge")!;
+    help.focus(); help.click();
+    button("‹ Topics").click();
+    const search = document.getElementById("encyclopedia-search") as HTMLInputElement;
+    for (const query of ["Charge", "battery", "power", "Flywheel"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(button("Charge")).toBeDefined();
+    }
+    search.value = "World"; search.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.getElementById("encyclopedia-results")!.textContent).toBe("No matching entries");
+    app.closeModal();
+    expect(app.ui.modal).toBe("catalog");
+    expect(document.activeElement?.id).toBe("about-charge");
+    expect(document.querySelector<HTMLElement>(".catalog-body")!.scrollTop).toBe(85);
+    expect(app.state.nous).toBe(0);
+  });
+  it("encounters an owned tray generator during flow without opening and keeps the live session running while reading", () => {
+    startSession(app.state, 600);
+    const session = app.state.session;
+    app.state.modules.push(createModule(app.state, "focusKeyed"));
+    app.render();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state).toHaveProperty("encyclopedia.charge", "available");
+    door().click(); button("Charge · Unseen").click();
+    advance(app.state, 10);
+    app.render();
+    expect(app.state.session).toBe(session);
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.session!.elapsed).toBe(10);
+    expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");
+    app.closeModal();
+    expect(app.state.session).toBe(session);
+    app.state.modules = app.state.modules.filter(m => m.type !== "focusKeyed");
+    app.render();
+    door().click();
+    expect(button("Charge")).toBeDefined();
+  });
+  it("starts empty, encounters the unaffordable visible shelf without opening, and clears the quiet mark only on reading", () => {
+    door().click();
+    expect(document.getElementById("modal-content")!.textContent).toContain("No entries available yet");
+    app.closeModal();
+    app.state.nous = 0;
+    app.openModal("catalog");
+    expect(app.ui.modal).toBe("catalog");
+    expect(document.querySelector('.catalog-frame [aria-label="charge — what it means"]')).toBeNull();
+    expect(app.state).toHaveProperty("encyclopedia.charge", "available");
+    app.closeModal();
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).not.toBeNull();
+    door().focus(); door().click();
+    expect(document.getElementById("modal-content")!.textContent).toContain("Board mechanics");
+    button("Charge · Unseen").click();
+    expect(app.state).toHaveProperty("encyclopedia.charge", "seen");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.activeElement).toBe(door());
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).toBeNull();
+    const settings = document.getElementById("console-settings")!;
+    settings.focus(); settings.click(); app.closeModal();
+    expect(document.activeElement).toBe(settings);
+  });
+});
