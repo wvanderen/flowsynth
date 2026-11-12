@@ -1,0 +1,9 @@
+file:///home/lem/.t3/worktrees/flowsynth/t3-de769b0b-5f1f9adc92c0d752/docs/evidence/issue-536/revision-2/capture.mjs:13
+const assert=(v,label)=>{if(!v)throw new Error(label);};
+                                     ^
+
+Error: desktop library real scroll setup
+    at assert (file:///home/lem/.t3/worktrees/flowsynth/t3-de769b0b-5f1f9adc92c0d752/docs/evidence/issue-536/revision-2/capture.mjs:13:38)
+    at file:///home/lem/.t3/worktrees/flowsynth/t3-de769b0b-5f1f9adc92c0d752/docs/evidence/issue-536/revision-2/capture.mjs:101:7
+
+Node.js v22.23.4
