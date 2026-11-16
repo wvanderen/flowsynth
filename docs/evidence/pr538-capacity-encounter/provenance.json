@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-16T22:24:11.624Z",
+  "url": "http://localhost:5174",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-1ebb7b59-67bf2a930856196d",
+  "branch": "fix/pr538-capacity-encounter",
+  "commit": "220f0260a592a0bd6df6c4efd5071eeba2ca9d35",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}

@@ -1,5 +1,7 @@
 # #536 — integrated Encyclopedia acceptance / parent #532 completion mapping
 
+> **PR #538 capacity-encounter recovery:** source `220f0260` changes initial desktop Chords availability and moves encounter updates inside the shared layout batch. [The recovery record](../pr538-capacity-encounter/README.md) owns the finding mapping, current full-suite results and narrow regenerated desktop/phone captures. The earlier source/suite and affected opening-availability evidence below are superseded, not current-source acceptance; the rest of the integrated evidence is not relabeled as revalidated. Human comprehension and independent visual/accessibility judgments remain blocked.
+
 > **Current recovery revision:** [revision-2/review-resolution.md](revision-2/review-resolution.md) and [revision-2/README.md](revision-2/README.md). Source freeze **c9cd0d075bbdb9d18e3db642c27513c4d2150d2b** supersedes the 30274459 freeze below. All root-level suite logs, captures and browser observations are retained **superseded history**, not current-source evidence. The original source-review claim of no defect was disproved by final review: ID-only snapshots missed `.modal-face`; the old U-sections assertion used a non-scroller. New mappings below replace that invalid claim. Human comprehension and independent visual/layout acceptance remain unavailable, not passed.
 
 ## Identity, scope and disposition
