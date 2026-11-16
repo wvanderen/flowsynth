@@ -5,14 +5,34 @@ import { createModule } from "../engine/state";
 import { startSession } from "../engine/actions";
 import { advance } from "../engine/advance";
 import type { App } from "./app";
-import { createAppFixture } from "./testing/app-fixture";
+import { createAppFixture, setAppWidth } from "./testing/app-fixture";
 const fixture = createAppFixture();
 let app: App;
 const button = (name: string) => [...document.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent?.trim() === name)!;
 const door = () => document.querySelector<HTMLButtonElement>('[aria-label="Encyclopedia"]')!;
-beforeEach(() => { localStorage.clear(); app = fixture.boot(); });
+beforeEach(() => { localStorage.clear(); app = fixture.boot(); setAppWidth(390); app.hardReset(); });
 afterEach(() => fixture.release());
 describe("voluntary Encyclopedia", () => {
+  it("offers chords before opening a panel when desktop capacity is visible, but waits on phone", () => {
+    expect(app.state.encyclopedia.chords).toBeUndefined();
+    expect(app.ui.modal).toBeNull();
+    setAppWidth(1200);
+    app.hardReset();
+    expect(document.querySelector("#board-ledger .ledger-capacity")?.textContent).toContain("Harmonic capacity");
+    expect(app.state.capacityBought).toBe(0);
+    expect(app.state.encyclopedia.chords).toBe("available");
+    expect(app.ui.modal).toBeNull();
+    door().click();
+    expect(button("Chords and harmonic capacity · Unseen")).toBeDefined();
+    app.closeModal();
+    setAppWidth(390);
+    app.render();
+    expect(app.state.encyclopedia.chords).toBe("available");
+    app.hardReset();
+    expect(app.state.encyclopedia.chords).toBeUndefined();
+    app.openLedger("capacity");
+    expect(app.state.encyclopedia.chords).toBe("available");
+  });
   it("preserves mixed three-topic knowledge across legacy import, repeated loading, real prestige and a full restart", () => {
     // Approved save seam establishes an existing player's mixed reading state.
     const legacy = JSON.parse(serialize(app.state));

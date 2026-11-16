@@ -12,8 +12,8 @@ import { playthroughCheckpointPreset } from "../engine/playthrough";
 const AFTER_FIRST_BANK_CLAIM = playthroughCheckpointPreset("after-first-bank").record.claims[0]!;
 import { createInitialState as engineInitialState } from "../engine/state";
 // These application expectations include discovery of the always-visible reset.
-const createInitialState = () => ({ ...engineInitialState(), encyclopedia: { prestige: "available" as const } });
-const createFocusScenarioState = (now: number) => ({ ...engineFocusState(now), encyclopedia: { prestige: "available" as const } });
+const createInitialState = () => ({ ...engineInitialState(), encyclopedia: { chords: "available" as const, prestige: "available" as const } });
+const createFocusScenarioState = (now: number) => ({ ...engineFocusState(now), encyclopedia: { chords: "available" as const, prestige: "available" as const } });
 import { addPracticeLog, createHabit } from "../engine/habits";
 import { activeGoalOf, deleteGoal } from "../engine/goals";
 
@@ -261,7 +261,7 @@ describe("the launch command", () => {
       const expected = scenarioOf(id)!.build(t);
       // Installing an already charge-bearing, multi-voice collection is a
       // meaningful encounter; the ambient reset is visible in every scenario.
-      expected.encyclopedia = id === "fresh-start" ? { prestige: "available" } : { charge: "available", chords: "available", prestige: "available" };
+      expected.encyclopedia = id === "fresh-start" ? { chords: "available", prestige: "available" } : { charge: "available", chords: "available", prestige: "available" };
       expect(app.state).toEqual(expected);
       expect(app.devScenarioNote).toContain("✓");
       expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");

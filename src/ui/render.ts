@@ -119,6 +119,7 @@ export function render(app: App): void {
   const devStage = app.dev ? devStageBox() : null;
   beginLayoutPass();
   try {
+    app.refreshEncyclopediaEncounters();
     // One rate computation per pass, both bases (§7): the display basis —
     // live during flow, projected build rate while arranging — and the
     // charge-projected basis the panels, bloom, and countdowns preview.

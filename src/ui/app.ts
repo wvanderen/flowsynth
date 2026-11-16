@@ -64,6 +64,7 @@ import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
 import { applyBreatherGap, applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
 import { availableEntries, encounterEntries, type EntryId } from "../engine/encyclopedia";
+import { isPhoneWidth } from "./container";
 import { createInitialState, createModule, createWeapon, createWorldColumn } from "../engine/state";
 import { SCENARIOS, scenarioOf, type ScenarioDescriptor } from "../engine/scenarios";
 import {
@@ -4111,14 +4112,17 @@ export class App {
     if (document.title !== title) document.title = title;
   }
 
-  render(): void {
-    if (this.released) return;
+  refreshEncyclopediaEncounters(): void {
     // Actual visible charge-bearing inspections and the starter shelf count
     // as encounters even when their purchases are unaffordable.
     const inspected = this.state.modules.find(module => module.id === this.ui.inventory.inspect || (this.ui.detail && module.pos && sameHex(module.pos, this.ui.detail.pos)));
-    if (encounterEntries(this.state, { prestigeVisible: true, capacityVisible: this.ui.modal === "catalog" || this.ui.modal === "rate" || this.ui.modal === "library", starterShelfVisible: this.ui.modal === "catalog" && this.ui.catalogFace === "nous", chargeMeterVisible: this.ui.modal === "forge", inspectedType: inspected?.type })) this.save();
+    if (encounterEntries(this.state, { prestigeVisible: true, capacityVisible: !isPhoneWidth() || this.ui.modal === "catalog" || this.ui.modal === "rate" || this.ui.modal === "library", starterShelfVisible: this.ui.modal === "catalog" && this.ui.catalogFace === "nous", chargeMeterVisible: this.ui.modal === "forge", inspectedType: inspected?.type })) this.save();
     const dot = document.querySelector<HTMLElement>("#console-encyclopedia .encyclopedia-dot");
     if (dot) dot.hidden = !availableEntries(this.state).some(entry => this.state.encyclopedia[entry.id] === "available");
+  }
+
+  render(): void {
+    if (this.released) return;
     render(this);
     this.sweepListeners();
     this.syncTitle();
