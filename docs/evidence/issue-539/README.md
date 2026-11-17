@@ -1,6 +1,6 @@
 # Issue #539 — Hex navigation and shortcut discovery
 
-**Current offered source: `fbdb8ab3`.** The refinement acceptance below supersedes the historical blocked preview-service attempt. Chrome DevTools CLI desktop and phone captures now exist and have been visually inspected.
+**Current offered source: `4889ffc1`.** The ownership-visibility acceptance below supersedes the earlier navigator appearance; the refinement acceptance supersedes the historical blocked preview-service attempt. Chrome DevTools CLI desktop and phone captures now exist and have been visually inspected.
 
 Spec: https://github.com/wvanderen/flowsynth/issues/539
 
@@ -88,3 +88,17 @@ Visually inspected `refinement-desktop.png`, `refinement-desktop-hover.png`, `re
 Limitations: touch is Chrome mobile/touch emulation, not a physical handset; no physical-device or pinch-gesture claim. The old preview-service unavailable record remains historical, not current evidence. The first failing phone capture was discarded and regenerated after the source fix.
 
 **Final evidence gate:** current issue criteria and owner amendments map to the named tests and reviewed captures above. Accepted in-thread at `fbdb8ab3`; no remaining implementation or browser-evidence blocker identified.
+
+## Resting ownership visibility — 4889ffc1
+
+Owner feedback: ownership was not apparent on touch without hover. Expanded navigator now renders owned cells with a persistent neutral fill and solid muted-ink outline; unowned context has faint dashed outlines. Selection retains a stronger white outline and a brighter selected fill. The compact desktop map is intentionally unchanged.
+
+Preliminary in-thread source/spec review before freeze: checked selector scoping to `.context-overview`, contrast/state hierarchy at rest, dashed-versus-solid non-color distinction, selected-rule specificity and unchanged navigation behavior. No source findings; no independent reviewer. Targeted `hexdetail.test.ts` passed 63 cases before freeze. Its phone-selection case now asserts one owned face per owned cell and persistent owned/unowned/selected styling independent of hover.
+
+At source freeze `4889ffc1`: `npm run check` passed; `npm test` passed 136 files / 2,428 tests, 9 skipped (238.33s). New suite results supersede prior revision's results. No engine/calendar changes.
+
+Evidence: `ownership-provenance.json` verifies clean source and this checkout. Chrome DevTools CLI page 2, closed afterward; desktop 1280×800 and phone 390×844 mobile/touch emulation, reduced-motion reduce. Setup: `app.devLaunchScenario('fresh-start'); app.openDetail({q:0,r:0},'modules')`, hide development console only, then tap-equivalent activation of `.ctx-touch` on phone. No pointer hover was used to establish ownership styling. `ownership-states.json` records resting computed styles. Visually read `ownership-phone.png`: the three owned cells are clearly solid outlined against the faint dashed surrounding grid; selected current cell retains the strongest white perimeter. Visually read `ownership-desktop.png`: compact map remains unchanged and navigator opener is absent (`display:none`).
+
+Mapping: resting touch ownership → phone capture + computed styles + named phone-selection test; non-color distinction → solid/filled versus dashed state in capture; selection preserved → existing navigation assertions and stronger selected CSS; desktop non-regression → desktop capture and scoped CSS. Prior `refinement-phone-navigator.png` is historical and superseded for ownership appearance by `ownership-phone.png`, not relabeled. Earlier interaction checks remain historical; the current full suite re-verifies selection and confirmation behavior.
+
+Final in-thread acceptance at `4889ffc1`: requested ownership signal is visible at rest without hover, selection remains distinct, and no source/evidence blocker identified. Touch remains emulated, not a physical-device claim.
