@@ -1,0 +1,61 @@
+uid=3_0 RootWebArea "FlowSynth" url="http://localhost:5173/?dev=1"
+  uid=3_1 heading "FlowSynth" level="1"
+  uid=3_2 banner
+    uid=3_3 image "FlowSynth"
+    uid=3_4 "FlowSynth"
+    uid=3_5 status atomic live="polite" relevant="additions text"
+      uid=3_6 "Upgrade mode"
+    uid=3_7 button "Pause" disableable disabled
+    uid=3_8 button "Focus controls, none selected, --:-- open-ended" description="Opens the Focus sheet" expandable
+    uid=3_9 button "Notes" description="Notes app"
+    uid=3_10 button "Enter flow" description="The board locks and runs itself"
+    uid=3_11 button "Encyclopedia"
+    uid=3_12 button "Settings" description="Settings — session start, sound, save data, import / export, reset"
+  uid=3_13 main
+    uid=3_14 button "Open ledger"
+    uid=3_15 "+2 Arete pending"
+    uid=3_16 button "Reset era"
+    uid=3_17 button "Feats" description="Feats — the full list, and how close the next one is"
+    uid=3_18 button "Chords" description="Chord library — the field guide of chord classes"
+    uid=3_19 button "Catalog" description="Catalog — the nous shop and the Arete catalog" expandable
+    uid=3_20 button "Forge" description="Forge progress 0 / 60 — charged by deployed Forges" expandable
+    uid=3_21 button "Add" description="Add — cell purchases live on the Modules face" disableable disabled expandable
+    uid=3_22 button "RETURN"
+    uid=3_23 navigation "Hex layer"
+      uid=3_24 button "World layer" description="Charge Blade · place beside a Column to feed · BLADE · UNFED ⌁0/30 ATK 4"
+      uid=3_25 button "Modules layer" description="Sine · Lv. 0 · +0.1 ν/s" pressed
+    uid=3_26 region "Modules — Sine at C4"
+      uid=3_27 button "Emphasize the Modules face" description="Sine · common · Tier I · level 0 · +0.1 ν/s · sings C4" pressed
+      uid=3_28 button "Incoming charge — none now — open the breakdown" description="Incoming charge ⌁0 Base output 0.1 ν/s Host power ×1 Chord factor ×1 Booster uplift ×1 Charged empowerment ×1 Achievement bonus ×1 Discovery bonus ×1 Final output +0.1 ν/s" expandable
+      uid=3_29 button "Chord bonus — none now — open the breakdown" description="inert · no chord Base output 0.1 ν/s Host power ×1 Booster uplift ×1 Charged empowerment ×1 Achievement bonus ×1 Discovery bonus ×1 Final output +0.1 ν/s" expandable
+    uid=3_30 button "×1" description="Buy 1 levels" pressed
+    uid=3_31 button "×5" description="Buy 5 levels"
+    uid=3_32 button "×10" description="Buy 10 levels"
+    uid=3_33 button "MAX·1" description="Buy every affordable level (1)"
+    uid=3_34 button "Upgrade ×1 · 10 ν +0.02 ν/s" description="Buy 1 level"
+    uid=3_35 complementary "Details at C4"
+      uid=3_36 button "Open the Hex detail at C5 · 0,1"
+      uid=3_37 button "Open the Hex detail at G4 · 1,0"
+      uid=3_38 "PROFILE"
+      uid=3_39 "BASE"
+      uid=3_40 "×1 (A)"
+      uid=3_41 "BOOST"
+      uid=3_42 "×0.5 (C)"
+      uid=3_43 "CHORD"
+      uid=3_44 "×1 (B)"
+      uid=3_45 "CHARGE"
+      uid=3_46 "×1 (B)"
+      uid=3_47 "BREATH"
+      uid=3_48 "—"
+      uid=3_49 button "About charge"
+      uid=3_50 "CHORD FACTS"
+      uid=3_51 "HARMONIC CAPACITY"
+      uid=3_52 "0/1"
+      uid=3_53 "FACTOR"
+      uid=3_54 "×1"
+      uid=3_55 button "About chords"
+    uid=3_56 button "Collapse tray, 2 stored" expandable expanded
+    uid=3_57 button "Inspect Charge Blade · ⌁0/30 · ATK 4"
+    uid=3_58 button "Inspect Charge Column"
+  uid=3_59 status atomic live="polite" relevant="additions text"
+    uid=3_60 "Dev: World era granted — the second face stands."

@@ -1,0 +1,27 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-17T22:01:37.662Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "integration/532-encyclopedia",
+  "commit": "fbdb8ab36f5a6af7f4ce6bae321b8f132a55c9d9",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-539/refinement-desktop.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-539/refinement-phone.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-539/refinement-provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

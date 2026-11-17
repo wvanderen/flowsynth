@@ -1,5 +1,7 @@
 # Issue #539 — Hex navigation and shortcut discovery
 
+**Current offered source: `fbdb8ab3`.** The refinement acceptance below supersedes the historical blocked preview-service attempt. Chrome DevTools CLI desktop and phone captures now exist and have been visually inspected.
+
 Spec: https://github.com/wvanderen/flowsynth/issues/539
 
 ## Preliminary source/spec gate
@@ -47,3 +49,42 @@ Desktop resize: three requests for 1280×800 returned a requested setting of 128
 ## Final evidence gate
 
 All automated criteria pass at the offered revision. The source fixes and tests are complete, but final acceptance remains **blocked** by unavailable desktop/phone visual and accessibility evidence. No scope waiver has been requested or assumed. Keep #539 open until a functioning browser can capture and judge these surfaces against the instrument standards. Evidence-only updates do not change the offered source revision.
+
+---
+
+## Owner-feedback refinement — current completion record
+
+Owner amendment: https://github.com/wvanderen/flowsynth/issues/539#issuecomment-6961974678. Actual occupant miniatures replace generic layer symbols, clear of the charge wave; mobile opens the navigator by tapping the map, selects before navigating, has no cell list, and exposes Navigate / Navigate & close. Desktop retains direct mini-map navigation without a navigator door.
+
+### Source review, freeze and recovery
+
+In-thread preliminary source/spec pass checked the actual-occupant renderers, existing plain-tooltip wiring, availability gate, reserved wave spacing, desktop/mobile affordance split, selection/confirmation separation, both confirmation paths, Escape/focus lifecycle, and existing zoom/pan behavior. Targeted tests passed before freeze `f2ea3e4e`. No independent reviewer used. The first Chrome phone capture then exposed a real layout blocker: legacy left inset clipped the focus face and Return overlapped the upper preview. Freeze lifted; fixed together by restoring phone sheet width and reserving vertical room for Return, reviewed against those failures, then 109 targeted cases passed and source re-froze at `fbdb8ab3`. All f2ea3e4e suite/provenance/capture evidence is superseded; capture filenames were regenerated at fbdb8ab3, not relabeled.
+
+At `fbdb8ab3`: `npm run check` passed; `npm test` passed 136 files, 2,428 tests, 9 skipped (238.36s). Supported-runtime preflight passed with Node 22.23.4 / America/Chicago / storage roundtrip. No balance or calendar behavior changed.
+
+### Current acceptance mapping
+
+| Criterion | Verification at offered revision | Class |
+| --- | --- | --- |
+| Indigo Upgrade core; other mode semantics remain; text identifies state | `refinement-phone.png`, `refinement-desktop-hover.png`: visible Upgrade mode label and static indigo core; previous unchanged flow/paused selectors retained, current full suite passes | Automated + manual |
+| L cycles available board/detail layers, ignores input/modifiers/modal contexts | `layer-navigation.test.ts`: “gates the shortcut before World discovery and cycles board and detail after discovery”, “does not change layers under Settings and renders every shared binding there”; both `shortcuts.test.ts` cases | Automated |
+| Shared Settings binding reference, no main-UI key badges | Same Settings case; source imports `SHORTCUTS` in handlers, layer tooltips and Settings; current captures carry no shortcut badges | Automated + manual |
+| Actual occupant miniatures with basic name/level/output tooltip | `layer-navigation.test.ts`: “layer previews show the coordinate's real faces and basic facts instead of generic symbols”; `refinement-desktop-hover.png`, `refinement-phone-tooltip.png`, `refinement-touch-tooltip.json` | Automated + manual |
+| One focused face, vertical selector, no charge-wave overlap; actions/inventory preserved | `hexdetail.test.ts` selected-face, selector, World/actions/inventory cases; desktop and phone captures visually inspected. Phone preview right edge x108, charge trigger left x145.09; desktop preview right x340, charge trigger left x364.31 | Automated + manual |
+| Desktop mini-map direct navigation, individual hover/focus, no navigator entry | `layer-navigation.test.ts` direct navigation case; desktop screenshot and `refinement-desktop-interactions.json`; `.ctx-touch` computed display none at 1280×800 | Automated + manual |
+| Mobile map itself opens navigator, no extra button or exhaustive cell list; selected note/coordinates | `refinement-phone-navigator.png`, `refinement-navigator-snapshot.txt`, `refinement-selection-before.json`; `hexdetail.test.ts`: “selects a map destination on phone without a cell list and confirms before navigating” | Automated + manual |
+| Selection does not navigate until confirmation; Navigate stays open; Navigate & close returns | Updated `hexdetail.test.ts` map navigation case; `refinement-selection-before.json`, `refinement-navigation-kept-open.json`, `refinement-navigation-closed.json` exercise actual CLI clicks | Automated + manual |
+| Keyboard/dismissal/focus, touch access, reduced motion, non-color state | `refinement-dismissal-motion.json`, phone touch-emulated CLI activation and tooltip capture; selected layer underline and map outline visible without hue. Chrome emulated prefers-reduced-motion reduce and reported no active named animations. Keyboard cell navigation and Escape exercised | Automated + manual |
+| Final checks and provenance-verified desktop/phone evidence | Check/full-suite results above; `refinement-provenance.json`, screenshots and interaction records listed here | Automated + manual |
+
+### Capture setup and judgment
+
+Used the user-installed `agent-browser` Chrome DevTools CLI with its dedicated Chrome profile, page ID 3 (closed when finished; other pages untouched). URL `http://localhost:5173/?dev=1`; exact checkout/clean source verified by `refinement-provenance.json`. Desktop 1280×800; phone 390×844 with mobile/touch emulation. Both used reduced-motion emulation. Re-seeded after viewport changes because mobile emulation reloads the page.
+
+Reproducible setup: `app.devLaunchScenario('fresh-start'); app.devWorldEra(); app.state.world.weapons[0].pos={q:0,r:0}; app.openDetail({q:0,r:0},'modules')`. The weapon placement is an explicit constructed evidence fixture, not a progression claim. Hid only `#dev-panel` via page style after seeding so development controls do not obscure product UI; collapsed the World tray through its visible Collapse control for the hover capture. No product surface was hidden. Phone map was scrolled into view, then opened by CLI clicking its map-shaped button. Selected G4, verified underlying detail was still C4, clicked Navigate, verified G4 with dialog still open; selected C4 and clicked Navigate & close, verified Return focus. Reopened via focused map, pressed Escape, verified invoker focus restoration.
+
+Visually inspected `refinement-desktop.png`, `refinement-desktop-hover.png`, `refinement-phone.png`, `refinement-phone-tooltip.png`, and `refinement-phone-navigator.png` with the image reader. Selected miniature has a firm underline; real glyphs/face finishes preserve identity; name, level and output appear in the plain tooltip. Preview targets are 72px, not generic 34px symbols. Incoming charge disclosure is visibly separate. Phone face is no longer clipped and Return clears previews. Navigator has a calm map stage, selected note/coordinates, one zoom slider and two explicit confirmation actions; no grid-cell roster. Desktop has no navigator button. Existing rack panels, type hierarchy and state grammar are retained. `refinement-console.txt` / `refinement-network.txt` record browser diagnostics.
+
+Limitations: touch is Chrome mobile/touch emulation, not a physical handset; no physical-device or pinch-gesture claim. The old preview-service unavailable record remains historical, not current evidence. The first failing phone capture was discarded and regenerated after the source fix.
+
+**Final evidence gate:** current issue criteria and owner amendments map to the named tests and reviewed captures above. Accepted in-thread at `fbdb8ab3`; no remaining implementation or browser-evidence blocker identified.
