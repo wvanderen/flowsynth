@@ -1,0 +1,32 @@
+{
+  "sourceCommit": "398a7459",
+  "url": "http://localhost:5173/?dev=1",
+  "setup": ["app.devLaunchScenario('fresh-start')", "app.devWorldEra()", "app.openDetail({q:0,r:0}, 'modules')"],
+  "phoneDomChecks": {
+    "viewport": [390, 844],
+    "bodyScrollWidth": 390,
+    "enlargedFaceCount": 1,
+    "boardEdgeLegendHidden": true,
+    "compactMapDisplay": "flex",
+    "layerButtonsCssSize": [44, 44],
+    "settingsHorizontalOverflow": false,
+    "expandedDialogOpen": true,
+    "expandedDestinationCount": 3,
+    "escapeDismissal": true,
+    "focusedInvokerRestored": true,
+    "miniMapKeyboardNavigation": true,
+    "miniMapFocusStroke": "rgb(233, 234, 232)",
+    "navigationFocusDestination": "hex-detail-return"
+  },
+  "modeChecks": {
+    "note": "Preview produced no animation frames. CSS transitions explicitly finished via document.getAnimations() before reading flow/paused final colors; this is not animation or reduced-motion evidence.",
+    "upgrade": {"fill": "rgb(203, 202, 255)", "status": "Upgrade mode", "coreAnimationName": "none"},
+    "flow": {"fill": "rgb(204, 96, 61)", "status": "Flow active"},
+    "paused": {"fill": "rgb(188, 146, 57)", "status": "Flow paused"}
+  },
+  "unavailable": [
+    "Desktop and phone screenshots / rendered visual judgment: screenshot operation failed three times: Preview automation snapshot failed: The browser is not producing screenshot frames. For a desktop tab, show or restore the T3 Code window and try again.",
+    "Desktop viewport: three preview_resize requests for 1280x800 left live innerWidth/innerHeight at 390x844; status reads between retries confirmed the mismatch.",
+    "Physical touch gestures, rendered hover appearance, and reduced-motion emulation were not verified. DOM click/keyboard checks are not substitutes."
+  ]
+}

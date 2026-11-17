@@ -1,0 +1,19 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-17T19:11:40.469Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "integration/532-encyclopedia",
+  "commit": "398a74598d83f5f3014c2ac5bad83f8635500bbf",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-539/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

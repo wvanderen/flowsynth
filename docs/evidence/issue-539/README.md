@@ -28,4 +28,22 @@ Second source pass: shared builder, mode lamp, shortcut handler/reference, disco
 
 ## Final evidence
 
-Pending source freeze. No balance or calendar behavior changed; no balance/playthrough or calendar recording required by this issue.
+Offered source revision: `398a7459` (following original freeze `c6d4b4fe`). The first full run was interrupted by its 200-second command limit; the next completed run exposed a heading-outline defect and a stale phone-selector regression. Freeze lifted, fixes batched and reviewed: Settings uses an h2 section under the existing h1 identity; the identity test scopes its no-duplicate-heading assertion to the modal top; the phone regression uses the visible detail selector. Targeted rerun: 164/164 passing. Original suite results and original provenance are superseded, not carried forward.
+
+At `398a7459`:
+- `npm run check`: passed typecheck and recorder static gate.
+- `npm test`: 136 files passed; 2,427 tests passed, 9 skipped. Completed in 231.84 seconds. No calendar-adjacent or balance behavior changed; no calendar/balance/playthrough recording owed.
+- Capture preflight: accepted exact checkout/commit with clean source; see [provenance.json](provenance.json).
+- Live phone DOM checks and mode readings: [browser-checks.json](browser-checks.json). One enlarged face, hidden board-edge legend, 44px CSS selector targets, visible compact map, keyboard cell navigation with Return focus, explicit expanded dialog, Escape and focused-invoker restoration, Settings reference without horizontal overflow. Mode colors: indigo Upgrade, vermillion Flow, amber Paused; readable status retained. Because preview did not advance frames, final flow/paused colors were read after explicitly finishing CSS transitions; this does not verify motion.
+
+### Browser failure and bounded recovery
+
+Phone snapshot at 390×844 failed with: `Preview automation snapshot failed: The browser is not producing screenshot frames. For a desktop tab, show or restore the T3 Code window and try again.` Health check verified server provenance. Status: available, loaded, dialog-free, correct URL, initially not visible. Activated same tab; second snapshot failed identically. Status then reported visible; third snapshot still failed identically. Three-attempt snapshot budget exhausted. No screenshots were produced.
+
+Desktop resize: three requests for 1280×800 returned a requested setting of 1280×800 but an actual viewport of 390×844. Intervening status and live `innerWidth/innerHeight` reads confirmed the mismatch. Resize budget exhausted. No desktop layout check is claimed.
+
+**Unavailable:** desktop/phone screenshots and rendered judgment; desktop viewport composition; physical touch gesture validation; rendered hover appearance; reduced-motion emulation. DOM checks are not visual/touch evidence. Breather color is unchanged source but was not separately exercised in this browser pass.
+
+## Final evidence gate
+
+All automated criteria pass at the offered revision. The source fixes and tests are complete, but final acceptance remains **blocked** by unavailable desktop/phone visual and accessibility evidence. No scope waiver has been requested or assumed. Keep #539 open until a functioning browser can capture and judge these surfaces against the instrument standards. Evidence-only updates do not change the offered source revision.
