@@ -602,7 +602,9 @@ describe("the small-screen composition (issue #389)", () => {
     s.mutatorSlots = [hex(0, 0)];
     s.mutators = [{ id: "mu1", family: "power", rarity: "common", pos: hex(0, 0) }];
     app.render();
-    const legend = () => document.getElementById("layer-legend")!;
+    const legend = () => app.ui.detail
+      ? document.querySelector<HTMLElement>("#hex-detail .hex-detail-layers")!
+      : document.getElementById("layer-legend")!;
     // The grid: the strip is the one layer switch.
     expect(legend().hidden).toBe(false);
     legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();

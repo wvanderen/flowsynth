@@ -4583,7 +4583,7 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
 #grid { touch-action: none; }
 .tool-icon .tool-badge { border: 0; background: transparent; color: var(--ink); padding: 0; }
 .settings-shortcuts { margin-top: 20px; }
-.settings-shortcuts h3 { font: 600 13px var(--font-condensed); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+.settings-shortcuts h2 { font: 600 13px var(--font-condensed); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
 .settings-shortcuts dd { margin: 0; }
 .ctx-open-navigator { font-size: 12px; min-height: 44px; }
 .hex-detail-focus { display: grid; grid-template-columns: 44px var(--detail-hex); align-items: center; gap: 16px; width: calc(var(--detail-hex) + 60px); max-width: 100%; }

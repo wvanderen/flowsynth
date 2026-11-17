@@ -589,7 +589,8 @@ describe("the settings readout stack (§5, issue #280)", () => {
     const title = document.getElementById("modal-title")!;
     expect(title.textContent).toBe("SETTINGS");
     expect(title.classList.contains("eyebrow")).toBe(true);
-    expect(content.querySelector("h2")).toBeNull();
+    expect(content.querySelector(".modal-top h2")).toBeNull();
+    expect(content.querySelector("#settings-shortcuts-title")?.textContent).toBe("Keyboard shortcuts");
     expect(content.textContent).not.toContain("PREFERENCES");
   });
 
