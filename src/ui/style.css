@@ -4605,9 +4605,11 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
   .ctx-touch svg { pointer-events: none; }
 }
 @container app (width < 600px) {
-  .hex-detail { --detail-hex: 170px; }
+  .hex-detail, .hex-detail.sheet { --detail-hex: 170px; }
   .hex-detail-focus { gap: 76px; width: calc(var(--detail-hex) + 148px); }
   .hex-detail-scene .hex-detail-grid { grid-template-columns: minmax(0, 1fr); }
+  .hex-detail.sheet { left: 8px; }
+  .hex-detail.sheet .hex-detail-grid { padding-top: 60px; }
 }
 .context-overview { width: min(760px, calc(100% - 24px)); max-height: 88dvh; padding: 1px; border: 0; background: var(--line-strong); color: var(--ink); clip-path: var(--inst-clip); overflow: hidden; }
 .context-overview::backdrop { background: var(--scrim); }
