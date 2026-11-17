@@ -123,7 +123,7 @@ export function contextMapSvg(state: GameState, pos: Hex, module: ModuleInstance
     const isOpened = cell.q === pos.q && cell.r === pos.r;
     const resident = occupied.get(key);
     const hexAttrs = `class="ctx-cell${owned ? " owned" : ""}" points="${hexPoints(cellRadius)}"`;
-    if (owned && !isOpened && expanded) {
+    if (owned && !isOpened) {
       // The owned cell is the map's one navigation: a button in the
       // board grid's own SVG grammar, opening that coordinate's detail.
       board += `<g class="ctx-cell-node" data-ctx-cell="${cell.q},${cell.r}" tabindex="0" role="button" aria-label="Open the Hex detail at ${cellNoteOf(cell)}"><polygon ${hexAttrs} transform="translate(${px(ax)} ${px(ay)})"/>${resident ? `<circle class="ctx-dot" style="fill:var(--${HUE_TOKEN_OF[resident.type]})" cx="${px(ax)}" cy="${px(ay)}" r="${Math.max(1.6, cellRadius * 0.16).toFixed(2)}"/>` : ""}</g>`;
@@ -137,7 +137,7 @@ export function contextMapSvg(state: GameState, pos: Hex, module: ModuleInstance
   const [ox, oy] = at(boardPoint(pos)[0], boardPoint(pos)[1]);
   const marker = `<polygon class="ctx-opened" points="${hexPoints(cellRadius)}" transform="translate(${px(ox)} ${px(oy)})"/>`;
   const svg = `<svg class="ctx-map" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="group" aria-label="Context map — the opened hex, its active chords, and the owned board">${board}${chords}${marker}</svg>`;
-  return expanded ? svg : `<button class="ctx-expand" data-context-expand aria-label="Expand context map">${svg}</button>`;
+  return expanded ? svg : `<div class="ctx-navigation">${svg}<button class="ctx-open-navigator" data-context-expand>Open navigator</button></div>`;
 }
 
 export function openContextMap(app: App, marks: ChordMark[]): void {

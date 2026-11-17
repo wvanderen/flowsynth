@@ -144,3 +144,9 @@ The confirmed [flow-control/header brief](flow-control-header-brief.md) replaces
 ## Phone header trial — 2026-10-22
 
 The user requested a two-row phone layout after reviewing the compact implementation. Below 600px, the first row carries logo, FlowSynth with mode status, and Settings; the second carries Pause/Resume, the clock/Notes well, and the labeled main action. The wordmark and status now fit within the header. This supersedes the single-row phone constraint and below-header status fallback on phones only; desktop and intermediate-width presentation remain unchanged. Session behavior and the clipped vermillion action remain unchanged.
+
+## Hex navigation and Upgrade lamp amendment — issue #539
+
+Owner-confirmed: Hex detail shows one enlarged selected-layer face, with the shared vertical layer selector beside it instead of the stacked other-layer thumbnail. The horizontal context mini-map navigates owned cells directly with per-cell hover/focus, not a whole-map hover surface. An explicit Open navigator door retains expanded pan/zoom and touch-sized destinations; these controls do not appear in the compact map. The board-edge selector is hidden while detail owns layer navigation.
+
+The logo core wears steady indigo in Upgrade mode, paired with its readable mode status; no Upgrade glow or pulse. Other mode states remain unchanged. L cycles available layers outside typing and modal contexts. Main UI carries no key badges; existing layer tooltips may name the shortcut, and Settings owns a read-only reference generated from the handler bindings.

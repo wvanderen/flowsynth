@@ -1,35 +1,10 @@
 import { tierPowerOf } from "../engine/module-strength";
-// The Hex detail (issue #295): the module bloom's successor — an owned
-// board coordinate's full-stack cross-section, standing where the grid
-// stood, at every width. The presentation is the instrument metaphor, not
-// a panel of cards: the cell's column lifted toward the camera, frameless
-// at stage center. The composition (ADR-0072) has three posts. The stack:
-// the World face above the Modules face, both visible always, one
-// layer in focus — the focused face full-size at full engraving, the
-// other an identity thumbnail (chassis, state marks; its text engraving
-// yields, the words and figures riding tooltip and details column). The
-// action rail: one row below the stack, its contents following the
-// focused face — the upgrade dial and button under Modules, the occupant's
-// retrieve and target priority under World. The details column: the
-// standing facts in open sections — the context map heading it (the whole
-// in-range board in miniature, the opened hex in the firm selected
-// marker, its active chords in their hues), then profile grades, chord
-// facts (issue #388: active chips inline, idle candidates behind one N
-// idle disclosure), and the World line. The wave connections keep their
-// posts (issue #297): the incoming charge and the chord bonus at the
-// module face's vertices, their breakdowns riding their disclosures
-// (hexflows.ts) — the column holds standing facts, not opened math.
-// Global destinations (Catalog, Forge) belong to the surrounding
-// navigation — the dock doors and the legend — never repeated buttons
-// here; a compact floating Return control and the flow tag ride the
-// corner. Nothing else: the deeper mechanics ride the tooltip layer
-// (issue #267's inst-tip).
-//
-// The face selection emphasizes one section, focuses its control, and
-// synchronizes the vertical layer legend without ever reordering.
-// Editing lives in upgrade mode only: during flow the same cross-section
-// opens read-only, its readouts live, its controls gone — the click still
-// answers the lock.
+// Hex detail (#295, composition amended by #539): one enlarged selected
+// face beside the shared vertical layer selector, its actions below, and
+// the horizontal context map heading the standing facts. Relationship
+// waves keep their face vertices; inventory overlays without reflow.
+// Layer changes synchronize the return layer and focus the new face.
+// Editing remains upgrade-only; live sessions inspect the same readouts.
 import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, displayedRates, flowLive, hostPower, isPriceableLevel, isResponseSupport, levelCost, levelsCost, responseSupportPowerOf, wholeNous } from "../engine/economy";
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
@@ -40,7 +15,7 @@ import type { App, DetailFace } from "./app";
 import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead, spotlightInactiveVerdict } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
-import { worldEntered, bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
+import { layerLegendHtml, worldEntered, bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
 import { COLUMN_WORD, META, RARITY_LABEL, WORLD_META, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
@@ -262,7 +237,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   // write; the new stack restores that captured position.
   const focused = document.activeElement;
   const focusAttribute = focused instanceof Element && host.contains(focused)
-    ? ["id", "data-ctx-cell", "data-ctx-navigation", "data-detail-face", "data-bulk", "data-shift", "data-target", "aria-describedby"]
+    ? ["id", "data-ctx-cell", "data-ctx-navigation", "data-legend-layer", "data-detail-face", "data-bulk", "data-shift", "data-target", "aria-describedby"]
         .find((attribute) => focused.hasAttribute(attribute))
     : undefined;
   const focusValue = focusAttribute ? focused!.getAttribute(focusAttribute) : null;
@@ -279,8 +254,10 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       </div>
       <div class="hex-detail-grid">
         <div class="hex-detail-stack">
-          ${worldEntered(state) ? worldLayerHtml(app, pos, snapshot) : ""}
-          ${moduleLayerHtml(app, pos, module, snapshot)}
+          <div class="hex-detail-focus">
+            <nav class="hex-detail-layers" aria-label="Hex layer">${layerLegendHtml(app)}</nav>
+            ${detail.face === "world" && worldEntered(state) ? worldLayerHtml(app, pos, snapshot) : moduleLayerHtml(app, pos, module, snapshot)}
+          </div>
           ${actionRailHtml(app, pos, module)}
         </div>
         ${detailColumnHtml(app, pos, module, chordRow)}
@@ -293,6 +270,20 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   host.querySelectorAll<HTMLElement>("[data-detail-face]").forEach((chassis) => {
     const face = chassis.getAttribute("data-detail-face") as DetailFace;
     app.listen(chassis, "click", () => app.detailFace(face));
+  });
+  host.querySelectorAll<HTMLElement>("[data-legend-layer]").forEach(button => {
+    app.listen(button, "click", () => app.detailFace(button.dataset.legendLayer as DetailFace));
+  });
+  host.querySelectorAll<SVGElement>("[data-ctx-cell]").forEach(cell => {
+    const navigate = () => {
+      const [q, r] = cell.dataset.ctxCell!.split(",").map(Number);
+      app.openDetail({ q: q!, r: r! }, detail.face);
+      document.getElementById("hex-detail-return")?.focus();
+    };
+    app.listen(cell, "click", navigate);
+    app.listen(cell, "keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); navigate(); }
+    });
   });
   app.listen(host.querySelector("[data-context-expand]"), "click", () => {
     openContextMap(app, chordRow.marks);

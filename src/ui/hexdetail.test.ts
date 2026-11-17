@@ -189,18 +189,20 @@ describe("opening the cross-section (issue #295)", () => {
     expect(modules.querySelector("#detail-upgrade")).toBeNull();
   });
 
-  it("the fixed stack shows both faces, World above Modules, never reordered", () => {
+  it("shows only the selected enlarged face beside the shared vertical selector", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
     const faces = sections().map((node) => node.classList.contains("world") ? "world" : "modules");
-    expect(faces).toEqual(["world", "modules"]);
+    expect(faces).toEqual(["modules"]);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
+    expect(detail().querySelectorAll(".hex-detail-layers button")).toHaveLength(2);
     // Selecting the Modules face changes emphasis without reordering.
     document.querySelector<HTMLButtonElement>('[data-detail-face="modules"]')!.click();
     const after = sections().map((node) => node.classList.contains("world") ? "world" : "modules");
-    expect(after).toEqual(["world", "modules"]);
+    expect(after).toEqual(["modules"]);
     expect(section("modules").classList.contains("selected")).toBe(true);
-    expect(section("world").classList.contains("selected")).toBe(false);
+    expect(section("world")).toBeNull();
   });
 
   it("a face selection emphasizes its section, focuses its control, and syncs the legend", () => {
@@ -208,14 +210,14 @@ describe("opening the cross-section (issue #295)", () => {
     app.render();
     clickCell(0, 0);
     // The legend opens synchronized with the click's layer.
-    const legend = () => document.getElementById("layer-legend")!;
+    const legend = () => detail().querySelector<HTMLElement>(".hex-detail-layers")!;
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(true);
     // Selecting the World face through the legend moves emphasis, the
     // marker, and the focus.
     legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
     expect(app.ui.detail!.face).toBe("world");
     expect(section("world").classList.contains("selected")).toBe(true);
-    expect(section("modules").classList.contains("selected")).toBe(false);
+    expect(section("modules")).toBeNull();
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(false);
     expect(document.activeElement).toBe(section("world").querySelector("[data-detail-face]"));
@@ -223,11 +225,11 @@ describe("opening the cross-section (issue #295)", () => {
     // lands on the face the player last read.
     expect(app.ui.boardLayer).toBe("world");
     // A face's own chassis selects too.
-    document.querySelector<HTMLButtonElement>('[data-detail-face="modules"]')!.click();
+    detail().querySelector<HTMLButtonElement>('[data-legend-layer="modules"]')!.click();
     expect(app.ui.detail!.face).toBe("modules");
   });
 
-  it("the emphasized face wears the firm inset marker; the other stays present, dimmed", () => {
+  it("the selected face and layer selector carry non-color state markers", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
@@ -235,7 +237,8 @@ describe("opening the cross-section (issue #295)", () => {
     // readable without color — and the stylesheet shows it on the
     // emphasized layer only.
     expect(section("modules").querySelector(".hex-stack-marker")).not.toBeNull();
-    expect(section("world").querySelector(".hex-stack-marker")).not.toBeNull();
+    expect(section("world")).toBeNull();
+    expect(detail().querySelector('[data-legend-layer="modules"]')!.getAttribute("aria-pressed")).toBe("true");
     const css = readFileSync("src/ui/style.css", "utf8");
     expect(css).toMatch(/\.hex-detail-layer\.selected \.hex-stack-marker[^{]*\{[^}]*display:\s*block/);
     expect(css).toMatch(/\.hex-stack-marker[^{]*\{[^}]*display:\s*none/);
@@ -267,12 +270,12 @@ describe("the World face in detail", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
+    app.detailFace("world");
     // The opening cell (0,0) is open space — the quiet dashed plate; the
     // enemy position w0 sits reserved off the owned patch.
     expect(section("world").querySelector(".world-plate.open")).not.toBeNull();
     // The tooltip carries the state's one line.
-    const tip = section("world").querySelector(".inst-tip-body")!;
-    expect(tip.textContent).toContain("Open World cell");
+    expect(worldTip()).toContain("Open World cell");
   });
 
   it("a weapon's enlarged face carries its stores, its routing, and the target priority rail", () => {
@@ -761,19 +764,18 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(document.getElementById("layer-legend")!.hidden).toBe(false);
     clickCell(0, 0);
     expect(open()).toBe(true);
-    // The stack still shows both faces in the fixed order, read-only, and
-    // the legend stands beside it — the session's shared switch.
-    expect(sections()).toHaveLength(2);
-    expect(sections()[0].classList.contains("world")).toBe(true);
+    // One read-only face stands beside the detail's shared selector.
+    expect(sections()).toHaveLength(1);
+    expect(sections()[0].classList.contains("modules")).toBe(true);
     expect(detail().querySelector(".hex-detail-readonly")).not.toBeNull();
-    const legend = document.getElementById("layer-legend")!;
+    const legend = detail().querySelector<HTMLElement>(".hex-detail-layers")!;
     expect(legend.querySelector('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(true);
     // The legend emphasizes the face without reordering the stack.
     legend.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
     expect(app.ui.detail!.face).toBe("world");
     expect(section("world").classList.contains("selected")).toBe(true);
-    expect(legend.querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
-    expect(sections()).toHaveLength(2);
+    expect(detail().querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
+    expect(sections()).toHaveLength(1);
     expect(sections()[0].classList.contains("world")).toBe(true);
     // The grid's layer followed the emphasis: the return lands where the
     // player read, the World layer standing read-only.
@@ -849,7 +851,7 @@ describe("the phone face (issue #295)", () => {
     const css = readFileSync("src/ui/style.css", "utf8");
     const reflow = css.match(/@container app \(width < 1000px\) \{[\s\S]*?\n\}/g)!.find((block) => block.includes(".hex-detail-side"));
     expect(reflow).toBeTruthy();
-    expect(reflow).toMatch(/grid-template-columns:\s*minmax\(0,\s*var\(--detail-hex\)\)/);
+    expect(reflow).toMatch(/grid-template-columns:\s*minmax\(0,\s*calc\(var\(--detail-hex\) \+ 60px\)\)/);
     expect(reflow).toMatch(/\.hex-detail-side\s*\{[^}]*width:\s*100%/);
     setAppWidth(1200);
   });

@@ -410,6 +410,7 @@ h1, h2, h3, p { margin: 0; }
 .console[data-mode="flow"] #console-logo svg {
   filter: drop-shadow(0 0 7px color-mix(in srgb, var(--switch) 55%, transparent));
 }
+.console[data-mode="upgrade"] #console-logo .brand-core { fill: var(--accent); }
 .console[data-mode="paused"] #console-logo .brand-core { fill: var(--habit-amber); }
 .console[data-mode="breather"] #console-logo .brand-core { fill: var(--charge); }
 .console[data-mode="paused"] .session-strip > span { background: var(--habit-amber); }
@@ -2391,11 +2392,7 @@ body.hex-detail-open .upgrade-all {
 /* The context map (ADR-0072): the miniature heading the column — the
    opened hex in the firm selected marker, its active chords as hue links
    between their voices, owned cells navigating on click / Enter / Space. */
-.ctx-navigation { display: none; }
-@media (pointer: coarse), (max-width: 700px) {
-  .ctx-navigation { display: flex; flex-direction: column; gap: 6px; font: 600 12px var(--font-condensed); }
-  .ctx-navigation select { width: 100%; min-height: 44px; border: 1px solid var(--line); border-radius: 0; background: var(--panel); color: var(--ink); font: inherit; }
-}
+.ctx-navigation { display: flex; flex-direction: column; align-items: stretch; gap: 6px; width: 100%; }
 .ctx-map { display: block; width: 100%; height: auto; }
 .ctx-cell { fill: transparent; stroke: var(--line-soft); stroke-width: 1; }
 .ctx-cell.owned { fill: var(--panel); stroke: var(--line); }
@@ -2431,7 +2428,7 @@ body.hex-detail-open .upgrade-all {
    nothing is unreachable. */
 @container app (width < 1000px) {
   .hex-detail-scene .hex-detail-grid {
-    grid-template-columns: minmax(0, var(--detail-hex));
+    grid-template-columns: minmax(0, calc(var(--detail-hex) + 60px));
     justify-content: center;
     column-gap: 0;
   }
@@ -4585,8 +4582,18 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
 #grid.pan-ready, #grid.pan-ready .cell-node { cursor: grab; }
 #grid { touch-action: none; }
 .tool-icon .tool-badge { border: 0; background: transparent; color: var(--ink); padding: 0; }
-.ctx-expand { display: block; width: 100%; padding: 0; border: 0; background: transparent; }
-.ctx-expand .ctx-map { pointer-events: none; }
+.settings-shortcuts { margin-top: 20px; }
+.settings-shortcuts h3 { font: 600 13px var(--font-condensed); letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 8px; }
+.settings-shortcuts dd { margin: 0; }
+.ctx-open-navigator { font-size: 12px; min-height: 44px; }
+.hex-detail-focus { display: grid; grid-template-columns: 44px var(--detail-hex); align-items: center; gap: 16px; width: calc(var(--detail-hex) + 60px); max-width: 100%; }
+.hex-detail-layers { display: flex; flex-direction: column; gap: 4px; }
+.hex-detail-layers button { width: 44px; min-height: 44px; font-size: 13px; }
+.hex-detail-layers button[aria-pressed="true"] { box-shadow: inset 0 -2px var(--ink); background: var(--panel-deep); }
+@media (max-width: 600px) {
+  .hex-detail-focus { gap: 8px; width: calc(var(--detail-hex) + 52px); }
+  .hex-detail-layers button { padding: 8px; font-size: 12px; }
+}
 .context-overview { width: min(760px, calc(100% - 24px)); max-height: 88dvh; padding: 1px; border: 0; background: var(--line-strong); color: var(--ink); clip-path: var(--inst-clip); overflow: hidden; }
 .context-overview::backdrop { background: var(--scrim); }
 .context-overview-face { padding: 18px; background: var(--panel); clip-path: var(--inst-clip); max-height: calc(88dvh - 2px); overflow: auto; }
