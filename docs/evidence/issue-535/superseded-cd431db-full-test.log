@@ -1,0 +1,393 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-606348e7-a7db9f4d287248d0
+
+ ❯ |engine| src/engine/opening.test.ts (22 tests | 1 failed) 252ms
+     × the grant and the opening survive a save round-trip 34ms
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+ ❯ |engine| tools/century.test.ts (22 tests | 1 failed | 1 skipped) 28902ms
+     × matches every frozen figure to the committed save-translation baseline 37ms
+ ❯ |ui| src/ui/shared-save.test.ts (37 tests | 4 failed) 35ms
+     × primary denial restores absent backup slots including absent keys, without advancing ownership 8ms
+     × primary denial restores original backup slots including absent keys, without advancing ownership 2ms
+     × primary denial restores archive backup slots including absent keys, without advancing ownership 1ms
+     × primary denial restores same source backup slots including absent keys, without advancing ownership 1ms
+ ❯ |ui| src/ui/app.recovery.test.ts (13 tests | 6 failed) 736ms
+     × applying the recovery lands the calibrated economy and retains the exact source bytes 64ms
+     × boot primary-write denial keeps the offer, state, and every slot intact, then retries 53ms
+     × import primary-write denial keeps the offer, state, and every slot intact, then retries 54ms
+     × a failed post-adoption session save leaves committed recovery with its original gap available on reload 52ms
+     × an imported lost save offers recovery at the import destination; declining returns there 45ms
+     × an imported lost save applies through the same door: exact source bytes retained first 51ms
+ ❯ |ui| src/ui/app.migration.test.ts (14 tests | 2 failed) 735ms
+     × booting a stored v12 save explains the migration, retains the original bytes, and lands calibrated 114ms
+     × an existing lineage backup survives beside the exact pre-conversion bytes 55ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 14 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.migration.test.ts > the calibrated migration's flow (issue #493) > booting a stored v12 save explains the migration, retains the original bytes, and lands calibrated
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/ui/app.migration.test.ts:65:28
+     63|     expect(files.get(ORIGINAL_SAVE_KEY)).toBe(source);
+     64|     const stored = JSON.parse(files.get(STORAGE_KEY)!);
+     65|     expect(stored.version).toBe(13);
+       |                            ^
+     66|     expect(stored.state.nous).toBe(BALANCE.openingGrant);
+     67|     expect(stored.state.eraEarned).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+ FAIL  |ui| src/ui/app.migration.test.ts > the calibrated migration's flow (issue #493) > an existing lineage backup survives beside the exact pre-conversion bytes
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/ui/app.migration.test.ts:79:57
+     77|     expect(app.retainedOriginal()).toBe(source);
+     78|     expect(files.get(PRE_V13_ORIGINAL_SAVE_KEY)).toBe(earlier);
+     79|     expect(JSON.parse(files.get(STORAGE_KEY)!).version).toBe(13);
+       |                                                         ^
+     80|     app.closeModal();
+     81|     app = boot(undefined, false, new SharedSave(mapStorage(files)));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  |ui| src/ui/app.recovery.test.ts > the lost-money recovery's flow (issue #494) > applying the recovery lands the calibrated economy and retains the exact source bytes
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/ui/app.recovery.test.ts:115:28
+    113|     expect(files.get(ORIGINAL_SAVE_KEY)).toBe(source);
+    114|     const stored = JSON.parse(files.get(STORAGE_KEY)!);
+    115|     expect(stored.version).toBe(13);
+       |                            ^
+    116|     expect(stored.state.nous).toBe(BALANCE.openingGrant);
+    117|     // A reload of the recovered save stands silent: no re-recovery, no
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  |ui| src/ui/app.recovery.test.ts > the lost-money recovery's flow (issue #494) > boot primary-write denial keeps the offer, state, and every slot intact, then retries
+ FAIL  |ui| src/ui/app.recovery.test.ts > the lost-money recovery's flow (issue #494) > import primary-write denial keeps the offer, state, and every slot intact, then retries
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/ui/app.recovery.test.ts:213:57
+    211|     expect(files.get(ORIGINAL_SAVE_KEY)).toBe(source);
+    212|     expect(files.get(PRE_V13_ORIGINAL_SAVE_KEY)).toBe(earlier);
+    213|     expect(JSON.parse(files.get(STORAGE_KEY)!).version).toBe(13);
+       |                                                         ^
+    214|     expect(app.state.nous).toBe(BALANCE.openingGrant);
+    215|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  |ui| src/ui/app.recovery.test.ts > the lost-money recovery's flow (issue #494) > a failed post-adoption session save leaves committed recovery with its original gap available on reload
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/ui/app.recovery.test.ts:240:31
+    238|     expect(reconciledPool).toBe(600);
+    239|     const committed = JSON.parse(files.get(STORAGE_KEY)!);
+    240|     expect(committed.version).toBe(13);
+       |                               ^
+    241|     expect(committed.savedAt).toBe(400_000);
+    242|     expect(committed.state.session.accounting.poolSeconds).toBe(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  |ui| src/ui/app.recovery.test.ts > the lost-money recovery's flow (issue #494) > an imported lost save offers recovery at the import destination; declining returns there
+AssertionError: expected '{\n  "app": "flowsynth",\n  "version"…' to be null
+
+- Expected:
+null
+
++ Received:
+"{
+  \"app\": \"flowsynth\",
+  \"version\": 14,
+  \"savedAt\": 1794435777985,
+  \"state\": {
+    \"encyclopedia\": {
+      \"prestige\": \"available\"
+    },
+    \"mode\": \"upgrade\",
+    \"sessionIndex\": 0,
+    \"sessionsCompleted\": 0,
+    \"unstructuredSessions\": 0,
+    \"plannedSessionsCompleted\": 0,
+    \"combinations\": 0,
+    \"nous\": 12,
+    \"totalEarned\": 0,
+    \"eraEarned\": 0,
+    \"arete\": 0,
+    \"scrap\": 0,
+    \"draftTierBonus\": 0,
+    \"specialDrafts\": {
+      \"category\": 0,
+      \"rare\": 0,
+      \"tier\": 0
+    },
+    \"mergeCapPurchases\": 0,
+    \"prestiges\": 0,
+    \"muted\": false,
+    \"notificationAsked\": false,
+    \"modules\": [
+      {
+        \"id\": \"m1\",
+        \"type\": \"additive\",
+        \"tier\": 0,
+        \"level\": 0,
+        \"invested\": 0,
+        \"pos\": {
+          \"q\": 0,
+          \"r\": 0
+        },
+        \"reserve\": 0,
+        \"shift\": null,
+        \"target\": null
+      }
+    ],
+    \"cells\": [
+      {
+        \"q\": 0,
+        \"r\": 0
+      },
+      {
+        \"q\": 1,
+        \"r\": 0
+      },
+      {
+        \"q\": 0,
+        \"r\": 1
+      }
+    ],
+    \"cellsBought\": 0,
+    \"gatedRows\": [
+      0,
+      1
+    ],
+    \"unlockedRows\": [],
+    \"catalogEntryOwned\": false,
+    \"rollPoolJoined\": false,
+    \"world\": {
+      \"unlocked\": false,
+      \"starterColumnGranted\": false,
+      \"frontier\": 0,
+      \"starterWeaponGranted\": false,
+      \"columns\": [],
+      \"weapons\": [],
+      \"hone\": {
+        \"chargeBlade\": 0
+      },
+      \"enemies\": {
+        \"w0\": {
+          \"discovered\": false,
+          \"hp\": 12
+        },
+        \"w1\": {
+          \"discovered\": false,
+          \"hp\": 18
+        },
+        \"w2\": {
+          \"discovered\": false,
+          \"hp\": 27
+        },
+        \"w3\": {
+          \"discovered\": false,
+          \"hp\": 40.5
+        },
+        \"w4\": {
+          \"discovered\": false,
+          \"hp\": 60.75
+        },
+        \"w5\": {
+          \"discovered\": false,
+          \"hp\": 91.125
+        },
+        \"w6\": {
+          \"discovered\": false,
+          \"hp\": 136.6875
+        },
+        \"w7\": {
+          \"discovered\": false,
+          \"hp\": 205.03125
+        },
+        \"w8\": {
+          \"discovered\": false,
+          \"hp\": 307.546875
+        }
+      }
+    },
+    \"capacityBought\": 0,
+    \"capacityCeilings\": 0,
+    \"capacityDiscounts\": 0,
+    \"mutatorSlots\": [],
+    \"mutators\": [],
+    \"forge\": {
+      \"progress\": 0,
+      \"earned\": 0
+    },
+    \"mutatorForge\": {
+      \"progress\": 0,
+      \"earned\": 0
+    },
+    \"arcCardSeen\": false,
+    \"bankedRolls\": [],
+    \"bankedMutatorRolls\": [],
+    \"purchased\": {
+      \"generator\": false,
+      \"infusor\": false,
+      \"forge\": false
+    },
+    \"goalCapacityBought\": 0,
+    \"notes\": [],
+    \"habits\": [],
+    \"activeHabitId\": null,
+    \"practiceLog\": [],
+    \"sessionRecords\": [],
+    \"goals\": [],
+    \"goalFuel\": 0,
+    \"achievements\": {},
+    \"chordDiscovery\": {},
+    \"activeChords\": [],
+    \"session\": null,
+    \"summary\": null,
+    \"breather\": null,
+    \"lastSessionClock\": 0,
+    \"breathersCompleted\": 0,
+    \"breatherSeconds\": 0,
+    \"nextId\": 2
+  }
+}"
+
+ ❯ src/ui/app.recovery.test.ts:276:53
+    274|     expect(app.ui.recovery).toMatchObject({ from: "import" });
+    275|     expect(localStorage.getItem(STORAGE_KEY)).not.toBe(source);
+    276|     expect(localStorage.getItem(ORIGINAL_SAVE_KEY)).toBeNull();
+       |                                                     ^
+    277|     // Declining hands the screen back to the import walk, its message
+    278|     // standing; the state and both slots are untouched.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  |ui| src/ui/app.recovery.test.ts > the lost-money recovery's flow (issue #494) > an imported lost save applies through the same door: exact source bytes retained first
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/ui/app.recovery.test.ts:298:28
+    296|     expect(app.state.eraEarned).toBe(0);
+    297|     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+    298|     expect(stored.version).toBe(13);
+       |                            ^
+    299|   });
+    300|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+ FAIL  |ui| src/ui/shared-save.test.ts > the lost-money recovery's adoption (issue #494) > primary denial restores absent backup slots including absent keys, without advancing ownership
+ FAIL  |ui| src/ui/shared-save.test.ts > the lost-money recovery's adoption (issue #494) > primary denial restores original backup slots including absent keys, without advancing ownership
+ FAIL  |ui| src/ui/shared-save.test.ts > the lost-money recovery's adoption (issue #494) > primary denial restores archive backup slots including absent keys, without advancing ownership
+ FAIL  |ui| src/ui/shared-save.test.ts > the lost-money recovery's adoption (issue #494) > primary denial restores same source backup slots including absent keys, without advancing ownership
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/ui/shared-save.test.ts:361:63
+    359|     expect(storage.getItem(ORIGINAL_SAVE_KEY)).toBe(raw);
+    360|     expect(owner.isNewer()).toBe(false);
+    361|     expect(JSON.parse(storage.getItem(STORAGE_KEY)!).version).toBe(13);
+       |                                                               ^
+    362|   });
+    363|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  |engine| tools/century.test.ts > the frozen baseline > matches every frozen figure to the committed save-translation baseline
+AssertionError: frozen saveVersion: re-record and explicitly re-freeze before changing: expected 14 to deeply equal 13
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ tools/century.test.ts:272:90
+    270|     expect(Object.keys(compiled).length).toBeGreaterThan(0);
+    271|     for (const [key, value] of Object.entries(compiled)) {
+    272|       expect(value, `frozen ${key}: re-record and explicitly re-freeze…
+       |                                                                                          ^
+    273|     }
+    274|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+ FAIL  |engine| src/engine/opening.test.ts > the carrierless opening board > the grant and the opening survive a save round-trip
+AssertionError: expected 14 to be 13 // Object.is equality
+
+- Expected
++ Received
+
+- 13
++ 14
+
+ ❯ src/engine/opening.test.ts:110:26
+    108|     expect(restored.modules[0]!.pos).toEqual(hex(0, 0));
+    109|     expect(restored.nous).toBe(BALANCE.openingGrant);
+    110|     expect(SAVE_VERSION).toBe(13);
+       |                          ^
+    111|   });
+    112| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯
+
+
+ Test Files  5 failed | 129 passed (134)
+      Tests  14 failed | 2392 passed | 9 skipped (2415)
+   Start at  16:05:37
+   Duration  1064.04s (transform 24.70s, setup 0ms, import 551.96s, tests 1797.50s, environment 8.35s)
+

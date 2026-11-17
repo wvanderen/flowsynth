@@ -1,0 +1,87 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T23:55:11.896Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-de769b0b-5f1f9adc92c0d752",
+  "branch": "t3/fix-encyclopedia-review-findings",
+  "commit": "c9cd0d075bbdb9d18e3db642c27513c4d2150d2b",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-536/revision-2/capture-first-attempt.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/capture-preflight.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/capture.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/capture.mjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/check.exit",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/check.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-charge.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-chords.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-global.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-inspection-return.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-prestige.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-rate-before-0.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-rate-before-100.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-rate-return-0.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-rate-return-100.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/desktop-topics.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/full-test.log",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-536/revision-2/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}

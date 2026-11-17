@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-11T21:01:52.482Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-d8db3ecb-7b4b25910c484d9d",
+  "branch": "t3/implement-charge-slice",
+  "commit": "f9f91f5cb1d4e70dafc2013989fa660720407bb6",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}

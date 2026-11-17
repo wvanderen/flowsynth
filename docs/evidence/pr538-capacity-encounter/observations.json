@@ -1,0 +1,41 @@
+[
+  {
+    "name": "desktop",
+    "initial": {
+      "size": [
+        1280,
+        900
+      ],
+      "modal": null,
+      "marks": {
+        "prestige": "available",
+        "chords": "available"
+      },
+      "capacityDisplay": "block",
+      "overflow": false
+    },
+    "initialTopics": "ProgressionPrestige · UnseenBoard mechanicsChords and harmonic capacity · Unseen",
+    "entryOpened": true,
+    "taskRestored": true,
+    "reducedMotion": true
+  },
+  {
+    "name": "phone",
+    "initial": {
+      "size": [
+        390,
+        844
+      ],
+      "modal": null,
+      "marks": {
+        "prestige": "available"
+      },
+      "capacityDisplay": "none",
+      "overflow": false
+    },
+    "initialTopics": "ProgressionPrestige · Unseen",
+    "entryOpened": true,
+    "taskRestored": true,
+    "reducedMotion": true
+  }
+]

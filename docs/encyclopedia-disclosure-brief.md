@@ -1,6 +1,6 @@
 # Encyclopedia and selective disclosure — confirmed design brief
 
-Status: owner-confirmed design; not implemented or visually accepted. This document records the completed design interview. It authorizes documentation, not feature implementation.
+Status: owner-confirmed design. Issue #533 implements Charge; #534 implements Chords and harmonic capacity through the shared seams. Issue #535 adds Prestige through those same seams, preserving reset facts locally. Implementation evidence and acceptance limitations live in `docs/evidence/issue-533/README.md`, `docs/evidence/issue-534/README.md` and `docs/evidence/issue-535/README.md`. This document records the completed design interview, not visual acceptance or human comprehension.
 
 ## Intent and priorities
 
@@ -83,7 +83,7 @@ Each criterion below must map to a named test or recorded verification in the im
 | Explanations support decisions | Recorded comprehension tasks for representative concepts, e.g. explain why a recognized chord may be idle and locate its actual constraint |
 | Presentation follows the approved language | Preliminary source/spec review, then source freeze and desktop/phone evidence and final acceptance under the standing workflow |
 
-Human comprehension is not proven by opening/seen-state tests. If a human session, browser check, or accessibility judgment cannot run, record it as unavailable. No implementation tests, browser evidence, or comprehension validation have run for this documentation-only agreement.
+Human comprehension is not proven by opening/seen-state tests. If a human session, browser check, or accessibility judgment cannot run, record it as unavailable. This agreement itself claims no test, browser or comprehension results; implementation completion records own those claims.
 
 ## Policy ownership and historical decisions
 

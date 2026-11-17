@@ -1,0 +1,14 @@
+
+FlowSynth capture preflight
+
+  url       http://localhost:5173
+  worktree  /home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11
+  commit    30274459
+
+  Verified: http://localhost:5173 serves `/home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11` at commit 30274459 with clean source.
+
+  record    /home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11/docs/evidence/issue-536/provenance.json
+  ACCEPT — evidence may be captured from this URL.
+
+  Evidence rules: docs/agents/visual-evidence.md
+

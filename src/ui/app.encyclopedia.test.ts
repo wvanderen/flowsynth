@@ -1,0 +1,343 @@
+// @vitest-environment happy-dom
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { serialize } from "../engine/save";
+import { createModule } from "../engine/state";
+import { startSession } from "../engine/actions";
+import { advance } from "../engine/advance";
+import type { App } from "./app";
+import { createAppFixture, setAppWidth } from "./testing/app-fixture";
+const fixture = createAppFixture();
+let app: App;
+const button = (name: string) => [...document.querySelectorAll<HTMLButtonElement>("button")].find(b => b.textContent?.trim() === name)!;
+const door = () => document.querySelector<HTMLButtonElement>('[aria-label="Encyclopedia"]')!;
+beforeEach(() => { localStorage.clear(); app = fixture.boot(); setAppWidth(390); app.hardReset(); });
+afterEach(() => fixture.release());
+describe("voluntary Encyclopedia", () => {
+  it("offers chords before opening a panel when desktop capacity is visible, but waits on phone", () => {
+    expect(app.state.encyclopedia.chords).toBeUndefined();
+    expect(app.ui.modal).toBeNull();
+    setAppWidth(1200);
+    app.hardReset();
+    expect(document.querySelector("#board-ledger .ledger-capacity")?.textContent).toContain("Harmonic capacity");
+    expect(app.state.capacityBought).toBe(0);
+    expect(app.state.encyclopedia.chords).toBe("available");
+    expect(app.ui.modal).toBeNull();
+    door().click();
+    expect(button("Chords and harmonic capacity · Unseen")).toBeDefined();
+    app.closeModal();
+    setAppWidth(390);
+    app.render();
+    expect(app.state.encyclopedia.chords).toBe("available");
+    app.hardReset();
+    expect(app.state.encyclopedia.chords).toBeUndefined();
+    app.openLedger("capacity");
+    expect(app.state.encyclopedia.chords).toBe("available");
+  });
+  it("preserves mixed three-topic knowledge across legacy import, repeated loading, real prestige and a full restart", () => {
+    // Approved save seam establishes an existing player's mixed reading state.
+    const legacy = JSON.parse(serialize(app.state));
+    legacy.state.encyclopediaRevision = 2;
+    legacy.state.encyclopedia = { charge: "seen", chords: "available" };
+    legacy.state.eraEarned = 20_000_000;
+    expect(app.importText(JSON.stringify(legacy))).toBe(true);
+    const mixed = { charge: "seen", chords: "available", prestige: "seen" };
+    expect(app.state.encyclopedia).toEqual(mixed);
+    app.closeModal();
+    for (let load = 0; load < 2; load++) {
+      expect(app.importText(serialize(app.state))).toBe(true);
+      expect(app.state.encyclopedia).toEqual(mixed);
+      app.closeModal();
+    }
+    app.openLedger("arete"); document.getElementById("prestige-door")!.click();
+    document.getElementById("prestige-confirm")!.click();
+    expect(app.state.world.unlocked).toBe(true);
+    expect(app.state.encyclopedia).toEqual(mixed);
+    app.closeModal();
+    expect(app.importText(serialize(app.state))).toBe(true);
+    app.closeModal();
+    door().click();
+    expect([...document.querySelectorAll("#encyclopedia-results h2")].map(h => h.textContent)).toEqual(["Board mechanics", "Progression"]);
+    expect(button("Charge")).toBeDefined();
+    expect(button("Prestige")).toBeDefined();
+    button("Chords and harmonic capacity · Unseen").click();
+    app.closeModal();
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).toBeNull();
+    app.hardReset();
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
+    expect(app.state.world.unlocked).toBe(false);
+    expect(app.ui.modal).not.toBe("encyclopedia");
+    app.openModal("catalog");
+    expect(app.state.encyclopedia).toEqual({ charge: "available", chords: "available", prestige: "available" });
+    expect(app.ui.modal).toBe("catalog");
+  });
+  it("offers Prestige at the visible but ineligible reset, reads voluntarily, and returns to the ledger without resetting", () => {
+    expect(app.state.encyclopedia).toHaveProperty("prestige", "available");
+    expect(app.ui.modal).toBeNull();
+    app.openLedger("arete");
+    const help = document.getElementById("about-prestige")!;
+    help.focus(); help.click();
+    expect(app.state.encyclopedia).toHaveProperty("prestige", "seen");
+    const text = document.getElementById("modal-content")!.textContent!;
+    expect(text).toContain("Illustrative example");
+    expect(text).not.toMatch(/World|combat|map|Blade|Column/);
+    button("‹ Topics").click(); button("Prestige").click();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.modal).toBe("rate");
+    expect(document.activeElement?.id).toBe("about-prestige");
+    expect(app.state.prestiges).toBe(0);
+    expect(document.querySelector<HTMLButtonElement>("#prestige-door")!.disabled).toBe(true);
+  });
+  it("filters browse search related and contextual routes, and returns through related reading during live flow", () => {
+    door().click(); button("Prestige · Unseen").click();
+    expect(document.querySelector('nav[aria-label="Related entries"]')!.textContent).not.toContain("Charge");
+    expect(document.getElementById("modal-content")!.textContent).not.toMatch(/World|combat|map|Column|Blade/);
+    button("‹ Topics").click();
+    const search = document.getElementById("encyclopedia-search") as HTMLInputElement;
+    for (const query of ["Prestige", "start over", "reset", "Arete"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(button("Prestige")).toBeDefined();
+    }
+    for (const query of ["World", "combat", "Column", "Blade"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(document.getElementById("encyclopedia-results")!.textContent).toBe("No matching entries");
+    }
+    app.closeModal(); app.openModal("catalog"); app.closeModal();
+    startSession(app.state, 600); app.render(); app.openLedger("arete");
+    const help = document.getElementById("about-prestige")!; help.focus(); help.click();
+    button("Charge").click(); button("‹ Back").click();
+    expect(document.querySelector(".encyclopedia-entry h2")!.textContent).toBe("Prestige");
+    button("Charge").click(); button("Prestige").click();
+    advance(app.state, 10); app.render(); app.closeModal();
+    expect(app.state.session!.elapsed).toBe(10);
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.prestiges).toBe(0);
+    expect(document.activeElement?.id).toBe("about-prestige");
+    expect(document.querySelector<HTMLButtonElement>("#prestige-door")!.disabled).toBe(true);
+  });
+  it("reads from confirmation without choosing, retains seen knowledge through zero and positive claims, export/import and full reset", () => {
+    for (const earned of [7_000_000, 20_000_000]) {
+      app.state.eraEarned = earned; app.render();
+      app.openLedger("arete"); document.getElementById("prestige-door")!.click();
+      const before = app.state.prestiges;
+      const help = document.getElementById("confirm-about-prestige")!; help.focus(); help.click();
+      app.closeModal();
+      expect(app.ui.modal).toBe("prestige");
+      expect(document.activeElement?.id).toBe("confirm-about-prestige");
+      expect(app.state.prestiges).toBe(before);
+      expect(document.getElementById("modal-content")!.textContent).toContain("purchased capacity returns to one");
+      document.getElementById("prestige-confirm")!.click();
+      expect(app.state.prestiges).toBe(before + 1);
+      expect(app.state.world.unlocked).toBe(earned === 20_000_000);
+      expect(app.state.encyclopedia.prestige).toBe("seen");
+      app.closeModal();
+    }
+    const exported = serialize(app.state); app.hardReset();
+    expect(app.state.encyclopedia.prestige).toBe("available");
+    expect(app.importText(exported)).toBe(true);
+    expect(app.state.encyclopedia.prestige).toBe("seen");
+  });
+  it("encounters visible unaffordable capacity, searches idle chords, and returns through related entries to the same Catalog", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    expect(app.ui.modal).toBe("catalog");
+    expect(app.state.encyclopedia).toHaveProperty("chords", "available");
+    const help = document.getElementById("about-chords")!;
+    help.focus(); help.click();
+    expect(app.state.encyclopedia.chords).toBe("seen");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");
+    button("Charge").click();
+    button("‹ Back").click();
+    expect(document.querySelector(".encyclopedia-entry h2")!.textContent).toBe("Chords and harmonic capacity");
+    button("Charge").click();
+    button("Chords and harmonic capacity").click();
+    button("‹ Topics").click();
+    const search = document.getElementById("encyclopedia-search") as HTMLInputElement;
+    for (const query of ["harmonic capacity", "idle", "budget", "recognition"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(button("Chords and harmonic capacity")).toBeDefined();
+    }
+    app.closeModal();
+    expect(app.ui.modal).toBe("catalog");
+    expect(document.activeElement?.id).toBe("about-chords");
+    expect(app.state.capacityBought).toBe(0);
+    expect(app.state.nous).toBe(0);
+    expect(document.querySelector('.capacity-catalog [aria-label="Harmonic capacity — what it means"]')).toBeNull();
+    expect(document.querySelector(".capacity-catalog")!.textContent).toContain("Raises Harmonic capacity by one for all voices");
+    expect(document.querySelector("[data-buy-capacity]")).not.toBeNull();
+  });
+  it("imports and exports save-owned marks, clears them on full reset, and gives later encounters normal unseen marks after legacy migration", () => {
+    app.openModal("catalog"); app.closeModal();
+    const exported = serialize(app.state);
+    app.hardReset();
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
+    expect(app.importText(exported)).toBe(true);
+    expect(app.state.encyclopedia).toEqual({ charge: "available", chords: "available", prestige: "available" });
+    door().click(); button("Charge · Unseen").click(); app.closeModal();
+    const readExport = serialize(app.state);
+    app.hardReset();
+    app.importText(readExport);
+    expect(app.state.encyclopedia).toEqual({ charge: "seen", chords: "available", prestige: "available" });
+    app.hardReset();
+    const legacy = JSON.parse(serialize(app.state)); delete legacy.state.encyclopedia;
+    expect(app.importText(JSON.stringify(legacy))).toBe(true);
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
+    app.openModal("catalog");
+    expect(app.state.encyclopedia).toEqual({ charge: "available", chords: "available", prestige: "available" });
+  });
+  it.each([
+    ["rate", 72], ["library", 72], ["rate", 0], ["library", 0],
+  ] as const)("returns from the %s section door with scroll %i and selection intact", (modal, top) => {
+    app.openModal(modal);
+    const stage = app.ui.chordStage;
+    const content = document.querySelector<HTMLElement>(".modal-face")!;
+    content.scrollTop = top;
+    const help = document.getElementById("about-chords")!;
+    expect(help).not.toBeNull();
+    help.focus(); help.click();
+    app.closeModal();
+    expect(app.ui.modal).toBe(modal);
+    expect(app.ui.chordStage).toBe(stage);
+    expect(document.querySelector<HTMLElement>(".modal-face")!.scrollTop).toBe(top);
+    expect(document.activeElement?.id).toBe("about-chords");
+  });
+  it("explains charge phases and distinguishes certified allocation from a budget-limited incumbent", () => {
+    app.openModal("catalog"); app.closeModal();
+    door().click(); button("Charge · Unseen").click();
+    const charge = document.querySelector(".encyclopedia-entry")!.textContent!;
+    expect(charge).toContain("Upgrade mode and paused flow stop charge delivery and reserve drain");
+    expect(charge).toContain("Breathers keep delivery and reserve drain running");
+    expect(charge).not.toContain("Charge pauses between sessions");
+    button("Chords and harmonic capacity").click();
+    const chords = document.querySelector(".encyclopedia-entry")!.textContent!;
+    expect(chords).toContain("proven optimal only when certified");
+    expect(chords).toContain("search budget");
+    expect(chords).toContain("best allocation found so far");
+    expect(chords).toContain("local certification status in Chord facts");
+  });
+  it("keeps hidden chord routes closed, then encounters an owned voice without opening and never relocks it", () => {
+    app.openEncyclopedia("chords");
+    expect(app.ui.modal).toBeNull();
+    door().click();
+    expect(document.getElementById("modal-content")!.textContent).not.toContain("Chords and harmonic capacity");
+    app.closeModal();
+    app.state.modules = [createModule(app.state, "blaster")]; app.render();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state.encyclopedia.chords).toBe("available");
+    app.state.modules = []; app.render();
+    door().click(); button("Chords and harmonic capacity · Unseen").click();
+    expect(app.state.encyclopedia.chords).toBe("seen");
+  });
+  it("reads chords from voice inspection during flow and restores the selected layer and board view", () => {
+    app.ui.zoom = 2;
+    app.ui.pan = { x: 10, y: -20 };
+    startSession(app.state, 600);
+    const session = app.state.session;
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const detail = structuredClone(app.ui.detail);
+    const layer = app.ui.boardLayer;
+    const zoom = app.ui.zoom;
+    const help = document.getElementById("detail-about-chords")!;
+    expect(help).not.toBeNull();
+    help.focus(); help.click();
+    expect(app.state.encyclopedia.chords).toBe("seen");
+    expect(document.getElementById("modal-content")!.textContent).toContain("No partial chord earns a bonus");
+    expect(document.getElementById("modal-content")!.querySelector("input, canvas, animate")).toBeNull();
+    advance(app.state, 10); app.render();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.state.session).toBe(session);
+    expect(session!.elapsed).toBe(10);
+    expect(app.ui.detail).toEqual(detail);
+    expect(app.ui.boardLayer).toBe(layer);
+    expect(app.ui.zoom).toBe(zoom);
+    expect(app.ui.pan).toEqual({ x: 10, y: -20 });
+    expect(document.activeElement?.id).toBe("detail-about-chords");
+  });
+  it("returns keyboard focus and the selected board task after inspection reading, with static teaching and no exercises", () => {
+    document.querySelector('[data-cell="0,0"]')!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const detail = structuredClone(app.ui.detail);
+    const zoom = app.ui.zoom;
+    const help = document.getElementById("detail-about-charge")!;
+    help.focus(); help.click();
+    expect(document.getElementById("modal-content")!.querySelector("svg animate, canvas, input")).toBeNull();
+    button("‹ Topics").click(); button("Charge").click();
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(app.ui.detail).toEqual(detail);
+    expect(app.ui.zoom).toBe(zoom);
+    expect(document.activeElement?.id).toBe("detail-about-charge");
+  });
+  it("does not infer a Charge encounter from inspecting an empty cell", () => {
+    const cell = app.state.cells.find(pos => pos.q !== 0 || pos.r !== 0)!;
+    document.querySelector(`[data-cell="${cell.q},${cell.r}"]`)!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    expect(app.state.encyclopedia).toEqual({ prestige: "available" });
+  });
+  it("searches canonical and familiar words without hidden previews and returns from a contextual catalog detour", () => {
+    app.state.nous = 0;
+    app.openModal("catalog");
+    const scroll = document.querySelector<HTMLElement>(".catalog-body")!;
+    scroll.scrollTop = 85;
+    const help = document.getElementById("about-charge")!;
+    help.focus(); help.click();
+    button("‹ Topics").click();
+    const search = document.getElementById("encyclopedia-search") as HTMLInputElement;
+    for (const query of ["Charge", "battery", "power", "Flywheel"]) {
+      search.value = query; search.dispatchEvent(new Event("input", { bubbles: true }));
+      expect(button("Charge")).toBeDefined();
+    }
+    search.value = "World"; search.dispatchEvent(new Event("input", { bubbles: true }));
+    expect(document.getElementById("encyclopedia-results")!.textContent).toBe("No matching entries");
+    app.closeModal();
+    expect(app.ui.modal).toBe("catalog");
+    expect(document.activeElement?.id).toBe("about-charge");
+    expect(document.querySelector<HTMLElement>(".catalog-body")!.scrollTop).toBe(85);
+    expect(app.state.nous).toBe(0);
+  });
+  it("encounters an owned tray generator during flow without opening and keeps the live session running while reading", () => {
+    startSession(app.state, 600);
+    const session = app.state.session;
+    app.state.modules.push(createModule(app.state, "focusKeyed"));
+    app.render();
+    expect(app.ui.modal).toBeNull();
+    expect(app.state).toHaveProperty("encyclopedia.charge", "available");
+    door().click(); button("Charge · Unseen").click();
+    expect(document.querySelector('[data-entry="chords"]')).toBeNull();
+    expect(document.getElementById("modal-content")!.textContent).not.toMatch(/World|combat|Column|Blade/);
+    advance(app.state, 10);
+    app.render();
+    expect(app.state.session).toBe(session);
+    expect(app.state.mode).toBe("flow");
+    expect(app.state.session!.elapsed).toBe(10);
+    expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");
+    app.closeModal();
+    expect(app.state.session).toBe(session);
+    app.state.modules = app.state.modules.filter(m => m.type !== "focusKeyed");
+    app.render();
+    door().click();
+    expect(button("Charge")).toBeDefined();
+  });
+  it("starts with visible Prestige, encounters the unaffordable visible shelf without opening, and clears the quiet mark only on reading", () => {
+    door().click();
+    expect(document.getElementById("modal-content")!.textContent).toContain("Prestige · Unseen");
+    app.closeModal();
+    app.state.nous = 0;
+    app.openModal("catalog");
+    expect(app.ui.modal).toBe("catalog");
+    expect(document.querySelector('.catalog-frame [aria-label="charge — what it means"]')).toBeNull();
+    expect(app.state).toHaveProperty("encyclopedia.charge", "available");
+    app.closeModal();
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).not.toBeNull();
+    door().focus(); door().click();
+    expect(document.getElementById("modal-content")!.textContent).toContain("Board mechanics");
+    button("Prestige · Unseen").click(); button("‹ Topics").click();
+    button("Charge · Unseen").click();
+    expect(app.state).toHaveProperty("encyclopedia.charge", "seen");
+    expect(document.getElementById("modal-content")!.textContent).toContain("Illustrative example");
+    document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.activeElement).toBe(door());
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).not.toBeNull();
+    door().click(); button("Chords and harmonic capacity · Unseen").click(); app.closeModal();
+    expect(door().querySelector('[aria-label="Unseen entries"]:not([hidden])')).toBeNull();
+    const settings = document.getElementById("console-settings")!;
+    settings.focus(); settings.click(); app.closeModal();
+    expect(document.activeElement).toBe(settings);
+  });
+});

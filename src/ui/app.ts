@@ -63,6 +63,8 @@ import { wireTooltips } from "./instrument";
 import { unlockedMergeCap } from "../engine/catalog";
 import { formatInt, formatNumber } from "./format";
 import { applyBreatherGap, applyGap, flushPendingAway, poolOutstanding, resolveHonestyReport, type HonestyOutcome } from "../engine/trust";
+import { availableEntries, encounterEntries, type EntryId } from "../engine/encyclopedia";
+import { isPhoneWidth } from "./container";
 import { createInitialState, createModule, createWeapon, createWorldColumn } from "../engine/state";
 import { SCENARIOS, scenarioOf, type ScenarioDescriptor } from "../engine/scenarios";
 import {
@@ -122,6 +124,7 @@ import { createInventoryState, type InventoryState } from "./inventory";
 // tap-up disclosure below the 760px breakpoint (§7); the inventory sheet
 // re-docks the board-surface tray for touch on portrait phone.
 export type ModalKind =
+  | "encyclopedia"
   | "settings"
   | "catalog"
   | "forge"
@@ -620,6 +623,7 @@ export class App {
     rollGoalOccurrences(this.state, Date.now());
     this.ensureBoardOverlays();
     this.bindGlobalEvents();
+    document.getElementById("console-encyclopedia")?.addEventListener("click", () => this.openEncyclopedia(), { signal: this.signal });
     document.getElementById("console-settings")?.addEventListener("click", () => this.openModal("settings"), { signal: this.signal });
     // The display panel's goal meter is a permanent header resident (the
     // header-status brief): its tooltip layer wires at mount on the stable
@@ -853,6 +857,10 @@ export class App {
   // The transient interaction modes are mutually exclusive: every exit path
   // (import, reset, session start, arming another mode) clears them together.
   private clearTransientUi(): void {
+    this.encyclopediaOrigin = null;
+    this.encyclopediaEntry = null;
+    this.encyclopediaHistory = [];
+    this.encyclopediaQuery = "";
     const inv = this.ui.inventory;
     inv.inspect = null; inv.merge = null; inv.menu = false;
     inv.scrapMode = false; inv.scrapReview = false; inv.selected = []; inv.dragOpen = false;
@@ -2708,9 +2716,39 @@ export class App {
     target?.focus({ preventScroll: true });
   }
 
+  encyclopediaEntry: EntryId | null = null;
+  encyclopediaHistory: EntryId[] = [];
+  encyclopediaQuery = "";
+  private encyclopediaOrigin: { modal: ModalKind; focus: HTMLElement | null; id: string; scroll: [string, number][]; faceScroll: number | null } | null = null;
+
+  openEncyclopedia(id?: EntryId): void {
+    if (id && !availableEntries(this.state).some(entry => entry.id === id)) return;
+    if (this.ui.modal !== "encyclopedia") {
+      const focus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      this.encyclopediaOrigin = { modal: this.ui.modal, focus, id: focus?.id ?? "", scroll: [...document.querySelectorAll<HTMLElement>("[id]")].map(el => [el.id, el.scrollTop]), faceScroll: document.querySelector<HTMLElement>(".modal-face")?.scrollTop ?? null };
+      this.encyclopediaQuery = "";
+      this.encyclopediaHistory = [];
+      this.captureModalInvoker();
+    } else if (id && this.encyclopediaEntry && id !== this.encyclopediaEntry) {
+      this.encyclopediaHistory.push(this.encyclopediaEntry);
+    }
+    if (!id) this.encyclopediaHistory = [];
+    this.encyclopediaEntry = id ?? null;
+    if (id) { this.state.encyclopedia[id] = "seen"; this.save(); }
+    this.ui.modal = "encyclopedia";
+    this.render();
+  }
+
+  backEncyclopedia(): void {
+    const previous = this.encyclopediaHistory.pop();
+    this.encyclopediaEntry = null;
+    this.openEncyclopedia(previous);
+  }
+
   ledgerSection: "nous" | "production" | "arete" | "scrap" | "capacity" = "production";
 
   openModal(kind: ModalKind): void {
+    if (kind === "encyclopedia") { this.openEncyclopedia(); return; }
     // The catalog door opens on the layer's face — layer wins (issue #426,
     // the mode-wins rule's successor): the World face lands on the ◇ face
     // its section lives on, module mode on ν, and no last-face memory
@@ -2740,6 +2778,21 @@ export class App {
   }
 
   closeModal(): void {
+    if (this.ui.modal === "encyclopedia" && this.encyclopediaOrigin) {
+      const origin = this.encyclopediaOrigin;
+      this.encyclopediaOrigin = null;
+      this.ui.modal = origin.modal;
+      this.render();
+      for (const [id, top] of origin.scroll) { const el = document.getElementById(id); if (el) el.scrollTop = top; }
+      // The modal face is recreated by render and has no ID. Restore even zero:
+      // opening the ledger may have scrolled its selected section into view.
+      const face = document.querySelector<HTMLElement>(".modal-face");
+      if (face && origin.faceScroll !== null) face.scrollTop = origin.faceScroll;
+      const focus = origin.focus?.isConnected ? origin.focus : document.getElementById(origin.id);
+      if (!origin.modal) this.restoreModalInvoker();
+      if (focus) focus.focus({ preventScroll: true });
+      return;
+    }
     // The honesty report is non-dismissible (ADR-0019): it settles, or the
     // player leaves and the next return re-presents it, recalculated.
     if (this.ui.modal === "honesty") return;
@@ -4057,6 +4110,15 @@ export class App {
       }
     }
     if (document.title !== title) document.title = title;
+  }
+
+  refreshEncyclopediaEncounters(): void {
+    // Actual visible charge-bearing inspections and the starter shelf count
+    // as encounters even when their purchases are unaffordable.
+    const inspected = this.state.modules.find(module => module.id === this.ui.inventory.inspect || (this.ui.detail && module.pos && sameHex(module.pos, this.ui.detail.pos)));
+    if (encounterEntries(this.state, { prestigeVisible: true, capacityVisible: !isPhoneWidth() || this.ui.modal === "catalog" || this.ui.modal === "rate" || this.ui.modal === "library", starterShelfVisible: this.ui.modal === "catalog" && this.ui.catalogFace === "nous", chargeMeterVisible: this.ui.modal === "forge", inspectedType: inspected?.type })) this.save();
+    const dot = document.querySelector<HTMLElement>("#console-encyclopedia .encyclopedia-dot");
+    if (dot) dot.hidden = !availableEntries(this.state).some(entry => this.state.encyclopedia[entry.id] === "available");
   }
 
   render(): void {

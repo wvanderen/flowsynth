@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/ui/app.encyclopedia.test.ts -t preserves mixed three-topic
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-1dd9a9a8-5f05eff142889d11
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed | 14 skipped (15)
+   Start at  17:04:13
+   Duration  2.01s (transform 1.01s, setup 0ms, import 1.21s, tests 231ms, environment 216ms)
+

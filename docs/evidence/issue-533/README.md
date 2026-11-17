@@ -1,0 +1,94 @@
+# #533 — Charge Encyclopedia completion record
+
+Parent: #532. Scope: Charge only; no Chords/capacity, Prestige or World teaching pages.
+
+## Provenance and confirmed references
+
+The starting branch and local `integration/532-encyclopedia` both resolved to `73ed4aab76ee270985f810052db05937f52f270c`; `git merge-base --is-ancestor 73ed4aa HEAD` passed before edits. Both issues were read with `gh issue view --json title,body,comments`; both comment lists were empty. The confirmed brief, instrument amendment and CONTEXT definitions are present in that starting commit, not assumed from a remote or uncommitted sibling. GitHub has no remote branch by that integration name; the local integration ref is authoritative for the requested final merge.
+
+Confirmed testing seams: the parent explicitly approves the existing running-app fixture and save serialization/deserialization plus game actions. No new test-only API or low-level catalog suite. No subagents.
+
+## Concrete encounter and migration rules
+
+Charge is meaningfully encountered when the starter shelf is visible (even at zero nous), a charge-bearing module profile is inspected, the Forge charge meter is visible, or a relevant module is owned in board/tray. Relevant ownership covers generators, boosters, Forge, conduits, RITUAL, and the explicitly charge-dependent Blaster, Sideband and Saw. The fresh Sine alone is not evidence of historical exposure; inspecting its charge-response profile is a real encounter. Empty cells and silent wire do not discover Charge.
+
+Legacy saves without the knowledge field backfill those ownership/purchased-shelf facts as **seen** after existing conversions and normalization. No ownership/receipt evidence means no guessed backfill. The written empty map distinguishes an upgraded save from a legacy save; future encounters remain **available/unseen**. Both marks are durable and title-independent. Unknown/corrupt records cannot expose another topic.
+
+## Named acceptance mapping (issue order)
+
+UI cases below live in `src/ui/app.encyclopedia.test.ts`; lifecycle cases in `src/engine/encyclopedia.test.ts`.
+
+| # | Criterion | Verification and class |
+|---|---|---|
+| 1 | Meaningful encounter, owned items, unaffordable visible mechanic, retention | **Automated:** “starts empty, encounters the unaffordable visible shelf without opening, and clears the quiet mark only on reading”; “encounters an owned tray generator during flow without opening and keeps the live session running while reading”; “does not infer a Charge encounter from inspecting an empty cell”; parametrized “backfills the owned %s charge mechanic even in inventory”. |
+| 2 | Stable accessible desktop/phone book door, independent of Settings, layout review | **Automated:** first UI case opens through the accessible global door and subsequently verifies Settings' separate focus round trip. **Current manual DOM evidence:** `final-browser-walkthrough.md`, verified1280×900 and390×844 live dimensions and44×44 book target. **Unavailable:** screenshot/layout and actual touch judgment (capture service failures recorded there). |
+| 3 | One availability rule for browse/search/context/related, absent hidden pages, usable empty library | **Automated:** empty-library case and “searches canonical and familiar words without hidden previews and returns from a contextual catalog detour”. **Source review:** catalog filtered once by `availableEntries`, context and related destinations use that same list; only Charge exists, no locked pages or denominator. Multiple related topics are deliberately not fabricated for this slice. |
+| 4 | Voluntary reading, quiet aggregate dot, immediate per-entry seen | **Automated:** first and flow UI cases check no automatic open, the unseen dot and label, immediate seen transition without scroll, and dot clearance. **Source review:** dot is static with no animation, counts, notifications or learned/completed claims. |
+| 5 | Useful authored spatial Charge example, exact rules, static essentials | **Automated:** inspection and flow cases assert the illustrative content remains present and no exercise inputs/canvas/animation are required. **Source review:** worked strength-2 generator reaches two flanking receivers at full strength each; no splitting, additive incoming sources and reserve expenditure agree with economy and ADR-0060. **Human comprehension unavailable:** no human participant; opening a page proves no understanding. Final perceptual readability judgment is **unavailable**, not inferred from the DOM text/geometry checks. |
+| 6 | Selective context routes, Close/Escape restores task/focus, flow continues | **Automated:** contextual Catalog case restores focus and scroll at unchanged balance; inspection case retains detail/zoom through Topics → Charge → Escape; flow case advances 10 seconds during reading and retains the identical live session. **Unavailable:** real keyboard/touch desktop/phone; current-source scripted DOM round trip is recorded separately in `final-browser-walkthrough.md`. |
+| 7 | Reload/export/import/prestige/reset, legacy seen and future unseen, idempotence | **Automated:** “imports and exports save-owned marks, clears them on full reset, and gives later encounters normal unseen marks after legacy migration”; “round trips available and seen identity through reload and prestige, without copy-based rebadging”; “backfills owned Charge mechanics as seen, but never guesses exposure from the opening oscillator”; parametrized owned cases and malformed-record case. Existing save/conversion regression files run targeted and are included in the full suite. |
+| 8 | Stable identity, copy never re-badges, reversible navigation | **Automated:** save round-trip literal `charge` identity and inspection Topics round trip. **Source review:** seen records depend only on stable id, never a content/title/version hash; back navigation retains the original task. Cross-entry navigation is filtered and preserves that origin; its multi-entry exercise belongs to later slices as explicitly allowed by #533. |
+| 9 | Replacement before removal; preserve decision facts; before/after inventory | **Source review/manual record:** inventory below. **Automated:** updated “shelf rows carry the simplified module preview and one description line” (`src/ui/app.catalog.test.ts`) retains the precise Flywheel effect and requires a section route instead of a redundant charge tooltip. Standing Hex detail, inventory, wave/effect and Catalog tests retain actual facts. |
+| 10 | Reconcile confirmed refs; no Details, roster calculations, live-board lessons or purge | **Source review:** references reconciled above; only the `charge` generic term migrates, all unrelated term glosses and actual effect disclosures remain. Entry illustration is authored, not a second live inspector. |
+| 11 | App-fixture behavior and focused save/action lifecycle tests | **Automated:** named cases above use the agreed seams, existing fixture, modal and normal UI actions; no private catalog tests. |
+| 12 | Targeted/standing checks; source gate before freeze/evidence; honest unavailable judgments | Targeted checks, source review/recovery and final gates below. **Automated:** current `check.log` and `full-test.log` pass. **Unavailable:** screenshots, real keyboard/touch, reduced-motion/perceptual judgment and human comprehension; details in `final-browser-walkthrough.md`, not inferred or waived. |
+
+## Selective-disclosure inventory and mistaken-choice test
+
+| Surface before | After | Facts deliberately retained locally / removal-test result |
+|---|---|---|
+| Starter shelf wraps every “charge” in the generic “Generator output that powers other modules” tooltip | Plain charge words; one “About charge” route for the shelf | Flywheel earning description, Booster and Forge effects, costs, countdown, affordability and acquired state remain unchanged. Knowing the concept plus these local facts still supports the same purchase choice. The removed gloss adds no current decision fact. |
+| Generic `charge` term disclosures in module offer effects, chart charge axis and reset conversion report | Plain word; global reference and relevant Forge/inspection routes | Candidate effects and profile coefficients, actual chart figures, charge-clears reset/report consequences remain intact. The generic definition adds no numeric or exceptional fact and its removal cannot conceal a different current choice. |
+| Board/inventory module inspection already has actual profile and current incoming wave facts | One section-level About charge route, not links on each term | Current received strength, per-design charge response, resulting production, reserve, costs, requirements and warnings remain in the existing face/wave/profile/action surfaces. None of their concrete facts are moved into the reference. |
+| Unrelated terms (including Chords, capacity, Prestige and World-specific names) | Unchanged disclosures | Not migrated, not purged. No new inline rate calculation or expandable Details. |
+
+## TDD and targeted checks
+
+Red → green witnessed through the public seams:
+- legacy backfill test first failed for absent `encyclopedia` field;
+- first app journey failed for absent accessible global door;
+- empty-cell regression failed when it incorrectly unlocked Charge;
+- contextual Catalog regression failed with scroll 0 instead of 85;
+- subsequent Settings focus regression failed by returning to the stale book invoker.
+Each was resolved and rerun before continuing. Later cases cover the delivered slice rather than a speculative horizontal framework.
+
+Environment: initial direct preflight correctly refused Node 26.13.0. `mise exec node@22.23.4 -- npm run preflight` accepted Node 22.23.4, America/Chicago and UI storage. npm test/check select the pinned runtime automatically.
+
+Targeted command: `npm test -- src/ui/app.encyclopedia.test.ts src/engine/encyclopedia.test.ts src/ui/app.modal-focus.test.ts src/ui/app.catalog.test.ts src/ui/app.inventory.test.ts src/ui/hexdetail.test.ts src/ui/hexflows.test.ts src/ui/instrument.test.ts src/engine/save.test.ts src/engine/save-integrity.test.ts src/engine/save-recovery.test.ts src/engine/prestige.test.ts` — passed before source review; final touched-area rerun follows the review batch. No calendar behavior changed; calendar-specific rerun not owed. No balance or recorder behavior changed; expensive calibration recordings not owed.
+
+## Preliminary source/spec review (before freeze)
+
+Self-review in two sequential passes sharing implementation context, not an independent review. Compared source against issues #533/#532, the confirmed local references, instrument prototype/controls policy and standing verification rules. Final captures and standing suites were **owed**, not claimed at this gate.
+
+**Standards findings:**
+1. Breakpoint overrides must preserve the established 1100/900/600 header composition rather than introduce 1000/760 thresholds. **Documented-standard violation; fix with batch.**
+2. Local confirmed documents still described every part as unimplemented. **Accuracy correction; fix with batch**, distinguishing implemented Charge from planned later slices and pending visual/human acceptance.
+
+**Spec findings:**
+1. Reading origin must be cleared with transient UI, and a direct common-modal opener must use the same reader route. **Correctness; resolved in implementation and retained in batch.**
+2. No seen marker may claim comprehension; human understanding and final visual layout are not established by automated tests. **Evidence limitation, not a waiver:** record human comprehension unavailable and perform post-freeze browser checks; acceptance remains limited accordingly.
+
+**Optional suggestion:** delegate search result clicks at the stable result host rather than retain detached-button listeners until the next app render. **Fix with batch** (small locality improvement before evidence).
+
+Fix review: all findings above are resolved in one pre-freeze batch. Breakpoints now match the established header composition, documents distinguish Charge implementation from remaining slices and acceptance, and search uses one delegated listener on its disposable navigation host. Transient origin clearing and common-modal routing are present; no independent-review claim. The final targeted command above passed again (337 cases across the named files); `npm run check` and `git diff --check` passed. `git merge integration/532-encyclopedia` reported already up to date before freeze. No issue closure or parent change is authorized or performed.
+
+## Post-freeze recovery and second source gate
+
+Initial freeze was `f9f91f5cb1d4e70dafc2013989fa660720407bb6`. Its full run failed seven cases in six UI files: the old global charge-gloss requirements in Forge, mixed draft and the migration report; the old direct-child Settings header assertion; an engine-built scenario expectation omitting the application's owned-mechanic discovery; and a supposedly independent capacity-preview board that rebooted the prior slot after discovery now correctly persisted it. This is **not** a green suite. The first full-run attempt was interrupted by the tool's200-second timeout before results; the completed retry is preserved in `superseded-f9f91f5-full.log` (exit1).
+
+Freeze lifted. One batch reconciles the migrated-disclosure expectations with stronger replacement-route/fact-preservation assertions, makes the independent preview board explicitly fresh, and includes the expected save-owned discovery on installed progression presets. Runtime implementation is unchanged. Source/spec fix review reads all six files together: no deleted current facts, no weakened live choice assertions, no new topic or behavior; the prior charge-definition tests now prove the real replacement reader round trip without choosing an offer. Header test proves both separate utilities remain at the edge. The named eight-file targeted rerun (all six failures plus app/lifecycle Encyclopedia cases) passed:159 cases,252.37s. `npm run check` passed again. This is a shared-context self-review, not independent validation.
+
+Affected evidence invalidated explicitly: the initial typecheck and all earlier suite results are not final results for the revised source; `superseded-f9f91f5-provenance.json` and the initial browser walkthrough remain observations at f9f91f5 only, **not** current captures. The superseded browser pass produced no screenshots, and its human/keyboard/touch/visual limitations were never passes. Current source is re-frozen in the commit containing this recovery; new final suites and capture preflight are owed at that revision.
+
+## Final evidence and acceptance disposition
+
+Re-frozen source: **`9a72a6941a601390a38b78fbe7ffdc2f58e57470`**. Only evidence/record files change afterward.
+
+- `npm run check` — passed at this revision (`check.log`), strict typecheck and recorder static gate.
+- `npm test` — passed at this revision (`full-test.log`), exit0,134 test files;2402 passed and9 skipped. No separate full UI rerun was performed. The log retains git-not-a-repository diagnostic lines emitted during testing; they were not test failures and the completed run exits0.
+- Post-review affected-area run — passed (`revision-targeted.log`); every formerly failing case passes and the new slice/lifecycle cases remain green. This is targeted iteration, not the final full suite's substitute.
+- Capture preflight — accepted exact re-frozen source and clean active checkout (`provenance.json`). Current-source walkthrough/failure record: **`final-browser-walkthrough.md`**; health check: `browser-healthcheck.log`. Verified desktop and phone dimensions plus scripted DOM continuity are observations only. Screenshots failed three times; no capture artifacts or visual acceptance are claimed.
+- Human comprehension, actual keyboard/touch delivery, reduced-motion emulation and perceptual/visual judgment remain **unavailable**. These are outstanding acceptance evidence, not an approved scope reduction. Final evidence-gate disposition: **automated/source portions verified; final acceptance blocked on the unavailable judgments**. Do not close #533 or change #532 on this record's basis.
+- Before final handoff, the local integration tip remained`73ed4aab76ee270985f810052db05937f52f270c`; `git merge integration/532-encyclopedia` reported **Already up to date**, and the ancestry check passed. This is an actual merge attempt of the current tip, not an assumption that the starting commit still sufficed. No parent branch or issue was modified.
+
+Additional named verification: `src/ui/forge.test.ts` “opens the section Charge reference without choosing and returns to the same draft”; `src/ui/app.mixed-draft.test.ts` “Blade draft retains its effect and the section Charge reference returns without consuming the offer”; `src/ui/app.migration.test.ts` “the explanation names what was kept and what moved, and offers the retained original” now explicitly retains “charge empties” while rejecting its obsolete generic definition. These strengthen mapping rows6/9, not a claim of physical touch.

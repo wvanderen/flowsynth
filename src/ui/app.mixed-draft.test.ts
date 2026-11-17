@@ -54,22 +54,24 @@ it.each([1280, 390])("mixed drafts route repeated World choices through inventor
   expect(app.state.world.weapons).toHaveLength(2);
 });
 
-it("Blade draft charge disclosure opens by focus and touch and dismisses without consuming the offer", () => {
+it("Blade draft retains its effect and the section Charge reference returns without consuming the offer", () => {
   const app = fixture.boot();
   app.state.world.unlocked = true;
   const offer = generateOffer(app.state, stubRng([...Array(9).fill(0.5), 0, 0.5]));
   app.state.bankedRolls.push(offer);
   app.openModal("forge");
-  const term = document.querySelector<HTMLButtonElement>(`#forge-effect-${offer.candidates[2].id} [aria-label="charge — what it means"]`)!;
-  expect(term).not.toBeNull();
-  term.focus();
-  expect(term.getAttribute("aria-expanded")).toBe("true");
-  term.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  expect(term.getAttribute("aria-expanded")).toBe("false");
-  term.click();
-  expect(term.getAttribute("aria-expanded")).toBe("true");
-  term.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
-  expect(term.getAttribute("aria-expanded")).toBe("false");
+  const effect = document.getElementById(`forge-effect-${offer.candidates[2].id}`)!;
+  expect(effect.textContent).toBe("Store charge → strike enemies");
+  expect(effect.querySelector('[aria-label="charge — what it means"]')).toBeNull();
+  const help = document.getElementById("forge-about-charge")!;
+  help.focus(); help.click();
+  expect(document.querySelector(".charge-example")).not.toBeNull();
+  document.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+  expect(app.ui.modal).toBe("forge");
+  expect(document.activeElement?.id).toBe("forge-about-charge");
+  document.getElementById("forge-about-charge")!.click();
+  document.getElementById("close-modal")!.click();
+  expect(app.ui.modal).toBe("forge");
   expect(app.state.bankedRolls).toEqual([offer]);
   expect(app.state.world.weapons).toHaveLength(0);
 });

@@ -1,0 +1,40 @@
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-de769b0b-5f1f9adc92c0d752
+
+ ❯ |ui| src/ui/app.encyclopedia.test.ts (18 tests | 1 failed | 17 skipped) 128ms
+     × explains charge phases and distinguishes certified allocation from a budget-limited incumbent 127ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.encyclopedia.test.ts > voluntary Encyclopedia > explains charge phases and distinguishes certified allocation from a budget-limited incumbent
+AssertionError: expected 'ChargeGenerators bank charge from pra…' to contain 'Upgrade mode and paused flow stop cha…'
+
+- Expected
++ Received
+
+- Upgrade mode and paused flow stop charge delivery and reserve drain
++ ChargeGenerators bank charge from practice, notes and live goal completion according to their profiles, even in inventory. Deploy them beside receivers to deliver that supply while the board runs. Charge pauses between sessions; remaining reserves follow generators when moved.
++     Illustrative example — not your live board
++       Receiver Astrength 2←Generatorstrength 2→Receiver Bstrength 2
++       A and B each touch the generator. Each receives the full strength 2, not half. A distant receiver with no connection receives none.
++     
++     Direct delivery reaches eligible adjacent receivers, not the whole board. Strengths from active generators add at a receiver. A generator spends reserve at its emission rate, not once per receiver; adding a neighbor does not shorten its remaining duration.
++     Oscillators and boosters use received charge continuously; a Module Forge accumulates it toward drafts. Each module’s profile and current readouts show its actual response. Conduits route received charge onward rather than generating it.
++     Decision: place supply beside the receivers you want to power. Check remaining reserve and received strength before moving a generator: ownership earns charge, but placement determines delivery. Current effects and prices stay on the live inspection and purchase surfaces.Chords and harmonic capacityPrestige
+
+ ❯ src/ui/app.encyclopedia.test.ts:187:20
+    185|     door().click(); button("Charge · Unseen").click();
+    186|     const charge = document.querySelector(".encyclopedia-entry")!.text…
+    187|     expect(charge).toContain("Upgrade mode and paused flow stop charge…
+       |                    ^
+    188|     expect(charge).toContain("Breathers keep delivery and reserve drai…
+    189|     expect(charge).not.toContain("Charge pauses between sessions");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 17 skipped (18)
+   Start at  17:52:56
+   Duration  1.90s (transform 1000ms, setup 0ms, import 1.20s, tests 128ms, environment 214ms)
+

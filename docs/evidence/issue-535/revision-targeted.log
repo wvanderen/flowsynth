@@ -1,0 +1,13 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run src/ui/app.encyclopedia.test.ts src/ui/app.recovery.test.ts src/ui/app.migration.test.ts src/ui/shared-save.test.ts src/engine/encyclopedia.test.ts src/engine/prestige.test.ts src/engine/opening.test.ts src/engine/save.test.ts src/engine/save-integrity.test.ts src/engine/save-recovery.test.ts
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-606348e7-a7db9f4d287248d0
+
+
+ Test Files  10 passed (10)
+      Tests  228 passed (228)
+   Start at  16:25:47
+   Duration  6.76s (transform 2.74s, setup 0ms, import 4.08s, tests 3.51s, environment 642ms)
+

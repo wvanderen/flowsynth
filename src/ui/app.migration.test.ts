@@ -228,9 +228,12 @@ describe("the calibrated migration's flow (issue #493)", () => {
     // What moved: the levels and the balances, with the report's figures.
     expect(content.textContent).toContain("8.2B");
     expect(content.textContent).toContain("opening grant");
-    for (const term of ["Arete", "Hone", "Catalog", "nous", "charge", "Claimed frontier"]) {
+    for (const term of ["Arete", "Hone", "Catalog", "nous", "Claimed frontier"]) {
       expect(content.querySelector(`.term-trigger[aria-label="${term} — what it means"]`)).not.toBeNull();
     }
+    // Charge's reusable definition moved; this reset consequence did not.
+    expect(content.textContent).toContain("charge empties");
+    expect(content.querySelector('[aria-label="charge — what it means"]')).toBeNull();
     // The retained original is offered, not just claimed.
     expect(content.querySelector("#migration-original")).not.toBeNull();
     app.closeModal();

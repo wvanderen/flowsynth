@@ -3,14 +3,17 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import type { App } from "./app";
 import { createAppFixture, setVisibility } from "./testing/app-fixture";
 import { STORAGE_KEY, serialize } from "../engine/save";
-import { assertFocusScenario, createFocusScenarioState } from "../engine/focus-scenario";
+import { assertFocusScenario, createFocusScenarioState as engineFocusState } from "../engine/focus-scenario";
 import { SCENARIOS, scenarioOf } from "../engine/scenarios";
 import { playthroughCheckpointPreset } from "../engine/playthrough";
 
 // The walked preset's banked claim: the curve's honest figure at the
 // shipped slope, derived once so the launch pins never drift from the walk.
 const AFTER_FIRST_BANK_CLAIM = playthroughCheckpointPreset("after-first-bank").record.claims[0]!;
-import { createInitialState } from "../engine/state";
+import { createInitialState as engineInitialState } from "../engine/state";
+// These application expectations include discovery of the always-visible reset.
+const createInitialState = () => ({ ...engineInitialState(), encyclopedia: { chords: "available" as const, prestige: "available" as const } });
+const createFocusScenarioState = (now: number) => ({ ...engineFocusState(now), encyclopedia: { chords: "available" as const, prestige: "available" as const } });
 import { addPracticeLog, createHabit } from "../engine/habits";
 import { activeGoalOf, deleteGoal } from "../engine/goals";
 
@@ -255,7 +258,11 @@ describe("the launch command", () => {
       expect(app.state.habits).toHaveLength(lived + 1);
 
       await app.devLaunchScenario(id, t);
-      expect(app.state).toEqual(scenarioOf(id)!.build(t));
+      const expected = scenarioOf(id)!.build(t);
+      // Installing an already charge-bearing, multi-voice collection is a
+      // meaningful encounter; the ambient reset is visible in every scenario.
+      expected.encyclopedia = id === "fresh-start" ? { chords: "available", prestige: "available" } : { charge: "available", chords: "available", prestige: "available" };
+      expect(app.state).toEqual(expected);
       expect(app.devScenarioNote).toContain("✓");
       expect(document.querySelector("#dev-scenario-note")?.textContent).toContain("✓");
     }

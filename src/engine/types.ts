@@ -642,6 +642,8 @@ export interface RunCandidates {
 }
 
 export interface GameState {
+  encyclopedia: import("./encyclopedia").EncyclopediaState;
+  encyclopediaRevision: number;
   mode: Mode;
   sessionIndex: number;
   sessionsCompleted: number;

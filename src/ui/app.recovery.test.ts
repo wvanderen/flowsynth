@@ -267,19 +267,25 @@ describe("the lost-money recovery's flow (issue #494)", () => {
 
   it("an imported lost save offers recovery at the import destination; declining returns there", () => {
     app = boot(undefined, false, new SharedSave(localStorage));
+    // Visible-reference discovery may already have persisted the opening.
+    // Offering/declining recovery must preserve both existing slots exactly.
+    const primaryBefore = localStorage.getItem(STORAGE_KEY);
+    const originalBefore = localStorage.getItem(ORIGINAL_SAVE_KEY);
     const source = lostMoneyV12();
     expect(app.importText(source)).toBe(false);
     // The offer stands where the import stood, and nothing was adopted.
     expect(app.ui.modal).toBe("recovery");
     expect(app.ui.recovery).toMatchObject({ from: "import" });
     expect(localStorage.getItem(STORAGE_KEY)).not.toBe(source);
-    expect(localStorage.getItem(ORIGINAL_SAVE_KEY)).toBeNull();
+    expect(localStorage.getItem(ORIGINAL_SAVE_KEY)).toBe(originalBefore);
     // Declining hands the screen back to the import walk, its message
     // standing; the state and both slots are untouched.
     document.getElementById("recovery-decline")!.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     expect(app.ui.modal).toBe("import");
     expect(app.ui.importError).toContain("recovery");
     expect(app.ui.recovery).toBeNull();
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(primaryBefore);
+    expect(localStorage.getItem(ORIGINAL_SAVE_KEY)).toBe(originalBefore);
     const before = serialize(app.state, 1000);
     expect(serialize(app.state, 1000)).toBe(before);
   });

@@ -1,0 +1,161 @@
+
+> flowsynth@0.1.0 test
+> node tools/run-supported.mjs node_modules/vitest/vitest.mjs run
+
+
+ RUN  v4.1.12 /home/lem/.t3/worktrees/flowsynth/t3-d8db3ecb-7b4b25910c484d9d
+
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+fatal: not a git repository (or any parent up to mount point /)
+Stopping at filesystem boundary (GIT_DISCOVERY_ACROSS_FILESYSTEM not set).
+ ❯ |ui| src/ui/app.test.ts (54 tests | 1 failed) 2224ms
+     × keeps Notes inside the dark session console and Settings at the edge 29ms
+ ❯ |ui| src/ui/app.capacity.test.ts (35 tests | 1 failed) 2976ms
+     × ghost promises classify by the projected allocation — idle says idle 152ms
+ ❯ |ui| src/ui/app.scenarios.test.ts (22 tests | 1 failed) 152389ms
+     × repeating a progression launch rebuilds the walked setup without accumulating 729ms
+ ❯ |ui| src/ui/app.migration.test.ts (14 tests | 1 failed) 738ms
+     × the explanation names what was kept and what moved, and offers the retained original 46ms
+ ❯ |ui| src/ui/forge.test.ts (10 tests | 2 failed) 472ms
+     × opens effect definitions without choosing and dismisses them before the draft 35ms
+     × discloses live effects without presenting a retained Mutator Forge candidate 33ms
+ ❯ |ui| src/ui/app.mixed-draft.test.ts (4 tests | 1 failed) 925ms
+   × Blade draft charge disclosure opens by focus and touch and dismisses without consuming the offer 30ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |ui| src/ui/app.capacity.test.ts > placement previews with capacity-aware production (#260) > ghost promises classify by the projected allocation — idle says idle
+AssertionError: expected [] to deeply equal [ 'Fifth ×1.3' ]
+
+- Expected
++ Received
+
+- [
+-   "Fifth ×1.3",
+- ]
++ []
+
+ ❯ src/ui/app.capacity.test.ts:476:27
+    474|     document.querySelector<HTMLButtonElement>("[data-inventory-place]"…
+    475|     cell(1, 0).dispatchEvent(new MouseEvent("pointerenter", { bubbles:…
+    476|     expect(ghostLabels()).toEqual(["Fifth ×1.3"]);
+       |                           ^
+    477|     expect(document.querySelectorAll(".ghost-mark.chord-idle")).toHave…
+    478|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/7]⎯
+
+ FAIL  |ui| src/ui/app.migration.test.ts > the calibrated migration's flow (issue #493) > the explanation names what was kept and what moved, and offers the retained original
+AssertionError: expected null not to be null
+ ❯ src/ui/app.migration.test.ts:232:96
+    230|     expect(content.textContent).toContain("opening grant");
+    231|     for (const term of ["Arete", "Hone", "Catalog", "nous", "charge", …
+    232|       expect(content.querySelector(`.term-trigger[aria-label="${term} …
+       |                                                                                                ^
+    233|     }
+    234|     // The retained original is offered, not just claimed.
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/7]⎯
+
+ FAIL  |ui| src/ui/app.mixed-draft.test.ts > Blade draft charge disclosure opens by focus and touch and dismisses without consuming the offer
+AssertionError: expected null not to be null
+ ❯ src/ui/app.mixed-draft.test.ts:64:20
+     62|   app.openModal("forge");
+     63|   const term = document.querySelector<HTMLButtonElement>(`#forge-effec…
+     64|   expect(term).not.toBeNull();
+       |                    ^
+     65|   term.focus();
+     66|   expect(term.getAttribute("aria-expanded")).toBe("true");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/7]⎯
+
+ FAIL  |ui| src/ui/app.scenarios.test.ts > the launch command > repeating a progression launch rebuilds the walked setup without accumulating
+AssertionError: expected { …(55) } to deeply equal { encyclopedia: {}, …(54) }
+
+- Expected
++ Received
+
+@@ -543,11 +543,13 @@
+        "rootsHeard": 2,
+      },
+    },
+    "combinations": 0,
+    "draftTierBonus": 0,
+-   "encyclopedia": {},
++   "encyclopedia": {
++     "charge": "available",
++   },
+    "eraEarned": 0,
+    "forge": {
+      "earned": 0,
+      "progress": 0,
+    },
+
+ ❯ src/ui/app.scenarios.test.ts:258:25
+    256|
+    257|       await app.devLaunchScenario(id, t);
+    258|       expect(app.state).toEqual(scenarioOf(id)!.build(t));
+       |                         ^
+    259|       expect(app.devScenarioNote).toContain("✓");
+    260|       expect(document.querySelector("#dev-scenario-note")?.textContent…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/7]⎯
+
+ FAIL  |ui| src/ui/app.test.ts > the console header around Enter/Exit Flow (#148) > keeps Notes inside the dark session console and Settings at the edge
+AssertionError: expected 2 to be less than -1
+ ❯ src/ui/app.test.ts:172:64
+    170|     expect(document.querySelector(".clock-anchor #app-tile-notes")).no…
+    171|     expect(document.getElementById("clock-plan")!.contains(document.ge…
+    172|     expect(order(document.getElementById("console-session")!)).toBeLes…
+       |                                                                ^
+    173|     // The session cluster owns the header's primary text action.
+    174|     expect(document.querySelector("#console-session #flow-switch")).no…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/7]⎯
+
+ FAIL  |ui| src/ui/forge.test.ts > Forge drafts (#335) > opens effect definitions without choosing and dismisses them before the draft
+TypeError: Cannot read properties of null (reading 'closest')
+ ❯ src/ui/forge.test.ts:109:20
+    107|     app.openModal("forge");
+    108|     const trigger = panel().querySelector<HTMLButtonElement>('.candida…
+    109|     expect(trigger.closest("[data-choice], [data-mut-choice]")).toBeNu…
+       |                    ^
+    110|     trigger.focus();
+    111|     const body = document.getElementById(trigger.getAttribute("aria-de…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/7]⎯
+
+ FAIL  |ui| src/ui/forge.test.ts > Forge drafts (#335) > discloses live effects without presenting a retained Mutator Forge candidate
+AssertionError: expected [ 'pitch', 'chords', 'module rolls' ] to deeply equal [ 'pitch', 'chords', 'charge', …(1) ]
+
+- Expected
++ Received
+
+  [
+    "pitch",
+    "chords",
+-   "charge",
+    "module rolls",
+  ]
+
+ ❯ src/ui/forge.test.ts:139:19
+    137|     app.openModal("forge");
+    138|     const terms = [...panel().querySelectorAll(".candidate-effect .ter…
+    139|     expect(terms).toEqual(["pitch", "chords", "charge", "module rolls"…
+       |                   ^
+    140|     expect(panel().querySelector('[data-choice="mutator"]')).toBeNull(…
+    141|     expect(panel().querySelectorAll("button button")).toHaveLength(0);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/7]⎯
+
+
+ Test Files  6 failed | 128 passed (134)
+      Tests  7 failed | 2395 passed | 9 skipped (2411)
+   Start at  15:02:01
+   Duration  1007.46s (transform 15.94s, setup 0ms, import 472.16s, tests 1675.22s, environment 8.26s)
+

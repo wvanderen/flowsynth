@@ -1,3 +1,4 @@
+import { renderEncyclopedia, chargeHelpHtml, bindChargeHelp, chordsHelpHtml, bindChordsHelp } from "./encyclopedia";
 import { playthroughStatusMark } from "../engine/playthrough";
 import { SaveRefusedError } from "../engine/save";
 import { historicalBoardHtml } from "./historical-board";
@@ -118,6 +119,7 @@ export function render(app: App): void {
   const devStage = app.dev ? devStageBox() : null;
   beginLayoutPass();
   try {
+    app.refreshEncyclopediaEncounters();
     // One rate computation per pass, both bases (§7): the display basis —
     // live during flow, projected build rate while arranging — and the
     // charge-projected basis the panels, bloom, and countdowns preview.
@@ -765,6 +767,7 @@ function renderLibraryModal(app: App, content: HTMLElement, snapshot?: RateSnaps
   content.innerHTML = `
     ${modalTop(null, undefined, back)}
     ${libraryHeaderHtml(count, NAMED_CHORDS.length, Math.round(BALANCE.discoveryBonusPerClass * 100), Math.round((discoveryBoostOf(state) - 1) * 100))}
+    ${chordsHelpHtml(app)}
     <div class="chord-sheet">
       <div class="chord-index">${rows}</div>
       ${libraryStageHtml(stageDef, state.chordDiscovery[selected], activeTotal, ringing)}
@@ -779,6 +782,7 @@ function renderLibraryModal(app: App, content: HTMLElement, snapshot?: RateSnaps
     });
   });
   wireTooltips(content, app.signal);
+  bindChordsHelp(app, content);
   wireCollectionBack(app);
   wireClose(app);
 }
@@ -2600,7 +2604,8 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   backdrop.setAttribute("aria-modal", kind === "forge" || kind === "inventory" ? "false" : "true");
   document.body.classList.toggle("modal-sheet-open", sheet);
   const extra =
-    kind === "forge"
+    kind === "encyclopedia" ? [app.encyclopediaEntry, app.state.encyclopedia]
+    : kind === "forge"
       ? [app.ui.forgeFace, app.state.catalogEntryOwned, app.state.bankedRolls.length, app.state.bankedMutatorRolls.length, app.state.bankedRolls.at(-1)?.id ?? null, app.state.bankedMutatorRolls.at(-1)?.id ?? null]
       : kind === "honesty"
         ? [app.exitPending, app.state.session?.accounting.poolSeconds ?? 0, app.state.session?.accounting.bucketNous ?? 0]
@@ -2714,7 +2719,8 @@ function renderModal(app: App, live: RateSnapshot, projected: RateSnapshot): voi
   // sheet is a docked panel, never a blocking dialog. The backdrop keeps
   // its class fresh so another kind's scrim returns.
   backdrop.classList.toggle("peek-tray", kind === "inventory");
-  if (kind === "settings") renderSettingsModal(app, content);
+  if (kind === "encyclopedia") renderEncyclopedia(app, content);
+  else if (kind === "settings") renderSettingsModal(app, content);
   else if (kind === "catalog") renderCatalogModal(app, content);
   else if (kind === "forge") renderForgeModal(app, content, projected);
   else if (kind === "achievements") renderAchievementsModal(app, content, projected);
@@ -2793,12 +2799,14 @@ function renderRateModal(app: App, content: HTMLElement, live: RateSnapshot): vo
     ${modalTop("LEDGER", "modal-title")}
     <section id="ledger-nous" class="ledger-section" tabindex="-1"><h3>Nous</h3><div class="ledger-detail-row"><span>Balance</span><b class="mono" data-live="ledger-nous"></b></div><div id="ledger-production" class="rate-details-sheet" tabindex="-1">${rateDetailsHtml(app.state, snapshot, true, "sheet")}</div></section>
     <section id="ledger-pressure" class="ledger-section"></section>
-    <section id="ledger-arete" class="ledger-section" tabindex="-1"><h3>Arete</h3><div class="ledger-detail-row"><span>Banked</span><b class="mono" data-live="ledger-arete"></b></div><button id="prestige-door" class="prestige-door"></button><small class="prestige-availability" data-live="prestige-availability"></small></section>
+    <section id="ledger-arete" class="ledger-section" tabindex="-1"><h3>Arete</h3><button id="about-prestige" class="encyclopedia-context">About prestige</button><div class="ledger-detail-row"><span>Banked</span><b class="mono" data-live="ledger-arete"></b></div><button id="prestige-door" class="prestige-door"></button><small class="prestige-availability" data-live="prestige-availability"></small></section>
     <section id="ledger-scrap" class="ledger-section" tabindex="-1"><h3>Scrap</h3><div class="ledger-detail-row"><span>Recovered from modules and skipped drafts</span><b class="mono" data-live="ledger-scrap"></b></div></section>
-    <section id="ledger-capacity" class="ledger-section" tabindex="-1"><h3>Harmonic capacity</h3><div class="ledger-detail-row"><span>Whole-chord budget per standard voice</span><b class="mono" data-live="ledger-capacity"></b></div></section>
+    <section id="ledger-capacity" class="ledger-section" tabindex="-1"><h3>Harmonic capacity</h3><div class="ledger-detail-row"><span>Allowance / ceiling</span><b class="mono" data-live="ledger-capacity"></b></div>${chordsHelpHtml(app)}</section>
     <nav class="ledger-destinations"><button id="ledger-feats">${FEATS_SVG}<span>Feats</span><span class="mono">${unlockedCount(app.state)}/${ACHIEVEMENTS.length}</span></button><button id="ledger-chords">${LIBRARY_SVG}<span>Chords</span><span class="mono">${discoveryCount(app.state)}/${NAMED_CHORDS.length}</span></button></nav>`;
   updateRateDetailsLive(content, app.state, snapshot);
   updateLedgerModal(app, content);
+  app.listen(byId("about-prestige"), "click", () => app.openEncyclopedia("prestige"));
+  bindChordsHelp(app, content);
   app.listen(byId("prestige-door"), "click", () => app.openPrestigeConfirm());
   app.listen(byId("ledger-feats"), "click", () => app.openModal("achievements"));
   app.listen(byId("ledger-chords"), "click", () => app.openModal("library"));
@@ -3050,10 +3058,10 @@ function capacityShopHtml(app: App): string {
     : `<p class="t-note mono">${capacity}/${ceiling} → ${capacity + 1}/${ceiling}</p>`;
   return `
     <section class="capacity-catalog">
-      <h2 class="t-condensed">${termTipHtml("Harmonic capacity")}</h2>
+      <h2 class="t-condensed">Harmonic capacity</h2>${chordsHelpHtml(app)}
       <div class="catalog-rows">
         <article class="catalog-row">
-          <div><h3 class="t-condensed">${termTipHtml("Poly Expander")}</h3><p class="t-note">Raises ${termTipHtml("Harmonic capacity")} by one for all voices</p>${figure}${note}</div>
+          <div><h3 class="t-condensed">${termTipHtml("Poly Expander")}</h3><p class="t-note">Raises Harmonic capacity by one for all voices</p>${figure}${note}</div>
           ${buy}
         </article>
       </div>
@@ -3178,7 +3186,7 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
       ${identity}
       <button id="close-modal" aria-label="Close dialog">✕</button>
     </div>
-    <div class="catalog-body">${body}</div>
+    <div class="catalog-body" id="catalog-body">${body}</div>
   </div>`;
   content.querySelectorAll<HTMLButtonElement>("[data-catalog-face]").forEach((button) => {
     app.listen(button, "click", () => {
@@ -3214,6 +3222,8 @@ function renderCatalogModal(app: App, content: HTMLElement): void {
   });
   // A face rebuild replaces this root, so disclosure listeners cannot
   // accumulate on the stable modal content and toggle a tap twice.
+  bindChargeHelp(app, content);
+  bindChordsHelp(app, content);
   wireTooltips(content.querySelector(".catalog-frame")!, app.signal);
   wireClose(app);
 }
@@ -3407,6 +3417,7 @@ function catalogNousFaceHtml(app: App): string {
     })
     .join("");
   return `<div class="catalog-sections">
+    ${chargeHelpHtml(app)}
     ${
       openShelf.length > 0
         ? `<section>
@@ -3432,8 +3443,7 @@ function catalogNousFaceHtml(app: App): string {
 }
 
 function shelfDescriptionHtml(type: keyof typeof SHELF_DESCRIPTIONS): string {
-  return (SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role)
-    .replace(/\bcharge\b/gi, () => termTipHtml("charge"));
+  return SHELF_DESCRIPTIONS[type] ?? META[SHELF_MODULE[type]].role;
 }
 
 // The simplified module mark (the tray tile's own): the category-hued hex
@@ -3652,7 +3662,9 @@ function renderForgeModal(app: App, content: HTMLElement, projected: RateSnapsho
           ${candidateScalingHtml(candidate.type)}</span>
         </div>`).join("") : ""}
     </div>${skip}` : `<p class="empty-copy">No ${face === "mutators" ? "mutator" : "module"} rolls banked.</p>`}
-    ${forgeMeterHtml(face)}</div>`;
+    ${forgeMeterHtml(face)}${chargeHelpHtml(app, "forge-about-charge")}</div>`;
+  bindChargeHelp(app, content);
+  bindChordsHelp(app, content);
   wireTooltips(content, app.signal);
   updateForgeMetersLive(content, state, projected.forgeRate, projected.mutatorForgeRate);
   content.querySelectorAll<HTMLButtonElement>("[data-forge-face]").forEach(button => {
@@ -3876,6 +3888,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
   content.innerHTML = `
     ${modalTop("PRESTIGE")}
     <h2 id="modal-title">Begin the next era?</h2>
+    <button id="confirm-about-prestige" class="encyclopedia-context">About prestige</button>
     <p class="lead">${zero
       ? `This prestige banks no Arete (<strong>0 Arete</strong>)`
       : `Prestige banks <strong class="mono">${claim} Arete</strong>`} and starts the era over: module levels return to base${capacityClause}, and your nous and charge return to the opening.</p>
@@ -3884,6 +3897,7 @@ function renderPrestigeModal(app: App, content: HTMLElement): void {
       <button id="prestige-cancel">Not yet</button>
       <button id="prestige-confirm" class="primary">${zero ? "Prestige anyway" : `Prestige and claim ${claim} Arete`}</button>
     </div>`;
+  app.listen(byId("confirm-about-prestige"), "click", () => app.openEncyclopedia("prestige"));
   app.listen(byId("prestige-cancel"), "click", () => app.closeModal());
   wireTooltips(content, app.signal);
   app.listen(byId("prestige-confirm"), "click", () => app.confirmPrestige());

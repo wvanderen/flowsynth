@@ -1,0 +1,10 @@
+scroll setup desktop rate 100 {"top":100,"max":465,"focus":"about-chords","stage":null}
+scroll setup desktop rate 0 {"top":0,"max":465,"focus":"about-chords","stage":null}
+scroll setup desktop library 100 {"top":100,"max":224,"focus":"about-chords","stage":null}
+scroll setup desktop library 0 {"top":0,"max":224,"focus":"about-chords","stage":null}
+desktop completed
+scroll setup phone rate 100 {"top":100,"max":347,"focus":"about-chords","stage":null}
+scroll setup phone rate 0 {"top":0,"max":347,"focus":"about-chords","stage":null}
+scroll setup phone library 100 {"top":100,"max":256,"focus":"about-chords","stage":null}
+scroll setup phone library 0 {"top":0,"max":256,"focus":"about-chords","stage":null}
+phone completed

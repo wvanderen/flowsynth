@@ -466,7 +466,9 @@ describe("placement previews with capacity-aware production (#260)", () => {
     expect(ghostLabels().sort()).toEqual(["Fifth ×1.3 ×2 · idle", "Octave ×1.15 · idle"]);
     expect(document.querySelectorAll(".ghost-mark.chord-idle")).toHaveLength(2);
     // A promise the capacity can afford stays an earning promise: the
-    // lone C4's Fifth previews without the idle word.
+    // lone C4's Fifth previews without the idle word. Discovery now saves
+    // the earlier inspection, so this independent board needs a fresh slot.
+    fixture.release();
     app = boot(undefined, true);
     const tray = give(app.state, "additive", null);
     app.render();
