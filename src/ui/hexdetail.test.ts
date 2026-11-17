@@ -144,25 +144,34 @@ describe("opening the cross-section (issue #295)", () => {
     const dialog=document.querySelector<HTMLDialogElement>(".context-overview")!;
     expect(dialog.open).toBe(true);
     dialog.querySelector('[data-ctx-cell="1,0"]')!.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
-    expect(document.querySelector(".context-overview")).toBeNull();
+    expect(app.ui.detail).toEqual({pos:hex(0,0),face:"modules"});
+    expect(dialog.querySelector('[data-map-selection]')!.textContent).toContain("1,0");
+    dialog.querySelector<HTMLButtonElement>('[data-map-go]')!.click();
+    expect(dialog.open).toBe(true);
     expect(app.ui.detail).toEqual({pos:hex(1,0),face:"modules"});
+    dialog.querySelector('[data-ctx-cell="0,0"]')!.dispatchEvent(new MouseEvent("click",{bubbles:true}));
+    dialog.querySelector<HTMLButtonElement>('[data-map-go-close]')!.click();
+    expect(document.querySelector(".context-overview")).toBeNull();
+    expect(app.ui.detail).toEqual({pos:hex(0,0),face:"modules"});
   });
   it("retains overview focus through live ticks and closes back to the miniature", () => {
     app.render();clickCell(0,0);
     const invoker=detail().querySelector<HTMLButtonElement>("[data-context-expand]")!;
     invoker.focus();invoker.click();
-    const node=document.querySelector<HTMLButtonElement>('[data-map-cell="1,0"]')!;
+    const node=document.querySelector<SVGElement>('.context-overview [data-ctx-cell="1,0"]')!;
     node.focus();app.state.nous+=10;app.render();
     expect(document.activeElement).toBe(node);
     document.querySelector<HTMLButtonElement>("[data-map-close]")!.click();
     expect(document.querySelector(".context-overview")).toBeNull();
   });
-  it("offers touch-sized cell buttons instead of a native picker on phone", () => {
+  it("selects a map destination on phone without a cell list and confirms before navigating", () => {
     setAppWidth(390);seedEra();app.openDetail(hex(0,0),"world");
     expect(detail().querySelector("select[data-ctx-navigation]")).toBeNull();
     detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
-    expect(document.querySelectorAll("[data-map-cell]")).toHaveLength(app.state.cells.length);
-    document.querySelector<HTMLButtonElement>('[data-map-cell="1,0"]')!.click();
+    expect(document.querySelectorAll("[data-map-cell], .context-destinations")).toHaveLength(0);
+    document.querySelector('.context-overview [data-ctx-cell="1,0"]')!.dispatchEvent(new MouseEvent("click",{bubbles:true}));
+    expect(app.ui.detail).toEqual({pos:hex(0,0),face:"world"});
+    document.querySelector<HTMLButtonElement>('[data-map-go-close]')!.click();
     expect(app.ui.detail).toEqual({pos:hex(1,0),face:"world"});
   });
 
@@ -851,7 +860,7 @@ describe("the phone face (issue #295)", () => {
     const css = readFileSync("src/ui/style.css", "utf8");
     const reflow = css.match(/@container app \(width < 1000px\) \{[\s\S]*?\n\}/g)!.find((block) => block.includes(".hex-detail-side"));
     expect(reflow).toBeTruthy();
-    expect(reflow).toMatch(/grid-template-columns:\s*minmax\(0,\s*calc\(var\(--detail-hex\) \+ 60px\)\)/);
+    expect(reflow).toMatch(/grid-template-columns:\s*minmax\(0,\s*calc\(var\(--detail-hex\) \+ 164px\)\)/);
     expect(reflow).toMatch(/\.hex-detail-side\s*\{[^}]*width:\s*100%/);
     setAppWidth(1200);
   });

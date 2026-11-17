@@ -15,7 +15,7 @@ import type { App, DetailFace } from "./app";
 import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead, spotlightInactiveVerdict } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
-import { layerLegendHtml, worldEntered, bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
+import { worldEntered, bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
 import { COLUMN_WORD, META, RARITY_LABEL, WORLD_META, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
@@ -255,7 +255,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       <div class="hex-detail-grid">
         <div class="hex-detail-stack">
           <div class="hex-detail-focus">
-            <nav class="hex-detail-layers" aria-label="Hex layer">${layerLegendHtml(app)}</nav>
+            <nav class="hex-detail-layers" aria-label="Hex layer">${detailLayerPreviews(app, pos, module, snapshot)}</nav>
             ${detail.face === "world" && worldEntered(state) ? worldLayerHtml(app, pos, snapshot) : moduleLayerHtml(app, pos, module, snapshot)}
           </div>
           ${actionRailHtml(app, pos, module)}
@@ -316,6 +316,20 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
       .find((control) => control.getAttribute(focusAttribute) === focusValue)
       ?.focus({ preventScroll: true });
   }
+}
+
+function detailLayerPreviews(app: App, pos: Hex, module: ModuleInstance | undefined, snapshot: RateSnapshot): string {
+  const preview = (face: DetailFace, image: string, detail: string) => {
+    const id = `detail-layer-${face}-tip`;
+    const selected = app.ui.detail?.face === face;
+    return `<span class="inst-tip"><button class="detail-layer-preview inst-tip-trigger${selected ? " active" : ""}" data-legend-layer="${face}" aria-label="${face === "world" ? "World" : "Modules"} layer" aria-pressed="${selected}" aria-describedby="${id}">${image}</button><span class="inst-tip-body" id="${id}" role="tooltip">${detail}</span></span>`;
+  };
+  const world = worldChassisHtml(app.state, pos, snapshot);
+  const worldFacts = world.chassis.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const read = module ? faceReadoutFor(app.state, module, pos, snapshot, true) : null;
+  const moduleImage = `<svg class="hex-stack-face" viewBox="-70 -70 140 140" ${module ? `data-type="${module.type}" data-rarity="${typeRarityOf(module.type)}"` : ""} aria-hidden="true">${module ? moduleFace({ type: module.type, tier: module.tier, variant: "identity", readout: "" }) : `<polygon class="hex" points="${hexPoints(HEX_RADIUS)}"/>`}</svg>`;
+  const moduleFacts = module ? `${META[module.type].name} · Lv. ${module.level} · ${read!.readout}` : "Empty module cell";
+  return `${worldEntered(app.state) ? preview("world", world.chassis, `${world.tip}${worldFacts ? ` · ${worldFacts}` : ""}`) : ""}${preview("modules", moduleImage, moduleFacts)}`;
 }
 
 /* ── The World face ─────────────────────────────────── */

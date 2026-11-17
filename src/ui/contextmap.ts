@@ -123,10 +123,10 @@ export function contextMapSvg(state: GameState, pos: Hex, module: ModuleInstance
     const isOpened = cell.q === pos.q && cell.r === pos.r;
     const resident = occupied.get(key);
     const hexAttrs = `class="ctx-cell${owned ? " owned" : ""}" points="${hexPoints(cellRadius)}"`;
-    if (owned && !isOpened) {
+    if (owned && (!isOpened || expanded)) {
       // The owned cell is the map's one navigation: a button in the
       // board grid's own SVG grammar, opening that coordinate's detail.
-      board += `<g class="ctx-cell-node" data-ctx-cell="${cell.q},${cell.r}" tabindex="0" role="button" aria-label="Open the Hex detail at ${cellNoteOf(cell)}"><polygon ${hexAttrs} transform="translate(${px(ax)} ${px(ay)})"/>${resident ? `<circle class="ctx-dot" style="fill:var(--${HUE_TOKEN_OF[resident.type]})" cx="${px(ax)}" cy="${px(ay)}" r="${Math.max(1.6, cellRadius * 0.16).toFixed(2)}"/>` : ""}</g>`;
+      board += `<g class="ctx-cell-node" data-ctx-cell="${cell.q},${cell.r}" tabindex="0" role="button" aria-label="${expanded ? "Select" : "Open the Hex detail at"} ${cellNoteOf(cell)} · ${cell.q},${cell.r}"><polygon ${hexAttrs} transform="translate(${px(ax)} ${px(ay)})"/>${resident ? `<circle class="ctx-dot" style="fill:var(--${HUE_TOKEN_OF[resident.type]})" cx="${px(ax)}" cy="${px(ay)}" r="${Math.max(1.6, cellRadius * 0.16).toFixed(2)}"/>` : ""}</g>`;
     } else {
       board += `<polygon ${hexAttrs} transform="translate(${px(ax)} ${px(ay)})"/>`;
       if (resident && !isOpened) {
@@ -137,7 +137,9 @@ export function contextMapSvg(state: GameState, pos: Hex, module: ModuleInstance
   const [ox, oy] = at(boardPoint(pos)[0], boardPoint(pos)[1]);
   const marker = `<polygon class="ctx-opened" points="${hexPoints(cellRadius)}" transform="translate(${px(ox)} ${px(oy)})"/>`;
   const svg = `<svg class="ctx-map" viewBox="0 0 ${MAP_WIDTH} ${MAP_HEIGHT}" role="group" aria-label="Context map — the opened hex, its active chords, and the owned board">${board}${chords}${marker}</svg>`;
-  return expanded ? svg : `<div class="ctx-navigation">${svg}<button class="ctx-open-navigator" data-context-expand>Open navigator</button></div>`;
+  if (expanded) return svg;
+  const touchSvg = svg.replace(/data-ctx-cell="[^"]*"/g, "").replace(/tabindex="0"/g, "").replace(/role="button"/g, "").replace('role="group"', 'aria-hidden="true"');
+  return `<div class="ctx-navigation"><div class="ctx-desktop">${svg}</div><button class="ctx-touch" data-context-expand aria-label="Open cell navigator">${touchSvg}</button></div>`;
 }
 
 export function openContextMap(app: App, marks: ChordMark[]): void {
@@ -148,7 +150,7 @@ export function openContextMap(app: App, marks: ChordMark[]): void {
   dialog.className = "context-overview";
   dialog.setAttribute("aria-label", "Open hex");
   const module = app.state.modules.find(m => m.pos?.q === detail.pos.q && m.pos?.r === detail.pos.r);
-  dialog.innerHTML = `<div class="context-overview-face"><header><h2>Open hex</h2><button data-map-close>Close</button></header><div class="context-overview-stage">${contextMapSvg(app.state, detail.pos, module, marks, true)}</div><label class="map-zoom">Zoom <input type="range" min="100" max="400" value="100" aria-label="Context map zoom"></label><nav class="context-destinations" aria-label="Owned cells">${app.state.cells.map(cell => `<button data-map-cell="${cell.q},${cell.r}"${cell.q === detail.pos.q && cell.r === detail.pos.r ? ' aria-current="true"' : ""}>${cellNoteOf(cell)} <small class="mono">${cell.q},${cell.r}</small></button>`).join("")}</nav></div>`;
+  dialog.innerHTML = `<div class="context-overview-face"><header><h2>Open hex</h2><button data-map-close>Close</button></header><div class="context-overview-stage">${contextMapSvg(app.state, detail.pos, module, marks, true)}</div><label class="map-zoom">Zoom <input type="range" min="100" max="400" value="100" aria-label="Context map zoom"></label><div class="context-selection"><output class="mono" data-map-selection aria-live="polite"></output><div class="context-navigation-actions"><button data-map-go>Navigate</button><button data-map-go-close>Navigate &amp; close</button></div></div></div>`;
   document.body.append(dialog);
   let closed = false;
   let forget = () => {};
@@ -163,18 +165,39 @@ export function openContextMap(app: App, marks: ChordMark[]): void {
   dialog.addEventListener("cancel", event => { event.preventDefault(); close(); });
   dialog.addEventListener("keydown", event => { if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); close(); } });
   dialog.addEventListener("click", event => { if (event.target === dialog) close(); });
-  const navigate = (raw: string) => {
-    const [q, r] = raw.split(",").map(Number);
-    close(); app.openDetail({ q: q!, r: r! }, detail.face);
-    document.getElementById("hex-detail-return")?.focus();
+  let selected = { ...detail.pos };
+  const selection = dialog.querySelector<HTMLOutputElement>("[data-map-selection]")!;
+  const paintSelection = () => {
+    selection.textContent = `${cellNoteOf(selected)} · ${selected.q},${selected.r}`;
+    dialog.querySelectorAll<SVGElement>("[data-ctx-cell]").forEach(node => {
+      const active = node.dataset.ctxCell === `${selected.q},${selected.r}`;
+      node.classList.toggle("ctx-selected", active);
+      node.setAttribute("aria-pressed", String(active));
+    });
   };
-  dialog.querySelectorAll<HTMLElement>("[data-map-cell], [data-ctx-cell]").forEach(node => {
-    const go = () => navigate(node.dataset.mapCell ?? node.dataset.ctxCell!);
-    node.addEventListener("click", go);
-    if (node.hasAttribute("data-ctx-cell")) node.addEventListener("keydown", event => {
-      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); go(); }
+  const navigate = (dismiss: boolean) => {
+    app.openDetail(selected, detail.face);
+    const destination = dialog.querySelector<SVGElement>(`[data-ctx-cell="${selected.q},${selected.r}"] polygon`);
+    if (destination) dialog.querySelector(".ctx-opened")?.setAttribute("transform", destination.getAttribute("transform")!);
+    if (dismiss) {
+      close();
+      document.getElementById("hex-detail-return")?.focus();
+    }
+  };
+  dialog.querySelector("[data-map-go]")!.addEventListener("click", () => navigate(false));
+  dialog.querySelector("[data-map-go-close]")!.addEventListener("click", () => navigate(true));
+  dialog.querySelectorAll<SVGElement>("[data-ctx-cell]").forEach(node => {
+    const select = () => {
+      const [q, r] = node.dataset.ctxCell!.split(",").map(Number);
+      selected = { q: q!, r: r! };
+      paintSelection();
+    };
+    node.addEventListener("click", select);
+    node.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(); }
     });
   });
+  paintSelection();
   const svg = dialog.querySelector<SVGSVGElement>(".ctx-map")!;
   const slider = dialog.querySelector<HTMLInputElement>("input")!;
   let zoom = 1, x = MAP_WIDTH / 2, y = MAP_HEIGHT / 2, moved = false;

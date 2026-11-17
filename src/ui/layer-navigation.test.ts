@@ -28,6 +28,19 @@ describe("layer navigation and discovery (#539)", () => {
     press();
     expect(app.ui.detail?.face).toBe("modules");
   });
+  it("layer previews show the coordinate's real faces and basic facts instead of generic symbols", () => {
+    app.state.world.unlocked = true;
+    app.render();
+    clickCell(0, 0);
+    const module = app.state.modules.find(m => m.pos?.q === 0 && m.pos?.r === 0)!;
+    const preview = document.querySelector<HTMLButtonElement>('#hex-detail .detail-layer-preview[data-legend-layer="modules"]')!;
+    expect(preview.querySelector('.face-signature')).not.toBeNull();
+    expect(preview.querySelector('[data-type]')!.getAttribute('data-type')).toBe(module.type);
+    const tip = document.getElementById(preview.getAttribute('aria-describedby')!)!;
+    expect(tip.textContent).toContain(`Lv. ${module.level}`);
+    expect(tip.textContent).toContain("ν");
+    expect(document.querySelector('#hex-detail .detail-layer-preview[data-legend-layer="world"] .world-stack')).not.toBeNull();
+  });
   it("does not change layers under Settings and renders every shared binding there", () => {
     app.state.world.unlocked = true;
     app.openModal("settings");
