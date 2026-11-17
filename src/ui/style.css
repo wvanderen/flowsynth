@@ -4594,7 +4594,10 @@ body.modal-sheet-open .zoom-cluster { position: absolute; right: 12px; bottom: 1
 .detail-layer-preview .hex-stack-marker { display: none; }
 .detail-layer-preview[aria-pressed="true"] { box-shadow: inset 0 -2px var(--ink); }
 .detail-layer-preview:hover, .detail-layer-preview:focus-visible { background: var(--hover-bg); }
-.ctx-selected .ctx-cell { stroke: var(--ink); stroke-width: 2.4; fill: var(--line); }
+/* Ownership is persistent in the touch navigator, never a hover state. */
+.context-overview .ctx-cell:not(.owned) { stroke-dasharray: 2 3; opacity: 0.35; }
+.context-overview .ctx-cell.owned { fill: var(--line); stroke: var(--muted); stroke-width: 1.4; }
+.context-overview .ctx-selected .ctx-cell { stroke: var(--ink); stroke-width: 2.4; fill: var(--line-strong); }
 .context-selection { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .context-navigation-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .context-navigation-actions button { min-height: 44px; }

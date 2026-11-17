@@ -169,6 +169,15 @@ describe("opening the cross-section (issue #295)", () => {
     expect(detail().querySelector("select[data-ctx-navigation]")).toBeNull();
     detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
     expect(document.querySelectorAll("[data-map-cell], .context-destinations")).toHaveLength(0);
+    const map = document.querySelector(".context-overview .ctx-map")!;
+    expect(map.querySelectorAll(".ctx-cell.owned")).toHaveLength(app.state.cells.length);
+    expect(map.querySelectorAll(".ctx-cell:not(.owned)").length).toBeGreaterThan(0);
+    // Resting ownership must not depend on hover or hue: solid filled owned
+    // faces versus faint dashed unavailable context, with selection stronger.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toMatch(/\.context-overview \.ctx-cell\.owned\s*\{[^}]*fill:\s*var\(--line\);[^}]*stroke:\s*var\(--muted\)/);
+    expect(css).toMatch(/\.context-overview \.ctx-cell:not\(\.owned\)\s*\{[^}]*stroke-dasharray:\s*2 3/);
+    expect(css).toMatch(/\.context-overview \.ctx-selected \.ctx-cell\s*\{[^}]*stroke-width:\s*2\.4/);
     document.querySelector('.context-overview [data-ctx-cell="1,0"]')!.dispatchEvent(new MouseEvent("click",{bubbles:true}));
     expect(app.ui.detail).toEqual({pos:hex(0,0),face:"world"});
     document.querySelector<HTMLButtonElement>('[data-map-go-close]')!.click();
