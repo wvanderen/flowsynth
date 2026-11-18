@@ -1,6 +1,6 @@
 # Issue #539 — Hex navigation and shortcut discovery
 
-**Current offered source: `4889ffc1`.** The ownership-visibility acceptance below supersedes the earlier navigator appearance; the refinement acceptance supersedes the historical blocked preview-service attempt. Chrome DevTools CLI desktop and phone captures now exist and have been visually inspected.
+**Current offered source: `ad373d64` on PR branch `feat/539-hex-navigation`.** The ownership-visibility acceptance below supersedes the earlier navigator appearance; the refinement acceptance supersedes the historical blocked preview-service attempt. Chrome DevTools CLI desktop and phone captures now exist and have been visually inspected.
 
 Spec: https://github.com/wvanderen/flowsynth/issues/539
 
@@ -102,3 +102,13 @@ Evidence: `ownership-provenance.json` verifies clean source and this checkout. C
 Mapping: resting touch ownership → phone capture + computed styles + named phone-selection test; non-color distinction → solid/filled versus dashed state in capture; selection preserved → existing navigation assertions and stronger selected CSS; desktop non-regression → desktop capture and scoped CSS. Prior `refinement-phone-navigator.png` is historical and superseded for ownership appearance by `ownership-phone.png`, not relabeled. Earlier interaction checks remain historical; the current full suite re-verifies selection and confirmation behavior.
 
 Final in-thread acceptance at `4889ffc1`: requested ownership signal is visible at rest without hover, selection remains distinct, and no source/evidence blocker identified. Touch remains emulated, not a physical-device claim.
+
+## PR preparation on current main — ad373d64
+
+The original integration branch had already been squash-merged as #538. Created `feat/539-hex-navigation` from `origin/main` (`d490e40`) and cherry-picked only the eight #539 commits, without conflicts. Source/spec integration pass checked the resulting diff against main: only the intended UI/navigation, tests, instrument amendment and evidence. Existing main corrections are retained; no unrelated Encyclopedia source is in this PR.
+
+Old commit hashes above remain historical, not relabeled. At the new offered source `ad373d64`: supported-runtime preflight passed; `npm run check` passed; full `npm test` passed 136 files / 2,424 tests, 9 skipped (235.95s). The count differs from the older branch because this branch starts from merged main; criterion cases remain present and pass.
+
+Regenerated evidence rather than carrying old captures forward: `pr-provenance.json` verifies this exact clean revision; `pr-desktop.png` (1280×800), `pr-phone.png` and `pr-phone-navigator.png` (390×844 mobile/touch), all with reduced-motion emulation. Reused the documented constructed fixture and hid only development controls. Visually inspected all three images: recognizable occupant miniatures, plain tooltip and focus outline, clearance from charge trigger, phone face/Return layout, persistent filled owned cells versus dashed unowned context, no cell roster, note/coordinates and both confirmation controls. Desktop opener computed display none. `pr-interactions.json` rechecks selection before navigation, Navigate keeping the dialog open, Navigate & close dismissing with Return focus. Browser page 3 closed afterward. Evidence-only commit does not change offered source.
+
+Current criterion mapping is the refinement/ownership mapping above, with all automated results replaced by this full run, visual composition replaced by the three `pr-*.png` captures, and confirmation behavior replaced by `pr-interactions.json`. Earlier gesture/focus records are historical supporting checks, not newly executed hardware evidence. In-thread source and evidence gate: no remaining blocker; physical touch/pinch limitations remain explicit.
