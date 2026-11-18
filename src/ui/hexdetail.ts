@@ -23,7 +23,7 @@ import { chargeHelpHtml, bindChargeHelp, chordsHelpHtml, bindChordsHelp } from "
 import { profileGradesHtml } from "./profile";
 import { moduleFlowsHtml } from "./hexflows";
 import { contextMapSvg, openContextMap } from "./contextmap";
-import { bindPointerDrag, type DetailChordRow } from "./render";
+import { bindPointerDrag, detailChordRow, type DetailChordRow } from "./render";
 
 /* ── The upgrade benefit (§5) ─────────────────────────
    One entry per module type — the single place a type's benefit phrasing
@@ -286,7 +286,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
     });
   });
   app.listen(host.querySelector("[data-context-expand]"), "click", () => {
-    openContextMap(app, chordRow.marks);
+    openContextMap(app, () => detailChordRow(app, displayedRates(app.state, app.state.mode === "upgrade")).marks);
   });
   // The World actions and the buy column wire together — an occupied
   // place's stack still carries its controls.

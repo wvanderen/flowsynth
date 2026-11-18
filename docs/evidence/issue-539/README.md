@@ -1,6 +1,6 @@
 # Issue #539 — Hex navigation and shortcut discovery
 
-**Current offered source: `ad373d64` on PR branch `feat/539-hex-navigation`.** The ownership-visibility acceptance below supersedes the earlier navigator appearance; the refinement acceptance supersedes the historical blocked preview-service attempt. Chrome DevTools CLI desktop and phone captures now exist and have been visually inspected.
+**Current status: PR #540 review recovery, recorded in the final section below.** The earlier `ad373d64` captures and suite results are superseded for the changed navigator; they remain historical evidence, not acceptance of the review fixes.
 
 Spec: https://github.com/wvanderen/flowsynth/issues/539
 
@@ -112,3 +112,19 @@ Old commit hashes above remain historical, not relabeled. At the new offered sou
 Regenerated evidence rather than carrying old captures forward: `pr-provenance.json` verifies this exact clean revision; `pr-desktop.png` (1280×800), `pr-phone.png` and `pr-phone-navigator.png` (390×844 mobile/touch), all with reduced-motion emulation. Reused the documented constructed fixture and hid only development controls. Visually inspected all three images: recognizable occupant miniatures, plain tooltip and focus outline, clearance from charge trigger, phone face/Return layout, persistent filled owned cells versus dashed unowned context, no cell roster, note/coordinates and both confirmation controls. Desktop opener computed display none. `pr-interactions.json` rechecks selection before navigation, Navigate keeping the dialog open, Navigate & close dismissing with Return focus. Browser page 3 closed afterward. Evidence-only commit does not change offered source.
 
 Current criterion mapping is the refinement/ownership mapping above, with all automated results replaced by this full run, visual composition replaced by the three `pr-*.png` captures, and confirmation behavior replaced by `pr-interactions.json`. Earlier gesture/focus records are historical supporting checks, not newly executed hardware evidence. In-thread source and evidence gate: no remaining blocker; physical touch/pinch limitations remain explicit.
+
+## PR #540 review recovery — source gate
+
+Two P2 findings lifted the prior source freeze: the roster-free phone navigator left undersized cell targets, and Navigate kept the original voice's chord geometry after changing destination. Resolved together:
+
+- The expanded map computes its minimum zoom from the rendered viewport and cell geometry so each cell's inscribed diameter is at least 44 CSS px. Slider, wheel and pinch share that floor; resize recomputes it, tall boards retain additional zoom range, and keyboard focus pans offscreen destinations into view. The compact desktop map is unchanged; no roster or extra navigation door returns.
+- Navigate obtains the destination's current chord marks after the detail render and refreshes map contents in the existing SVG root. Dialog controls, pan/zoom and focus remain intact; delegated selection works after every refresh, including empty-to-occupied navigation.
+
+Preliminary in-thread source/spec review read both fixes against #539 and its amendments, the instrument standards/controls pin, retained ADR-0072 context semantics, ownership styles, focus/dismissal lifecycle and named regression assertions. Resize cleanup and keyboard visibility were checked as part of the same revision. No remaining source blocker; no independent reviewer. Targeted `hexdetail`, `layer-navigation`, and `shortcuts` run: 74 passed. Final check/full suite and fresh desktop/phone captures are **owed at the new source freeze**. All earlier suite results are invalidated; prior navigator captures do not demonstrate these fixes.
+
+| Review requirement | Named verification | Class/status at source gate |
+| --- | --- | --- |
+| Touch-sized map destinations without a roster | `hexdetail.test.ts`: “keeps navigator cells at least 44px at minimum zoom and after resize” at 320/390/768px and a tall board; asserts geometry, zoom-out floor, resize, keyboard centering and observer cleanup | Automated; rendered phone evidence owed |
+| Destination-dependent formation refresh with Navigate kept open | `hexdetail.test.ts`: “refreshes kept-open map chords for empty and occupied destinations without resetting navigation”; asserts chord removal/restoration, marker/selection, zoom, button focus and dismissal restoration | Automated; browser interaction evidence owed |
+| Existing direct desktop navigation, phone confirmation, ownership and layer behavior | Existing `hexdetail.test.ts` and `layer-navigation.test.ts` cases; targeted pass above | Automated; desktop/phone composition evidence owed |
+| Final check, full suite, provenance and acceptance | Owed after source freeze | Automated/manual owed |

@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createAppFixture, clickCell, setAppWidth } from "./testing/app-fixture";
@@ -31,7 +31,11 @@ beforeEach(() => {
   app = boot();
 });
 
-afterEach(() => fixture.release());
+afterEach(() => {
+  fixture.release();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const detail = () => document.getElementById("hex-detail")!;
 const open = () => !detail().hidden;
@@ -154,6 +158,97 @@ describe("opening the cross-section (issue #295)", () => {
     expect(document.querySelector(".context-overview")).toBeNull();
     expect(app.ui.detail).toEqual({pos:hex(0,0),face:"modules"});
   });
+  it("refreshes kept-open map chords for empty and occupied destinations without resetting navigation", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render(); clickCell(0, 0);
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    const dialog = document.querySelector<HTMLDialogElement>(".context-overview")!;
+    const map = dialog.querySelector<SVGSVGElement>(".ctx-map")!;
+    const slider = dialog.querySelector<HTMLInputElement>("input")!;
+    slider.value = "200";
+    slider.dispatchEvent(new Event("input"));
+    const view = map.getAttribute("viewBox");
+    const go = dialog.querySelector<HTMLButtonElement>("[data-map-go]")!;
+    expect(map.querySelectorAll(".ctx-link").length).toBeGreaterThan(0);
+    const navigate = (position: string) => {
+      map.querySelector<SVGElement>(`[data-ctx-cell="${position}"]`)!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      go.focus(); go.click();
+      expect(dialog.open).toBe(true);
+      expect(document.activeElement).toBe(go);
+      expect(map.getAttribute("viewBox")).toBe(view);
+      expect(slider.value).toBe("200");
+      expect(map.querySelector(`[data-ctx-cell="${position}"]`)!.getAttribute("aria-pressed")).toBe("true");
+    };
+    navigate("0,1");
+    expect(app.ui.detail?.pos).toEqual(hex(0, 1));
+    expect(map.querySelectorAll(".ctx-link, .ctx-seam")).toHaveLength(0);
+    // Start from an empty cell too: the initial marks cannot supply this chord.
+    navigate("1,0");
+    expect(app.ui.detail?.pos).toEqual(hex(1, 0));
+    expect(map.querySelectorAll(".ctx-link").length).toBeGreaterThan(0);
+    expect(map.querySelector(".ctx-opened")!.getAttribute("transform")).toBe(
+      map.querySelector('[data-ctx-cell="1,0"] polygon')!.getAttribute("transform"),
+    );
+    dialog.querySelector<HTMLButtonElement>("[data-map-close]")!.click();
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.focus();
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    document.querySelector(".context-overview")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.activeElement).toBe(detail().querySelector("[data-context-expand]"));
+  });
+
+  it.each([
+    { width: 320, tall: false }, { width: 390, tall: false }, { width: 768, tall: false },
+    { width: 390, tall: true },
+  ])("keeps navigator cells at least 44px at minimum zoom and after resize ($width px, tall=$tall)", ({ width, tall }) => {
+    let viewportWidth = width;
+    let resized!: ResizeObserverCallback;
+    const disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) { resized = callback; }
+      observe() {}
+      disconnect = disconnect;
+    });
+    if (tall) {
+      app.state.unlockedRows.push(30);
+      app.state.cells.push(hex(0, 30));
+    }
+    app.render(); clickCell(0, 0);
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    const dialog = document.querySelector<HTMLDialogElement>(".context-overview")!;
+    const map = dialog.querySelector<SVGSVGElement>(".ctx-map")!;
+    Object.defineProperty(map, "clientWidth", { configurable: true, get: () => viewportWidth - 64 });
+    Object.defineProperty(map, "clientHeight", { configurable: true, value: 280 });
+    resized([], {} as ResizeObserver);
+    const slider = dialog.querySelector<HTMLInputElement>("input")!;
+    const assertTargets = () => {
+      const [, , w, h] = map.getAttribute("viewBox")!.split(" ").map(Number);
+      const scale = Math.min(map.clientWidth / w!, map.clientHeight / h!);
+      expect(Math.sqrt(3) * Number(map.getAttribute("data-cell-radius")) * scale).toBeGreaterThanOrEqual(44);
+    };
+    assertTargets();
+    slider.value = slider.min;
+    slider.dispatchEvent(new Event("input"));
+    assertTargets();
+    // Ctrl-wheel zoom-out and a narrower viewport must respect the same floor.
+    map.dispatchEvent(new WheelEvent("wheel", { ctrlKey: true, deltaY: 1000, cancelable: true }));
+    assertTargets();
+    viewportWidth = 280;
+    resized([], {} as ResizeObserver);
+    assertTargets();
+    expect(Number(slider.value)).toBeGreaterThanOrEqual(Number(slider.min));
+    if (tall) {
+      expect(Number(slider.max)).toBeGreaterThan(400);
+      map.querySelector<SVGElement>('[data-ctx-cell="0,30"]')!.focus();
+      const [x, y, w, h] = map.getAttribute("viewBox")!.split(" ").map(Number);
+      const center = map.querySelector('[data-ctx-cell="0,30"] polygon')!.getAttribute("transform")!.match(/translate\(([-\d.]+) ([-\d.]+)\)/)!;
+      expect(x! + w! / 2).toBeCloseTo(Number(center[1]));
+      expect(y! + h! / 2).toBeCloseTo(Number(center[2]));
+      assertTargets();
+    }
+    dialog.querySelector<HTMLButtonElement>("[data-map-close]")!.click();
+    expect(disconnect).toHaveBeenCalled();
+  });
+
   it("retains overview focus through live ticks and closes back to the miniature", () => {
     app.render();clickCell(0,0);
     const invoker=detail().querySelector<HTMLButtonElement>("[data-context-expand]")!;
