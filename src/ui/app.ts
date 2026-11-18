@@ -1,3 +1,4 @@
+import { SHORTCUTS, isLayerShortcut } from "./shortcuts";
 import { GAME_COMMANDS } from "./game-commands";
 import { advance, earnNous, emptyAdvanceResult } from "../engine/advance";
 import type { AdvanceResult } from "../engine/types";
@@ -1142,13 +1143,22 @@ export class App {
         first.focus();
       }
     });
+    document.addEventListener("keydown", (event) => {
+      if (!this.ownsBoard() || this.ui.modal || document.querySelector("dialog[open]") || !isLayerShortcut(event)) return;
+      if (!worldEntered(this.state)) return;
+      event.preventDefault();
+      const current = this.ui.detail?.face ?? this.ui.boardLayer;
+      const next = current === "modules" ? "world" : "modules";
+      if (this.ui.detail) this.detailFace(next);
+      else this.setBoardLayer(next);
+    }, { signal: this.signal });
     // The Esc chain (§5, issue #295): the modal eats it first; then the
     // armed transient modes unwind — an armed placement cancels before the
     // Hex detail closes; then the detail itself returns the grid with its
     // layer, position, and zoom intact; then the Mutators layer; then the
     // console furniture. Outside a dialog, typing keeps its own Escape.
     document.addEventListener("keydown", (event) => {
-      if (event.key !== "Escape" || !this.ownsBoard()) return;
+      if (event.key !== SHORTCUTS.escape.key || !this.ownsBoard()) return;
       const inv = this.ui.inventory;
       const inventoryActive = this.state.mode === "upgrade" && (this.ui.modal === "inventory" || (!this.ui.modal && (!inv.collapsed || inv.dragOpen)));
       if (inventoryActive && (inv.inspect || inv.merge || inv.scrapReview || inv.scrapMode || inv.menu)) {
@@ -1197,7 +1207,7 @@ export class App {
     // state remains the source of truth for what buys; this flip only
     // shows the mode. Never while typing.
     document.addEventListener("keydown", (event) => {
-      if (event.key !== "Shift" || event.repeat || !this.ownsBoard()) return;
+      if (event.key !== SHORTCUTS.maximum.key || event.repeat || !this.ownsBoard()) return;
       const target = event.target;
       if (target instanceof HTMLElement && (target.isContentEditable || target.matches("input, textarea, select"))) return;
       if (this.state.mode === "upgrade" && !this.ui.faceMax) {
@@ -1206,7 +1216,7 @@ export class App {
       }
     }, { signal: this.signal });
     document.addEventListener("keyup", (event) => {
-      if (event.key !== "Shift" || !this.ownsBoard()) return;
+      if (event.key !== SHORTCUTS.maximum.key || !this.ownsBoard()) return;
       if (this.ui.faceMax) {
         this.ui.faceMax = false;
         this.render();

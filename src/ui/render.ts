@@ -1,3 +1,4 @@
+import { SHORTCUTS } from "./shortcuts";
 import { renderEncyclopedia, chargeHelpHtml, bindChargeHelp, chordsHelpHtml, bindChordsHelp } from "./encyclopedia";
 import { playthroughStatusMark } from "../engine/playthrough";
 import { SaveRefusedError } from "../engine/save";
@@ -2998,6 +2999,10 @@ function renderSettingsModal(app: App, content: HTMLElement): void {
         <span class="folio-main"><span class="folio-sub">saves automatically on this device</span></span>
       </div>
     </div>
+    <section class="settings-shortcuts" aria-labelledby="settings-shortcuts-title">
+      <h2 id="settings-shortcuts-title">Keyboard shortcuts</h2>
+      <dl class="folio-rows">${Object.values(SHORTCUTS).map(shortcut => `<div class="folio-row"><dt class="folio-key mono">${shortcut.label}</dt><dd class="folio-main">${shortcut.description}</dd></div>`).join("")}</dl>
+    </section>
     <div class="modal-actions">
       <button id="settings-export">Export save</button><button id="settings-import">Import save</button><button id="settings-reset" class="settings-reset">Reset progress</button>
     </div>`;

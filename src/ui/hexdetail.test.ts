@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it, beforeEach, afterEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import type { App } from "./app";
 import { createAppFixture, clickCell, setAppWidth } from "./testing/app-fixture";
@@ -31,7 +31,11 @@ beforeEach(() => {
   app = boot();
 });
 
-afterEach(() => fixture.release());
+afterEach(() => {
+  fixture.release();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
 const detail = () => document.getElementById("hex-detail")!;
 const open = () => !detail().hidden;
@@ -144,25 +148,134 @@ describe("opening the cross-section (issue #295)", () => {
     const dialog=document.querySelector<HTMLDialogElement>(".context-overview")!;
     expect(dialog.open).toBe(true);
     dialog.querySelector('[data-ctx-cell="1,0"]')!.dispatchEvent(new KeyboardEvent("keydown",{key:"Enter",bubbles:true}));
-    expect(document.querySelector(".context-overview")).toBeNull();
+    expect(app.ui.detail).toEqual({pos:hex(0,0),face:"modules"});
+    expect(dialog.querySelector('[data-map-selection]')!.textContent).toContain("1,0");
+    dialog.querySelector<HTMLButtonElement>('[data-map-go]')!.click();
+    expect(dialog.open).toBe(true);
     expect(app.ui.detail).toEqual({pos:hex(1,0),face:"modules"});
+    dialog.querySelector('[data-ctx-cell="0,0"]')!.dispatchEvent(new MouseEvent("click",{bubbles:true}));
+    dialog.querySelector<HTMLButtonElement>('[data-map-go-close]')!.click();
+    expect(document.querySelector(".context-overview")).toBeNull();
+    expect(app.ui.detail).toEqual({pos:hex(0,0),face:"modules"});
   });
+  it("refreshes kept-open map chords for empty and occupied destinations without resetting navigation", () => {
+    give(app.state, "additive", hex(1, 0));
+    app.render(); clickCell(0, 0);
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    const dialog = document.querySelector<HTMLDialogElement>(".context-overview")!;
+    const map = dialog.querySelector<SVGSVGElement>(".ctx-map")!;
+    const slider = dialog.querySelector<HTMLInputElement>("input")!;
+    slider.value = "200";
+    slider.dispatchEvent(new Event("input"));
+    const view = map.getAttribute("viewBox");
+    const go = dialog.querySelector<HTMLButtonElement>("[data-map-go]")!;
+    expect(map.querySelectorAll(".ctx-link").length).toBeGreaterThan(0);
+    const navigate = (position: string) => {
+      map.querySelector<SVGElement>(`[data-ctx-cell="${position}"]`)!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+      go.focus(); go.click();
+      expect(dialog.open).toBe(true);
+      expect(document.activeElement).toBe(go);
+      expect(map.getAttribute("viewBox")).toBe(view);
+      expect(slider.value).toBe("200");
+      expect(map.querySelector(`[data-ctx-cell="${position}"]`)!.getAttribute("aria-pressed")).toBe("true");
+    };
+    navigate("0,1");
+    expect(app.ui.detail?.pos).toEqual(hex(0, 1));
+    expect(map.querySelectorAll(".ctx-link, .ctx-seam")).toHaveLength(0);
+    // Start from an empty cell too: the initial marks cannot supply this chord.
+    navigate("1,0");
+    expect(app.ui.detail?.pos).toEqual(hex(1, 0));
+    expect(map.querySelectorAll(".ctx-link").length).toBeGreaterThan(0);
+    expect(map.querySelector(".ctx-opened")!.getAttribute("transform")).toBe(
+      map.querySelector('[data-ctx-cell="1,0"] polygon')!.getAttribute("transform"),
+    );
+    dialog.querySelector<HTMLButtonElement>("[data-map-close]")!.click();
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.focus();
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    document.querySelector(".context-overview")!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    expect(document.activeElement).toBe(detail().querySelector("[data-context-expand]"));
+  });
+
+  it.each([
+    { width: 320, tall: false }, { width: 390, tall: false }, { width: 768, tall: false },
+    { width: 390, tall: true },
+  ])("keeps navigator cells at least 44px at minimum zoom and after resize ($width px, tall=$tall)", ({ width, tall }) => {
+    let viewportWidth = width;
+    let resized!: ResizeObserverCallback;
+    const disconnect = vi.fn();
+    vi.stubGlobal("ResizeObserver", class {
+      constructor(callback: ResizeObserverCallback) { resized = callback; }
+      observe() {}
+      disconnect = disconnect;
+    });
+    if (tall) {
+      app.state.unlockedRows.push(30);
+      app.state.cells.push(hex(0, 30));
+    }
+    app.render(); clickCell(0, 0);
+    detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
+    const dialog = document.querySelector<HTMLDialogElement>(".context-overview")!;
+    const map = dialog.querySelector<SVGSVGElement>(".ctx-map")!;
+    Object.defineProperty(map, "clientWidth", { configurable: true, get: () => viewportWidth - 64 });
+    Object.defineProperty(map, "clientHeight", { configurable: true, value: 280 });
+    resized([], {} as ResizeObserver);
+    const slider = dialog.querySelector<HTMLInputElement>("input")!;
+    const assertTargets = () => {
+      const [, , w, h] = map.getAttribute("viewBox")!.split(" ").map(Number);
+      const scale = Math.min(map.clientWidth / w!, map.clientHeight / h!);
+      expect(Math.sqrt(3) * Number(map.getAttribute("data-cell-radius")) * scale).toBeGreaterThanOrEqual(44);
+    };
+    assertTargets();
+    slider.value = slider.min;
+    slider.dispatchEvent(new Event("input"));
+    assertTargets();
+    // Ctrl-wheel zoom-out and a narrower viewport must respect the same floor.
+    map.dispatchEvent(new WheelEvent("wheel", { ctrlKey: true, deltaY: 1000, cancelable: true }));
+    assertTargets();
+    viewportWidth = 280;
+    resized([], {} as ResizeObserver);
+    assertTargets();
+    expect(Number(slider.value)).toBeGreaterThanOrEqual(Number(slider.min));
+    if (tall) {
+      expect(Number(slider.max)).toBeGreaterThan(400);
+      map.querySelector<SVGElement>('[data-ctx-cell="0,30"]')!.focus();
+      const [x, y, w, h] = map.getAttribute("viewBox")!.split(" ").map(Number);
+      const center = map.querySelector('[data-ctx-cell="0,30"] polygon')!.getAttribute("transform")!.match(/translate\(([-\d.]+) ([-\d.]+)\)/)!;
+      expect(x! + w! / 2).toBeCloseTo(Number(center[1]));
+      expect(y! + h! / 2).toBeCloseTo(Number(center[2]));
+      assertTargets();
+    }
+    dialog.querySelector<HTMLButtonElement>("[data-map-close]")!.click();
+    expect(disconnect).toHaveBeenCalled();
+  });
+
   it("retains overview focus through live ticks and closes back to the miniature", () => {
     app.render();clickCell(0,0);
     const invoker=detail().querySelector<HTMLButtonElement>("[data-context-expand]")!;
     invoker.focus();invoker.click();
-    const node=document.querySelector<HTMLButtonElement>('[data-map-cell="1,0"]')!;
+    const node=document.querySelector<SVGElement>('.context-overview [data-ctx-cell="1,0"]')!;
     node.focus();app.state.nous+=10;app.render();
     expect(document.activeElement).toBe(node);
     document.querySelector<HTMLButtonElement>("[data-map-close]")!.click();
     expect(document.querySelector(".context-overview")).toBeNull();
   });
-  it("offers touch-sized cell buttons instead of a native picker on phone", () => {
+  it("selects a map destination on phone without a cell list and confirms before navigating", () => {
     setAppWidth(390);seedEra();app.openDetail(hex(0,0),"world");
     expect(detail().querySelector("select[data-ctx-navigation]")).toBeNull();
     detail().querySelector<HTMLButtonElement>("[data-context-expand]")!.click();
-    expect(document.querySelectorAll("[data-map-cell]")).toHaveLength(app.state.cells.length);
-    document.querySelector<HTMLButtonElement>('[data-map-cell="1,0"]')!.click();
+    expect(document.querySelectorAll("[data-map-cell], .context-destinations")).toHaveLength(0);
+    const map = document.querySelector(".context-overview .ctx-map")!;
+    expect(map.querySelectorAll(".ctx-cell.owned")).toHaveLength(app.state.cells.length);
+    expect(map.querySelectorAll(".ctx-cell:not(.owned)").length).toBeGreaterThan(0);
+    // Resting ownership must not depend on hover or hue: solid filled owned
+    // faces versus faint dashed unavailable context, with selection stronger.
+    const css = readFileSync("src/ui/style.css", "utf8");
+    expect(css).toMatch(/\.context-overview \.ctx-cell\.owned\s*\{[^}]*fill:\s*var\(--line\);[^}]*stroke:\s*var\(--muted\)/);
+    expect(css).toMatch(/\.context-overview \.ctx-cell:not\(\.owned\)\s*\{[^}]*stroke-dasharray:\s*2 3/);
+    expect(css).toMatch(/\.context-overview \.ctx-selected \.ctx-cell\s*\{[^}]*stroke-width:\s*2\.4/);
+    document.querySelector('.context-overview [data-ctx-cell="1,0"]')!.dispatchEvent(new MouseEvent("click",{bubbles:true}));
+    expect(app.ui.detail).toEqual({pos:hex(0,0),face:"world"});
+    document.querySelector<HTMLButtonElement>('[data-map-go-close]')!.click();
     expect(app.ui.detail).toEqual({pos:hex(1,0),face:"world"});
   });
 
@@ -189,18 +302,20 @@ describe("opening the cross-section (issue #295)", () => {
     expect(modules.querySelector("#detail-upgrade")).toBeNull();
   });
 
-  it("the fixed stack shows both faces, World above Modules, never reordered", () => {
+  it("shows only the selected enlarged face beside the shared vertical selector", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
     const faces = sections().map((node) => node.classList.contains("world") ? "world" : "modules");
-    expect(faces).toEqual(["world", "modules"]);
+    expect(faces).toEqual(["modules"]);
+    expect(document.getElementById("layer-legend")!.hidden).toBe(true);
+    expect(detail().querySelectorAll(".hex-detail-layers button")).toHaveLength(2);
     // Selecting the Modules face changes emphasis without reordering.
     document.querySelector<HTMLButtonElement>('[data-detail-face="modules"]')!.click();
     const after = sections().map((node) => node.classList.contains("world") ? "world" : "modules");
-    expect(after).toEqual(["world", "modules"]);
+    expect(after).toEqual(["modules"]);
     expect(section("modules").classList.contains("selected")).toBe(true);
-    expect(section("world").classList.contains("selected")).toBe(false);
+    expect(section("world")).toBeNull();
   });
 
   it("a face selection emphasizes its section, focuses its control, and syncs the legend", () => {
@@ -208,14 +323,14 @@ describe("opening the cross-section (issue #295)", () => {
     app.render();
     clickCell(0, 0);
     // The legend opens synchronized with the click's layer.
-    const legend = () => document.getElementById("layer-legend")!;
+    const legend = () => detail().querySelector<HTMLElement>(".hex-detail-layers")!;
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(true);
     // Selecting the World face through the legend moves emphasis, the
     // marker, and the focus.
     legend().querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
     expect(app.ui.detail!.face).toBe("world");
     expect(section("world").classList.contains("selected")).toBe(true);
-    expect(section("modules").classList.contains("selected")).toBe(false);
+    expect(section("modules")).toBeNull();
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
     expect(legend().querySelector<HTMLElement>('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(false);
     expect(document.activeElement).toBe(section("world").querySelector("[data-detail-face]"));
@@ -223,11 +338,11 @@ describe("opening the cross-section (issue #295)", () => {
     // lands on the face the player last read.
     expect(app.ui.boardLayer).toBe("world");
     // A face's own chassis selects too.
-    document.querySelector<HTMLButtonElement>('[data-detail-face="modules"]')!.click();
+    detail().querySelector<HTMLButtonElement>('[data-legend-layer="modules"]')!.click();
     expect(app.ui.detail!.face).toBe("modules");
   });
 
-  it("the emphasized face wears the firm inset marker; the other stays present, dimmed", () => {
+  it("the selected face and layer selector carry non-color state markers", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
@@ -235,7 +350,8 @@ describe("opening the cross-section (issue #295)", () => {
     // readable without color — and the stylesheet shows it on the
     // emphasized layer only.
     expect(section("modules").querySelector(".hex-stack-marker")).not.toBeNull();
-    expect(section("world").querySelector(".hex-stack-marker")).not.toBeNull();
+    expect(section("world")).toBeNull();
+    expect(detail().querySelector('[data-legend-layer="modules"]')!.getAttribute("aria-pressed")).toBe("true");
     const css = readFileSync("src/ui/style.css", "utf8");
     expect(css).toMatch(/\.hex-detail-layer\.selected \.hex-stack-marker[^{]*\{[^}]*display:\s*block/);
     expect(css).toMatch(/\.hex-stack-marker[^{]*\{[^}]*display:\s*none/);
@@ -267,12 +383,12 @@ describe("the World face in detail", () => {
     seedEra();
     app.render();
     clickCell(0, 0);
+    app.detailFace("world");
     // The opening cell (0,0) is open space — the quiet dashed plate; the
     // enemy position w0 sits reserved off the owned patch.
     expect(section("world").querySelector(".world-plate.open")).not.toBeNull();
     // The tooltip carries the state's one line.
-    const tip = section("world").querySelector(".inst-tip-body")!;
-    expect(tip.textContent).toContain("Open World cell");
+    expect(worldTip()).toContain("Open World cell");
   });
 
   it("a weapon's enlarged face carries its stores, its routing, and the target priority rail", () => {
@@ -761,19 +877,18 @@ describe("the vertical layer legend (issue #295)", () => {
     expect(document.getElementById("layer-legend")!.hidden).toBe(false);
     clickCell(0, 0);
     expect(open()).toBe(true);
-    // The stack still shows both faces in the fixed order, read-only, and
-    // the legend stands beside it — the session's shared switch.
-    expect(sections()).toHaveLength(2);
-    expect(sections()[0].classList.contains("world")).toBe(true);
+    // One read-only face stands beside the detail's shared selector.
+    expect(sections()).toHaveLength(1);
+    expect(sections()[0].classList.contains("modules")).toBe(true);
     expect(detail().querySelector(".hex-detail-readonly")).not.toBeNull();
-    const legend = document.getElementById("layer-legend")!;
+    const legend = detail().querySelector<HTMLElement>(".hex-detail-layers")!;
     expect(legend.querySelector('[data-legend-layer="modules"]')!.classList.contains("active")).toBe(true);
     // The legend emphasizes the face without reordering the stack.
     legend.querySelector<HTMLButtonElement>('[data-legend-layer="world"]')!.click();
     expect(app.ui.detail!.face).toBe("world");
     expect(section("world").classList.contains("selected")).toBe(true);
-    expect(legend.querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
-    expect(sections()).toHaveLength(2);
+    expect(detail().querySelector('[data-legend-layer="world"]')!.classList.contains("active")).toBe(true);
+    expect(sections()).toHaveLength(1);
     expect(sections()[0].classList.contains("world")).toBe(true);
     // The grid's layer followed the emphasis: the return lands where the
     // player read, the World layer standing read-only.
@@ -849,7 +964,7 @@ describe("the phone face (issue #295)", () => {
     const css = readFileSync("src/ui/style.css", "utf8");
     const reflow = css.match(/@container app \(width < 1000px\) \{[\s\S]*?\n\}/g)!.find((block) => block.includes(".hex-detail-side"));
     expect(reflow).toBeTruthy();
-    expect(reflow).toMatch(/grid-template-columns:\s*minmax\(0,\s*var\(--detail-hex\)\)/);
+    expect(reflow).toMatch(/grid-template-columns:\s*minmax\(0,\s*calc\(var\(--detail-hex\) \+ 164px\)\)/);
     expect(reflow).toMatch(/\.hex-detail-side\s*\{[^}]*width:\s*100%/);
     setAppWidth(1200);
   });

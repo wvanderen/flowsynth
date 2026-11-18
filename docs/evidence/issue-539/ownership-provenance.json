@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-17T23:16:41.820Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "integration/532-encyclopedia",
+  "commit": "4889ffc1972ae1fd1bdf4400aa9870130a478372",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}

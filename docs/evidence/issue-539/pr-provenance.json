@@ -1,0 +1,14 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-18T00:07:17.167Z",
+  "url": "http://localhost:5173",
+  "worktree": "/home/lem/dev/flowsynth",
+  "branch": "feat/539-hex-navigation",
+  "commit": "ad373d64737fac013b2c6a18662b4d6ececcad45",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": []
+  }
+}

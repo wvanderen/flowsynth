@@ -3,6 +3,7 @@
 // wrap's center; the pan center clamps to the base bounds, so a full or
 // larger-than-screen board always stays reachable. World coordinates never
 // move — seams, chips, and bloom frames are zoom-agnostic by construction.
+import { SHORTCUTS } from "./shortcuts";
 import type { App } from "./app";
 import { HEX_RADIUS } from "./face";
 
@@ -179,13 +180,13 @@ export function bindBoardNavigation(app: App, svg: SVGSVGElement): void {
   let space = false;
   const editing = (target: EventTarget | null): boolean => target instanceof Element && !!target.closest("input, textarea, select, button, a, [contenteditable], [role=button], [role=slider], [role=dialog], dialog");
   app.listen(document, "keydown", (event) => {
-    if (event.code !== "Space" || editing(event.target) || app.ui.modal) return;
+    if (event.code !== SHORTCUTS.pan.key || editing(event.target) || app.ui.modal) return;
     space = true;
     event.preventDefault();
     svg.classList.add("pan-ready");
   });
   const releaseSpace = () => { space = false; svg.classList.remove("pan-ready"); };
-  app.listen(document, "keyup", (event) => { if (event.code === "Space") releaseSpace(); });
+  app.listen(document, "keyup", (event) => { if (event.code === SHORTCUTS.pan.key) releaseSpace(); });
   app.listen(window, "blur", releaseSpace);
 
   const scale = (): number => {

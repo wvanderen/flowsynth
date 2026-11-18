@@ -1,3 +1,4 @@
+import { SHORTCUTS } from "./shortcuts";
 import { BALANCE, WORLD_ENEMIES } from "../engine/constants";
 // The World layer's UI (issue #426, ADR-0074): the board's second face,
 // built to the design round's approved presentation language
@@ -73,8 +74,8 @@ export function layerLegendHtml(app: App): string {
   const locked = !worldEntered(state);
   const worldSelected = active === "world";
   // Discovery reveals a real door, never a locked preview.
-  return `${locked ? "" : `<button class="legend-symbol${worldSelected ? " active" : ""}" data-legend-layer="world" aria-pressed="${worldSelected}" aria-label="World layer" title="World — enemies, weapons, Columns">${LAYER_WORLD_SVG}</button>`}
-    <button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid">${LAYER_MODULES_SVG}</button>`;
+  return `${locked ? "" : `<button class="legend-symbol${worldSelected ? " active" : ""}" data-legend-layer="world" aria-pressed="${worldSelected}" aria-label="World layer" title="World — enemies, weapons, Columns · ${SHORTCUTS.layer.label} cycles layers">${LAYER_WORLD_SVG}</button>`}
+    <button class="legend-symbol${active === "modules" ? " active" : ""}" data-legend-layer="modules" aria-pressed="${active === "modules"}" aria-label="Modules layer" title="Modules — the production grid · ${SHORTCUTS.layer.label} cycles layers">${LAYER_MODULES_SVG}</button>`;
 }
 
 // The locked World face's preview line: the reveal's threshold in figures
@@ -88,6 +89,8 @@ const boundLegends = new WeakSet<HTMLElement>();
 export function renderLayerLegend(app: App): void {
   const host = document.getElementById("layer-legend");
   if (!host) return;
+  host.hidden = Boolean(app.ui.detail);
+  if (app.ui.detail) return;
   wireTooltips(host, app.signal);
   // Every mode's furniture: the strip stands through flow and pause,
   // switching grid layers and emphasizing detail faces read-only.

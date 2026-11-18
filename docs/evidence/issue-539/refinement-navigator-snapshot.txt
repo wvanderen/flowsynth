@@ -1,0 +1,14 @@
+uid=4_0 RootWebArea "FlowSynth" url="http://localhost:5173/?dev=1"
+  uid=5_0 dialog "Open hex" modal
+    uid=5_1 banner
+      uid=5_2 heading "Open hex" level="2"
+      uid=5_3 button "Close" focusable focused
+    uid=5_4 button "Select C4 · 0,0" pressed
+    uid=5_5 button "Select C5 · 0,1"
+    uid=5_6 button "Select G4 · 1,0"
+    uid=5_7 "Zoom"
+    uid=5_8 slider "Context map zoom" orientation="horizontal" value="100" valuemax="400" valuemin="100" valuetext="100"
+    uid=5_9 status atomic live="polite" relevant="additions text"
+      uid=5_10 "C4 · 0,0"
+    uid=5_11 button "Navigate"
+    uid=5_12 button "Navigate & close"
