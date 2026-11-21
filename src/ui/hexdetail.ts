@@ -9,14 +9,15 @@ import { affordableLevels, boosterBonusOf, boosterTermOf, deployed, deployedAt, 
 import { BALANCE, isOscillatorType, typeRarityOf } from "../engine/constants";
 import { adjacent, sameHex } from "../engine/hex";
 import { cellNoteOf, noteNameOf, pitchOf } from "../engine/lattice";
-import { enemyDefAt, worldOccupantAt } from "../engine/world";
+import { enemyStateOf, worldEnemyAt, worldOccupantAt, worldPieceOf } from "../engine/world";
+import { conduitEdgesHtml, worldPieceName } from "./world-combat";
 import type { Hex, ModuleInstance, RateSnapshot } from "../engine/types";
 import type { App, DetailFace } from "./app";
 import { HEX_RADIUS, hexPoints, moduleFace, forgeBranchOf, faceLevel, faceReadoutFor, waterFill, zeroBuyRead, spotlightInactiveVerdict } from "./face";
 import { chargeGlow } from "./leads";
 import { formatInt, formatNumber } from "./format";
 import { worldEntered, bindWorldDrag, enemyPenaltyFigure, targetPriorityHtml, worldChassisHtml } from "./world";
-import { COLUMN_WORD, META, RARITY_LABEL, WORLD_META, tierWord } from "./meta";
+import { META, RARITY_LABEL, tierWord } from "./meta";
 import { isPhoneWidth, scrollTopOf } from "./container";
 import { wireTooltips } from "./instrument";
 import { chargeHelpHtml, bindChargeHelp, chordsHelpHtml, bindChordsHelp } from "./encyclopedia";
@@ -178,6 +179,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   // from the occupant's store and the lift read.
   const contribution = module ? snapshot.contributions.get(module.id) ?? null : null;
   const worldOccupant = worldOccupantAt(state, pos);
+  const worldEnemy = worldEnemyAt(state, pos);
   const key = JSON.stringify([
     phone,
     state.mode,
@@ -211,7 +213,8 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
           })()
         : `c:${worldOccupant.id}`
       : null,
-    enemyDefAt(pos) ? `${state.world.enemies[enemyDefAt(pos)!.key]?.discovered}:${state.world.enemies[enemyDefAt(pos)!.key]?.hp}` : null,
+    worldEnemy && enemyStateOf(state, worldEnemy.key),
+    state.world.proof && [state.world.proof.creature, state.world.proof.spell, state.world.proof.conduit],
     state.cells.length,
     state.unlockedRows.join(","),
     // The open inventory (issue #296) and what waits in it: a placement
@@ -237,7 +240,7 @@ export function renderHexDetail(app: App, live: RateSnapshot, projected: RateSna
   // write; the new stack restores that captured position.
   const focused = document.activeElement;
   const focusAttribute = focused instanceof Element && host.contains(focused)
-    ? ["id", "data-ctx-cell", "data-ctx-navigation", "data-legend-layer", "data-detail-face", "data-bulk", "data-shift", "data-target", "aria-describedby"]
+    ? ["id", "data-ctx-cell", "data-ctx-navigation", "data-legend-layer", "data-detail-face", "data-bulk", "data-shift", "data-target", "data-world-edge", "aria-describedby"]
         .find((attribute) => focused.hasAttribute(attribute))
     : undefined;
   const focusValue = focusAttribute ? focused!.getAttribute(focusAttribute) : null;
@@ -345,7 +348,7 @@ function worldLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   const id = detailTipId();
   // The face's own post — its actions (retrieve, target priority) ride
   // the action rail below the stack when the World face holds focus.
-  return `<section class="hex-detail-layer world${selected ? " selected" : ""}" data-detail-section="world" tabindex="-1" aria-label="World — ${app.state.cells.some((cell) => sameHex(cell, pos)) || enemyDefAt(pos) ? "face state" : "locked"} at ${note}">
+  return `<section class="hex-detail-layer world${selected ? " selected" : ""}" data-detail-section="world" tabindex="-1" aria-label="World — ${app.state.cells.some((cell) => sameHex(cell, pos)) || worldEnemyAt(app.state, pos) ? "face state" : "locked"} at ${note}">
     <span class="hex-orbit"><span class="inst-tip"><button class="hex-stack-chassis inst-tip-trigger" data-detail-face="world" aria-pressed="${selected}" aria-describedby="${id}" aria-label="Emphasize the World face">${chassis}</button><span class="inst-tip-body" id="${id}" role="tooltip">${tip}</span></span></span>
   </section>`;
 }
@@ -417,9 +420,10 @@ function actionRailHtml(app: App, pos: Hex, module: ModuleInstance | undefined):
   if (ui.detail?.face === "world") {
     const occupant = worldOccupantAt(state, pos);
     if (!occupant) return "";
-    const name = occupant.kind === "column" ? COLUMN_WORD : WORLD_META[state.world.weapons.find((w) => w.id === occupant.id)!.type].name;
-    const priority = occupant.kind === "weapon" ? targetPriorityHtml(state, state.world.weapons.find((w) => w.id === occupant.id)!) : "";
-    return `<div class="hex-detail-actions"><button class="hex-action" id="detail-world-retrieve" aria-label="Retrieve the ${name} to the World tray">Retrieve to World tray</button>${priority}</div>`;
+    const piece = worldPieceOf(state, occupant.id)!;
+    const name = worldPieceName(piece);
+    const local = piece.kind === "weapon" ? targetPriorityHtml(state, piece.copy) : piece.kind === "conduit" ? conduitEdgesHtml(piece) : "";
+    return `<div class="hex-detail-actions"><button class="hex-action" id="detail-world-retrieve" aria-label="Retrieve the ${name} to the World tray">Retrieve to World tray</button>${local}</div>`;
   }
   return module ? `<div class="hex-detail-actions">${detailBuyHtml(app, module)}</div>` : "";
 }
@@ -445,8 +449,8 @@ function detailColumnHtml(app: App, pos: Hex, module: ModuleInstance | undefined
   }
   // The World line (issue #426): the enemy threat or the cleared bonus —
   // the same read the plate's tooltip carries, stated once in the column.
-  const enemyDef = enemyDefAt(pos);
-  if (enemyDef && worldEntered(state)) {
+  const enemyDef = worldEnemyAt(state, pos);
+  if (enemyDef && worldEntered(state) && !state.world.proof) {
     const live = state.world.enemies[enemyDef.key];
     const line = !live?.discovered
       ? "Reserved cell — the World holds this position"
@@ -577,6 +581,12 @@ function wireDetailWorldActions(app: App, host: HTMLElement, pos: Hex): void {
       const occupant = worldOccupantAt(app.state, pos);
       if (occupant?.kind !== "weapon") return;
       app.worldMovePriority(occupant.id, el.dataset.worldPriority!, Number(el.dataset.dir));
+    });
+  });
+  host.querySelectorAll<HTMLButtonElement>("[data-world-edge]").forEach((el) => {
+    app.listen(el, "click", () => {
+      const occupant = worldOccupantAt(app.state, pos);
+      if (occupant?.kind === "conduit") app.routeWorldConduit(occupant.id, Number(el.dataset.worldEdge));
     });
   });
   app.listen(host.querySelector<HTMLButtonElement>("[data-world-priority-reset]"), "click", () => {

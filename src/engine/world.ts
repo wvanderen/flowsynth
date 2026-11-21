@@ -9,9 +9,10 @@
 // beside the horizon it gates.
 import { BALANCE, EPS, WORLD_ENEMIES } from "./constants";
 import type { WorldEnemyDef } from "./constants";
-import { adjacent, sameHex } from "./hex";
+import { adjacent, neighbors, sameHex } from "./hex";
 import { requireFinite } from "./numeric";
-import type { GameState, Hex, RateSnapshot, WeaponCopy, WeaponType, WorldEnemyState } from "./types";
+import type { GameState, Hex, RateSnapshot, WeaponCopy, WeaponType, WorldColumn, WorldCombatCreature, WorldCombatProof, WorldEnemyState } from "./types";
+import { activeProofWall, advanceCombatProof, COMBAT_PROOF, proofCombatBoundary, proofDiscoverySeconds, syncProofWall } from "./world-combat";
 
 const ENEMY_BY_KEY = new Map(WORLD_ENEMIES.map((def) => [def.key, def]));
 
@@ -24,22 +25,56 @@ export function enemyDefAt(pos: Hex) {
   return WORLD_ENEMIES.find((def) => sameHex(def.pos, pos));
 }
 
-// The World occupant standing on this coordinate — a placed Column or a
-// deployed weapon — if any. One World occupant per cell, beside whatever
-// module occupies the cell beneath (issue #425, priority 10: the shared
-// coordinates' second face, the Mutator Grid's engine precedent).
-export function worldOccupantAt(state: GameState, pos: Hex): { kind: "column" | "weapon"; id: string } | undefined {
-  if (state.world.columns.some((column) => column.pos !== null && sameHex(column.pos, pos))) {
-    return { kind: "column", id: state.world.columns.find((column) => column.pos !== null && sameHex(column.pos, pos))!.id };
-  }
-  const weapon = state.world.weapons.find((weapon) => weapon.pos !== null && sameHex(weapon.pos, pos));
-  return weapon ? { kind: "weapon", id: weapon.id } : undefined;
+// The proof has its own roster; ordinary saves keep the shipped enemies.
+export function worldEnemiesOf(state: GameState): readonly WorldEnemyDef[] {
+  return state.world.proof ? COMBAT_PROOF.walls : WORLD_ENEMIES;
+}
+
+export function worldEnemyAt(state: GameState, pos: Hex): WorldEnemyDef | undefined {
+  return worldEnemiesOf(state).find((def) => sameHex(def.pos, pos));
+}
+
+export function worldCellReserved(state: GameState, pos: Hex): boolean {
+  const def = worldEnemyAt(state, pos);
+  return Boolean(def && (!state.world.proof || !enemyDefeated(state, def.key)));
+}
+
+export type WorldPiece =
+  | { kind: "column" | "armor"; copy: WorldColumn }
+  | { kind: "weapon"; copy: WeaponCopy }
+  | { kind: "creature"; copy: WorldCombatCreature }
+  | { kind: "conduit"; copy: WorldCombatProof["conduit"] }
+  | { kind: "spell"; copy: WorldCombatProof["spell"] };
+
+export function worldPiecesOf(state: GameState): WorldPiece[] {
+  const { proof, columns, weapons } = state.world;
+  const pieces: WorldPiece[] = [
+    ...columns.map((copy) => ({ kind: "column" as const, copy })),
+    ...weapons.map((copy) => ({ kind: "weapon" as const, copy })),
+  ];
+  if (proof) pieces.push(
+    { kind: "creature", copy: proof.creature }, { kind: "armor", copy: proof.armor },
+    { kind: "spell", copy: proof.spell }, { kind: "conduit", copy: proof.conduit },
+  );
+  return pieces;
+}
+
+export function worldPieceOf(state: GameState, id: string): WorldPiece | undefined {
+  return worldPiecesOf(state).find(({ copy }) => copy.id === id);
+}
+
+// World occupation is independent of the Modules occupant below.
+export function worldOccupantAt(state: GameState, pos: Hex): { kind: WorldPiece["kind"]; id: string } | undefined {
+  const piece = worldPiecesOf(state).find(({ copy }) => copy.pos !== null && sameHex(copy.pos, pos));
+  return piece && { kind: piece.kind, id: piece.copy.id };
 }
 
 // The enemy's live state — always present for an authored key after
 // normalization; a missing key reads as the authored fresh state rather
 // than poisoning a read.
 export function enemyStateOf(state: GameState, key: string): WorldEnemyState {
+  const trial = state.world.proof?.enemies[key];
+  if (trial) return trial;
   const def = ENEMY_BY_KEY.get(key)!;
   return state.world.enemies[key] ?? { discovered: false, hp: def.maxHp };
 }
@@ -59,6 +94,7 @@ export function enemyDefeated(state: GameState, key: string): boolean {
 // strictly positive floor. Undiscovered enemies weigh nothing. Nous
 // production only: charge generation, routing, and combat never read this.
 export function worldFactorOf(state: GameState): number {
+  if (state.world.proof) return 1 - (activeProofWall(state.world.proof)?.pressure ?? 0);
   let factor = 1;
   for (const def of WORLD_ENEMIES) {
     const live = state.world.enemies[def.key];
@@ -94,6 +130,10 @@ export function enemyDepthOf(state: GameState, key: string): number {
 // disagree with the rate pass about the pressure. The authored array is
 // the single source; its last entry is the bound.
 export function enemyPenaltyOf(state: GameState, key: string): number {
+  if (state.world.proof) {
+    const active = activeProofWall(state.world.proof);
+    return active?.key === key ? active.pressure : 0;
+  }
   return BALANCE.world.enemyDepthPenalties[enemyDepthOf(state, key)]!;
 }
 
@@ -105,6 +145,7 @@ export function enemyPenaltyOf(state: GameState, key: string): number {
 // past a threshold at the pre-discovery rate; the bucket's one-move bank
 // after an honesty settlement meets this sync directly.
 export function syncWorldDiscoveries(state: GameState): number {
+  if (state.world.proof) return syncProofWall(state, state.world.proof);
   let discovered = 0;
   for (const def of WORLD_ENEMIES) {
     const live = state.world.enemies[def.key];
@@ -161,7 +202,20 @@ export function bandBoundarySeconds(state: GameState, rate: number): number {
 // the discovery crossing, the depth-band crossing (issue #489), and the
 // next attack tick — the one read both walk loops share, so the
 // trusted-time legs can never drift apart.
-export function worldBoundarySeconds(state: GameState, rate: number): number {
+export function worldBoundarySeconds(state: GameState, rate: number, snapshot?: Pick<RateSnapshot, "chargeStrength">): number {
+  const proof = state.world.proof;
+  if (proof) {
+    const lift = snapshot && proof.spell.pos ? columnLiftsOf(state, snapshot, undefined, true) : undefined;
+    const spellIncoming = lift?.bySpell.get(proof.spell.id) ?? 0;
+    // Split again when another store fills: its share can then reach the
+    // spell and move the exact instant at which it can spend threshold charge.
+    let fillBoundary = Infinity;
+    if (spellIncoming > EPS) for (const blade of state.world.weapons) {
+      const incoming = lift?.byWeapon.get(blade.id) ?? 0;
+      if (incoming > EPS) fillBoundary = Math.min(fillBoundary, (BALANCE.world.storageCap - blade.store) / incoming);
+    }
+    return Math.min(proofDiscoverySeconds(state, proof, rate), proofCombatBoundary(proof, state.world.weapons, spellIncoming), fillBoundary);
+  }
   return Math.min(discoverySecondsOf(state, rate), combatBoundaryOf(state), bandBoundarySeconds(state, rate));
 }
 
@@ -244,6 +298,7 @@ export function combatBoundaryOf(state: GameState): number {
 // Trusted time only: the callers gate this on the live and breather walks —
 // provisional spans hold fire, and honesty-credited minutes never retro-fight.
 export function advanceWorldCombat(state: GameState, spanSeconds: number): void {
+  if (state.world.proof) return advanceCombatProof(state.world.proof, spanSeconds, state.world.weapons, attackPowerOf(state, "chargeBlade"));
   const cadence = BALANCE.world.attackCadenceSeconds;
   for (const weapon of state.world.weapons) {
     if (weapon.pos === null) continue;
@@ -317,35 +372,57 @@ export interface WorldLift {
   byColumn: Map<string, number>;
   // Routing share per deployed weapon, per second.
   byWeapon: Map<string, number>;
+  bySpell: Map<string, number>;
+}
+
+type WorldMove = { id: string; pos: Hex | null };
+type ChargeStore = { copy: WorldColumn & { store: number }; cap: number; kind: "weapon" | "spell" };
+
+function worldChargeStores(state: GameState): ChargeStore[] {
+  const stores: ChargeStore[] = state.world.weapons.map((copy) => ({ copy, cap: BALANCE.world.storageCap, kind: "weapon" }));
+  if (state.world.proof) stores.push({ copy: state.world.proof.spell, cap: COMBAT_PROOF.spell.threshold, kind: "spell" });
+  return stores;
+}
+
+function worldLiftRoutes(state: GameState, snapshot: Pick<RateSnapshot, "chargeStrength">, override?: WorldMove) {
+  const positionOf = (copy: WorldColumn): Hex | null => override?.id === copy.id ? override.pos : copy.pos;
+  const stores = worldChargeStores(state);
+  const conduit = state.world.proof?.conduit;
+  const conduitPos = conduit ? positionOf(conduit) : null;
+  const outlet = conduitPos && conduit ? neighbors(conduitPos)[conduit.direction] : undefined;
+  return state.world.columns.flatMap((column) => {
+    const pos = positionOf(column);
+    if (!pos) return [];
+    const module = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
+    const supply = module ? snapshot.chargeStrength.get(module.id) ?? 0 : 0;
+    if (supply <= 0) return [];
+    const forwards = conduitPos && outlet && adjacent(conduitPos, pos);
+    // Only terminal stores accept supply. An empty edge, a back edge to
+    // the Column, or a second path to the same store cannot mint charge.
+    const consumers = stores.filter(({ copy }) => {
+      const target = positionOf(copy);
+      return target && (adjacent(pos, target) || (forwards && sameHex(outlet!, target)));
+    });
+    return [{ column, supply, consumers }];
+  });
 }
 
 export function columnLiftsOf(
   state: GameState,
   snapshot: Pick<RateSnapshot, "chargeStrength">,
-  override?: { id: string; pos: Hex | null },
+  override?: WorldMove,
+  bounded = false,
 ): WorldLift {
-  const lift: WorldLift = { byColumn: new Map(), byWeapon: new Map() };
-  const positionOf = (id: string, pos: Hex | null): Hex | null =>
-    override && override.id === id ? override.pos : pos;
-  for (const column of state.world.columns) {
-    const pos = positionOf(column.id, column.pos);
-    if (pos === null) continue;
-    const module = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-    if (!module) continue;
-    const copied = snapshot.chargeStrength.get(module.id) ?? 0;
-    if (copied <= EPS) continue;
-    lift.byColumn.set(column.id, (lift.byColumn.get(column.id) ?? 0) + copied);
-    const consumers = state.world.weapons
-      .map((weapon) => ({ id: weapon.id, pos: positionOf(weapon.id, weapon.pos) }))
-      .filter((entry): entry is { id: string; pos: Hex } => entry.pos !== null && adjacent(entry.pos, pos));
-    if (consumers.length === 0) continue;
-    // Unlimited storage: the split's routing shape alone.
-    const split = splitColumnSupply(
-      copied,
-      new Map(consumers.map(({ id }) => [id, Infinity])),
-    );
-    for (const [id, amount] of split.accepted) {
-      lift.byWeapon.set(id, (lift.byWeapon.get(id) ?? 0) + amount);
+  const lift: WorldLift = { byColumn: new Map(), byWeapon: new Map(), bySpell: new Map() };
+  for (const { column, supply, consumers } of worldLiftRoutes(state, snapshot, override)) {
+    lift.byColumn.set(column.id, supply);
+    const room = new Map(consumers.map(({ copy, cap }) => [copy.id, bounded && cap - copy.store <= EPS ? 0 : Infinity]));
+    const split = splitColumnSupply(supply, room);
+    for (const { copy, kind } of consumers) {
+      const amount = split.accepted.get(copy.id);
+      if (amount === undefined) continue;
+      const rates = kind === "weapon" ? lift.byWeapon : lift.bySpell;
+      rates.set(copy.id, (rates.get(copy.id) ?? 0) + amount);
     }
   }
   return lift;
@@ -359,27 +436,13 @@ export function columnLiftsOf(
 // Both trusted and provisional spans lift (the charge economy runs in
 // both); only the combat legs above gate on trust.
 export function advanceWorldCharge(state: GameState, snapshot: RateSnapshot, spanSeconds: number): void {
-  for (const column of state.world.columns) {
-    const pos = column.pos;
-    if (pos === null) continue;
-    const module = state.modules.find((m) => m.pos !== null && sameHex(m.pos, pos));
-    if (!module) continue;
-    const copied = requireFinite((snapshot.chargeStrength.get(module.id) ?? 0) * spanSeconds, "a Charge Column's copied supply");
-    if (copied <= EPS) continue;
-    const consumers: { weapon: WeaponCopy; space: number }[] = [];
-    for (const weapon of state.world.weapons) {
-      const weaponPos = weapon.pos;
-      if (weaponPos === null || !adjacent(weaponPos, pos)) continue;
-      consumers.push({ weapon, space: Math.max(0, BALANCE.world.storageCap - weapon.store) });
-    }
-    if (consumers.length === 0) continue;
-    const split = splitColumnSupply(
-      copied,
-      new Map(consumers.map(({ weapon, space }) => [weapon.id, space])),
-    );
-    for (const [id, amount] of split.accepted) {
-      const weapon = state.world.weapons.find((w) => w.id === id);
-      if (weapon) weapon.store = requireFinite(weapon.store + amount, "a weapon's stored charge");
+  for (const { supply, consumers } of worldLiftRoutes(state, snapshot)) {
+    const copied = requireFinite(supply * spanSeconds, "a Charge Column's copied supply");
+    const room = new Map(consumers.map(({ copy, cap }) => [copy.id, Math.max(0, cap - copy.store)]));
+    const split = splitColumnSupply(copied, room);
+    for (const { copy } of consumers) {
+      const amount = split.accepted.get(copy.id);
+      if (amount !== undefined) copy.store = requireFinite(copy.store + amount, "stored World charge");
     }
   }
 }
@@ -387,5 +450,5 @@ export function advanceWorldCharge(state: GameState, snapshot: RateSnapshot, spa
 
 // Shared definition for progression checkpoint detection and assertions.
 export function hasActiveWorldEnemy(state: GameState): boolean {
-  return Object.values(state.world.enemies).some((enemy) => enemy.discovered && enemy.hp > 0);
+  return Object.values(state.world.proof?.enemies ?? state.world.enemies).some((enemy) => enemy.discovered && enemy.hp > 0);
 }

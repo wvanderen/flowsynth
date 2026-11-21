@@ -141,6 +141,7 @@ describe("the walked presets", () => {
       "after-first-bank",
       "world-enemy",
       "focus",
+      "world-combat",
     ]);
     const approaching = scenarioOf("approaching-prestige")!;
     expect(approaching.origin).toBe("recipe checkpoint");

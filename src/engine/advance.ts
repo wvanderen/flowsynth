@@ -157,7 +157,7 @@ function walkFlow(
     // spans hold fire, and their production never touches eraEarned, so
     // neither boundary can move under them.
     if (sink === "live") {
-      earliest = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
+      earliest = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate, snapshot));
     }
     const spanSeconds = earliest !== Infinity && earliest + EPS < seconds ? earliest : seconds;
 
@@ -276,7 +276,7 @@ function walkBreather(state: GameState, seconds: number, rng: Rng): AdvanceResul
     // absent here.
     const snapshot = syncRates(state, true);
     const { liveGenerators, earliest } = boardBoundaries(state);
-    const boundary = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate));
+    const boundary = Math.min(earliest, worldBoundarySeconds(state, snapshot.rate, snapshot));
     const spanSeconds = boundary !== Infinity && boundary + EPS < seconds ? boundary : seconds;
     const gained = requireFinite(snapshot.rate * spanSeconds, "the breather's produced ν/s");
     // Supply earned during this span is available at its ending attack tick.

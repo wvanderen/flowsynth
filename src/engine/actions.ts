@@ -3,10 +3,11 @@ import { bankableClaimOf, horizonReached } from "./accumulator";
 import { rowUnlockCost, unlockableRows, unlockedMergeCap, mergeCapIncreaseCost } from "./catalog";
 import { nextCapacityPrice, nextCeilingPrice, nextDiscountPrice } from "./capacity";
 import { affordableLevels, cellPurchasePrice, chargeDelivered, maxChordFactorOf, deployedAt, findModule, isPriceableLevel, isResponseSupport, levelCost, levelsCost, modulePower, responseSupportPowerOf, rowGateOwed, syncRates, wholeNous } from "./economy";
-import { enemyDefAt, honeCostOf, worldOccupantAt } from "./world";
+import { honeCostOf, syncWorldDiscoveries, worldCellReserved, worldOccupantAt, worldPieceOf } from "./world";
+import { resetProofDuel } from "./world-combat";
 import { summaryTermsOf } from "./allocation";
 import { arcCardDue } from "./arc";
-import { adjacent, hexKey, isConnected, neighbors, sameHex } from "./hex";
+import { DIRECTIONS, adjacent, hexKey, isConnected, neighbors, sameHex } from "./hex";
 import { octaveRowOf, positionInRange } from "./lattice";
 import { createModule, createWeapon, createWorldColumn, eraStartGrantOf, freshEnemyStates, openingGrant } from "./state";
 import { logSessionPractice } from "./habits";
@@ -1188,7 +1189,13 @@ export function prestige(state: GameState, tuning: PrestigeTuning = {}): ActionR
   // at their authored fixed stats — undiscovered, undamaged, era bonuses
   // gone with the defeat state they derived from — and stored World charge
   // empties. Purchases and the frontier persist above.
-  state.world.enemies = freshEnemyStates();
+  if (state.world.proof) {
+    state.world.proof.spell.store = 0;
+    resetProofDuel(state.world.proof);
+    syncWorldDiscoveries(state);
+  } else {
+    state.world.enemies = freshEnemyStates();
+  }
   for (const weapon of state.world.weapons) {
     weapon.store = 0;
     weapon.cooldown = 0;
@@ -1266,15 +1273,15 @@ export function buyHoneRank(state: GameState, type: WeaponType): ActionResult {
 // upgrade mode is the only window, like every reconfiguration.
 export function placeWorldOccupant(state: GameState, id: string, pos: Hex): ActionResult {
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
-  const column = state.world.columns.find((entry) => entry.id === id);
-  const weapon = state.world.weapons.find((entry) => entry.id === id);
-  if (!column && !weapon) return fail("World occupant not found.");
+  const piece = worldPieceOf(state, id);
+  if (!piece) return fail("World occupant not found.");
+  if (piece.kind === "creature" && piece.copy.recovering) return fail("The creature must recover to full HP before deployment.");
   if (!state.cells.some((cell) => sameHex(cell, pos))) return fail("Only an owned cell carries a World face.");
-  if (enemyDefAt(pos)) return fail("That cell is reserved for an enemy.");
+  if (worldCellReserved(state, pos)) return fail("That cell is reserved for an enemy.");
   const occupied = worldOccupantAt(state, pos);
   if (occupied && occupied.id !== id) return fail("That World cell is already occupied.");
-  if (column) column.pos = pos;
-  else weapon!.pos = pos;
+  if (piece.kind === "creature" && (!piece.copy.pos || !sameHex(piece.copy.pos, pos))) resetProofDuel(state.world.proof!);
+  piece.copy.pos = pos;
   return { ok: true, unlocked: checkUnlocks(state) };
 }
 
@@ -1282,12 +1289,20 @@ export function placeWorldOccupant(state: GameState, id: string, pos: Hex): Acti
 // free — placement and relocation never charge.
 export function retrieveWorldOccupant(state: GameState, id: string): ActionResult {
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
-  const column = state.world.columns.find((entry) => entry.id === id);
-  const weapon = state.world.weapons.find((entry) => entry.id === id);
-  if (!column && !weapon) return fail("World occupant not found.");
-  if (column) column.pos = null;
-  else weapon!.pos = null;
+  const piece = worldPieceOf(state, id);
+  if (!piece) return fail("World occupant not found.");
+  if (piece.kind === "creature") resetProofDuel(state.world.proof!);
+  piece.copy.pos = null;
   return { ok: true, unlocked: checkUnlocks(state) };
+}
+
+export function setWorldConduitDirection(state: GameState, id: string, direction: number): ActionResult {
+  if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
+  const conduit = state.world.proof?.conduit;
+  if (!conduit || conduit.id !== id || !conduit.pos) return fail("Place the conduit before choosing an edge.");
+  if (!Number.isInteger(direction) || direction < 0 || direction >= DIRECTIONS.length) return fail("Choose a neighboring edge.");
+  conduit.direction = direction;
+  return { ok: true };
 }
 
 // A weapon's between-session target priority (issue #425): the ordered
@@ -1299,6 +1314,7 @@ export function setWeaponTargetPriority(state: GameState, id: string, keys: stri
   if (state.mode !== "upgrade") return fail("The grid is locked during flow.");
   const weapon = state.world.weapons.find((entry) => entry.id === id);
   if (!weapon) return fail("Weapon not found.");
+  if (state.world.proof) return fail("Only the current wall can be fought.");
   const known = keys.filter((key, index) => WORLD_ENEMIES.some((def) => def.key === key) && keys.indexOf(key) === index);
   weapon.targetPriority = known;
   return { ok: true, unlocked: checkUnlocks(state) };

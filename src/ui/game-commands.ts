@@ -107,6 +107,7 @@ export const GAME_COMMANDS: Readonly<Record<string, Command>> = {
   setBendShift: command([text, integer], actions.setBendShift),
   setBoosterTarget: command([text, nullable(text)], actions.setBoosterTarget),
   setWeaponTargetPriority: command([text, list(text)], actions.setWeaponTargetPriority),
+  setWorldConduitDirection: command([text, integer], actions.setWorldConduitDirection),
   skipRoll: command([text], actions.skipRoll),
   startBreather: command([], (s) => actions.startBreather(s, Date.now())),
   startSession: command([nullable(number)], (s, seconds) => {

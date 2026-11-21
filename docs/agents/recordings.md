@@ -16,6 +16,7 @@ A recording is the scheduled playthrough runner invoking real engine actions —
 | `tools/record-later-eras.mjs` | later-era productivity, recorded as one resumable job | [later-era-productivity](../later-era-productivity.md), "Reproduction and source provenance"; the job contract is [ADR-0083](../adr/0083-the-later-era-evaluation-records-as-one-resumable-job.md) |
 | the first-prestige matrix's vitest gate (`FLOWSYNTH_FIRST_PRESTIGE_REPORT`) | the opening calibration | [first-worthwhile-prestige](../first-worthwhile-prestige.md) |
 | `tools/record-profile.mjs` | the profiler's measurement | its usage line and [ADR-0084](../adr/0084-long-batch-recordings-retain-bounded-histories-and-a-batch-record-is-not-an-interactive-artifact.md) |
+| `tools/record-world-combat.mjs` | #542 fixed-kit proof, not live calibration | [World combat proof](../evidence/issue-542/README.md) |
 
 The evaluation records own their matrices, budgets, and reproduction commands; this guide navigates to them and does not restate them.
 

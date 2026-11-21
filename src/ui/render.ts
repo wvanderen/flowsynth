@@ -1213,7 +1213,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // stands (issue #426): enemies sit on coordinates the owned patch may
   // not cover, and the lens holds the whole face.
   const worldLive = worldBoardLive(app);
-  const worldCoords = worldLive ? worldLensCoordinates() : [];
+  const worldCoords = worldLive ? worldLensCoordinates(state) : [];
   const allCells = [...state.cells, ...frontier, ...worldCoords, ...bands.flatMap((band) => band.hexes)];
   const coords = allCells.map(point);
   // The lens's base (§7): the board's own bounds with breathing room —

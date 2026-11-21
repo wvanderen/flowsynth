@@ -15,8 +15,8 @@ import { BALANCE, WORLD_ENEMIES } from "../engine/constants";
 // (columnLiftsOf), never a UI-side re-derivation. Combat never demands
 // attention: the faces carry their own figures, a fed weapon's fill
 // breathes at low amplitude, and reduced motion stands fully static.
-import { enemyDefAt, enemyDefeated, enemyPenaltyOf, enemyStateOf, attackPowerOf, columnLiftsOf, eligibleTargetsOf, worldOccupantAt } from "../engine/world";
-import { adjacent, sameHex } from "../engine/hex";
+import { enemyDefAt, enemyDefeated, enemyPenaltyOf, enemyStateOf, attackPowerOf, columnLiftsOf, eligibleTargetsOf, worldCellReserved, worldEnemiesOf, worldEnemyAt, worldOccupantAt, worldPieceOf, worldPiecesOf, type WorldLift, type WorldPiece } from "../engine/world";
+import { adjacent, neighbors, sameHex } from "../engine/hex";
 import { cellNoteOf } from "../engine/lattice";
 import { displayedRates } from "../engine/economy";
 import type { GameState, Hex, RateSnapshot, WeaponCopy, WorldColumn } from "../engine/types";
@@ -27,6 +27,7 @@ import { COLUMN_SHORT, COLUMN_WORD, WORLD_META } from "./meta";
 import { formatInt, formatNumber } from "./format";
 import { wireTooltips } from "./instrument";
 import { termTipHtml } from "./terms";
+import { COMBAT_GLYPHS, proofPieceRead, proofWallFor, worldPieceName } from "./world-combat";
 
 /* ── The layer's liveness ───────────────────────────── */
 
@@ -139,14 +140,17 @@ export const WORLD_GLYPH = {
   column: '<rect x="-7" y="-12" width="14" height="24"/><path d="M-11-12h22M-11 12h22"/>',
 };
 
-function worldGlyph(kind: "enemy" | "weapon" | "column", dimmed: boolean, scale = 1): string {
-  return `<g class="world-glyph${dimmed ? " dimmed" : ""}" transform="scale(${scale})">${WORLD_GLYPH[kind]}</g>`;
+type WorldGlyphKind = keyof typeof WORLD_GLYPH | keyof typeof COMBAT_GLYPHS;
+
+function worldGlyph(kind: WorldGlyphKind, dimmed: boolean, scale = 1, rotation = 0): string {
+  const glyph = kind in COMBAT_GLYPHS ? COMBAT_GLYPHS[kind as keyof typeof COMBAT_GLYPHS] : WORLD_GLYPH[kind as keyof typeof WORLD_GLYPH];
+  return `<g class="world-glyph${dimmed ? " dimmed" : ""}" transform="scale(${scale})${rotation ? ` rotate(${rotation})` : ""}">${glyph}</g>`;
 }
 
 // The coordinate's World verdict: why the cell takes no placement, in the
 // face's own words. Null on an open cell.
 export function worldPlacementVerdict(state: GameState, pos: Hex): string | null {
-  if (enemyDefAt(pos)) return enemyDefeated(state, enemyDefAt(pos)!.key) ? "cleared" : "reserved";
+  if (worldCellReserved(state, pos)) return enemyDefeated(state, worldEnemyAt(state, pos)!.key) ? "cleared" : "reserved";
   const occupant = worldOccupantAt(state, pos);
   if (occupant) return "occupied";
   return null;
@@ -251,6 +255,39 @@ function openFaceHtml(pos: Hex, armed: boolean): string {
     <polygon class="world-hit" tabindex="0" role="button" aria-label="World cell at ${cellNoteOf(pos)}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
 }
 
+// The proof engraves the existing World plate; it does not own its outline.
+function proofEngraving(name: string, glyph: WorldGlyphKind, read: string, verdict: string, large: boolean, rotation = 0): string {
+  return `${plate("firm", large ? 52 : PLATE_HALF)}
+    <text class="world-word" y="${large ? -38 : NAME_Y}" text-anchor="middle">${name}</text>
+    <g transform="translate(0,${large ? -13 : -5})">${worldGlyph(glyph, false, large ? 1.15 : 0.8, rotation)}</g>
+    <text class="world-fig" y="${large ? 24 : 17}" text-anchor="middle">${read}</text>
+    <text class="world-fig" y="${large ? 44 : VERDICT_Y}" text-anchor="middle">${verdict}</text>`;
+}
+
+function pieceEngraving(state: GameState, piece: WorldPiece, lift: WorldLift, large: boolean) {
+  const name = worldPieceName(piece);
+  const label = piece.kind === "column" ? COLUMN_SHORT : piece.kind === "weapon" ? WORLD_META[piece.copy.type].short : name;
+  const { read, stateWord, tip } = proofPieceRead(state, piece, lift);
+  let rotation = 0;
+  if (piece.kind === "conduit" && piece.copy.pos) {
+    const [x, y] = boardPoint(piece.copy.pos);
+    const [toX, toY] = boardPoint(neighbors(piece.copy.pos)[piece.copy.direction]!);
+    rotation = Math.atan2(toY - y, toX - x) * (180 / Math.PI);
+  }
+  return { inner: proofEngraving(label, piece.kind, read, stateWord, large, rotation), name, read, stateWord, tip };
+}
+
+function wallEngraving(state: GameState, key: string, large: boolean) {
+  const wall = proofWallFor(key)!;
+  const read = `${Math.ceil(enemyStateOf(state, key).hp)}/${wall.maxHp} HP`;
+  const pressure = enemyPenaltyFigure(state, key);
+  return { inner: proofEngraving(wall.name, wall.key, read, pressure, large), label: `${wall.name} · ${read} · ${pressure}`, wall };
+}
+
+function proofGridHit(pos: Hex, label: string): string {
+  return `<polygon class="world-hit" tabindex="0" role="button" aria-label="${label}" data-world-cell="${pos.q},${pos.r}" points="${hexPoints(HEX_RADIUS)}" fill="none" stroke="none"/>`;
+}
+
 /* ── The grid decorations ───────────────────────────── */
 
 // The layer's one drawing pass, the Mutator Grid's discipline: while the
@@ -264,28 +301,36 @@ export function worldGridDecorations(app: App, snapshot: RateSnapshot): string {
   const lift = columnLiftsOf(state, snapshot);
   const armed = worldLayerLive(app) && ui.worldArmed !== null;
   const parts: string[] = [];
-  for (const def of WORLD_ENEMIES) {
+  for (const def of worldEnemiesOf(state)) {
+    if (!worldCellReserved(state, def.pos)) continue;
     const [x, y] = boardPoint(def.pos);
-    const live = state.world.enemies[def.key];
-    const face = !live?.discovered
-      ? reservedFaceHtml(def.pos)
-      : enemyDefeated(state, def.key)
-        ? clearedFaceHtml(def.pos)
-        : enemyFaceHtml(state, def.pos, def.key);
+    const live = enemyStateOf(state, def.key);
+    let face: string;
+    if (!live.discovered) face = reservedFaceHtml(def.pos);
+    else if (enemyDefeated(state, def.key)) face = clearedFaceHtml(def.pos);
+    else if (state.world.proof) {
+      const { inner, label } = wallEngraving(state, def.key, false);
+      face = inner + proofGridHit(def.pos, label);
+    } else face = enemyFaceHtml(state, def.pos, def.key);
     parts.push(`<g data-key="world-${def.key}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${face}</g>`);
   }
   for (const pos of state.cells) {
-    if (enemyDefAt(pos)) continue;
+    if (worldCellReserved(state, pos)) continue;
     const [x, y] = boardPoint(pos);
     const occupant = worldOccupantAt(state, pos);
     if (!occupant) {
       parts.push(`<g data-key="world-open-${pos.q},${pos.r}" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${openFaceHtml(pos, armed)}</g>`);
       continue;
     }
-    const inner =
-      occupant.kind === "weapon"
+    let inner: string;
+    if (state.world.proof) {
+      const engraving = pieceEngraving(state, worldPieceOf(state, occupant.id)!, lift, false);
+      inner = engraving.inner + proofGridHit(pos, [engraving.name, engraving.read, engraving.stateWord].filter(Boolean).join(" · "));
+    } else {
+      inner = occupant.kind === "weapon"
         ? weaponFaceHtml(state, state.world.weapons.find((w) => w.id === occupant.id)!, lift.byWeapon.get(occupant.id) ?? 0, pos)
         : columnFaceHtml(state, lift.byColumn.get(occupant.id) ?? 0, pos);
+    }
     parts.push(`<g data-key="world-occ-${pos.q},${pos.r}" class="world-occupant" transform="translate(${x.toFixed(2)},${y.toFixed(2)})">${inner}</g>`);
   }
   return `<g data-key="world-grid">${parts.join("")}</g>`;
@@ -294,8 +339,8 @@ export function worldGridDecorations(app: App, snapshot: RateSnapshot): string {
 // The lens's World extent: the authored positions sit on coordinates the
 // owned patch may not cover, so the board's bounds read includes them
 // while the layer stands — zoom and pan hold the whole face.
-export function worldLensCoordinates(): Hex[] {
-  return WORLD_ENEMIES.map((def) => def.pos);
+export function worldLensCoordinates(state: GameState): Hex[] {
+  return worldEnemiesOf(state).filter((def) => worldCellReserved(state, def.pos)).map((def) => def.pos);
 }
 
 /* ── The reserved readout's ask ─────────────────────── */
@@ -306,7 +351,19 @@ export function worldLensCoordinates(): Hex[] {
 // cells their silence.
 export function worldAskHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   const { state } = app;
-  const def = enemyDefAt(pos);
+  const def = worldEnemyAt(state, pos);
+  if (state.world.proof) {
+    const piece = worldOccupantAt(state, pos);
+    let read = "Open World cell";
+    if (def && worldCellReserved(state, pos)) {
+      read = enemyStateOf(state, def.key).discovered ? wallEngraving(state, def.key, false).label : "Reserved cell";
+    } else if (piece) {
+      const item = worldPieceOf(state, piece.id)!;
+      const facts = proofPieceRead(state, item, columnLiftsOf(state, snapshot));
+      read = `${worldPieceName(item)} · ${facts.tip}`;
+    } else if (def) read = `${proofWallFor(def.key)!.name} cleared · open World cell`;
+    return `<span class="chord-readout-chip mono" style="--cc:var(--world)">${read}</span>`;
+  }
   if (def) {
     const live = state.world.enemies[def.key];
     if (!live?.discovered) {
@@ -350,16 +407,25 @@ export interface WorldPreview {
 // engine would take. Null off valid targets (the register shows nothing).
 export function worldPlacementPreview(state: GameState, id: string, pos: Hex | null): WorldPreview | null {
   if (pos === null || state.mode !== "upgrade") return null;
-  const isColumn = state.world.columns.some((c) => c.id === id);
-  const isWeapon = state.world.weapons.some((w) => w.id === id);
-  if (!isColumn && !isWeapon) return null;
-  if (enemyDefAt(pos)) return null;
+  const piece = worldPieceOf(state, id);
+  if (!piece || (piece.kind === "creature" && piece.copy.recovering)) return null;
+  const isColumn = piece.kind === "column";
+  const isWeapon = piece.kind === "weapon";
+  if (worldCellReserved(state, pos) || !state.cells.some((cell) => sameHex(cell, pos))) return null;
   const occupant = worldOccupantAt(state, pos);
   if (occupant && occupant.id !== id) return null;
   const snapshot = displayedRates(state, true);
   const before = columnLiftsOf(state, snapshot);
   const after = columnLiftsOf(state, snapshot, { id, pos });
   const rows: string[] = [];
+  if (state.world.proof) {
+    for (const item of worldPiecesOf(state)) {
+      const rates = (lift: WorldLift) => (item.kind === "column" ? lift.byColumn : item.kind === "spell" ? lift.bySpell : lift.byWeapon).get(item.copy.id) ?? 0;
+      const prior = rates(before), moved = rates(after);
+      if (Math.abs(prior - moved) > 1e-9) rows.push(`${worldPieceName(item)}: ⌁${formatNumber(prior)}/s → ⌁${formatNumber(moved)}/s`);
+    }
+    return { moved: id, rows };
+  }
   const share = (lift: { byWeapon: Map<string, number> }, weaponId: string): number => lift.byWeapon.get(weaponId) ?? 0;
   const routeWord = (rate: number): string => (rate > 0 ? `⌁${formatNumber(rate)}/s` : "unfed");
   if (isWeapon) {
@@ -403,12 +469,12 @@ export function worldTrayOccupants(state: GameState): { weapons: WeaponCopy[]; c
 }
 
 // Inventory and the real pointer ghost share the board's steel hex.
-export function worldTileInner(kind: "weapon" | "column"): string {
+export function worldTileInner(kind: WorldPiece["kind"]): string {
   return `<polygon class="world-tile-plate" points="${worldHexPoints(46)}"/>
-    ${worldGlyph(kind === "weapon" ? "weapon" : "column", false, 1.9)}`;
+    ${worldGlyph(kind, false, 1.9)}`;
 }
 
-export function worldTileSvg(kind: "weapon" | "column"): string {
+export function worldTileSvg(kind: WorldPiece["kind"]): string {
   return `<svg viewBox="-70 -70 140 140" aria-hidden="true" style="color: var(--world)">${worldTileInner(kind)}</svg>`;
 }
 
@@ -423,6 +489,22 @@ function weaponTrayRead(state: GameState, weapon: WeaponCopy): string {
 function worldInspectHtml(app: App): string {
   const { state } = app;
   const id = app.ui.worldTray.inspect!;
+  if (state.world.proof) {
+    const piece = worldPieceOf(state, id);
+    if (!piece || piece.copy.pos) return `<button data-world-back>Back to tray</button>`;
+    const { read, stateWord, tip } = proofPieceRead(state, piece);
+    const isRecovering = piece.kind === "creature" && piece.copy.recovering;
+    const preview = app.ui.detail && worldPlacementPreview(state, id, app.ui.detail.pos);
+    return `<button data-world-back>Back to tray</button>
+      <div class="inventory-inspection">
+        <div class="inventory-detail-face">${worldTileSvg(piece.kind)}</div>
+        <h3 class="inventory-detail-name">${worldPieceName(piece)}</h3>
+        ${piece.kind !== "column" ? `<p class="mono">${[read, stateWord].filter(Boolean).join(" · ")}</p>` : ""}
+        <p>${tip}</p>
+        ${preview?.rows.length ? `<div class="world-placement-preview" aria-label="Placement supply preview">${worldPreviewHtml(preview)}</div>` : ""}
+        <button class="primary" data-world-place="${id}"${state.mode !== "upgrade" || isRecovering ? " disabled" : ""}>Place</button>
+      </div>`;
+  }
   const weapon = state.world.weapons.find((w) => w.id === id && w.pos === null);
   const column = state.world.columns.find((c) => c.id === id && c.pos === null);
   if (!weapon && !column) return `<button data-world-back>Back to tray</button><p class="inventory-empty">This occupant is no longer in the tray.</p>`;
@@ -446,6 +528,7 @@ function worldInspectHtml(app: App): string {
 // behind it — one row per authored enemy, the raise and lower controls
 // moving preference. Locks with everything else in flow.
 export function targetPriorityHtml(state: GameState, weapon: WeaponCopy): string {
+  if (state.world.proof) return "";
   const locked = state.mode !== "upgrade";
   const stored = weapon.targetPriority;
   const effective: string[] = [];
@@ -485,6 +568,7 @@ function trayKey(app: App): string {
     ui.detail?.pos,
     state.world.weapons.map((w) => [w.id, w.pos, w.store, w.targetPriority]),
     state.world.columns.map((c) => [c.id, c.pos]),
+    state.world.proof && [state.world.proof.creature, state.world.proof.armor, state.world.proof.spell, state.world.proof.conduit],
   ]);
 }
 
@@ -493,7 +577,8 @@ export function renderWorldTrayContent(app: App, host: HTMLElement, sheet: boole
   const { state, ui } = app;
   const locked = state.mode !== "upgrade";
   const collapsed = !sheet && ui.inventory.collapsed && !ui.inventory.dragOpen;
-  const count = state.world.weapons.filter((w) => w.pos === null).length + state.world.columns.filter((c) => c.pos === null).length;
+  const pieces = worldPiecesOf(state).filter(({ copy }) => copy.pos === null);
+  const count = pieces.length;
   const key = trayKey(app) + JSON.stringify([sheet, collapsed, count]);
   if (host.dataset.worldKey === key) return;
   const active = document.activeElement;
@@ -502,13 +587,17 @@ export function renderWorldTrayContent(app: App, host: HTMLElement, sheet: boole
   host.classList.toggle("inventory-collapsed", collapsed);
   host.classList.add("inventory-browser", ...(sheet ? [] : ["inst-panel"]));
   host.classList.toggle("inventory-subview", ui.worldTray.inspect !== null);
-  const { weapons, columns } = worldTrayOccupants(state);
-  const row = (id: string, kind: "weapon" | "column", name: string, read: string): string =>
+  const row = (id: string, kind: WorldPiece["kind"], name: string, read: string): string =>
     `<div class="inventory-row"><button class="inventory-copy world-tile" data-world-tray="${id}" aria-label="Inspect ${name}${read ? ` · ${read}` : ""}">
       <span class="inventory-mark">${worldTileSvg(kind)}</span><span class="inventory-copy-read"><strong>${name}</strong>${read ? `<span class="inventory-level mono">${read}</span>` : ""}</span>
     </button></div>`;
   const browse = `<div class="inventory-list" data-world-scroll>${
-    [...weapons.map((w) => row(w.id, "weapon", WORLD_META[w.type].name, weaponTrayRead(state, w))), ...columns.map((c) => row(c.id, "column", COLUMN_WORD, ""))].join("")
+    pieces.sort((a, b) => Number(a.kind === "column") - Number(b.kind === "column")).map((piece) => {
+      const facts = state.world.proof && piece.kind !== "column" ? proofPieceRead(state, piece) : null;
+      const label = facts ? [facts.read, facts.stateWord].filter(Boolean).join(" · ")
+        : piece.kind === "weapon" ? weaponTrayRead(state, piece.copy) : "";
+      return row(piece.copy.id, piece.kind, worldPieceName(piece), label);
+    }).join("")
     || `<p class="inventory-empty">No stored World occupants.</p>`
   }</div>`;
   const subview = ui.worldTray.inspect !== null ? worldInspectHtml(app) : browse;
@@ -565,7 +654,8 @@ export function renderWorldPill(app: App): void {
     return;
   }
   host.hidden = false;
-  host.innerHTML = `Place ${app.ui.worldArmedKind === "column" ? COLUMN_WORD : WORLD_META.chargeBlade.name} · free<span class="pill-esc">Cancel · Esc</span>`;
+  const piece = worldPieceOf(app.state, app.ui.worldArmed);
+  host.innerHTML = `Place ${piece ? worldPieceName(piece) : "occupant"} · free<span class="pill-esc">Cancel · Esc</span>`;
   if (host.dataset.bound) return;
   host.dataset.bound = "true";
   app.listen(host, "click", () => app.worldCancelGestures());
@@ -640,13 +730,15 @@ function startWorldDrag(app: App, event: PointerEvent, id: string, origin: Hex |
   const overTray = (ev: PointerEvent): boolean => trayHitAt(ev) !== null;
   const tray = document.getElementById("world-tray");
   const sheet = () => (app.ui.modal === "inventory" ? document.getElementById("modal-content") : null);
-  const kind = app.state.world.columns.some((c) => c.id === id) ? "column" : "weapon";
+  const piece = worldPieceOf(app.state, id);
+  if (!piece || (piece.kind === "creature" && piece.copy.recovering)) return;
+  const kind = piece.kind;
   app.cancelWorldDrag = startPointerDrag(app, event, {
     start: () => {
       app.ui.worldCarrying = id;
       const ghost = document.createElement("div");
       ghost.className = "drag-ghost world-ghost";
-      ghost.innerHTML = worldTileSvg(kind as "weapon" | "column");
+      ghost.innerHTML = worldTileSvg(kind);
       return ghost;
     },
     move: (ev) => {
@@ -709,7 +801,7 @@ export function refreshWorldPreview(app: App): void {
 
 export function worldCountBadge(app: App): number {
   const { state } = app;
-  return state.world.weapons.filter((w) => w.pos === null).length + state.world.columns.filter((c) => c.pos === null).length;
+  return worldPiecesOf(state).filter(({ copy }) => copy.pos === null).length;
 }
 
 export function deployedWeaponAt(state: GameState, pos: Hex): WeaponCopy | undefined {
@@ -727,10 +819,16 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
       tip: `The World reveals at ${worldRevealPreview()}`,
     };
   }
-  const def = enemyDefAt(pos);
-  if (def) {
-    const live = state.world.enemies[def.key];
-    if (!live?.discovered) {
+  const def = worldEnemyAt(state, pos);
+  const reserved = worldCellReserved(state, pos);
+  const wrap = (content: string) => `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${content}<polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`;
+  if (state.world.proof && def && reserved && enemyStateOf(state, def.key).discovered) {
+    const { inner, wall } = wallEngraving(state, def.key, true);
+    return { chassis: wrap(inner), tip: `Heals ${wall.regeneration} HP/s while alive` };
+  }
+  if (def && reserved) {
+    const live = enemyStateOf(state, def.key);
+    if (!live.discovered) {
       return {
         chassis: `<svg class="world-stack" viewBox="-70 -70 140 140" aria-hidden="true">${plate("reserved", 52)}<polygon class="world-hatch" points="${worldHexPoints(52)}"/><text class="world-word" y="4" text-anchor="middle">RESERVED</text><polygon class="hex-stack-marker" points="${hexPoints(53)}"/></svg>`,
         tip: `Reserved cell · silent until its reveal`,
@@ -755,6 +853,10 @@ export function worldChassisHtml(state: GameState, pos: Hex, snapshot: RateSnaps
     };
   }
   const lift = columnLiftsOf(state, snapshot);
+  if (state.world.proof) {
+    const { inner, tip } = pieceEngraving(state, worldPieceOf(state, occupant.id)!, lift, true);
+    return { chassis: wrap(inner), tip };
+  }
   if (occupant.kind === "weapon") {
     const weapon = state.world.weapons.find((w) => w.id === occupant.id)!;
     const rate = lift.byWeapon.get(weapon.id) ?? 0;

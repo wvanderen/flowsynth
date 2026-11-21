@@ -253,6 +253,26 @@ export interface WorldEnemyState {
 // occupants (Columns and weapons), the per-type Hone ranks, and the
 // enemies' live state. World purchases persist through prestige; enemy
 // encounters, damage, and stored World charge reset with the era.
+export interface WorldCombatCreature {
+  id: string;
+  pos: Hex | null;
+  hp: number;
+  recovering: boolean;
+  cooldown: number;
+}
+
+// Constructed exclusively by the isolated development scenario. The live
+// save loader never installs a proof, even if given a scenario export.
+export interface WorldCombatProof {
+  creature: WorldCombatCreature;
+  armor: WorldColumn;
+  spell: WorldColumn & { store: number };
+  conduit: WorldColumn & { direction: number };
+  enemies: Record<string, WorldEnemyState>;
+  enemyCooldown: number;
+  elapsed: number;
+}
+
 export interface WorldState {
   unlocked: boolean;
   starterColumnGranted: boolean;
@@ -262,6 +282,7 @@ export interface WorldState {
   weapons: WeaponCopy[];
   hone: Record<WeaponType, number>;
   enemies: Record<string, WorldEnemyState>;
+  proof?: WorldCombatProof;
 }
 
 export interface MutatorCandidate {

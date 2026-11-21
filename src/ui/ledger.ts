@@ -4,7 +4,8 @@ import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumu
 import { ACHIEVEMENTS } from "../engine/achievements";
 import { capacityCeiling } from "../engine/capacity";
 import { catalogOpen } from "../engine/catalog";
-import { enemyDefeated, enemyPenaltyOf } from "../engine/world";
+import { enemyDefeated, enemyPenaltyOf, worldFactorOf } from "../engine/world";
+import { activeProofWall } from "../engine/world-combat";
 import { isOscillatorType, NAMED_CHORDS, WORLD_ENEMIES } from "../engine/constants";
 import { deployedAt, voiceCapacityOf } from "../engine/economy";
 import { discoveryCount } from "../engine/library";
@@ -17,6 +18,11 @@ import { liveAttr, liveSet } from "./live";
 import { META } from "./meta";
 
 export function enemyPressureHtml(state: GameState): string {
+  if (state.world.proof) {
+    const wall = activeProofWall(state.world.proof);
+    const reduction = ((1 - worldFactorOf(state)) * 100).toFixed(0);
+    return `<h3>Enemy pressure</h3><div class="ledger-detail-row"><span>${wall?.name ?? "No active wall"}</span><b class="mono">${wall ? "−" : ""}${reduction}% ν</b></div>`;
+  }
   const active = WORLD_ENEMIES.filter((def) => state.world.enemies[def.key]?.discovered && !enemyDefeated(state, def.key));
   const remaining = active.reduce((factor, def) => factor * (1 - enemyPenaltyOf(state, def.key)), 1);
   return `<h3>Enemy pressure</h3><div class="ledger-detail-row"><span>Combined</span><b class="mono">${((1 - remaining) * 100).toFixed(1)}% production reduction</b></div>` +
