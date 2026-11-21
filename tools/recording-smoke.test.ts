@@ -38,6 +38,8 @@ describe("recorder static gate", () => {
       "job-worker.mjs",
       // Issue #509: the retained-recording profiler.
       "record-profile.mjs",
+      // Issue #542: the isolated World combat proof recorder.
+      "record-world-combat.mjs",
     ]);
   });
 
