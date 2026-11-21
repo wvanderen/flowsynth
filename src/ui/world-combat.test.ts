@@ -2,7 +2,7 @@
 import { afterEach, expect, it } from "vitest";
 import { STORAGE_KEY, serialize } from "../engine/save";
 import { createInitialState } from "../engine/state";
-import { createAppFixture } from "./testing/app-fixture";
+import { createAppFixture, setAppWidth } from "./testing/app-fixture";
 
 const fixture = createAppFixture();
 afterEach(() => fixture.release());
@@ -52,4 +52,16 @@ it("edits the conduit only between sessions and explains the defeated tray lock"
   document.querySelector<HTMLButtonElement>('[data-world-tray="sentinel"]')!.click();
   expect(document.querySelector(".inventory-inspection")?.textContent).toContain("0/24 HP · Recovering");
   expect(document.querySelector<HTMLButtonElement>('[data-world-place="sentinel"]')!.disabled).toBe(true);
+});
+
+it("keeps the phone board unobstructed and brings the proof kit in through Inventory", () => {
+  const app = fixture.boot(undefined, true);
+  setAppWidth(390);
+  app.devLaunchScenario("world-combat");
+  expect(document.getElementById("world-tray")!.hidden).toBe(true);
+  expect(document.getElementById("arc-card")!.hidden).toBe(true);
+  app.openModal("inventory");
+  const rows = document.querySelectorAll('#modal-content [data-world-tray]');
+  expect(rows).toHaveLength(6);
+  expect(document.querySelector('#modal-content [data-world-tray="guard-plate"]')?.textContent).not.toContain("Unbound");
 });

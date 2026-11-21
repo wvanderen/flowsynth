@@ -9,6 +9,7 @@ export function createWorldCombatScenario(): GameState {
   const state = createInitialState();
   state.eraEarned = BALANCE.world.entryNous * 10;
   state.totalEarned = state.eraEarned;
+  state.arcCardSeen = true; // The prepared board is past the second-synth introduction.
   state.cells.push(hex(1, 1), hex(1, -1), hex(2, 0), hex(0, -1), hex(1, -2), hex(2, -2), hex(-1, 1), hex(-1, 0));
   // The proof grants a compact, connected patch and a charged Module rig.
   // It neither prices these cells nor claims this start can be earned live.

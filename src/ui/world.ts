@@ -499,7 +499,7 @@ function worldInspectHtml(app: App): string {
       <div class="inventory-inspection">
         <div class="inventory-detail-face">${worldTileSvg(piece.kind)}</div>
         <h3 class="inventory-detail-name">${worldPieceName(piece)}</h3>
-        ${piece.kind !== "column" ? `<p class="mono">${[read, stateWord].filter(Boolean).join(" · ")}</p>` : ""}
+        ${read && piece.kind !== "column" ? `<p class="mono">${piece.kind === "creature" ? `${read} · ${stateWord}` : read}</p>` : ""}
         <p>${tip}</p>
         ${preview?.rows.length ? `<div class="world-placement-preview" aria-label="Placement supply preview">${worldPreviewHtml(preview)}</div>` : ""}
         <button class="primary" data-world-place="${id}"${state.mode !== "upgrade" || isRecovering ? " disabled" : ""}>Place</button>
@@ -594,7 +594,7 @@ export function renderWorldTrayContent(app: App, host: HTMLElement, sheet: boole
   const browse = `<div class="inventory-list" data-world-scroll>${
     pieces.sort((a, b) => Number(a.kind === "column") - Number(b.kind === "column")).map((piece) => {
       const facts = state.world.proof && piece.kind !== "column" ? proofPieceRead(state, piece) : null;
-      const label = facts ? [facts.read, facts.stateWord].filter(Boolean).join(" · ")
+      const label = facts ? (piece.kind === "creature" ? `${facts.read} · ${facts.stateWord}` : facts.read)
         : piece.kind === "weapon" ? weaponTrayRead(state, piece.copy) : "";
       return row(piece.copy.id, piece.kind, worldPieceName(piece), label);
     }).join("")
