@@ -1,6 +1,8 @@
 # #542 — Isolated World combat proof
 
-Frozen source: `9c355a8f79cc860fee82dae6bc7ad59728452938`. Status: targeted checks, walk and browser evidence complete; full suite status below. No live economy calibration claim. Review basis: integration tips `6b303075` (implementation) and `ed00db9` (final merge), #542 and #541's proof slice, the World combat redesign brief, ADR-0077/0087/0088, and the pinned instrument/control prototypes `eb232c4` / `d405ce2`.
+Frozen source: `9c355a8f79cc860fee82dae6bc7ad59728452938`. Status: accepted for the isolated proof; full suite verified at evidence commit `0d729756f5d096dedc765f4fe9b5832c707a79c5`, whose source matches the freeze. No live economy calibration claim. Review basis: integration tips `6b303075` (implementation) and `ed00db9` (final merge), #542 and #541's proof slice, the World combat redesign brief, ADR-0077/0087/0088, and the pinned instrument/control prototypes `eb232c4` / `d405ce2`.
+
+Named cases below are in [engine World combat tests](../../../src/engine/world-combat.test.ts) and [UI World combat tests](../../../src/ui/world-combat.test.ts). Final acceptance checked the named assertions and recorded walks against #542, and compared the frozen captures with the pinned instrument and control references.
 
 | Criterion | Verification | Class |
 |---|---|---|
@@ -10,7 +12,7 @@ Frozen source: `9c355a8f79cc860fee82dae6bc7ad59728452938`. Status: targeted chec
 | Conserved routing, selected edge, back edge cannot duplicate, unbound stores bounded | `a directed route feeds unbound gear without firing or multiplying the Column's supply` | Automated |
 | Trusted World clock and honesty; recovery in flow and breathers, not during pause, upgrades, or offline gaps | `uses only trusted World time through pause, honesty settlement, and a breather`; isolated launch/reload case | Automated |
 | Wounded enemy heals during contact/below threshold; partial HP continuity, tray locks, no auto-deployment | `spends Blade charge on its own cadence and casts Pulse at its banked threshold`; `hands pressure to the next wall at victory, then preserves victories and wounds at prestige`; `adjacent armor enables a wounded bench return; defeat locks the tray until full HP` (ready but still benched) | Automated |
-| Next wall activates in order, one fixed nous penalty, lifetime release, preserved first clear and wounds through prestige | `hands pressure to the next wall at victory, then preserves victories and wounds at prestige`; `keeps HP, charge, and threshold-split production when the advance is subdivided` | Automated |
+| Next wall activates in order, one fixed nous penalty, lifetime release, preserved first clear and wounds through prestige | `hands pressure to the next wall at victory, then preserves victories and wounds at prestige`; `does not activate the next wall until its own threshold, even if the predecessor is cleared`; `clearing an unowned wall removes its World reservation without granting the cell`; `keeps HP, charge, and threshold-split production when the advance is subdivided` | Automated |
 | Fixed dev-only kit, ordinary save isolated, configuration between runs, readable and accessible World HP, pressure and readiness, no normal-flow combat prompt | `launches the fixed fight in a private slot and equips it from World without changing the ordinary save`; `keeps the phone board unobstructed and brings the proof kit in through Inventory`; [browser.json](browser.json) and captures below | Automated + recorded |
 
 ## Preliminary review (sequential passes, shared context)
@@ -30,8 +32,8 @@ Frozen source: `9c355a8f79cc860fee82dae6bc7ad59728452938`. Status: targeted chec
 ## Frozen checks and outcomes
 
 - `npm run preflight`: supported Node 22.23.4; UI storage available. `npm run check`: typecheck and recorder static gate passed.
-- Frozen `npm test -- --reporter=verbose` was started and is still running at handoff. The focused World/Hex detail run and `npm run check` passed; **full-suite acceptance is not yet established**. The child worktree has `.dev/issue-542-test.log`; `.dev/issue-542-test.exit` is written on completion.
-- `record-world-combat.mjs smoke` and `record` passed at freeze. The compiled engine digest is `a91d3807fb71f730fcf446c2a53619bbcac31a11050b8123ac79c57bf20ff05d`. The recording captures the common branches, layout and HP/charge at one-second intervals; times below count credited World time (including any deliberate recoveries), not wall-clock or just the attack phase.
+- The implementation `npm test -- --reporter=verbose` attempt ended without a verdict. The merger's detached `npm test` completed on the clean candidate `0d729756f5d096dedc765f4fe9b5832c707a79c5`: **exit 0, 138 files passed, 2,444 tests passed, 9 skipped**. The proof worktree's `.dev/issue-542-merger-test.log` and `.dev/issue-542-merger-test.exit` establish the result; final acceptance verified them without rerunning the suite. The log includes four `fatal: not a git repository` stderr messages that did not fail the run; it does not attribute them to particular cases or identify the skipped cases. Ancestry and `git diff --check` passed, and the freeze-to-candidate diff contained only `docs/evidence/issue-542/` files.
+- `record-world-combat.mjs smoke` and `record` passed at freeze. The compiled engine digest is `a91d3807fb71f730fcf446c2a53619bbcac31a11050b8123ac79c57bf20ff05d`. The recording captures layouts and HP/charge at one-second intervals in combat and recovery, and 30-second intervals in the common rebuild. Times below count credited World time (including deliberate recoveries), not wall-clock or just the attack phase.
 
 | Wall / layout | Common start (wall / Sentinel) | Outcome | World time | End HP (wall / Sentinel) |
 |---|---:|---|---:|---:|
@@ -41,7 +43,9 @@ Frozen source: `9c355a8f79cc860fee82dae6bc7ad59728452938`. Status: targeted chec
 | Basalt / bare prestige, rebuilt | 35 / 24 | Sentinel defeated | 24 s | 14.6 / 0 |
 | Basalt / same rebuild + two Hone ranks | 35 / 24 | Clears at 20 s; spends 3 of 4 banked Arete | 24 s | 0 / 8 |
 
-Prestige itself preserves Shale's clear and Sentinel's 3 HP, banks four Arete, and leaves Blade damage at four. Basalt is inactive at the reset; a common ordinary rebuild and recovery reach both variants' identical 974 s start with Basalt active. These are deliberately constructed, fixed-kit proof runs, not a tuned shipped progression or an evaluation of draft/class variance.
+Benching the Guard Plate changes the effective Shale layout to attrition: Shale heals from 22.85 to 27.05 HP between deployments. Moving the Column off its supply changes that same attrition layout to the weak layout; Shale heals to full during each recovery. The coefficients do not change.
+
+Prestige itself preserves Shale's clear and Sentinel's 3 HP, banks four Arete, and leaves Blade damage at four. Basalt is inactive at the reset; a common ordinary rebuild and recovery reach both variants' identical 974 s start with Basalt active. Both variants bank the same claim and use the same layout; the bare branch leaves Arete unspent. Configuration and wounds persist between practice sessions in the isolated slot, not across a page reload, which returns to the ordinary save. These are deliberately constructed, fixed-kit proof runs, not a tuned shipped progression or an evaluation of draft/class variance.
 
 ## Final browser acceptance
 
