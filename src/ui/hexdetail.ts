@@ -336,9 +336,8 @@ function detailLayerPreviews(app: App, pos: Hex, module: ModuleInstance | undefi
 }
 
 /* ── The World face ─────────────────────────────────── */
-// The coordinate's World plate, above the module, in the layer's steel
-// register — the same square-cut silhouette the board's second face
-// draws, at readable scale. The tooltip carries the state's one line.
+// The coordinate's steel World plate at detail scale, on the same
+// chassis as Modules. The tooltip carries the state's one line.
 
 function worldLayerHtml(app: App, pos: Hex, snapshot: RateSnapshot): string {
   const { ui } = app;

@@ -1,0 +1,287 @@
+{
+  "source": "8c9c451621f67cc0b612f425c546f0fdc482842a",
+  "url": "http://localhost:5173/",
+  "chromium": "155.0.8059.84",
+  "desktop": {
+    "viewport": {
+      "width": 1280,
+      "height": 800,
+      "touch": false
+    },
+    "errors": [],
+    "missingFavicons": [
+      "http://localhost:5173/favicon.ico: Failed to load resource: the server responded with a status of 404 (Not Found)"
+    ],
+    "layers": {
+      "modules": {
+        "points": "8.1406,-4.7000 8.1406,4.7000 0.0000,9.4000 -8.1406,4.7000 -8.1406,-4.7000 -0.0000,-9.4000",
+        "viewBox": "0 0 24 24",
+        "strokeWidth": "1.6px"
+      },
+      "world": {
+        "points": "8.1406,-4.7000 8.1406,4.7000 0.0000,9.4000 -8.1406,4.7000 -8.1406,-4.7000 -0.0000,-9.4000",
+        "viewBox": "0 0 24 24",
+        "strokeWidth": "1.6px"
+      }
+    },
+    "moduleCenter": "translate(56.29165124598851,97.5)",
+    "inventoryRows": {
+      "moduleTile": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "4.5px"
+      },
+      "worldTile": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "4.5px"
+      }
+    },
+    "inventoryInspection": {
+      "moduleInspect": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "worldInspect": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      }
+    },
+    "worldCenter": "translate(56.29,97.50)",
+    "board": {
+      "moduleBoard": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-134.29 -100.00 268.58 279.50",
+        "strokeWidth": "1px"
+      },
+      "worldBoard": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-246.87 -197.50 606.33 572.00",
+        "strokeWidth": "1px"
+      },
+      "states": [
+        "world-plate firm",
+        "world-plate engraved",
+        "world-plate reserved",
+        "world-plate open"
+      ],
+      "spacing": {
+        "enemyGlyphToHp": 5.699127197265625,
+        "bladeChargeToAttack": 7
+      }
+    },
+    "taperHit": {
+      "x": 639.994689541263,
+      "y": 452.5034965034965,
+      "cell": "1,0"
+    },
+    "inspect": {
+      "tooltip": "Charge Blade · place beside a Column to feed · BLADE · UNFED ⌁12/30 ATK 4",
+      "bounds": {
+        "x": 268,
+        "y": 268,
+        "width": 72,
+        "height": 72
+      },
+      "method": "Tab from Return",
+      "dismissed": "Escape, detail remains World"
+    },
+    "detail": {
+      "moduleMini": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "worldMini": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "moduleDetailOutline": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "worldDetailOutline": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      }
+    },
+    "drag": {
+      "moduleGhost": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "4.5px"
+      },
+      "worldGhost": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "4.5px"
+      }
+    },
+    "placement": {
+      "placed": {
+        "q": 0,
+        "r": 0
+      },
+      "previousOccupant": {
+        "q": 1,
+        "r": 0
+      },
+      "armed": null,
+      "nous": 12,
+      "spentNous": 0
+    },
+    "fed": {
+      "normal": {
+        "animation": "world-breath",
+        "strokeWidth": "1px",
+        "opacity": "0.55",
+        "fillWidth": "20.80"
+      },
+      "reduced": {
+        "animation": "none",
+        "strokeWidth": "1px",
+        "opacity": "0.7",
+        "fillWidth": "20.80"
+      }
+    }
+  },
+  "phone": {
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "touch": true
+    },
+    "errors": [],
+    "missingFavicons": [],
+    "layers": {
+      "modules": {
+        "points": "8.1406,-4.7000 8.1406,4.7000 0.0000,9.4000 -8.1406,4.7000 -8.1406,-4.7000 -0.0000,-9.4000",
+        "viewBox": "0 0 24 24",
+        "strokeWidth": "1.6px"
+      },
+      "world": {
+        "points": "8.1406,-4.7000 8.1406,4.7000 0.0000,9.4000 -8.1406,4.7000 -8.1406,-4.7000 -0.0000,-9.4000",
+        "viewBox": "0 0 24 24",
+        "strokeWidth": "1.6px"
+      }
+    },
+    "moduleCenter": "translate(56.29165124598851,97.5)",
+    "inventoryRows": {
+      "moduleTile": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "4.5px"
+      },
+      "worldTile": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "4.5px"
+      }
+    },
+    "inventoryInspection": {
+      "moduleInspect": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "worldInspect": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      }
+    },
+    "worldCenter": "translate(56.29,97.50)",
+    "board": {
+      "moduleBoard": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-134.29 -100.00 268.58 279.50",
+        "strokeWidth": "1px"
+      },
+      "worldBoard": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-246.87 -197.50 606.33 572.00",
+        "strokeWidth": "1px"
+      },
+      "states": [
+        "world-plate firm",
+        "world-plate engraved",
+        "world-plate reserved",
+        "world-plate open"
+      ],
+      "spacing": {
+        "enemyGlyphToHp": 3.53765869140625,
+        "bladeChargeToAttack": 7
+      }
+    },
+    "taperHit": {
+      "x": 194.99700735677305,
+      "y": 462.92454674605506,
+      "cell": "1,0"
+    },
+    "inspect": {
+      "tooltip": "Charge Blade · place beside a Column to feed · BLADE · UNFED ⌁12/30 ATK 4",
+      "bounds": {
+        "x": 36,
+        "y": 319,
+        "width": 72,
+        "height": 72
+      },
+      "method": "emulated Chromium touch tap",
+      "dismissed": "tap-away, detail remains World"
+    },
+    "detail": {
+      "moduleMini": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "worldMini": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "moduleDetailOutline": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      },
+      "worldDetailOutline": {
+        "points": "52.8275,-30.5000 52.8275,30.5000 0.0000,61.0000 -52.8275,30.5000 -52.8275,-30.5000 -0.0000,-61.0000",
+        "viewBox": "-70 -70 140 140",
+        "strokeWidth": "1px"
+      }
+    },
+    "armed": {
+      "normal": {
+        "animation": "world-pulse",
+        "strokeWidth": "1px",
+        "opacity": "1",
+        "fillWidth": null
+      },
+      "reduced": {
+        "animation": "none",
+        "strokeWidth": "1px",
+        "opacity": "1",
+        "fillWidth": null
+      }
+    },
+    "placement": {
+      "placed": {
+        "q": 0,
+        "r": 0
+      },
+      "previousOccupant": {
+        "q": 1,
+        "r": 0
+      },
+      "armed": null,
+      "nous": 12,
+      "spentNous": 0
+    }
+  }
+}

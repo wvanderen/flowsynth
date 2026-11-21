@@ -27,7 +27,7 @@ Square controls, clipped outer panels with a continuous corner hairline, and ope
 
 ## Confirmed World feedback amendment (implemented; visual acceptance outstanding)
 
-The [confirmed World feedback brief](world-layer-feedback-brief.md) extends hex faces to World board occupants, inventory, drag previews, and details. This supersedes the module-exclusive interpretation of hex silhouettes; World must remain visually distinguishable from Modules without changing map geometry. Other pinned presentation rules remain authoritative.
+The [confirmed World feedback brief](world-layer-feedback-brief.md) extends hex faces to World. [Issue #546](https://github.com/wvanderen/flowsynth/issues/546) specifies the Modules perimeter for both layers: the same point-up cut on the board, in inventory, in drag previews, in Hex detail, and on the layer-selector miniatures. Recognize World from steel faceplates with paired side slots and functional glyphs, not a different cut or color alone. Reserved hatching, the cleared engraving, and the quiet dashed open cell retain their state roles. World does not use module category rails, rarity marks, level, or merge tier. This is presentation only: pitch, occupancy, hit targets, and placement stay unchanged. Other pinned rules still govern. See [#546 verification](evidence/issue-546/README.md) for current evidence, not the historical #529 captures.
 
 The ambient desktop and phone resource strips gain pending Arete yield and one clearly labeled reset entry point, preserving confirmation and unavailable-state explanations. This explicitly amends the earlier single Ledger-button/no-independent-resource-action contract for that reset affordance only; it does not turn every resource figure into an action. The ledger also exposes combined and per-source enemy pressure before World unlocks, without revealing the hidden map. The #526–#530 slices implement these changes, including #527's ambient reset and pressure disclosure. Required desktop/phone captures and visual/accessibility judgment remain outstanding; see the parent mapping in `docs/evidence/issue-530/README.md`.
 
@@ -37,7 +37,7 @@ The ambient desktop and phone resource strips gain pending Arete yield and one c
 
 **2026-10-17 cohesion amendment:** [ADR-0070](adr/0070-refine-the-rack-around-quiet-practice-and-shared-surfaces.md) preserves the Rack identity and main layout, adopts a neutral graphite substrate family, and narrows clipping to floating outer panels with top-right/bottom-left cuts at every width. Controls and internal divisions stay square; the phone Catalog's sloping top edge is retired by this decision. Flow activity should read on deliberate inspection through steady low light and subtle local modulation. These approved changes amend the historical pins only on those points; the current refinement is verified against this amendment as recorded in [the review evidence](evidence/cohesion-2026-10-17/README.md), with unavailable checks called out there.
 
-- **Hexes stay the module voice** (Rack identity, [ADR-0016](adr/0016-adopt-the-rack-identity.md)): the hex chassis, signature glyphs, category hues, rarity finish, and charge light are existing approved identity; hexes describe modules and their relationships.
+- **Hexes describe both faces of the same grid.** Modules retain the approved Rack identity ([ADR-0016](adr/0016-adopt-the-rack-identity.md)): signature glyphs, category hues, rarity finish, and charge light. World shares the chassis and uses its own face treatment as specified above.
 - **Surrounding surfaces are flat instrument panels.** Floating outer panels carry top-right/bottom-left clipped corners consistently at every width; controls and internal divisions stay square. Clipping identifies that surface family, never decoration applied to every control.
 - **Inside a panel, open divisions and rules** — hairline separations, aligned rows — never repeated rounded cards or nested boxes.
 - **Controls are square-cut** — hairline border, condensed technical lettering, no radii; the rounded legacy style is retired. The controls sheet pins the geometry: buttons, the vertical goal-bar column (fill by height, engraved completion, never color alone), the plain tooltip layer (hairline and panel surface, never a card), and the goal-palette swatches in the state grammar.
@@ -101,7 +101,7 @@ Compare the changed surface with the pinned prototype. A surface passes when:
 
 - identity, actionable state, effect, and cost are readable at a glance;
 - every visible element has a purpose — nothing rides along as furniture;
-- module, category, and resource semantics stay intact (hexes are modules; hues are categories and resources);
+- module, World, category, and resource semantics stay intact (hexes share a chassis across the two layers; module hues still identify categories);
 - no paragraph is needed to explain behavior the controls or visuals show;
 - every tooltip earns its existence — it shows a mechanic the surface cannot, and it restates nothing visible — and its copy holds the gloss standard;
 - every purchasable thing is named per the register: proper name and one concrete effect line; migrated concepts use selective contextual help rather than blanket hoverable terms;
