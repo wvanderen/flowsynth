@@ -8,6 +8,8 @@ The [World feedback brief](docs/world-layer-feedback-brief.md) and [ADR-0087](do
 
 **Prestige versus Arete purchase**: prestige ends an era and banks its pending Arete claim; an Arete purchase spends already-banked Arete. The first positive-Arete prestige, not the first purchase or a zero-yield reset, is the permanent World discovery boundary.
 
+The [World combat redesign](docs/world-combat-redesign-brief.md) records agreed future behavior separately. The World progression entries below still describe what ships.
+
 ## Language
 
 ### Learning and reference (first slices implemented; final acceptance pending)
@@ -691,6 +693,26 @@ The World layer's unplaced-occupant browser, sharing the tray column's Modules/W
 _Avoid_: weapon rack, armory, second inventory
 
 The World redesign's agreed contract is recorded in ADR-0074 and Wayfinder #419; the engine and economy of the class layer (#423) and the two-layer World (#425) are shipped. The claim curve's entry depth and slope are calibrated by #490 and #492 and frozen for save translation in ADR-0079. Other World figures — prices, HP and thresholds, cadence, storage — retain their hypothesis provenance in `research/world-frontier/findings.md` (commit `4eaac5f`); the pinned fixtures in `world.test.ts` distinguish them from the calibrated curve. Calibration evidence has explicit limits, including the boundary-wait re-recording gap in `docs/century-calibration.md`; a frozen figure alone does not establish recoverability. Existing progression entries below describe shipped behavior; the habit-build entries record the retirement (issue #444, ADR-0076).
+
+### World combat redesign (confirmed direction; not implemented)
+
+**Lifetime**:
+The span containing successive eras across which a credited enemy victory persists. Prestige starts a new era, not a new lifetime.
+
+**Creature**:
+A player-side World combatant with its own HP and a base action, augmented by adjacent gear.
+
+**World regeneration**:
+Recovery of HP over time. Creatures regenerate in the World tray; a defeated creature stays owned but cannot deploy until fully healed. Living enemies can regain HP, but a lifetime victory is not reversed by regeneration.
+
+**World charge conduit**:
+A World occupant that carries charge within the World layer without generating it. The Charge Column lifts charge from Modules instead.
+
+**Blacksmith**:
+The habit class whose credited practice fills a weapon forge meter for the selected habit–class pair. A full meter earns a choice from Blacksmith's known weapon selection.
+
+**Distance band**:
+The cells at the same hex distance from the fixed origin. They share an expansion price; rearrangement does not move ownership into a farther band.
 
 ### Progression
 

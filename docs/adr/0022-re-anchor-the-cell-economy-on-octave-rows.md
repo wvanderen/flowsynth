@@ -2,6 +2,8 @@
 
 With pitch a property of the cell (ADR-0021), cells no longer gate harmonic depth through distance, and the economy needed a new scarcity axis. Decided with the maintainer across two grilling rounds (issue #122, 2026-09-24), with the opening grant settled by the opening-arc playtest (issue #123, 2026-09-25).
 
+> ADR-0089 accepts distance-band pricing in place of octave gates while retaining octave pitch. That change is not yet implemented.
+
 ## Decision
 
 - **One unified synth leg**: `rate = (synths + infusor uplift) × Π chord terms × empowerment × achievementBoost`. Every synthesizer shares one base rate scaled by `rarityPower^level` — the carrier/harmonics split dies with the distinction it served — while the infusor uplift stays its own named leg (ADR-0020's pattern). The breakdown and session-summary legs rename `carrier` + `harmonics` into one `synths` leg.

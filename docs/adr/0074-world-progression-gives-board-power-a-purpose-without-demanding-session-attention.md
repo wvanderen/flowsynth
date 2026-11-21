@@ -10,6 +10,8 @@ The first experiment tests one enemy sequence, one combat resource, scaling Aret
 
 > ADR-0087, implemented by #526–#530, supersedes this experiment's entry, acquisition, Mutator and refund promises: permanent discovery/kit on positive prestige, Columns/Blades through ordinary mixed drafts, persistent type-wide Hone, no new refunds, no live Mutator mechanics. Blacksmith/dedicated weapons remain deferred. Historical narrative and calibration provenance below are retained, not current economy validation.
 
+> ADR-0088 accepts the next design direction: lifetime victories, sequential pressure, and released enemy cells. It is not yet implemented. The [redesign brief](../world-combat-redesign-brief.md) records the rest of that approved direction.
+
 ## Progression and reset contract
 
 Prestige retains the existing module reset boundary: collection, placement, merge tiers, and earned rolls persist; module levels and nous purchases re-earn. World purchases and habit development persist; enemy encounters and temporary combat state reset. Era-earned nous determines a diminishing-return Arete claim from the first eligible reset, banked only on prestige. Reset count does not independently increase payout; lasting purchases provide acceleration. The exact curve remains tuning.
