@@ -168,34 +168,76 @@ describe("the enemy plates (issue #426, priority 2)", () => {
   });
 });
 
-describe("World hex identity (issue #529)", () => {
-  it("carries a six-sided steel silhouette from board to inventory, drag artwork and detail without changing cell hits", async () => {
+describe("World hex identity (issue #546)", () => {
+  it("uses the Modules outline on the same board coordinates without changing the full-cell targets", () => {
     seedEra();
-    app.setBoardLayer("world");
-    const { worldTileSvg } = await import("./world");
-    // Silhouette is the explicit presentation contract, not the paths of
-    // glyphs, bars, or other incidental SVG internals.
-    const sixSides = (outline: Element | null) => {
-      expect(outline?.tagName.toLowerCase()).toBe("polygon");
-      expect(outline?.getAttribute("points")?.trim().split(/\s+/)).toHaveLength(6);
-    };
-    sixSides(face("world-occ-1,0").querySelector(".world-plate"));
-    const hits = [...grid().querySelectorAll("[data-world-cell]")].map(el => [el.getAttribute("data-world-cell"), el.getAttribute("points")]);
+    app.state.world.enemies.w0 = { discovered: true, hp: BALANCE.world.enemyBaseHp };
+    app.state.world.enemies.w1 = { discovered: true, hp: 0 };
+    const coord = '[data-cell="1,0"]';
+    const module = grid().querySelector(coord)!;
+    const points = module.querySelector(".hex")!.getAttribute("points");
+    const center = module.getAttribute("transform")!.match(/-?[\d.]+/g)!.map(value => Number(value).toFixed(2));
     const before = JSON.stringify(app.state);
-    const tray = document.getElementById("world-tray")!;
-    sixSides(tray.querySelector('[data-world-tray="wp2"] .world-tile-plate'));
-    // The real pointer ghost consumes this same public face builder.
-    const ghost = document.createElement("div");
-    ghost.innerHTML = worldTileSvg("column");
-    sixSides(ghost.querySelector(".world-tile-plate"));
-    tray.querySelector<HTMLButtonElement>('[data-world-tray="wp2"]')!.click();
-    sixSides(tray.querySelector(".inventory-detail-face .world-tile-plate"));
-    app.openDetail(hex(1, 0), "world");
-    sixSides(document.querySelector(".world-stack .world-plate"));
-    expect(document.querySelector(".world-stack")?.textContent).toContain("UNFED");
-    expect(document.querySelector(".world-stack")?.textContent).not.toMatch(/Lv\.|Tier/);
+
+    app.setBoardLayer("world");
+    const hit = openFace(1, 0);
+    expect(hit.getAttribute("points")).toBe(points);
+    expect(hit.getAttribute("tabindex")).toBe("0");
+    expect(hit.getAttribute("role")).toBe("button");
+    expect(hit.getAttribute("aria-label")).toBe("World cell at G4");
+    expect(hit.closest("g")!.getAttribute("transform")).toBe(`translate(${center.join(",")})`);
+    // Occupied, open, enemy, cleared and reserved routes share the visible perimeter.
+    const plates = grid().querySelectorAll(".world-plate");
+    expect(plates.length).toBeGreaterThan(2);
+    for (const plate of plates) expect(plate.getAttribute("points")).toBe(points);
     expect(JSON.stringify(app.state)).toBe(before);
-    expect([...grid().querySelectorAll("[data-world-cell]")].map(el => [el.getAttribute("data-world-cell"), el.getAttribute("points")])).toEqual(hits);
+  });
+  it("matches the Modules inventory row and inspection outlines and carries the same cut in a real drag preview", () => {
+    seedEra();
+    const stored = give(app.state, "additive", null);
+    app.render();
+    const moduleRow = document.querySelector<HTMLButtonElement>(`[data-inv="${stored.id}"]`)!;
+    const shape = (outline: Element) => [outline.closest("svg")!.getAttribute("viewBox"), outline.getAttribute("points")];
+    const rowShape = shape(moduleRow.querySelector(".tile-hex")!);
+    moduleRow.click();
+    const inspectionShape = shape(document.querySelector(".inventory-detail-face .hex")!);
+
+    app.setBoardLayer("world");
+    const worldRow = () => document.querySelector<HTMLButtonElement>('[data-world-tray="wp2"]')!;
+    const row = worldRow();
+    expect(shape(row.querySelector(".world-tile-plate")!)).toEqual(rowShape);
+    expect(row.textContent).not.toMatch(/Lv\.|Tier/);
+    expect(row.querySelector(".rarity-mark")).toBeNull();
+    row.click();
+    const inspection = document.querySelector(".inventory-detail-face .world-tile-plate")!;
+    expect(shape(inspection)).toEqual(inspectionShape);
+    document.querySelector<HTMLButtonElement>("[data-world-back]")!.click();
+
+    const pointer = (target: EventTarget, type: string, x: number) => {
+      target.dispatchEvent(new PointerEvent(type, { button: 0, bubbles: true, clientX: x, clientY: 100, pointerId: 1 }));
+    };
+    pointer(worldRow(), "pointerdown", 100);
+    pointer(document, "pointermove", 140);
+    expect(shape(document.querySelector(".world-ghost .world-tile-plate")!)).toEqual(rowShape);
+    pointer(document, "pointercancel", 140);
+    expect(document.querySelector(".world-ghost")).toBeNull();
+    expect(app.state.world.weapons.find(w => w.id === "wp2")!.pos).toBeNull();
+  });
+
+  it("keeps the same cut on the enlarged Hex detail faces and the shared selector miniatures", () => {
+    seedEra();
+    const perimeter = (where: string) => document.querySelector(where)!.getAttribute("points");
+    expect(perimeter('#layer-legend [data-legend-layer="world"] polygon')).toBe(perimeter('#layer-legend [data-legend-layer="modules"] polygon'));
+    app.openDetail(hex(1, 0), "modules");
+    const moduleOutline = perimeter('[data-detail-face="modules"] .hex');
+    expect(perimeter('.detail-layer-preview[data-legend-layer="modules"] .hex')).toBe(moduleOutline);
+    expect(perimeter('.detail-layer-preview[data-legend-layer="world"] .world-plate')).toBe(moduleOutline);
+
+    document.querySelector<HTMLButtonElement>('.detail-layer-preview[data-legend-layer="world"]')!.click();
+    expect(perimeter('[data-detail-face="world"] .world-plate')).toBe(moduleOutline);
+    const world = document.querySelector('[data-detail-face="world"]')!;
+    expect(world.textContent).toContain("UNFED");
+    expect(world.textContent).not.toMatch(/Lv\.|Tier/);
   });
 });
 
