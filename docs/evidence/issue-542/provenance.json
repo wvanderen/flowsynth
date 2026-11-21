@@ -1,0 +1,23 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-21T01:12:26.182Z",
+  "url": "http://localhost:5174/",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-dea4b0b7-02f07c94a0f0905d",
+  "branch": "t3/world-combat-issue-542",
+  "commit": "9c355a8f79cc860fee82dae6bc7ad59728452938",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-542/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-542/capture.mjs",
+        "state": "??"
+      }
+    ]
+  }
+}

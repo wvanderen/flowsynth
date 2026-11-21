@@ -1213,7 +1213,7 @@ function renderGrid(app: App, live: RateSnapshot, projected: RateSnapshot, overl
   // stands (issue #426): enemies sit on coordinates the owned patch may
   // not cover, and the lens holds the whole face.
   const worldLive = worldBoardLive(app);
-  const worldCoords = worldLive ? worldLensCoordinates() : [];
+  const worldCoords = worldLive ? worldLensCoordinates(state) : [];
   const allCells = [...state.cells, ...frontier, ...worldCoords, ...bands.flatMap((band) => band.hexes)];
   const coords = allCells.map(point);
   // The lens's base (§7): the board's own bounds with breathing room —
@@ -2517,7 +2517,9 @@ function renderInventoryTray(app: App): void {
   if (!moduleTray || !worldTray) return;
   const modules = app.ui.boardLayer === "modules";
   moduleTray.classList.toggle("off", app.state.mode !== "upgrade" || !modules);
-  worldTray.hidden = app.state.mode !== "upgrade" || modules;
+  // The proof uses the same phone Inventory sheet, not the desktop tray
+  // behind it. Keep the shipped World presentation unchanged here.
+  worldTray.hidden = app.state.mode !== "upgrade" || modules || (!!app.state.world.proof && isPhoneWidth());
   const tray = modules ? moduleTray : worldTray;
   tray.closest<HTMLElement>(".tray-column")?.classList.toggle("collapsed", app.ui.inventory.collapsed && !app.ui.inventory.dragOpen);
   if (modules) renderInventoryContent(app, tray, false, (element, id) => bindPointerDrag(app, element, id));

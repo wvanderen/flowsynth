@@ -38,6 +38,7 @@ import {
   setBendShift,
   setBoosterTarget,
   setWeaponTargetPriority,
+  setWorldConduitDirection,
   skipRoll,
   startBreather as startBreatherAction,
   startSession,
@@ -48,7 +49,8 @@ import {
   type BulkPurchase,
 } from "../engine/actions";
 import { ARETE_HORIZON, bankableClaimOf, horizonReached } from "../engine/accumulator";
-import { worldOccupantAt } from "../engine/world";
+import { worldOccupantAt, worldPieceOf } from "../engine/world";
+import { worldPieceName } from "./world-combat";
 import type { WeaponType, ResponseCurveId } from "../engine/types";
 import { neighbors, hex, sameHex } from "../engine/hex";
 import { preferredChordCue } from "../engine/chords";
@@ -113,7 +115,7 @@ import type { Category, ClassId, GameState, HabitColor, Hex, ModuleInstance, Mod
 import type { FocusFace, NotesFace } from "./focus";
 import { render, updateChordReadout } from "./render";
 import { FAMILY_WORD } from "./mutators";
-import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME, tierWord, WORLD_META, COLUMN_WORD } from "./meta";
+import { HISTORY_PAGE_ROWS, META, CATEGORY_WORD, SPECIAL_DRAFT_NAME, tierWord, WORLD_META } from "./meta";
 import { browserChannels, type SignalChannels } from "./signals";
 import { suppressNextClick } from "./click";
 import { createInventoryState, type InventoryState } from "./inventory";
@@ -386,7 +388,6 @@ export interface UiState {
   // mirroring ui.placing), with the kind the pill names. Light furniture —
   // never saved.
   worldArmed: string | null;
-  worldArmedKind: "weapon" | "column" | null;
   // The entry sequence's pending automation (issue #274): set when the
   // entry purchase lands, spent when the entry roll's choice is taken or
   // the Forge modal closes. The choice itself mints to the roster like
@@ -553,7 +554,6 @@ export class App {
     inventory: createInventoryState(),
     detail: null,
     worldArmed: null,
-    worldArmedKind: null,
     entryRollPending: false,
     worldTray: { inspect: null },
     worldCarrying: null,
@@ -1669,7 +1669,6 @@ export class App {
   private worldDisarm(): void {
     this.cancelWorldDrag?.();
     this.ui.worldArmed = null;
-    this.ui.worldArmedKind = null;
     this.ui.worldCarrying = null;
     this.ui.worldDropHover = null;
   }
@@ -1687,15 +1686,11 @@ export class App {
       this.say("The board is locked between sessions.");
       return;
     }
-    const kind = this.state.world.columns.some((c) => c.id === id)
-      ? "column"
-      : this.state.world.weapons.some((w) => w.id === id)
-        ? "weapon"
-        : null;
-    if (!kind) return;
+    const piece = worldPieceOf(this.state, id);
+    if (!piece || (piece.kind === "creature" && piece.copy.recovering)) return;
+    const wasArmed = this.ui.worldArmed === id;
     this.worldDisarm();
-    this.ui.worldArmed = this.ui.worldArmed === id ? null : id;
-    this.ui.worldArmedKind = this.ui.worldArmed ? kind : null;
+    this.ui.worldArmed = wasArmed ? null : id;
     if (this.ui.worldArmed) this.say("Choose an open World cell.");
     this.render();
   }
@@ -1715,7 +1710,6 @@ export class App {
     if (ui.worldArmed !== null) {
       const id = ui.worldArmed;
       ui.worldArmed = null;
-      ui.worldArmedKind = null;
       this.worldPlace(id, pos);
       return;
     }
@@ -1745,10 +1739,12 @@ export class App {
   }
 
   private worldOccupantName(id: string): string {
-    const column = this.state.world.columns.find((c) => c.id === id);
-    if (column) return COLUMN_WORD;
-    const weapon = this.state.world.weapons.find((w) => w.id === id);
-    return weapon ? WORLD_META[weapon.type].name : "Occupant";
+    const piece = worldPieceOf(this.state, id);
+    return piece ? worldPieceName(piece) : "Occupant";
+  }
+
+  routeWorldConduit(id: string, direction: number): void {
+    this.act(this.gameAction("setWorldConduitDirection", () => setWorldConduitDirection(this.state, id, direction)), "Conduit outlet set.");
   }
 
   // The weapon's between-session target priority (issue #426): the rail's
@@ -2161,7 +2157,8 @@ export class App {
   detailPlaceWorld(id: string): void {
     const detail = this.ui.detail;
     if (!detail || this.state.mode !== "upgrade") return;
-    if (!this.state.world.weapons.some((w) => w.id === id && w.pos === null) && !this.state.world.columns.some((c) => c.id === id && c.pos === null)) return;
+    const piece = worldPieceOf(this.state, id);
+    if (!piece || piece.copy.pos !== null) return;
     if (this.act(this.gameAction("placeWorldOccupant", () => placeWorldOccupant(this.state, id, detail.pos)), `${this.worldOccupantName(id)} placed at ${cellNoteOf(detail.pos)}.`)) {
       focusDetailFace(this.ui.detail!.face);
     }
@@ -3185,6 +3182,7 @@ export class App {
     this.devRunOriginId = walked?.runId ?? null;
     if (walked) this.upsertRunResult({ record: walked, imported: false, modified: false, interventions: [] });
     this.state = candidate;
+    if (candidate.world.proof) this.ui.boardLayer = "world";
     this.lastWall = null;
     this.exitPending = false;
     this.save(now, true);

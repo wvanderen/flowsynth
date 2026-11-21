@@ -1,4 +1,5 @@
 import { hasActiveWorldEnemy } from "./world";
+import { assertWorldCombatScenario, createWorldCombatScenario } from "./world-combat-scenario";
 import { BALANCE } from "./constants";
 import { assertFocusScenario, createFocusScenarioState, focusScenarioSummary } from "./focus-scenario";
 import {
@@ -165,6 +166,15 @@ export const SCENARIOS: readonly ScenarioDescriptor[] = [
   AFTER_FIRST_BANK,
   WORLD_ENEMY,
   FOCUS,
+  {
+    id: "world-combat",
+    name: "World combat proof",
+    situation: "two ordered walls and one fixed kit (#542)",
+    origin: "constructed fixture",
+    build: createWorldCombatScenario,
+    assert: assertWorldCombatScenario,
+    summary: () => "Shale active · fixed kit in tray",
+  },
 ];
 
 export function scenarioOf(id: string): ScenarioDescriptor | null {

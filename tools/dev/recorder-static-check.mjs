@@ -23,6 +23,7 @@ export const RECORDER_SCRIPTS = [
   // Issue #509: the retained-recording profiler — the same plain-.mjs
   // tier, statically checked with the CLIs it shares the runtime with.
   "tools/record-profile.mjs",
+  "tools/record-world-combat.mjs",
 ];
 
 const repoRoot = path.dirname(path.dirname(path.dirname(fileURLToPath(import.meta.url))));

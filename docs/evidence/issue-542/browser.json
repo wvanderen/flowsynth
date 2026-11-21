@@ -1,0 +1,68 @@
+{
+  "url": "http://localhost:5174/?dev=1",
+  "browser": "155.0.8059.84",
+  "desktop": {
+    "launch": {
+      "note": "World combat proof ✓ Shale active · fixed kit in tray · two ordered walls and one fixed kit (#542) · constructed fixture · isolated save",
+      "viewport": [
+        1280,
+        800
+      ],
+      "coarse": false
+    },
+    "outlet": {
+      "pressed": "true",
+      "focused": true,
+      "marker": "rgb(233, 234, 232) 0px -3px 0px 0px inset",
+      "focus": "solid",
+      "target": {
+        "x": 513.5700073242188,
+        "y": 616.7664184570312,
+        "width": 77.20477294921875,
+        "height": 43.55145263671875,
+        "top": 616.7664184570312,
+        "right": 590.7747802734375,
+        "bottom": 660.31787109375,
+        "left": 513.5700073242188
+      }
+    },
+    "keyboardDisclosure": {
+      "opened": true,
+      "dismissed": true
+    },
+    "flowPressure": "Shale · 26/48 HP · −20% ν",
+    "nextPressure": "Basalt · 35/35 HP · −35% ν",
+    "reducedMotion": {
+      "enabled": true,
+      "armedTargets": 5,
+      "worldAnimations": 0
+    }
+  },
+  "phone": {
+    "launch": {
+      "note": "World combat proof ✓ Shale active · fixed kit in tray · two ordered walls and one fixed kit (#542) · constructed fixture · isolated save",
+      "viewport": [
+        390,
+        844
+      ],
+      "coarse": true
+    },
+    "desktopTrayHidden": true,
+    "touchDisclosure": {
+      "opened": true,
+      "text": "Heals 0.35 HP/s while alive",
+      "dismissed": true
+    },
+    "outletPressed": "true",
+    "beforeInspection": {
+      "mode": "upgrade",
+      "layer": "world",
+      "modal": "inventory",
+      "hp": 0,
+      "recovering": true,
+      "tray": "INVENTORY\n✕\nWorld tray 5×\nCharge Blade\n⌁0/30\nSentinel\n0/24 HP · Recovering\nGuard Plate\n−50% damage\nPulse\n⌁0/6\nCharge Column"
+    },
+    "recovering": "Sentinel\n\n0/24 HP · Recovering\n\nRequires full HP to deploy\n\nPlace"
+  },
+  "errors": []
+}

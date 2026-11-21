@@ -53,7 +53,7 @@ function seedOrdinaryAndBoot(t: number): number {
 }
 
 describe("the suite's catalog", () => {
-  it("declares the openings, the progression presets, and the Focus setup with their situations and origins", () => {
+  it("declares the openings, progression presets, Focus and combat proof with their situations and origins", () => {
     app = boot(undefined, true);
     expect(app.devScenarios().map((scenario) => scenario.id)).toEqual([
       "fresh-start",
@@ -61,6 +61,7 @@ describe("the suite's catalog", () => {
       "after-first-bank",
       "world-enemy",
       "focus",
+      "world-combat",
     ]);
     const fresh = app.devScenarios()[0]!;
     expect(fresh.name).toBe("Fresh start");
@@ -327,7 +328,7 @@ describe("the launch command", () => {
     app.devLaunchScenario("speedrun", t);
 
     expect(status()).toBe(
-      'Dev: no scenario "speedrun" — the suite offers fresh-start, approaching-prestige, after-first-bank, world-enemy, focus.',
+      'Dev: no scenario "speedrun" — the suite offers fresh-start, approaching-prestige, after-first-bank, world-enemy, focus, world-combat.',
     );
     // The refused candidate never installed: the Focus setup stays the
     // active scenario, its note and its assertion intact.
@@ -489,6 +490,7 @@ describe("the dev panel's suite entry", () => {
       "after-first-bank",
       "world-enemy",
       "focus",
+      "world-combat",
     ]);
     expect(select.options[0]!.hasAttribute("title")).toBe(false);
     expect(select.options[0]!.textContent).toBe("Fresh start");

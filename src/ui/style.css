@@ -2254,11 +2254,7 @@ body.hex-detail-open .upgrade-all {
 
 .hex-stack-face.empty .hex { fill: var(--panel-deep); fill-opacity: 0.45; stroke: var(--line-strong); stroke-dasharray: 3 5; }
 .hex-stack-face.empty .face-note { font-size: 13px; }
-/* The mutator chassis: the arete register, the slot face's own voice at
-   detail scale. */
-.world-stack { color: var(--world); }
-.world-stack .world-plate { stroke-width: 1.8; }
-.world-stack .world-word { font-size: 12px; letter-spacing: 0.14em; }
+/* Enlarged World engraving. */
 .world-stack .world-fig { font-size: 10px; }
 .hex-stack-mut .hex-stack-lock {
   fill: none;
@@ -2603,6 +2599,10 @@ body.hex-detail-open .upgrade-all {
 }
 .hex-shift-chip:hover { background: var(--hover-bg); border-color: var(--line-strong); }
 .hex-shift-chip.active { background: var(--hue-voice); border-color: var(--hue-voice); color: var(--accent-ink); }
+.world-outlet { display: grid; grid-template-columns: repeat(3, minmax(44px, 1fr)); }
+.world-outlet > span { grid-column: 1 / -1; text-align: left; }
+.world-outlet button { font-size: 12px; }
+.world-outlet [aria-pressed="true"] { border-color: var(--ink); color: var(--ink); box-shadow: inset 0 -3px var(--ink); }
 
 /* The Spotlight's recipient picker (issue #374): the Bend picker's chip
     row carrying note names, the inactive verdict a muted line above the
@@ -2898,44 +2898,39 @@ body.hex-detail-open .upgrade-all {
    included. The old stylesheet hiding is gone with the leak: there is
    nothing left for it to hide. */
 
-/* ── The World layer's plates (issue #426) ────────────
-   The second face's own silhouette from the design round: the square-cut
-   plate in the layer's steel register, one per coordinate. States ride
-   the shared grammar — muted outline reserved, firm discovered, engraved
-   cleared, dashed open — never color alone; the figures live where the
-   mechanics live. */
-
-/* The hatch: the reserved plate's claimed-but-unknown read. */
-.world-hatch {
-  fill: url(#world-hatch);
-  stroke: none;
+/* ── World faceplates (#426, #546) ────────────────────
+   The Modules perimeter in the World steel register. Inside the cut,
+   paired side slots and functional glyphs distinguish a populated plate;
+   hatch, engraving and dashed outline still carry the cell's state. */
+.world-hatch, .world-side-slots {
+  fill: none;
+  stroke: var(--muted);
   pointer-events: none;
 }
+.world-hatch { stroke-width: 1.4; }
+.world-side-slots { stroke-width: 2.7; }
 .world-plate {
   fill: var(--hex-face);
   stroke: var(--world-line);
-  stroke-width: 2;
+  stroke-width: 1;
 }
-.world-plate.firm {
+.world-plate.firm, .world-tile-plate {
   stroke: var(--world);
-  stroke-width: 2.4;
-  fill: color-mix(in srgb, var(--world) 6%, var(--hex-face));
+  fill: color-mix(in srgb, var(--world) 11%, var(--hex-face));
 }
 .world-plate.reserved {
   fill: color-mix(in srgb, var(--panel-deep) 40%, var(--hex-face));
   stroke: var(--line-strong);
-  stroke-width: 2;
 }
 .world-plate.engraved {
   fill: none;
   stroke: var(--line-strong);
-  stroke-width: 1.4;
 }
+.world-plate.engraved + .world-side-slots { stroke: var(--line-strong); }
 .world-plate.open {
   fill: none;
   stroke: var(--line);
   stroke-dasharray: 5 5;
-  stroke-width: 1.6;
 }
 .world-word {
   font: 600 11px var(--font-condensed);
@@ -2960,7 +2955,7 @@ body.hex-detail-open .upgrade-all {
   stroke-linejoin: round;
   pointer-events: none;
 }
-.world-glyph.dimmed { stroke: var(--line-strong); }
+.world-glyph.dimmed { stroke: color-mix(in srgb, var(--muted) 65%, var(--line-strong)); }
 .world-bar { fill: none; stroke: var(--line); stroke-width: 1; pointer-events: none; }
 .world-bar-fill { fill: var(--charge); pointer-events: none; }
 /* Quiet activity (the instrument standards): the fed weapon's fill
@@ -2969,8 +2964,8 @@ body.hex-detail-open .upgrade-all {
   .world-bar-fill.live { animation: world-breath 3.2s ease-in-out infinite; }
   @keyframes world-breath { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.95; } }
 }
-.world-plate.pulse { animation: world-pulse 1.4s ease-in-out infinite; }
-@keyframes world-pulse { 50% { stroke-width: 3.2; } }
+.world-plate.pulse { stroke: var(--muted); animation: world-pulse 1.4s ease-in-out infinite; }
+@keyframes world-pulse { 0%, 100% { stroke-opacity: 0.55; } 50% { stroke-opacity: 1; } }
 /* Reduced motion: fully static — the pulse reads as the dashed target
    alone, the breath as the static fill; the pill carries the arm. */
 @media (prefers-reduced-motion: reduce) {
@@ -3022,8 +3017,9 @@ body.hex-detail-open .upgrade-all {
 .mut-tile .mut-tile-glyph { color: currentColor; }
 .mut-tile .mut-tile-ticks { fill: currentColor; }
 .mut-tile .mut-tile-effect { font-size: 11px; fill: var(--muted); }
-.world-tile .mut-tile-hex { fill: none; }
-.world-tile-plate { fill: none; stroke: currentColor; stroke-width: 4.5; }
+.world-tile-plate { stroke-width: 4.5; }
+.inventory-detail-face .world-tile-plate { stroke-width: 1; }
+.world-tile-plate + .world-side-slots { stroke-width: 4; }
 
 /* The armed placement's pill (issue #426): the arm's one spot over the
    board's top edge — World placement is free, so the pill carries only
