@@ -1,0 +1,67 @@
+{
+  "app": "flowsynth",
+  "check": "capture-preflight",
+  "acceptedAt": "2026-11-21T00:51:25.282Z",
+  "url": "http://localhost:5173/",
+  "worktree": "/home/lem/.t3/worktrees/flowsynth/t3-8d7d7353-ab6ceb397f93e285",
+  "branch": "t3/faceplate-geometry-treatment",
+  "commit": "8c9c451621f67cc0b612f425c546f0fdc482842a",
+  "source": {
+    "clean": true,
+    "changes": [],
+    "evidence": [
+      {
+        "path": "docs/evidence/issue-546/README.md",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/capture.mjs",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/desktop-board.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/desktop-detail.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/desktop-drag.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/desktop-inspection.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/desktop-walk.webm",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/phone-board.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/phone-detail.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/phone-inspection.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/phone-inventory.png",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/phone-walk.webm",
+        "state": "??"
+      },
+      {
+        "path": "docs/evidence/issue-546/provenance.json",
+        "state": "??"
+      }
+    ]
+  }
+}
